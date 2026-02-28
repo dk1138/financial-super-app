@@ -87,3 +87,34 @@ body {
 /* Hide scrollbar */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* --- SLIDER FIXES --- */
+.form-range::-webkit-slider-runnable-track {
+  background-color: var(--border-color) !important;
+  height: 6px;
+  border-radius: 3px;
+}
+.form-range::-webkit-slider-thumb {
+  background-color: var(--primary) !important;
+  margin-top: -5px;
+}
+[data-bs-theme="light"] .form-range::-webkit-slider-runnable-track {
+  background-color: var(--border-color) !important;
+}
+
+/* --- EXPENSE TABLE FIXES (Overrides Bootstrap .table-dark in Light Mode) --- */
+[data-bs-theme="light"] .table-dark {
+  --bs-table-bg: #ffffff;
+  --bs-table-color: var(--text-main);
+  --bs-table-border-color: var(--border-color);
+}
+[data-bs-theme="light"] .table-dark th,
+[data-bs-theme="light"] .table-dark td {
+  background-color: #ffffff !important;
+  color: var(--text-main) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+[data-bs-theme="light"] .table-dark .surface-card,
+[data-bs-theme="light"] .table-dark thead tr {
+  background-color: var(--bg-surface) !important;
+}
