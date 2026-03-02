@@ -8,6 +8,7 @@ interface FinanceContextType {
   data: any;             
   results: any;          
   updateInput: (key: string, value: any) => void;
+  updateMultipleInputs: (updates: Record<string, any>) => void;
   updateMode: (newMode: 'Single' | 'Couple') => void;
   updateUseRealDollars: (val: boolean) => void;
   addArrayItem: (listName: string, defaultObj: any) => void;
@@ -19,6 +20,32 @@ interface FinanceContextType {
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
+
+// --- STRICT SANITIZATION ENGINE ---
+// This prevents malicious string injection and mathematical crashes (NaN / Infinity)
+const sanitizeValue = (val: any): any => {
+  if (typeof val === 'string') {
+    // 1. Strip out any HTML tags to prevent XSS injection in text fields
+    let cleanStr = val.replace(/<\/?[^>]+(>|$)/g, "");
+    
+    // 2. Prevent excessively long string inputs (buffer overflow protection)
+    if (cleanStr.length > 100) cleanStr = cleanStr.substring(0, 100);
+    return cleanStr;
+  }
+  
+  if (typeof val === 'number') {
+    // 1. Reject NaN or Infinity
+    if (isNaN(val) || !isFinite(val)) return 0;
+    
+    // 2. Prevent numbers large enough to break Javascript's MAX_SAFE_INTEGER during compound interest math
+    if (val > 1000000000) return 1000000000; // Cap at 1 Billion
+    if (val < -1000000000) return -1000000000;
+    
+    return val;
+  }
+  
+  return val; // Return booleans/objects as-is
+};
 
 const defaultData = {
   mode: 'Couple',
@@ -61,7 +88,14 @@ const defaultData = {
     inflation_rate: 2.1, tax_province: 'ON',
     cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000, 
     cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
-    fully_optimize_tax: false, oas_clawback_optimize: false,
+    
+    // Engine Features Added
+    portfolio_allocation: 'custom', 
+    use_glide_path: false,
+    fully_optimize_tax: false, 
+    oas_clawback_optimize: false, 
+    rrsp_meltdown_enabled: false,
+    
     skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
     skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
     exp_gogo_age: 75, exp_slow_age: 85,
@@ -93,7 +127,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState(defaultData);
   const [results, setResults] = useState<any>(null);
 
-  // Safely restore data from Local Storage on initial page load
   useEffect(() => {
     try {
       const savedData = localStorage.getItem('retirement_plan_data');
@@ -108,52 +141,71 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // PERFORMANCE FIX: 300ms Debounce so the UI doesn't freeze while typing numbers
   useEffect(() => {
-    try {
-      // DEEP CLONE FIX: Prevents the FinanceEngine from mutating live inputs!
-      const clonedData = JSON.parse(JSON.stringify(data));
-      const engine = new FinanceEngine(clonedData);
-      const simulation = engine.runSimulation(true, null);
-      const finalYear = simulation[simulation.length - 1];
-      
-      setResults({
-        timeline: simulation,
-        dashboard: {
-          finalNetWorth: finalYear ? finalYear.liquidNW + finalYear.reIncludedEq : 0,
-          totalTax: simulation.reduce((sum: number, year: any) => sum + year.taxP1 + (year.taxP2 || 0), 0)
-        }
-      });
-    } catch (err) { 
-      console.error("Simulation failed:", err); 
-    }
+    const timeoutId = setTimeout(() => {
+      try {
+        const clonedData = JSON.parse(JSON.stringify(data));
+        const engine = new FinanceEngine(clonedData);
+        const simulation = engine.runSimulation(true, null);
+        const finalYear = simulation[simulation.length - 1];
+        
+        setResults({
+          timeline: simulation,
+          dashboard: {
+            finalNetWorth: finalYear ? finalYear.liquidNW + (finalYear.reIncludedEq || 0) : 0,
+            totalTax: simulation.reduce((sum: number, year: any) => sum + year.taxP1 + (year.taxP2 || 0), 0)
+          }
+        });
+      } catch (err) { 
+        console.error("Simulation failed:", err); 
+      }
+    }, 300); 
+
+    return () => clearTimeout(timeoutId);
   }, [data]); 
 
-  const loadData = (newPlanData: any) => {
-    setData(newPlanData);
+  const loadData = (newPlanData: any) => setData(newPlanData);
+  
+  const updateInput = (key: string, value: any) => {
+      setData(prev => ({ ...prev, inputs: { ...prev.inputs, [key]: sanitizeValue(value) } }));
   };
 
-  const updateInput = (key: string, value: any) => setData(prev => ({ ...prev, inputs: { ...prev.inputs, [key]: value } }));
+  const updateMultipleInputs = (updates: Record<string, any>) => {
+      const cleanUpdates: Record<string, any> = {};
+      Object.keys(updates).forEach(k => cleanUpdates[k] = sanitizeValue(updates[k]));
+      setData(prev => ({ ...prev, inputs: { ...prev.inputs, ...cleanUpdates } }));
+  };
+
   const updateMode = (newMode: 'Single' | 'Couple') => setData(prev => ({ ...prev, mode: newMode }));
   const updateUseRealDollars = (val: boolean) => setData(prev => ({ ...prev, useRealDollars: val }));
 
-  const addArrayItem = (listName: string, defaultObj: any) => setData(prev => ({ ...prev, [listName]: [...prev[listName as keyof typeof prev], defaultObj] }));
+  // ADDED 'as any[]' CASTS HERE TO FIX TYPESCRIPT ERRORS
+  const addArrayItem = (listName: string, defaultObj: any) => setData(prev => ({ ...prev, [listName]: [...(prev[listName as keyof typeof prev] as any[]), defaultObj] }));
+  
   const updateArrayItem = (listName: string, index: number, field: string, value: any) => setData(prev => { 
-    const newList = [...prev[listName as keyof typeof prev]];
-    newList[index] = { ...newList[index], [field]: value };
+    const newList = [...(prev[listName as keyof typeof prev] as any[])];
+    newList[index] = { ...newList[index], [field]: sanitizeValue(value) };
     return { ...prev, [listName]: newList };
   });
+
   const removeArrayItem = (listName: string, index: number) => setData(prev => { 
-    const newList = [...prev[listName as keyof typeof prev]];
+    const newList = [...(prev[listName as keyof typeof prev] as any[])];
     newList.splice(index, 1);
     return { ...prev, [listName]: newList };
   });
+
   const updateStrategy = (type: 'accum' | 'decum', newList: string[]) => setData(prev => ({ ...prev, strategies: { ...prev.strategies, [type]: newList } }));
   
   const updateExpenseCategory = (catKey: string, items: any[]) => setData(prev => ({
     ...prev,
     expensesByCategory: {
       ...prev.expensesByCategory,
-      [catKey]: { items }
+      [catKey]: { items: items.map(item => {
+          const cleanItem: any = {};
+          Object.keys(item).forEach(k => cleanItem[k] = sanitizeValue(item[k]));
+          return cleanItem;
+      })}
     }
   }));
 
@@ -162,6 +214,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         data, 
         results, 
         updateInput, 
+        updateMultipleInputs,
         updateMode, 
         updateUseRealDollars, 
         addArrayItem, 

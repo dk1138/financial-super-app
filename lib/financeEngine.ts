@@ -1,7 +1,7 @@
 /**
  * financeEngine.js
  * Shared financial logic core for both the main UI thread and Web Workers.
- * Refactored for readability and maintainability.
+ * Refactored for readability, maintainability, and advanced optimization strategies.
  */
 import { parseFormattedNumber } from './utils';
 
@@ -326,11 +326,22 @@ export class FinanceEngine {
         };
     }
 
-    applyGrowth(person1: any, person2: any, isRet1: boolean, isRet2: boolean, isAdvancedMode: boolean, inflationRate: number, yearIndex: number, simContext: any) {
+    applyGrowth(person1: any, person2: any, isRet1: boolean, isRet2: boolean, isAdvancedMode: boolean, inflationRate: number, yearIndex: number, simContext: any, age1: number, age2: number) {
         const isStressTest = this.inputs['stressTestEnabled'] && yearIndex === 0; 
-        
-        const getRates = (personPrefix: string, isRetired: boolean) => {
-            const getRate = (id: string) => this.getVal(`${personPrefix}_${id}_ret` + (isAdvancedMode && isRetired ? '_retire' : '')) / 100;
+        const useGlide = this.inputs['use_glide_path'] || false;
+
+        const getRates = (personPrefix: string, isRetired: boolean, age: number) => {
+            const getRate = (id: string) => {
+                let baseRate = this.getVal(`${personPrefix}_${id}_ret` + (isAdvancedMode && isRetired ? '_retire' : '')) / 100;
+                
+                if (useGlide && ['tfsa','rrsp','fhsa','nonreg','crypto','lirf','lif','rrif_acct','resp'].includes(id)) {
+                    let ageOffset = Math.max(0, age - 50);
+                    baseRate -= (ageOffset * 0.001); 
+                    baseRate = Math.max(0.04, baseRate); 
+                }
+                return baseRate;
+            };
+
             return { 
                 tfsa: getRate('tfsa'), 
                 rrsp: getRate('rrsp'), 
@@ -346,14 +357,14 @@ export class FinanceEngine {
             };
         };
         
-        const ratesP1 = getRates('p1', isRet1);
-        const ratesP2 = getRates('p2', isRet2);
+        const ratesP1 = getRates('p1', isRet1, age1);
+        const ratesP2 = getRates('p2', isRet2, age2);
         
         if (isStressTest) { 
             const accountsToStress = ['tfsa','rrsp','nreg','cash','lirf','lif','rrif_acct','crypto', 'fhsa', 'resp'];
             accountsToStress.forEach(account => { 
-                if (ratesP1[account] !== undefined) ratesP1[account] = -0.15; 
-                if (ratesP2[account] !== undefined) ratesP2[account] = -0.15; 
+                if (ratesP1[account as keyof typeof ratesP1] !== undefined) (ratesP1 as any)[account] = -0.15; 
+                if (ratesP2[account as keyof typeof ratesP2] !== undefined) (ratesP2 as any)[account] = -0.15; 
             }); 
             ratesP1.crypto = -0.40; 
             ratesP2.crypto = -0.40; 
@@ -369,8 +380,8 @@ export class FinanceEngine {
             if (shock !== 0) {
                 const accountsToShock = ['tfsa','rrsp','nreg','crypto','lirf','lif','rrif_acct', 'fhsa', 'resp'];
                 accountsToShock.forEach(account => { 
-                    if (ratesP1[account] !== undefined) ratesP1[account] += shock; 
-                    if (ratesP2[account] !== undefined) ratesP2[account] += shock; 
+                    if (ratesP1[account as keyof typeof ratesP1] !== undefined) (ratesP1 as any)[account] += shock; 
+                    if (ratesP2[account as keyof typeof ratesP2] !== undefined) (ratesP2 as any)[account] += shock; 
                 });
             }
         }
@@ -400,13 +411,13 @@ export class FinanceEngine {
 
     calcInflows(currentYear: number, yearIndex: number, person1: any, person2: any, age1: number, age2: number, alive1: boolean, alive2: boolean, isRet1: boolean, isRet2: boolean, constants: any, baseInflation: number, trackedEvents: any) {
         let result = { 
-            p1: { gross:0, earned:0, cpp:0, oas:0, pension:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0 }, 
-            p2: { gross:0, earned:0, cpp:0, oas:0, pension:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0 },
+            p1: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0 }, 
+            p2: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0 },
             events: [] as string[]
         };
         
         const calculateInflowsForPerson = (person: any, age: number, isRetired: boolean, prefix: string, maxCpp: number, maxOas: number) => {
-            let inflows = { gross:0, earned:0, cpp:0, oas:0, pension:0, postRet:0, eiMat:0, topUp:0 };
+            let inflows = { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, postRet:0, eiMat:0, topUp:0 };
             
             if (!isRetired) { 
                 let baseIncome = person.inc;
@@ -764,7 +775,8 @@ export class FinanceEngine {
                 } 
             }
             else if (accountType === 'rrsp') { 
-                let priorityList = [];
+                let priorityList: any[] = []; // FIXED ARRAY TYPE DEFINITION
+                
                 const p1HasRoom = (!this.inputs['skip_first_rrsp_p1'] || yearIndex > 0) && alive1 && rrspLimit1 > 0;
                 const p2HasRoom = (!this.inputs['skip_first_rrsp_p2'] || yearIndex > 0) && alive2 && rrspLimit2 > 0;
                 
@@ -1329,7 +1341,6 @@ export class FinanceEngine {
             
             if (!alive1 && !alive2) break;
 
-            // Engine Fix: Explicitly Convert RRSP to RRIF at Age 72
             if (alive1 && age1 >= 72 && person1.rrsp > 0) {
                 person1.rrif_acct += person1.rrsp;
                 person1.rrsp = 0;
@@ -1419,11 +1430,30 @@ export class FinanceEngine {
             const preGrowthNreg1 = person1.nreg;
             const preGrowthNreg2 = person2.nreg;
 
-            this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext);
+            this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
 
             const inflows = this.calcInflows(yr, i, person1, person2, age1, age2, alive1, alive2, isRet1, isRet2, consts, baseInflation, detailed ? trackedEvents : null);
             if (detailed && deathEvents.length > 0) {
                 inflows.events.push(...deathEvents);
+            }
+
+            if (this.inputs['rrsp_meltdown_enabled']) {
+                const taxBrackets = this.getInflatedTaxData(baseInflation);
+                const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: string) => {
+                    if (isAlive && currentAge >= 55 && currentAge < this.CONSTANTS.RRIF_START_AGE && person.rrsp > 0) {
+                        let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nreg * person.nreg_yield);
+                        let targetBracketCap = taxBrackets.FED.brackets[0]; 
+                        let room = Math.max(0, targetBracketCap - currentTaxable);
+                        if (room > 0) {
+                            let pullAmt = Math.min(room, person.rrsp);
+                            person.rrsp -= pullAmt;
+                            incs.rrspMeltdown += pullAmt; 
+                            if (detailed && flowLog) flowLog.withdrawals[`${prefix.toUpperCase()} RRSP Meltdown`] = pullAmt;
+                        }
+                    }
+                };
+                if (isRet1) executeMeltdown(person1, age1, inflows.p1, alive1, 'p1');
+                if (this.mode === 'Couple' && isRet2) executeMeltdown(person2, age2, inflows.p2, alive2, 'p2');
             }
 
             let appliedRefundP1 = 0;
@@ -1477,6 +1507,9 @@ export class FinanceEngine {
                 if (detailed) flowLog.contributions.p2.rrsp += totalMatch2; 
             }
 
+            if (inflows.p1.rrspMeltdown > 0) rrspRoom1 = 0; 
+            if (inflows.p2.rrspMeltdown > 0) rrspRoom2 = 0; 
+
             const regMins = this.calcRegMinimums(person1, person2, age1, age2, alive1, alive2, preGrowthRrsp1, preGrowthRrif1, preGrowthRrsp2, preGrowthRrif2, preGrowthLirf1, preGrowthLif1, preGrowthLirf2, preGrowthLif2);
             
             const taxBrackets = this.getInflatedTaxData(baseInflation);
@@ -1484,8 +1517,8 @@ export class FinanceEngine {
             let divInc1 = preGrowthNreg1 * person1.nreg_yield;
             let divInc2 = alive2 ? (preGrowthNreg2 * person2.nreg_yield) : 0;
 
-            let grossTaxable1 = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + regMins.p1 + regMins.lifTaken1 + inflows.p1.windfallTaxable + divInc1;
-            let grossTaxable2 = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + regMins.p2 + regMins.lifTaken2 + inflows.p2.windfallTaxable + divInc2;
+            let grossTaxable1 = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.rrspMeltdown + regMins.p1 + regMins.lifTaken1 + inflows.p1.windfallTaxable + divInc1;
+            let grossTaxable2 = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.rrspMeltdown + regMins.p2 + regMins.lifTaken2 + inflows.p2.windfallTaxable + divInc2;
 
             let taxWithoutMatch1 = alive1 ? this.calculateTaxDetailed(grossTaxable1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1) : {totalTax: 0, margRate: 0};
             let taxWithoutMatch2 = alive2 ? this.calculateTaxDetailed(grossTaxable2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2) : {totalTax: 0, margRate: 0};
@@ -1512,49 +1545,53 @@ export class FinanceEngine {
             const expenses = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext);
 
             let mortgagePayment = 0;
-            let keptProperties = [];
+            let keptProperties: any[] = [];
             
-            simProperties.forEach(p => {
+            simProperties.forEach((p: any) => {
                 if (p.sellEnabled && p.sellAge === age1) {
                     const proceeds = p.value;
                     const transCosts = proceeds * 0.05;
                     const netCash = proceeds - p.mortgage - transCosts;
                     const newHomeCost = (p.replacementValue || 0) * baseInflation;
-                    const surplusCash = netCash - newHomeCost;
                     
-                    if (surplusCash > 0) {
-                        inflows.p1.windfallNonTax += surplusCash;
-                    }
-                    
-                    if (detailed && !trackedEvents.has('Downsize')) { 
-                        trackedEvents.add('Downsize'); 
-                        inflows.events.push('Downsize'); 
+                    if (newHomeCost > 0) {
+                        const buyerFees = newHomeCost * 0.02;
+                        const totalNewHomeCost = newHomeCost + buyerFees;
+                        const surplusCash = netCash - totalNewHomeCost;
+                        
+                        if (surplusCash > 0) {
+                            inflows.p1.windfallNonTax += surplusCash;
+                            keptProperties.push({
+                                name: "Replacement: " + p.name, value: newHomeCost, mortgage: 0, growth: p.growth, rate: p.rate, payment: 0, includeInNW: p.includeInNW, sellEnabled: false
+                            });
+                        } else {
+                            const newMortgage = Math.abs(surplusCash);
+                            const r = (p.rate || 0) / 100 / 12;
+                            let newPayment = 0;
+                            if (r === 0) {
+                                newPayment = newMortgage / 300;
+                            } else {
+                                newPayment = (newMortgage * r) / (1 - Math.pow(1 + r, -300));
+                            }
+                            keptProperties.push({
+                                name: "Replacement: " + p.name, value: newHomeCost, mortgage: newMortgage, growth: p.growth, rate: p.rate, payment: newPayment, includeInNW: p.includeInNW, sellEnabled: false
+                            });
+                            mortgagePayment += newPayment * 12;
+                        }
+                    } else {
+                        if (netCash > 0) inflows.p1.windfallNonTax += netCash;
                     }
 
-                    if (newHomeCost > 0) {
-                        keptProperties.push({
-                            name: "Replacement: " + p.name, 
-                            value: newHomeCost, 
-                            mortgage: 0, 
-                            growth: p.growth, 
-                            rate: 0, 
-                            payment: 0, 
-                            manual: false, 
-                            includeInNW: p.includeInNW, 
-                            sellEnabled: false 
-                        });
+                    if (detailed && !trackedEvents.has('Sold: ' + p.name)) {
+                        trackedEvents.add('Sold: ' + p.name);
+                        inflows.events.push('Sold: ' + p.name);
                     }
                 } else {
                     if (p.mortgage > 0 && p.payment > 0) { 
                         let annualPayment = p.payment * 12;
                         let interest = p.mortgage * (p.rate / 100);
                         let principal = annualPayment - interest; 
-                        
-                        if (principal > p.mortgage) { 
-                            principal = p.mortgage; 
-                            annualPayment = principal + interest; 
-                        } 
-                        
+                        if (principal > p.mortgage) { principal = p.mortgage; annualPayment = principal + interest; } 
                         p.mortgage = Math.max(0, p.mortgage - principal); 
                         mortgagePayment += annualPayment; 
                     } 
@@ -1564,25 +1601,60 @@ export class FinanceEngine {
             });
             simProperties = keptProperties;
 
+            // --- FUTURE EXPENSES LOAN ENGINE ---
             let futureExpenseAmt = 0;
             this.debt.forEach(d => {
                 let startYear = new Date((d.start || new Date().toISOString().slice(0,7)) + "-01").getFullYear();
-                if (startYear === yr) {
-                    futureExpenseAmt += (Number(d.amount) || 0);
+                let type = d.type || 'one';
+                let amount = Number(d.amount) || 0;
+                let rate = Number(d.rate) || 0;
+                
+                if (type === 'monthly' || type === 'yearly') {
+                    let duration = parseInt(d.duration) || 1;
+                    let endYear = startYear + duration - 1;
+                    if (yr >= startYear && yr <= endYear) {
+                        let annualPayment = 0;
+                        
+                        // If they provided an interest rate, calculate the PMT dynamically
+                        if (rate > 0) {
+                            let r = rate / 100;
+                            if (type === 'monthly') {
+                                r = r / 12;
+                                let n = duration * 12;
+                                let pmt = (amount * r) / (1 - Math.pow(1 + r, -n));
+                                annualPayment = pmt * 12;
+                            } else {
+                                let n = duration;
+                                let pmt = (amount * r) / (1 - Math.pow(1 + r, -n));
+                                annualPayment = pmt;
+                            }
+                        } else {
+                            // Flat payment if 0%
+                            annualPayment = type === 'monthly' ? amount * 12 : amount;
+                        }
+                        
+                        futureExpenseAmt += annualPayment;
+                        if (detailed && yr === startYear && !trackedEvents.has(`Started: ${d.name}`)) {
+                            trackedEvents.add(`Started: ${d.name}`);
+                            inflows.events.push(`Started: ${d.name}`);
+                        }
+                    }
+                } else {
+                    if (startYear === yr) {
+                        futureExpenseAmt += amount;
+                        if (detailed) inflows.events.push(`Purchased: ${d.name}`);
+                    }
                 }
             });
             let debtRepayment = futureExpenseAmt; 
             
-            if (detailed && simProperties.reduce((sum, p) => sum + p.mortgage, 0) <= 0 && !trackedEvents.has('Mortgage Paid') && simProperties.some(p => p.mortgage === 0 && p.value > 0)) { 
-                trackedEvents.add('Mortgage Paid'); 
-                inflows.events.push('Mortgage Paid'); 
+if (detailed && simProperties.reduce((sum: number, p: any) => sum + p.mortgage, 0) <= 0 && !trackedEvents.has('Mortgage Paid') && simProperties.some((p: any) => p.mortgage === 0 && p.value > 0)) {                trackedEvents.add('Mortgage Paid'); inflows.events.push('Mortgage Paid'); 
             }
 
             let pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
             if (this.mode === 'Couple' && this.inputs['pension_split_enabled']) {
                 this.applyPensionSplitting(taxableIncome1, taxableIncome2, inflows, regMins, person1, person2, age1, age2, (newInc1: number, newInc2: number, transferAmount: number, direction: string) => { 
-                    taxableIncome1 = newInc1; 
-                    taxableIncome2 = newInc2; 
+                    taxableIncome1 = newInc1; taxableIncome2 = newInc2; 
                     if (direction === 'p1_to_p2') pensionSplitTransfer.p1ToP2 = transferAmount;
                     if (direction === 'p2_to_p1') pensionSplitTransfer.p2ToP1 = transferAmount;
                 });
@@ -1601,26 +1673,13 @@ export class FinanceEngine {
             let wdBreakdown = detailed ? { p1: {} as any, p2: {} as any } : null;
 
             if (detailed && wdBreakdown) {
-                if (regMins.p1 > 0) { 
-                    flowLog.withdrawals['P1 RRIF'] = (flowLog.withdrawals['P1 RRIF'] || 0) + regMins.p1; 
-                    wdBreakdown.p1.RRIF = regMins.p1; 
-                    wdBreakdown.p1.RRIF_math = regMins.details.p1;
-                }
-                if (regMins.lifTaken1 > 0) { 
-                    flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; 
-                    wdBreakdown.p1.LIF = regMins.lifTaken1; 
-                    wdBreakdown.p1.LIF_math = regMins.details.p1;
-                }
-                if (regMins.p2 > 0) { 
-                    flowLog.withdrawals['P2 RRIF'] = (flowLog.withdrawals['P2 RRIF'] || 0) + regMins.p2; 
-                    wdBreakdown.p2.RRIF = regMins.p2; 
-                    wdBreakdown.p2.RRIF_math = regMins.details.p2;
-                }
-                if (regMins.lifTaken2 > 0) { 
-                    flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; 
-                    wdBreakdown.p2.LIF = regMins.lifTaken2; 
-                    wdBreakdown.p2.LIF_math = regMins.details.p2;
-                }
+                if (inflows.p1.rrspMeltdown > 0) wdBreakdown.p1.RRSP = (wdBreakdown.p1.RRSP || 0) + inflows.p1.rrspMeltdown;
+                if (inflows.p2.rrspMeltdown > 0) wdBreakdown.p2.RRSP = (wdBreakdown.p2.RRSP || 0) + inflows.p2.rrspMeltdown;
+
+                if (regMins.p1 > 0) { flowLog.withdrawals['P1 RRIF'] = (flowLog.withdrawals['P1 RRIF'] || 0) + regMins.p1; wdBreakdown.p1.RRIF = regMins.p1; wdBreakdown.p1.RRIF_math = regMins.details.p1; }
+                if (regMins.lifTaken1 > 0) { flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; wdBreakdown.p1.LIF = regMins.lifTaken1; wdBreakdown.p1.LIF_math = regMins.details.p1; }
+                if (regMins.p2 > 0) { flowLog.withdrawals['P2 RRIF'] = (flowLog.withdrawals['P2 RRIF'] || 0) + regMins.p2; wdBreakdown.p2.RRIF = regMins.p2; wdBreakdown.p2.RRIF_math = regMins.details.p2; }
+                if (regMins.lifTaken2 > 0) { flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; wdBreakdown.p2.LIF = regMins.lifTaken2; wdBreakdown.p2.LIF_math = regMins.details.p2; }
             }
 
             let actualDeductions = { p1: 0, p2: 0 };
@@ -1643,14 +1702,11 @@ export class FinanceEngine {
                 for (let pass = 0; pass < 10; pass++) {
                     let dynTax1 = this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1);
                     let dynTax2 = this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2);
-                    
-                    tax1 = dynTax1; 
-                    tax2 = dynTax2;
+                    tax1 = dynTax1; tax2 = dynTax2;
 
                     let dynNet1 = taxableIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
                     let dynNet2 = alive2 ? taxableIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0;
                     let dynTotalNet = dynNet1 + dynNet2;
-                    
                     let currentDeficit = totalOutflows - (dynTotalNet + cashFromNonTaxableWithdrawals);
                     
                     if (currentDeficit < 1) break; 
@@ -1670,19 +1726,13 @@ export class FinanceEngine {
 
             const liquidAssets1 = person1.tfsa + person1.tfsa_successor + person1.rrsp + person1.crypto + person1.nreg + person1.cash + person1.lirf + person1.lif + person1.rrif_acct + (person1.fhsa || 0);
             const liquidAssets2 = this.mode === 'Couple' ? (person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nreg + person2.cash + person2.lirf + person2.lif + person2.rrif_acct + (person2.fhsa || 0)) : 0;
-            
             const liquidNetWorth = (liquidAssets1 + liquidAssets2);
             
             let realEstateValue = 0, realEstateDebt = 0;
             let reExcludedValue = 0, reExcludedDebt = 0;
-            simProperties.forEach(prop => { 
-                if (prop.includeInNW) { 
-                    realEstateValue += prop.value; 
-                    realEstateDebt += prop.mortgage; 
-                } else { 
-                    reExcludedValue += prop.value; 
-                    reExcludedDebt += prop.mortgage; 
-                }
+simProperties.forEach((prop: any) => {
+                    if (prop.includeInNW) { realEstateValue += prop.value; realEstateDebt += prop.mortgage; } 
+                else { reExcludedValue += prop.value; reExcludedDebt += prop.mortgage; }
             });
             finalNetWorth = liquidNetWorth + (realEstateValue - realEstateDebt);
 
@@ -1693,136 +1743,51 @@ export class FinanceEngine {
                 const p1GrossTotal = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
                 const p2GrossTotal = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax;
                 const totalYield = divInc1 + divInc2;
-                
                 const grossInflow = p1GrossTotal + p2GrossTotal + totalYield + (totalWithdrawals as number);
                 
                 projectionData.push({
-                    year: yr, 
-                    p1Age: age1, 
-                    p2Age: this.mode === 'Couple' ? age2 : null, 
-                    p1Alive: alive1, 
-                    p2Alive: alive2,
-                    incomeP1: inflows.p1.gross, 
-                    incomeP2: inflows.p2.gross,
-                    eiMatP1: inflows.p1.eiMat, 
-                    eiMatP2: inflows.p2.eiMat,
-                    topUpP1: inflows.p1.topUp, 
-                    topUpP2: inflows.p2.topUp,
-                    cppP1: inflows.p1.cpp, 
-                    cppP2: inflows.p2.cpp,
-                    oasP1: inflows.p1.oas, 
-                    oasP2: inflows.p2.oas,
-                    ccbP1: inflows.p1.ccb || 0,
-                    oasClawbackP1: tax1.oas_clawback || 0, 
-                    oasClawbackP2: tax2.oas_clawback || 0,
-                    taxIncP1: taxableIncome1, 
-                    taxIncP2: taxableIncome2,
-                    oasThreshold: oasThresholdInf,
-                    benefitsP1: inflows.p1.cpp + inflows.p1.oas, 
-                    benefitsP2: inflows.p2.cpp + inflows.p2.oas,
-                    dbP1: inflows.p1.pension, 
-                    dbP2: inflows.p2.pension,
-                    taxP1: tax1.totalTax, 
-                    taxP2: tax2.totalTax,
-                    taxDetailsP1: tax1, 
-                    taxDetailsP2: tax2,
-                    p1Net: netIncome1, 
-                    p2Net: netIncome2,
-                    pensionSplit: pensionSplitTransfer,
-                    expenses: expenses, 
-                    mortgagePay: mortgagePayment, 
-                    debtRepayment,
-                    debtRemaining: 0, 
-                    debugNW: finalNetWorth,
-                    liquidNW: liquidNetWorth,
-                    assetsP1: {...person1}, 
-                    assetsP2: {...person2},
-                    wdBreakdown: wdBreakdown,
-                    flows: flowLog,
-                    events: inflows.events, 
-                    householdNet: grossInflow, 
-                    grossInflow: grossInflow, 
-                    visualExpenses: expenses + mortgagePayment + debtRepayment + tax1.totalTax + tax2.totalTax,
-                    mortgage: realEstateDebt + reExcludedDebt, 
-                    homeValue: realEstateValue + reExcludedValue,
-                    reIncludedEq: realEstateValue - realEstateDebt,
-                    reExcludedEq: reExcludedValue - reExcludedDebt,
-                    reIncludedValue: realEstateValue,
+                    year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
+                    incomeP1: inflows.p1.gross, incomeP2: inflows.p2.gross, eiMatP1: inflows.p1.eiMat, eiMatP2: inflows.p2.eiMat, topUpP1: inflows.p1.topUp, topUpP2: inflows.p2.topUp,
+                    cppP1: inflows.p1.cpp, cppP2: inflows.p2.cpp, oasP1: inflows.p1.oas, oasP2: inflows.p2.oas, ccbP1: inflows.p1.ccb || 0,
+oasClawbackP1: (tax1 as any).oas_clawback || 0, oasClawbackP2: (tax2 as any).oas_clawback || 0, taxIncP1: taxableIncome1, taxIncP2: taxableIncome2, oasThreshold: oasThresholdInf,                    benefitsP1: inflows.p1.cpp + inflows.p1.oas, benefitsP2: inflows.p2.cpp + inflows.p2.oas, dbP1: inflows.p1.pension, dbP2: inflows.p2.pension,
+                    taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: netIncome1, p2Net: netIncome2, pensionSplit: pensionSplitTransfer,
+                    expenses: expenses, mortgagePay: mortgagePayment, debtRepayment, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
+                    wdBreakdown: wdBreakdown, flows: flowLog, events: inflows.events, householdNet: grossInflow, grossInflow: grossInflow, 
+                    visualExpenses: expenses + mortgagePayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
+                    reIncludedEq: realEstateValue - realEstateDebt, reExcludedEq: reExcludedValue - reExcludedDebt, reIncludedValue: realEstateValue,
                     windfall: inflows.p1.windfallTaxable + (inflows.p1.windfallNonTax - appliedRefundP1) + inflows.p2.windfallTaxable + (inflows.p2.windfallNonTax - appliedRefundP2),
-                    postRetP1: inflows.p1.postRet, 
-                    postRetP2: inflows.p2.postRet,
-                    invIncP1: divInc1, 
-                    invIncP2: divInc2,
-                    invYieldMathP1: { bal: preGrowthNreg1, rate: person1.nreg_yield, amt: divInc1 },
-                    invYieldMathP2: { bal: preGrowthNreg2, rate: person2.nreg_yield, amt: divInc2 },
-                    debugTotalInflow: grossInflow,
-                    rrspRoomP1: rrspRoom1, 
-                    rrspRoomP2: rrspRoom2,
-                    rrspMatchP1: actEmpPortionP1, 
-                    rrspTotalMatch1: totalMatch1,
-                    rrspMatchP2: actEmpPortionP2, 
-                    rrspTotalMatch2: totalMatch2,
-                    rrspRefundP1: appliedRefundP1, 
-                    rrspRefundP2: appliedRefundP2,
-                    matchTaxSavingsP1: matchTaxSavings1, 
-                    matchTaxSavingsP2: matchTaxSavings2,
-                    discTaxSavingsP1: pendingRefund.p1, 
-                    discTaxSavingsP2: pendingRefund.p2
+                    postRetP1: inflows.p1.postRet, postRetP2: inflows.p2.postRet, invIncP1: divInc1, invIncP2: divInc2, invYieldMathP1: { bal: preGrowthNreg1, rate: person1.nreg_yield, amt: divInc1 },
+                    invYieldMathP2: { bal: preGrowthNreg2, rate: person2.nreg_yield, amt: divInc2 }, debugTotalInflow: grossInflow, rrspRoomP1: rrspRoom1, rrspRoomP2: rrspRoom2,
+                    rrspMatchP1: actEmpPortionP1, rrspTotalMatch1: totalMatch1, rrspMatchP2: actEmpPortionP2, rrspTotalMatch2: totalMatch2, rrspRefundP1: appliedRefundP1, rrspRefundP2: appliedRefundP2,
+                    matchTaxSavingsP1: matchTaxSavings1, matchTaxSavingsP2: matchTaxSavings2, discTaxSavingsP1: pendingRefund.p1, discTaxSavingsP2: pendingRefund.p2
                 });
             }
 
-            // End of Year FHSA Expiry Checks
             if (alive1 && !fhsaClosed1) {
-                if (person1.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p1.fhsa > 0)) {
-                    if (fhsaYearsP1 === 0) fhsaYearsP1 = 1;
-                    else fhsaYearsP1++;
-                }
+                if (person1.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p1.fhsa > 0)) { if (fhsaYearsP1 === 0) fhsaYearsP1 = 1; else fhsaYearsP1++; }
                 if (fhsaYearsP1 >= 15 || age1 >= 71) {
                     let transferAmount = person1.fhsa;
                     if (transferAmount > 0) {
-                        if (age1 >= this.CONSTANTS.RRIF_START_AGE) {
-                            person1.rrif_acct += transferAmount;
-                        } else {
-                            person1.rrsp += transferAmount;
-                        }
-                        if (detailed) {
-                            if (!trackedEvents.has('FHSA Expired')) trackedEvents.add('FHSA Expired');
-                            projectionData[projectionData.length - 1].events.push('FHSA Expired');
-                        }
+                        if (age1 >= this.CONSTANTS.RRIF_START_AGE) person1.rrif_acct += transferAmount; else person1.rrsp += transferAmount;
+                        if (detailed) { if (!trackedEvents.has('FHSA Expired')) trackedEvents.add('FHSA Expired'); projectionData[projectionData.length - 1].events.push('FHSA Expired'); }
                     }
-                    person1.fhsa = 0;
-                    fhsaClosed1 = true;
+                    person1.fhsa = 0; fhsaClosed1 = true;
                 }
             }
             if (alive2 && !fhsaClosed2 && this.mode === 'Couple') {
-                if (person2.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p2.fhsa > 0)) {
-                    if (fhsaYearsP2 === 0) fhsaYearsP2 = 1;
-                    else fhsaYearsP2++;
-                }
+                if (person2.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p2.fhsa > 0)) { if (fhsaYearsP2 === 0) fhsaYearsP2 = 1; else fhsaYearsP2++; }
                 if (fhsaYearsP2 >= 15 || age2 >= 71) {
                     let transferAmount = person2.fhsa;
                     if (transferAmount > 0) {
-                        if (age2 >= this.CONSTANTS.RRIF_START_AGE) {
-                            person2.rrif_acct += transferAmount;
-                        } else {
-                            person2.rrsp += transferAmount;
-                        }
-                        if (detailed) {
-                            if (!trackedEvents.has('FHSA Expired')) trackedEvents.add('FHSA Expired');
-                            if (!projectionData[projectionData.length - 1].events.includes('FHSA Expired')) {
-                                projectionData[projectionData.length - 1].events.push('FHSA Expired');
-                            }
-                        }
+                        if (age2 >= this.CONSTANTS.RRIF_START_AGE) person2.rrif_acct += transferAmount; else person2.rrsp += transferAmount;
+                        if (detailed) { if (!trackedEvents.has('FHSA Expired')) trackedEvents.add('FHSA Expired'); if (!projectionData[projectionData.length - 1].events.includes('FHSA Expired')) { projectionData[projectionData.length - 1].events.push('FHSA Expired'); } }
                     }
-                    person2.fhsa = 0;
-                    fhsaClosed2 = true;
+                    person2.fhsa = 0; fhsaClosed2 = true;
                 }
             }
 
-            consts.cppMax1 *= (1 + consts.inflation); 
-            consts.oasMax1 *= (1 + consts.inflation);
-            consts.cppMax2 *= (1 + consts.inflation); 
-            consts.oasMax2 *= (1 + consts.inflation);
+            consts.cppMax1 *= (1 + consts.inflation); consts.oasMax1 *= (1 + consts.inflation);
+            consts.cppMax2 *= (1 + consts.inflation); consts.oasMax2 *= (1 + consts.inflation);
         }
         
         return detailed ? projectionData : netWorthArray;

@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { FINANCIAL_CONSTANTS } from '../lib/config';
 
+// ADDED ICON AND COLOR PROPERTIES TO FIX TYPE ERROR
 const ACCOUNT_TYPES = [
-  { id: 'cash', label: 'Cash', tooltip: 'Interest income is 100% taxable at your marginal rate. No tax sheltering.' },
-  { id: 'tfsa', label: 'TFSA', tooltip: 'Tax-Free Savings Account. Growth and withdrawals are 100% tax-free.' },
-  { id: 'fhsa', label: 'FHSA', tooltip: 'First Home Savings Account. Tax-deductible contributions, tax-free withdrawals for a qualifying first home.' },
-  { id: 'rrsp', label: 'RRSP', tooltip: 'Registered Retirement Savings Plan. Tax-deductible contributions. Tax-deferred growth. 100% taxable withdrawals.' },
-  { id: 'resp', label: 'RESP', tooltip: 'Registered Education Savings Plan. 20% CESG match on first $2,500/yr.' },
-  { id: 'lirf', label: 'LIRF', tooltip: 'Locked-in Retirement Account (LIRA). Pension funds locked until retirement. Tax-deferred.' },
-  { id: 'lif', label: 'LIF', tooltip: 'Life Income Fund. Payout vehicle for LIRA. Has min/max annual limits. 100% taxable.' },
-  { id: 'rrif_acct', label: 'RRIF', tooltip: 'Registered Retirement Income Fund. Payout vehicle for RRSP. Mandatory minimum withdrawals. 100% taxable.' }
+  { id: 'cash', label: 'Cash', icon: 'bi-cash-stack', color: 'text-success', tooltip: 'Interest income is 100% taxable at your marginal rate. No tax sheltering.' },
+  { id: 'tfsa', label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', tooltip: 'Tax-Free Savings Account. Growth and withdrawals are 100% tax-free.' },
+  { id: 'fhsa', label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', tooltip: 'First Home Savings Account. Tax-deductible contributions, tax-free withdrawals for a qualifying first home.' },
+  { id: 'rrsp', label: 'RRSP', icon: 'bi-bank2', color: 'text-warning', tooltip: 'Registered Retirement Savings Plan. Tax-deductible contributions. Tax-deferred growth. 100% taxable withdrawals.' },
+  { id: 'resp', label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', tooltip: 'Registered Education Savings Plan. 20% CESG match on first $2,500/yr.' },
+  { id: 'lirf', label: 'LIRF', icon: 'bi-lock-fill', color: 'text-secondary', tooltip: 'Locked-in Retirement Account (LIRA). Pension funds locked until retirement. Tax-deferred.' },
+  { id: 'lif', label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', tooltip: 'Life Income Fund. Payout vehicle for LIRA. Has min/max annual limits. 100% taxable.' },
+  { id: 'rrif_acct', label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-warning', tooltip: 'Registered Retirement Income Fund. Payout vehicle for RRSP. Mandatory minimum withdrawals. 100% taxable.' }
 ];
 
-// --- HELPER: Mortgage Calculators ---
 const calcAmortization = (principal: number, rate: number, payment: number) => {
     if (!principal || !payment || principal <= 0 || payment <= 0) return '';
     const r = (rate || 0) / 100 / 12; 
-    if (r === 0) {
-        const months = principal / payment;
-        return `${Math.floor(months / 12)}y ${Math.ceil(months % 12)}m`;
-    }
+    if (r === 0) return `${Math.floor((principal/payment) / 12)}y ${Math.ceil((principal/payment) % 12)}m`;
     if (payment <= principal * r) return 'Never (Payment too low)';
     const months = -Math.log(1 - (r * principal) / payment) / Math.log(1 + r);
     if (!isFinite(months)) return '';
@@ -29,74 +27,131 @@ const calcAmortization = (principal: number, rate: number, payment: number) => {
 const calc25YearPayment = (principal: number, rate: number) => {
     if (!principal || principal <= 0) return 0;
     const r = (rate || 0) / 100 / 12;
-    const n = 300; 
-    if (r === 0) return principal / n;
-    return (principal * r) / (1 - Math.pow(1 + r, -n));
+    if (r === 0) return principal / 300;
+    return (principal * r) / (1 - Math.pow(1 + r, -300));
 };
 
-// --- MODERN UI COMPONENTS ---
+const getAdjustedCPP = (basePerYear: number, startAge: number) => {
+    let val = Number(basePerYear) || 0;
+    let diff = (startAge - 65) * 12;
+    if (diff < 0) val *= (1 - (Math.abs(diff) * 0.006));
+    else if (diff > 0) val *= (1 + (diff * 0.007));
+    return val;
+};
+
+const getAdjustedOAS = (yearsInCanada: number, startAge: number) => {
+    let maxOAS = FINANCIAL_CONSTANTS?.MAX_OAS || 8560; 
+    let proportion = Math.max(0, Math.min(40, yearsInCanada || 40)) / 40;
+    let val = maxOAS * proportion;
+    let diff = (startAge - 65) * 12;
+    if (diff > 0) val *= (1 + (diff * 0.006));
+    return val;
+};
+
+// --- ZERO-LAG UI COMPONENTS ---
+
+const SegmentedControl = ({ options, value, onChange }: any) => (
+    <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100">
+        {options.map((opt: any) => {
+            const isActive = value === opt.value;
+            return (
+                <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => onChange(opt.value)}
+                    className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${isActive ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
+                    style={{ fontSize: '0.75rem' }}
+                >
+                    {opt.label}
+                </button>
+            );
+        })}
+    </div>
+);
+
+const ProvinceSelector = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
+    const [localVal, setLocalVal] = useState(value);
+    useEffect(() => setLocalVal(value), [value]);
+
+    const handleToggle = (newVal: string) => {
+        setLocalVal(newVal);
+        setTimeout(() => onChange(newVal), 50);
+    };
+
+    const provs = ['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'];
+
+    return (
+        <div className="d-flex flex-wrap bg-input border border-secondary rounded-4 p-1 gap-1 shadow-sm">
+            {provs.map(p => (
+                <button 
+                    key={p} type="button" onClick={() => handleToggle(p)} 
+                    className={`btn btn-sm rounded-pill fw-bold border-0 transition-all py-2 flex-grow-1 ${localVal === p ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} 
+                    style={{ fontSize: '0.8rem', minWidth: '45px' }}
+                >
+                    {p}
+                </button>
+            ))}
+        </div>
+    );
+};
+
+const FrequencyToggle = ({ value, onChange, mode = 'number' }: { value: any, onChange: (val: any) => void, mode?: 'number'|'string' }) => {
+    const [localVal, setLocalVal] = useState(value);
+    useEffect(() => setLocalVal(value), [value]);
+
+    const handleToggle = (isMonthly: boolean) => {
+        const newVal = isMonthly ? (mode === 'number' ? 12 : 'month') : (mode === 'number' ? 1 : 'year');
+        setLocalVal(newVal);
+        setTimeout(() => onChange(newVal), 50); 
+    };
+
+    const isMo = localVal === 12 || localVal === 'month';
+    const isYr = localVal === 1 || localVal === 'year';
+
+    return (
+        <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100">
+            <button type="button" onClick={() => handleToggle(true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 w-50 ${isMo ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>/mo</button>
+            <button type="button" onClick={() => handleToggle(false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 w-50 ${isYr ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>/yr</button>
+        </div>
+    );
+};
+
+// --- DATA INPUTS WITH HARD SANITIZATION ---
 
 const CurrencyInput = ({ value, onChange, className, placeholder, style, disabled, suffix, noBg }: any) => {
     const [localValue, setLocalValue] = useState('');
-
     useEffect(() => {
-        if (value !== undefined && value !== '' && value !== null) {
-            setLocalValue(Number(Math.round(value)).toLocaleString('en-US'));
-        } else {
-            setLocalValue('');
-        }
+        if (value !== undefined && value !== '' && value !== null) { setLocalValue(Number(Math.round(value)).toLocaleString('en-US')); } else { setLocalValue(''); }
     }, [value]);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const rawValue = e.target.value.replace(/[^0-9]/g, ''); // Blocks decimals perfectly
-        if (rawValue === '') {
-            onChange('');
-        } else {
-            onChange(parseInt(rawValue, 10));
-        }
+        let rawStr = e.target.value;
+        if (rawStr.length > 15) rawStr = rawStr.substring(0, 15);
+        const rawValue = rawStr.replace(/[^0-9]/g, ''); 
+        if (rawValue === '') onChange(''); else onChange(parseInt(rawValue, 10));
     };
-
     return (
         <div className="position-relative w-100 d-flex align-items-center">
             <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '12px', fontSize: '0.9em', pointerEvents: 'none', zIndex: 5 }}>$</span>
-            <input 
-                type="text" 
-                className={`${className} text-end ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'}`} 
-                style={{ 
-                    ...style, 
-                    paddingLeft: noBg ? '18px' : '28px', 
-                    paddingRight: suffix ? '45px' : (noBg ? '4px' : '12px'),
-                    fontWeight: '600',
-                    outline: 'none'
-                }}
-                value={localValue} 
-                onChange={handleChange} 
-                placeholder={placeholder} 
-                disabled={disabled} 
-            />
+            <input type="text" maxLength={15} className={`${className} text-end ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50' : ''}`} style={{ ...style, paddingLeft: noBg ? '18px' : '28px', paddingRight: suffix ? '45px' : (noBg ? '4px' : '12px'), fontWeight: '600', outline: 'none' }} value={localValue} onChange={handleChange} placeholder={placeholder} disabled={disabled} />
             {suffix && <span className="position-absolute text-muted small fw-bold" style={{ right: '12px', pointerEvents: 'none', zIndex: 5 }}>{suffix}</span>}
         </div>
     );
 };
 
-const PercentInput = ({ value, onChange, className, placeholder, noBg }: any) => {
+const PercentInput = ({ value, onChange, className, placeholder, noBg, disabled }: any) => {
     const [focused, setFocused] = useState(false);
     let displayValue = value ?? '';
     if (!focused && displayValue !== '') displayValue = Number(displayValue).toFixed(2);
+    
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let val = e.target.value;
+        if (val.length > 8) val = val.substring(0, 8);
+        onChange(val === '' ? '' : parseFloat(val));
+    };
 
     return (
         <div className="position-relative w-100 d-flex align-items-center">
-            <input 
-                type="number" 
-                step="0.01" 
-                className={`${className} text-end ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'}`} 
-                style={{ paddingRight: noBg ? '18px' : '28px', fontWeight: '600', outline: 'none' }}
-                value={focused ? (value ?? '') : displayValue} 
-                onChange={(e) => onChange(e.target.value === '' ? '' : parseFloat(e.target.value))} 
-                onFocus={() => setFocused(true)} 
-                onBlur={() => setFocused(false)} 
-                placeholder={placeholder} 
-            />
+            <input type="number" step="0.01" max={1000} min={-100} className={`${className} text-end ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50 bg-secondary bg-opacity-25' : ''}`} style={{ paddingRight: noBg ? '18px' : '28px', fontWeight: '600', outline: 'none' }} value={focused ? (value ?? '') : displayValue} onChange={handleChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder={placeholder} disabled={disabled} />
             <span className="position-absolute text-muted fw-bold" style={{ right: noBg ? '4px' : '12px', fontSize: '0.9em', pointerEvents: 'none', zIndex: 5 }}>%</span>
         </div>
     );
@@ -108,35 +163,30 @@ const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: strin
     if (align === 'right') { posStyles.right = '0'; }
     else if (align === 'left') { posStyles.left = '0'; }
     else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
-
     return (
         <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
-            <button type="button" className="btn btn-link p-0 text-muted info-btn" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
                 <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
             </button>
             {open && (
-                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3" style={posStyles}>
-                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1" style={{fontSize: '0.85rem'}}>{title}</h6>
-                    <div className="small text-muted text-start fw-normal" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal'}} dangerouslySetInnerHTML={{__html: text}}></div>
+                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
+                    <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
                 </div>
             )}
         </div>
     );
 };
 
-// --- UPGRADED TYPABLE STEPPER ---
+// --- TYPABLE STEPPERS ---
 const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
     const numVal = Number(value) || 0; 
     const [textVal, setTextVal] = useState(numVal.toString());
-
-    // Sync local text state if external value changes
-    useEffect(() => {
-        setTextVal(numVal.toString());
-    }, [numVal]);
-
+    useEffect(() => { setTextVal(numVal.toString()); }, [numVal]);
+    
     const handleDec = () => { if (numVal > min) onChange(numVal - 1); };
     const handleInc = () => { if (numVal < max) onChange(numVal + 1); };
-
+    
     const handleBlur = () => {
         let parsed = parseInt(textVal);
         if (isNaN(parsed)) parsed = numVal;
@@ -144,26 +194,16 @@ const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
         setTextVal(parsed.toString());
         onChange(parsed);
     };
-
-    const handleKeyDown = (e: any) => {
-        if (e.key === 'Enter') {
-            e.target.blur(); 
-        }
+    
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => { 
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); 
     };
-
+    
     return (
-        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm">
+        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm w-100 justify-content-between">
             <button type="button" className="btn btn-sm btn-link text-muted p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
-            <div className="d-flex align-items-center justify-content-center">
-                <input 
-                    type="text" 
-                    className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" 
-                    style={{ width: '30px', outline: 'none', boxShadow: 'none', fontSize: '0.95rem' }}
-                    value={textVal}
-                    onChange={(e) => setTextVal(e.target.value)}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
-                />
+            <div className="d-flex align-items-center justify-content-center flex-grow-1">
+                <input type="text" maxLength={4} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0 w-100" style={{ outline: 'none', boxShadow: 'none', fontSize: '0.95rem' }} value={textVal} onChange={(e) => setTextVal(e.target.value)} onBlur={handleBlur} onKeyDown={handleKeyDown} />
                 {suffix && <span className="text-muted fw-bold pe-1" style={{fontSize: '0.95rem'}}>{suffix}</span>}
             </div>
             <button type="button" className="btn btn-sm btn-link text-primary p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
@@ -171,32 +211,192 @@ const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
     );
 };
 
+const MonthYearStepper = ({ value, onChange, minYear = 1900, maxYear = 2100 }: any) => {
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    const [yearStr, monthStr] = (value || "1990-01").split('-');
+    const y = parseInt(yearStr, 10) || 1990;
+    const m = parseInt(monthStr, 10) || 1;
+
+    const [localY, setLocalY] = useState(y.toString());
+    const [localM, setLocalM] = useState(MONTHS[m - 1]);
+
+    useEffect(() => { 
+        setLocalY(y.toString()); 
+        setLocalM(MONTHS[m - 1]);
+    }, [y, m]);
+
+    const commitDate = (newY: number, newM: number) => {
+        const safeY = Math.max(minYear, Math.min(maxYear, newY));
+        const safeM = Math.max(1, Math.min(12, newM));
+        onChange(`${safeY}-${safeM.toString().padStart(2, '0')}`);
+    };
+
+    const handleYDec = () => commitDate(y - 1, m);
+    const handleYInc = () => commitDate(y + 1, m);
+    
+    const handleMDec = () => { 
+        let newM = m - 1; let newY = y;
+        if (newM < 1) { newM = 12; newY--; }
+        commitDate(newY, newM);
+    };
+    const handleMInc = () => { 
+        let newM = m + 1; let newY = y;
+        if (newM > 12) { newM = 1; newY++; }
+        commitDate(newY, newM);
+    };
+
+    const commitY = () => {
+        let parsed = parseInt(localY, 10);
+        if(isNaN(parsed)) parsed = y;
+        commitDate(parsed, m);
+    };
+
+    const commitM = () => {
+        let parsed = parseInt(localM, 10);
+        if (!isNaN(parsed)) {
+            commitDate(y, parsed);
+        } else {
+            const idx = MONTHS.findIndex(mo => mo.toLowerCase() === localM.toLowerCase().trim());
+            if (idx !== -1) {
+                commitDate(y, idx + 1);
+            } else {
+                commitDate(y, m); 
+            }
+        }
+    };
+
+    return (
+        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm gap-1 w-100 justify-content-between" style={{ minWidth: '170px' }}>
+            <div className="d-flex align-items-center flex-grow-1 justify-content-center">
+                <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
+                <input 
+                    type="text" 
+                    maxLength={3}
+                    className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" 
+                    style={{ width: '40px', outline: 'none', fontSize: '0.95rem' }} 
+                    value={localM} 
+                    onChange={e => setLocalM(e.target.value)} 
+                    onBlur={commitM} 
+                    onFocus={e => (e.target as HTMLInputElement).select()}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} 
+                />
+                <button type="button" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
+            </div>
+            <div className="border-start border-secondary opacity-50 flex-shrink-0" style={{height: '20px'}}></div>
+            <div className="d-flex align-items-center flex-grow-1 justify-content-center">
+                <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
+                <input 
+                    type="text" 
+                    maxLength={4}
+                    className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" 
+                    style={{ width: '46px', outline: 'none', fontSize: '0.95rem' }} 
+                    value={localY} 
+                    onChange={e => setLocalY(e.target.value)} 
+                    onBlur={commitY} 
+                    onFocus={e => (e.target as HTMLInputElement).select()}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} 
+                />
+                <button type="button" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
+            </div>
+        </div>
+    );
+};
+
 export default function PlanTab() {
-  const { data, results, updateInput, updateMode, addArrayItem, updateArrayItem, removeArrayItem, updateExpenseCategory } = useFinance(); 
+  const { data, results, updateInput, updateMultipleInputs, updateMode, addArrayItem, updateArrayItem, removeArrayItem, updateExpenseCategory } = useFinance(); 
   
   const [assetAdvancedMode, setAssetAdvancedMode] = useState(false);
   const [expenseAdvancedMode, setExpenseAdvancedMode] = useState(false);
-  const [p1DbEnabled, setP1DbEnabled] = useState(false);
-  const [p2DbEnabled, setP2DbEnabled] = useState(false);
+  const [p1DbEnabled, setP1DbEnabled] = useState(data.inputs.p1_db_enabled ?? false);
+  const [p2DbEnabled, setP2DbEnabled] = useState(data.inputs.p2_db_enabled ?? false);
   
-  const [p1AssetsOpen, setP1AssetsOpen] = useState(false);
-  const [p2AssetsOpen, setP2AssetsOpen] = useState(false);
+  const [p1AssetsOpen, setP1AssetsOpen] = useState(true);
+  const [p2AssetsOpen, setP2AssetsOpen] = useState(true);
 
   const isCouple = data.mode === 'Couple';
+  const hasAutoAllocation = data.inputs.portfolio_allocation !== 'custom' && data.inputs.portfolio_allocation !== undefined;
 
-  const handleAgeChange = (player: 'p1'|'p2', newAge: number) => {
-      const currentYear = new Date().getFullYear();
-      const newBirthYear = currentYear - newAge;
-      
-      updateInput(`${player}_dob`, `${newBirthYear}-01`);
+  const [localAlloc, setLocalAlloc] = useState(data.inputs.portfolio_allocation || 'custom');
+  const [localGlide, setLocalGlide] = useState(data.inputs.use_glide_path || false);
+
+  useEffect(() => {
+      setLocalAlloc(data.inputs.portfolio_allocation || 'custom');
+      setLocalGlide(data.inputs.use_glide_path || false);
+      setP1DbEnabled(data.inputs.p1_db_enabled ?? false);
+      setP2DbEnabled(data.inputs.p2_db_enabled ?? false);
+  }, [data.inputs.portfolio_allocation, data.inputs.use_glide_path, data.inputs.p1_db_enabled, data.inputs.p2_db_enabled]);
+
+  const handleDobChange = (player: 'p1'|'p2', dobStr: string) => {
+      updateInput(`${player}_dob`, dobStr);
+      const newAge = new Date().getFullYear() - parseInt(dobStr.split('-')[0]);
       updateInput(`${player}_age`, newAge);
 
-      // Auto-bump constraints so plan doesn't break
       const currentRetAge = data.inputs[`${player}_retireAge`] || 60;
       const currentLifeExp = data.inputs[`${player}_lifeExp`] || 90;
 
       if (newAge > currentRetAge) updateInput(`${player}_retireAge`, newAge);
       if (newAge > currentLifeExp) updateInput(`${player}_lifeExp`, newAge);
+  };
+
+  const handleAgeChange = (player: 'p1'|'p2', newAge: number) => {
+      const currentYear = new Date().getFullYear();
+      const currentMonth = (data.inputs[`${player}_dob`] || "1990-01").split('-')[1];
+      const newBirthYear = currentYear - newAge;
+      
+      updateInput(`${player}_dob`, `${newBirthYear}-${currentMonth}`);
+      updateInput(`${player}_age`, newAge);
+
+      const currentRetAge = data.inputs[`${player}_retireAge`] || 60;
+      const currentLifeExp = data.inputs[`${player}_lifeExp`] || 90;
+
+      if (newAge > currentRetAge) updateInput(`${player}_retireAge`, newAge);
+      if (newAge > currentLifeExp) updateInput(`${player}_lifeExp`, newAge);
+  };
+
+  const handleAllocationChange = (val: string) => {
+      if (val === 'custom') {
+          updateInput('portfolio_allocation', val);
+          return;
+      }
+      
+      let rate = 6.0;
+      if (val === 'aggressive') rate = 8.0;
+      if (val === 'balanced') rate = 6.0;
+      if (val === 'conservative') rate = 4.5;
+
+      const updates: Record<string, any> = { portfolio_allocation: val };
+      
+      ['p1', 'p2'].forEach(p => {
+          ['tfsa', 'rrsp', 'nonreg', 'lirf', 'lif', 'rrif_acct', 'fhsa', 'resp'].forEach(acct => {
+              updates[`${p}_${acct}_ret`] = rate;
+              updates[`${p}_${acct}_retire_ret`] = rate;
+          });
+          updates[`${p}_crypto_ret`] = rate + 2.0; 
+          updates[`${p}_crypto_retire_ret`] = rate + 2.0;
+          updates[`${p}_cash_ret`] = 2.0;
+          updates[`${p}_cash_retire_ret`] = 2.0;
+      });
+
+      updateMultipleInputs(updates);
+  };
+
+  const handleAllocationChangeWrapper = (val: string) => {
+      setLocalAlloc(val); 
+      setTimeout(() => handleAllocationChange(val), 50); 
+  };
+
+  const handleGlideChangeWrapper = (checked: boolean) => {
+      setLocalGlide(checked);
+      setTimeout(() => updateInput('use_glide_path', checked), 50);
+  };
+
+  const handleManualReturnChange = (key: string, val: any) => {
+      if (data.inputs.portfolio_allocation !== 'custom') {
+          updateMultipleInputs({ portfolio_allocation: 'custom', [key]: val });
+      } else {
+          updateInput(key, val);
+      }
   };
 
   const updateExpense = (cat: string, idx: number, field: string, value: any) => {
@@ -222,13 +422,19 @@ export default function PlanTab() {
   const renderTaxBox = (taxDetails: any, gross: number) => {
       if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
       return (
-          <div className="tax-details-box border-secondary p-3 mt-3 rounded bg-black bg-opacity-25 border shadow-sm">
-              <div className="d-flex justify-content-between border-bottom border-secondary pb-1 mb-1"><span className="text-muted small">Federal Tax</span> <span className="small">(${Math.round(taxDetails.fed).toLocaleString()}) {((taxDetails.fed/gross)*100).toFixed(1)}%</span></div>
-              <div className="d-flex justify-content-between border-bottom border-secondary pb-1 mb-1"><span className="text-muted small">Provincial Tax</span> <span className="small">(${Math.round(taxDetails.prov).toLocaleString()}) {((taxDetails.prov/gross)*100).toFixed(1)}%</span></div>
-              <div className="d-flex justify-content-between border-bottom border-secondary pb-1 mb-1"><span className="text-muted small">CPP/EI Prem.</span> <span className="small">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
-              <div className="d-flex justify-content-between mt-2"><span className="text-warning fw-bold small">Total Tax Paid</span> <span className="text-warning fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
-              <div className="d-flex justify-content-between"><span className="text-muted small">Marginal Rate</span> <span className="small">{(taxDetails.margRate*100).toFixed(1)}%</span></div>
-              <div className="d-flex justify-content-between mt-2 pt-2 border-top border-secondary"><span className="text-success fw-bold small">After-Tax Net</span> <span className="text-success fw-bold small">${Math.round(gross - taxDetails.totalTax).toLocaleString()}</span></div>
+          <div className="border border-secondary rounded-4 overflow-hidden mt-4 shadow-sm">
+            <div className="bg-danger bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+                <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-receipt"></i></div>
+                <span className="fw-bold text-danger small text-uppercase ls-1">Estimated Tax Breakdown</span>
+            </div>
+            <div className="p-3 bg-input d-flex flex-column gap-2">
+              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Federal Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span></div>
+              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Provincial Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.prov/gross)*100).toFixed(1)}%</span></span></div>
+              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">CPP / EI Premiums</span> <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
+              <div className="d-flex justify-content-between mt-1"><span className="text-warning fw-bold small">Total Tax Paid</span> <span className="text-warning fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
+              <div className="d-flex justify-content-between"><span className="text-muted small fw-medium">Marginal Rate</span> <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span></div>
+              <div className="d-flex justify-content-between mt-2 pt-3 border-top border-secondary"><span className="text-success fw-bold">After-Tax Net</span> <span className="text-success fw-bold fs-5">${Math.round(gross - taxDetails.totalTax).toLocaleString()}</span></div>
+            </div>
           </div>
       );
   };
@@ -255,9 +461,6 @@ export default function PlanTab() {
   const hhGross = p1Gross + p2Gross;
   const hhNet = hhGross - (results?.timeline?.[0]?.taxDetailsP1?.totalTax || 0) - (isCouple ? (results?.timeline?.[0]?.taxDetailsP2?.totalTax || 0) : 0);
 
-  const balCol = assetAdvancedMode ? 'col-3' : 'col-5';
-  const retCol = assetAdvancedMode ? 'col-3' : 'col-4';
-
   return (
     <div className="p-3 p-md-4">
       <form id="financialForm" onSubmit={e => e.preventDefault()}>
@@ -271,83 +474,70 @@ export default function PlanTab() {
               <InfoBtn align="left" title="Personal Details" text="Set your Age (or Date of Birth) and targeted Retirement Age. <br><br><b>Life Expectancy</b> defines how long the simulation runs (ensuring you don't run out of money too early)." />
             </div>
             <div className="d-inline-flex bg-input rounded-pill p-1 border border-secondary shadow-sm">
-                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${!isCouple ? 'bg-primary shadow text-white' : 'text-muted'}`} onClick={() => updateMode('Single')}>Single</button>
-                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${isCouple ? 'shadow text-white' : 'text-muted'}`} style={isCouple ? {backgroundColor: 'var(--bs-purple)'} : {}} onClick={() => updateMode('Couple')}>Couple</button>
+                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${!isCouple ? 'bg-primary shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} onClick={() => updateMode('Single')}>Single</button>
+                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${isCouple ? 'shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} style={isCouple ? {backgroundColor: 'var(--bs-purple)'} : {}} onClick={() => updateMode('Couple')}>Couple</button>
             </div>
           </div>
           <div className="card-body p-4">
             <div className="row g-4">
+              
               <div className="col-12 col-xl-6">
-                 <div className="p-4 border border-secondary rounded-3 h-100 position-relative overflow-hidden surface-card shadow-sm">
-                  <div className="position-absolute top-0 start-0 w-100 border-top border-3 border-info"></div>
-                  <h6 className="fw-bold mb-4 text-uppercase ls-1 text-info"><i className="bi bi-person-fill me-2"></i>Player 1 (P1)</h6>
-                  <div className="row g-3 mb-2 align-items-center">
-                     <div className="col-12 col-md-4 text-center d-flex flex-column align-items-center">
-                        <label className="form-label text-muted fw-bold small mb-2">Birth Month</label>
-                        <input type="month" className="form-control text-info fw-bold bg-input border border-secondary text-center w-75" value={data.inputs.p1_dob ?? ''} onChange={(e) => {
-                            updateInput(`p1_dob`, e.target.value);
-                            if (e.target.value) {
-                                const newAge = new Date().getFullYear() - parseInt(e.target.value.split('-')[0]);
-                                updateInput(`p1_age`, newAge);
-                                if (newAge > (data.inputs.p1_retireAge || 60)) updateInput('p1_retireAge', newAge);
-                                if (newAge > (data.inputs.p1_lifeExp || 90)) updateInput('p1_lifeExp', newAge);
-                            }
-                        }} />
-                     </div>
-                     <div className="col-12 col-md-3 text-center d-flex flex-column align-items-center">
-                        <label className="form-label text-muted fw-bold small mb-2">Age</label>
-                        <div><StepperInput min={18} max={100} value={data.inputs.p1_age ?? 38} onChange={(val: any) => handleAgeChange('p1', val)} /></div>
-                     </div>
-                     <div className="col-6 col-md-2 text-center d-flex flex-column align-items-center">
-                        <label className="form-label text-muted fw-bold text-nowrap small mb-2">Retire At</label>
-                        <div><StepperInput min={data.inputs.p1_age ?? 18} max={100} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => {
-                            updateInput(`p1_retireAge`, val);
-                            if (val > (data.inputs.p1_lifeExp || 90)) updateInput('p1_lifeExp', val);
-                        }} /></div>
-                     </div>
-                     <div className="col-6 col-md-3 text-center d-flex flex-column align-items-center">
-                        <label className="form-label text-muted fw-bold text-nowrap small mb-2">Life Expect.</label>
-                        <div><StepperInput min={Math.max(data.inputs.p1_age ?? 18, data.inputs.p1_retireAge ?? 60)} max={120} value={data.inputs.p1_lifeExp ?? 90} onChange={(val: any) => updateInput(`p1_lifeExp`, val)} /></div>
-                     </div>
-                  </div>
+                <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
+                    <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
+                        <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px'}}>
+                            <i className="bi bi-person-fill fs-5"></i>
+                        </div>
+                        <h6 className="fw-bold mb-0 text-uppercase ls-1 text-info">Player 1 (P1)</h6>
+                    </div>
+                    <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100">
+                        <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                            <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p1_dob} onChange={(val: string) => handleDobChange('p1', val)} /></div>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                            <span className="small text-muted fw-bold text-nowrap">Current Age</span>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={18} max={100} value={data.inputs.p1_age ?? 38} onChange={(val: any) => handleAgeChange('p1', val)} /></div>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                            <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={100} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => { updateInput(`p1_retireAge`, val); if (val > (data.inputs.p1_lifeExp || 90)) updateInput('p1_lifeExp', val); }} /></div>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                            <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={Math.max(data.inputs.p1_age ?? 18, data.inputs.p1_retireAge ?? 60)} max={120} value={data.inputs.p1_lifeExp ?? 90} onChange={(val: any) => updateInput(`p1_lifeExp`, val)} /></div>
+                        </div>
+                    </div>
                 </div>
               </div>
               
               {isCouple && (
                 <div className="col-12 col-xl-6">
-                   <div className="p-4 border border-secondary rounded-3 h-100 position-relative overflow-hidden surface-card shadow-sm">
-                    <div className="position-absolute top-0 start-0 w-100 border-top border-3" style={{borderColor: 'var(--bs-purple)'}}></div>
-                    <h6 className="fw-bold mb-4 text-uppercase ls-1" style={{color: 'var(--bs-purple)'}}><i className="bi bi-person-fill me-2"></i>Player 2 (P2)</h6>
-                    <div className="row g-3 mb-2 align-items-center">
-                       <div className="col-12 col-md-4 text-center d-flex flex-column align-items-center">
-                          <label className="form-label text-muted fw-bold small mb-2">Birth Month</label>
-                          <input type="month" className="form-control fw-bold bg-input border border-secondary text-center w-75" style={{color: 'var(--bs-purple)'}} value={data.inputs.p2_dob ?? ''} onChange={(e) => {
-                              updateInput(`p2_dob`, e.target.value);
-                              if (e.target.value) {
-                                  const newAge = new Date().getFullYear() - parseInt(e.target.value.split('-')[0]);
-                                  updateInput(`p2_age`, newAge);
-                                  if (newAge > (data.inputs.p2_retireAge || 60)) updateInput('p2_retireAge', newAge);
-                                  if (newAge > (data.inputs.p2_lifeExp || 90)) updateInput('p2_lifeExp', newAge);
-                              }
-                          }} />
-                       </div>
-                       <div className="col-12 col-md-3 text-center d-flex flex-column align-items-center">
-                          <label className="form-label text-muted fw-bold small mb-2">Age</label>
-                          <div><StepperInput min={18} max={100} value={data.inputs.p2_age ?? 34} onChange={(val: any) => handleAgeChange('p2', val)} /></div>
-                       </div>
-                       <div className="col-6 col-md-2 text-center d-flex flex-column align-items-center">
-                          <label className="form-label text-muted fw-bold text-nowrap small mb-2">Retire At</label>
-                          <div><StepperInput min={data.inputs.p2_age ?? 18} max={100} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => {
-                              updateInput(`p2_retireAge`, val);
-                              if (val > (data.inputs.p2_lifeExp || 90)) updateInput('p2_lifeExp', val);
-                          }} /></div>
-                       </div>
-                       <div className="col-6 col-md-3 text-center d-flex flex-column align-items-center">
-                          <label className="form-label text-muted fw-bold text-nowrap small mb-2">Life Expect.</label>
-                          <div><StepperInput min={Math.max(data.inputs.p2_age ?? 18, data.inputs.p2_retireAge ?? 60)} max={120} value={data.inputs.p2_lifeExp ?? 95} onChange={(val: any) => updateInput(`p2_lifeExp`, val)} /></div>
-                       </div>
+                    <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
+                        <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-3" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
+                            <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px', backgroundColor: 'rgba(111, 66, 193, 0.25)', color: 'var(--bs-purple)'}}>
+                                <i className="bi bi-person-fill fs-5"></i>
+                            </div>
+                            <h6 className="fw-bold mb-0 text-uppercase ls-1" style={{color: 'var(--bs-purple)'}}>Player 2 (P2)</h6>
+                        </div>
+                        <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100">
+                            <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                                <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
+                                <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p2_dob} onChange={(val: string) => handleDobChange('p2', val)} /></div>
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                                <span className="small text-muted fw-bold text-nowrap">Current Age</span>
+                                <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={18} max={100} value={data.inputs.p2_age ?? 34} onChange={(val: any) => handleAgeChange('p2', val)} /></div>
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                                <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
+                                <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={data.inputs.p2_age ?? 18} max={100} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => { updateInput(`p2_retireAge`, val); if (val > (data.inputs.p2_lifeExp || 90)) updateInput('p2_lifeExp', val); }} /></div>
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
+                                <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
+                                <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={Math.max(data.inputs.p2_age ?? 18, data.inputs.p2_retireAge ?? 60)} max={120} value={data.inputs.p2_lifeExp ?? 95} onChange={(val: any) => updateInput(`p2_lifeExp`, val)} /></div>
+                            </div>
+                        </div>
                     </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -370,24 +560,37 @@ export default function PlanTab() {
           </div>
           <div className="card-body p-4">
             {data.dependents.length === 0 && <div className="text-center text-muted small fst-italic">No dependents added.</div>}
-            {data.dependents.map((dep: any, index: number) => (
-              <div className="row g-3 mb-3 align-items-end" key={`dep_${index}`}>
-                <div className="col-5"><label className="form-label small text-muted">Name</label><input type="text" className="form-control fw-bold bg-input border border-secondary" value={dep.name || ''} onChange={(e) => updateArrayItem('dependents', index, 'name', e.target.value)} /></div>
-                <div className="col-5"><label className="form-label small text-muted">Birth Month</label><input type="month" className="form-control fw-bold bg-input border border-secondary" value={dep.dob || ''} onChange={(e) => updateArrayItem('dependents', index, 'dob', e.target.value)} /></div>
-                <div className="col-2"><button type="button" className="btn btn-sm btn-link text-danger p-1 opacity-75 hover-opacity-100 w-100" onClick={() => removeArrayItem('dependents', index)}><i className="bi bi-x-lg fs-5"></i></button></div>
-              </div>
-            ))}
+            
+            <div className="row g-3">
+                {data.dependents.map((dep: any, index: number) => (
+                    <div className="col-12 col-xl-6" key={`dep_${index}`}>
+                        <div className="d-flex align-items-center justify-content-between p-3 border border-secondary rounded-4 bg-secondary bg-opacity-10 shadow-sm h-100 gap-3">
+                            <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '40px', height: '40px'}}>
+                                <i className="bi bi-emoji-smile-fill fs-5"></i>
+                            </div>
+                            <div className="d-flex flex-column flex-md-row gap-3 w-100 align-items-md-center">
+                                <input type="text" maxLength={50} className="form-control bg-transparent border-0 fw-bold fs-6 p-0 shadow-none text-main flex-grow-1" placeholder="Child's Name" value={dep.name || ''} onChange={(e) => updateArrayItem('dependents', index, 'name', e.target.value)} />
+                                <div style={{minWidth: '200px'}} className="w-100 flex-shrink-0">
+                                    <MonthYearStepper value={dep.dob || ''} onChange={(val: string) => updateArrayItem('dependents', index, 'dob', val)} />
+                                </div>
+                            </div>
+                            <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('dependents', index)}>
+                                <i className="bi bi-x-lg fs-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
           </div>
         </div>
 
-        {/* 3. Portfolio Assets */}
+        {/* 3. Portfolio Assets & Asset Allocation */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
               <i className="bi bi-wallet2 text-success fs-4 me-3"></i>
               <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
                   3. Portfolio Assets 
-                  <InfoBtn title="Assets & Returns" text="Enter your <b>current</b> balances. The <b>Return %</b> is your expected annual growth. <br><br>Toggle <b>Advanced Mode</b> to set different return rates for after you retire." />
               </h5>
             </div>
             <div className="form-check form-switch mb-0">
@@ -396,6 +599,39 @@ export default function PlanTab() {
             </div>
           </div>
           <div className="card-body p-4">
+            
+            <div className="p-3 border border-secondary rounded-3 bg-secondary bg-opacity-10 mb-4 d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 shadow-sm">
+                <div className="d-flex align-items-center gap-3" style={{ minWidth: '250px' }}>
+                    <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner flex-shrink-0" style={{width: '40px', height: '40px'}}>
+                        <i className="bi bi-pie-chart-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 className="fw-bold mb-1">Asset Allocation</h6>
+                        <span className="small text-muted">Preset or manual rates.</span>
+                    </div>
+                </div>
+                
+                <div className="d-flex flex-column flex-lg-row gap-3 w-100 justify-content-lg-end align-items-lg-center">
+                    <SegmentedControl 
+                        value={localAlloc} 
+                        onChange={handleAllocationChangeWrapper} 
+                        options={[
+                            { value: 'custom', label: 'Custom' },
+                            { value: 'aggressive', label: 'Aggressive' },
+                            { value: 'balanced', label: 'Balanced' },
+                            { value: 'conservative', label: 'Conservative' }
+                        ]} 
+                    />
+                    
+                    <div className="form-check form-switch mb-0 d-flex align-items-center px-0 justify-content-start flex-shrink-0 border-start border-secondary ps-lg-3 ms-lg-1 pt-2 pt-lg-0">
+                        <label className="form-check-label small fw-bold text-warning cursor-pointer me-2 text-nowrap" htmlFor="use_glide_path">
+                            Glide Path <InfoBtn align="right" title="Glide Path" text="Automatically reduces your equity exposure (risk) by 0.1% per year starting at Age 50 to protect your wealth heading into retirement." />
+                        </label>
+                        <input className="form-check-input ms-0 mt-0 cursor-pointer fs-5" type="checkbox" id="use_glide_path" checked={localGlide} onChange={e => handleGlideChangeWrapper(e.target.checked)} />
+                    </div>
+                </div>
+            </div>
+
             <div className="row g-4">
               {['p1', 'p2'].map((p) => {
                 if (!isCouple && p === 'p2') return null;
@@ -414,49 +650,62 @@ export default function PlanTab() {
                       </div>
 
                       {isOpen && (
-                          <div className="mb-2 transition-all">
-                              <div className="row g-2 align-items-end mb-3">
-                                  <div className="col-3"><label className="form-label text-muted mb-0 small">Account</label></div>
-                                  <div className={balCol}><label className="form-label text-muted mb-0 small">Balance ($)</label></div>
-                                  <div className={retCol}><label className="form-label text-muted mb-0 small">Return</label></div>
-                                  {assetAdvancedMode && <div className="col-3"><label className="form-label text-warning mb-0 small text-nowrap">Ret. Ret</label></div>}
-                              </div>
+                          <div className="d-flex flex-column gap-2 mb-2 transition-all">
                               {ACCOUNT_TYPES.map(acct => (
-                                  <div className="row g-2 mb-2" key={`${p}_${acct.id}`}>
-                                      <div className="col-3 pt-2 small fw-medium text-main d-flex align-items-center text-nowrap">
-                                          {acct.label} <InfoBtn align={isP1 ? 'center' : 'right'} title={acct.label} text={acct.tooltip} />
+                                  <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3" key={`${p}_${acct.id}`}>
+                                      <div className="d-flex align-items-center gap-2" style={{minWidth: '130px'}}>
+                                          <i className={`bi ${acct.icon} fs-5 ${acct.color}`}></i>
+                                          <span className="fw-bold text-main small">{acct.label}</span>
+                                          <InfoBtn align={isP1 ? 'center' : 'right'} title={acct.label} text={acct.tooltip} />
                                       </div>
-                                      <div className={balCol}><CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} /></div>
-                                      <div className={retCol}><PercentInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => updateInput(`${p}_${acct.id}_ret`, val)} /></div>
-                                      {assetAdvancedMode && <div className="col-3"><PercentInput className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => updateInput(`${p}_${acct.id}_retire_ret`, val)} /></div>}
+                                      <div className="d-flex align-items-center gap-2 flex-grow-1 justify-content-md-end">
+                                          <div style={{maxWidth: '200px', flexGrow: 1}}>
+                                              <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="Balance" />
+                                          </div>
+                                          <div style={{width: '90px'}}>
+                                              <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
+                                          </div>
+                                          {assetAdvancedMode && (
+                                              <div style={{width: '90px'}}>
+                                                  <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
+                                              </div>
+                                          )}
+                                      </div>
                                   </div>
                               ))}
+                              
                               {/* Non-Reg and Crypto */}
                               {['nonreg', 'crypto'].map(acct => (
-                                  <div className="row g-2 mb-2 align-items-center" key={`${p}_adv_${acct}`}>
-                                      <div className="col-3 small fw-medium text-main d-flex align-items-center text-nowrap">
-                                          {acct === 'nonreg' ? 'Non-Reg' : 'Crypto'}
-                                          <InfoBtn align={isP1 ? 'center' : 'right'} title={acct === 'nonreg' ? 'Non-Registered' : 'Crypto'} text={acct === 'nonreg' ? 'Taxable Investment Account. Yields taxed annually. Capital gains taxed at 50% inclusion.' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.'} />
+                                  <div className="p-3 bg-input border border-secondary rounded-3 shadow-sm d-flex flex-column gap-3 mt-2" key={`${p}_adv_${acct}`}>
+                                      <div className="d-flex align-items-center gap-2 border-bottom border-secondary pb-2">
+                                          <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-5`}></i>
+                                          <span className="fw-bold text-main small text-uppercase ls-1">{acct === 'crypto' ? 'Crypto Asset' : 'Non-Registered'}</span>
+                                          <InfoBtn align={isP1 ? 'center' : 'right'} title={acct === 'crypto' ? 'Crypto' : 'Non-Registered'} text={acct === 'nonreg' ? 'Taxable Investment Account. Yields taxed annually. Capital gains taxed at 50% inclusion.' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.'} />
                                       </div>
-                                      <div className={balCol}>
-                                          <div className="d-flex flex-column gap-1">
-                                              <div className="d-flex align-items-center gap-2"><span className="small text-muted fw-bold" style={{width:'35px', fontSize:'0.7rem'}}>MKT</span><CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}`, val)} /></div>
-                                              <div className="d-flex align-items-center gap-2 mt-1"><span className="small text-muted fw-bold" style={{width:'35px', fontSize:'0.7rem'}}>ACB</span><CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} /></div>
+                                      <div className="row g-3">
+                                          <div className="col-6">
+                                              <label className="small text-muted mb-1 fw-bold">Market Value ($)</label>
+                                              <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}`, val)} />
                                           </div>
-                                      </div>
-                                      <div className={retCol}>
-                                          <div className="d-flex flex-column gap-1">
-                                              <div className="d-flex align-items-center gap-2"><span className="small text-muted fw-bold text-end" style={{width:'35px', fontSize:'0.7rem'}}>TOT</span><PercentInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => updateInput(`${p}_${acct}_ret`, val)} /></div>
-                                              <div className="d-flex align-items-center gap-2 mt-1"><span className="small text-muted fw-bold text-end" style={{width:'35px', fontSize:'0.7rem'}}>YLD</span><PercentInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} /></div>
+                                          <div className="col-6">
+                                              <label className="small text-muted mb-1 fw-bold">Book Value / ACB ($)</label>
+                                              <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} />
                                           </div>
-                                      </div>
-                                      {assetAdvancedMode && (
-                                          <div className="col-3">
-                                              <div className="d-flex flex-column gap-1">
-                                                  <div className="d-flex align-items-center gap-2"><span className="small text-muted fw-bold text-end invisible" style={{width:'35px', fontSize:'0.7rem'}}>TOT</span><PercentInput className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => updateInput(`${p}_${acct}_retire_ret`, val)} /></div>
+                                          <div className={assetAdvancedMode ? "col-4" : "col-6"}>
+                                              <label className="small text-muted mb-1 fw-bold">Total Return (%)</label>
+                                              <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_ret`, val)} />
+                                          </div>
+                                          <div className={assetAdvancedMode ? "col-4" : "col-6"}>
+                                              <label className="small text-muted mb-1 fw-bold">Dividend Yield (%)</label>
+                                              <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} />
+                                          </div>
+                                          {assetAdvancedMode && (
+                                              <div className="col-4">
+                                                  <label className="small text-warning mb-1 fw-bold">Ret. Return (%)</label>
+                                                  <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_retire_ret`, val)} />
                                               </div>
-                                          </div>
-                                      )}
+                                          )}
+                                      </div>
                                   </div>
                               ))}
                           </div>
@@ -470,7 +719,6 @@ export default function PlanTab() {
               )})}
             </div>
 
-            {/* Portfolio Total Summary Box */}
             <div className="card border-success border-opacity-50 surface-card mt-4 shadow-sm">
               <div className="card-body p-3">
                   <div className="row text-center align-items-center">
@@ -494,7 +742,7 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 4. Real Estate */}
+        {/* 4. Real Estate - MODERNIZED WITH UPGRADE UI */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
@@ -504,49 +752,109 @@ export default function PlanTab() {
                     <InfoBtn title="Property Tracking" text="Track home equity and mortgage payoff. <br><b>Growth:</b> Annual increase in property value.<br><b>Include in NW:</b> Toggle this if you plan to sell the home to fund retirement. If unchecked, it remains an asset but isn't counted as liquid retirement cash." />
                 </h5>
             </div>
-            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('properties', { name: `Primary Residence`, value: 800000, mortgage: 400000, rate: 3.5, payment: 2000, growth: 3.0, includeInNW: true })}>
+            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('properties', { name: `Primary Residence`, value: 800000, mortgage: 400000, rate: 3.5, payment: 2000, growth: 3.0, includeInNW: true, sellEnabled: false })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Property
             </button>
           </div>
           <div className="card-body p-4">
             {data.properties.length === 0 && <div className="text-center text-muted small fst-italic">No properties added.</div>}
+            
             {data.properties.map((prop: any, idx: number) => (
-              <div className="p-3 border border-secondary rounded-3 surface-card mb-3 shadow-sm" key={`prop_${idx}`}>
-                <div className="d-flex justify-content-between mb-3 align-items-center">
-                    <input type="text" className="form-control form-control-sm bg-transparent border-0 text-danger fw-bold fs-5 w-50 px-0" value={prop.name || ''} onChange={(e) => updateArrayItem('properties', idx, 'name', e.target.value)} />
-                    <button type="button" className="btn btn-sm btn-link text-danger p-1 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('properties', idx)}><i className="bi bi-x-lg fs-5"></i></button>
-                </div>
-                <div className="row g-3 mb-3">
-                  <div className="col-12 col-md-4"><label className="form-label small text-muted">Value ($)</label><CurrencyInput className="form-control" value={prop.value ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'value', val)} /></div>
-                  <div className="col-12 col-md-4"><label className="form-label small text-muted">Mortgage ($)</label><CurrencyInput className="form-control" value={prop.mortgage ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'mortgage', val)} /></div>
-                  
-                  {/* Monthly Payment with 25y Auto-Calc Button */}
-                  <div className="col-12 col-md-4">
-                      <label className="form-label small text-muted d-flex justify-content-between align-items-end w-100 mb-1">
-                          <span>Monthly Pay ($)</span>
-                          {prop.mortgage > 0 && prop.rate > 0 && (
-                              <button type="button" className="btn btn-sm btn-link p-0 text-info fw-bold text-decoration-none" style={{fontSize: '0.65rem'}} onClick={() => updateArrayItem('properties', idx, 'payment', Math.round(calc25YearPayment(prop.mortgage, prop.rate)))}>
-                                  Set 25y Min
-                              </button>
-                          )}
-                      </label>
-                      <CurrencyInput className="form-control" value={prop.payment ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'payment', val)} />
-                      <div className="text-info fw-bold mt-1 text-end" style={{fontSize: '0.7rem', height: '14px'}}>
-                          {prop.mortgage > 0 && prop.payment > 0 ? `Est. Payoff: ${calcAmortization(prop.mortgage, prop.rate, prop.payment)}` : ''}
-                      </div>
-                  </div>
-                </div>
-                <div className="row g-3 align-items-center mt-0">
-                  <div className="col-6 col-md-4"><label className="form-label small text-muted">Mortgage Rate (%)</label><PercentInput className="form-control" value={prop.rate} onChange={(val: any) => updateArrayItem('properties', idx, 'rate', val)} /></div>
-                  <div className="col-6 col-md-4"><label className="form-label small text-muted">Property Growth (%)</label><PercentInput className="form-control" value={prop.growth} onChange={(val: any) => updateArrayItem('properties', idx, 'growth', val)} /></div>
-                  <div className="col-12 col-md-4 mt-md-4 pt-md-2">
-                    <div className="form-check form-switch d-flex align-items-center mb-0 ps-0 gap-2">
-                        <input className="form-check-input ms-0 mt-0 cursor-pointer" type="checkbox" checked={prop.includeInNW ?? false} onChange={(e) => updateArrayItem('properties', idx, 'includeInNW', e.target.checked)} />
-                        <label className="form-check-label small text-muted fw-bold mt-0 cursor-pointer">Include in Net Worth</label>
+                <div className="p-0 border border-secondary rounded-4 overflow-hidden mb-4 shadow-sm" key={`prop_${idx}`}>
+                    
+                    <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
+                        <div className="d-flex align-items-center gap-3 w-75">
+                            <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '40px', height: '40px'}}>
+                                <i className="bi bi-house-door-fill fs-5"></i>
+                            </div>
+                            <input type="text" maxLength={50} className="form-control bg-transparent border-0 text-main fw-bold fs-5 px-0 shadow-none" value={prop.name || ''} onChange={(e) => updateArrayItem('properties', idx, 'name', e.target.value)} placeholder="Property Name" />
+                        </div>
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="form-check form-switch mb-0 d-flex align-items-center" title="Include property equity in total Net Worth">
+                                <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={prop.includeInNW ?? false} onChange={(e) => updateArrayItem('properties', idx, 'includeInNW', e.target.checked)} />
+                                <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer d-none d-md-block">Include in NW</label>
+                            </div>
+                            <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('properties', idx)}><i className="bi bi-x-lg fs-5"></i></button>
+                        </div>
                     </div>
-                  </div>
+
+                    <div className="p-4 bg-input">
+                        <div className="row g-4">
+                            
+                            <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4">
+                                <h6 className="fw-bold text-success small text-uppercase ls-1 mb-3"><i className="bi bi-graph-up-arrow me-2"></i>Property Value</h6>
+                                <div className="row g-3">
+                                    <div className="col-sm-7">
+                                        <label className="form-label small text-muted mb-1">Current Value ($)</label>
+                                        <CurrencyInput className="form-control" value={prop.value ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'value', val)} />
+                                    </div>
+                                    <div className="col-sm-5">
+                                        <label className="form-label small text-muted mb-1">Growth (%)</label>
+                                        <PercentInput className="form-control" value={prop.growth} onChange={(val: any) => updateArrayItem('properties', idx, 'growth', val)} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="col-12 col-xl-7 ps-xl-4">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 className="fw-bold text-danger small text-uppercase ls-1 mb-0"><i className="bi bi-bank me-2"></i>Mortgage Details</h6>
+                                    {prop.mortgage > 0 && prop.rate > 0 && (
+                                        <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 fw-bold" style={{fontSize: '0.7rem'}} onClick={() => updateArrayItem('properties', idx, 'payment', Math.round(calc25YearPayment(prop.mortgage, prop.rate)))}>
+                                            <i className="bi bi-magic me-1 text-warning"></i> Auto 25-Yr
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="row g-3">
+                                    <div className="col-sm-4">
+                                        <label className="form-label small text-muted mb-1">Balance ($)</label>
+                                        <CurrencyInput className="form-control" value={prop.mortgage ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'mortgage', val)} />
+                                    </div>
+                                    <div className="col-sm-4">
+                                        <label className="form-label small text-muted mb-1">Int. Rate (%)</label>
+                                        <PercentInput className="form-control" value={prop.rate} onChange={(val: any) => updateArrayItem('properties', idx, 'rate', val)} />
+                                    </div>
+                                    <div className="col-sm-4">
+                                        <label className="form-label small text-muted mb-1">Payment /mo ($)</label>
+                                        <CurrencyInput className="form-control" value={prop.payment ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'payment', val)} />
+                                        <div className="text-info fw-bold mt-1 text-end text-nowrap" style={{fontSize: '0.7rem', height: '14px', letterSpacing: '-0.2px'}}>
+                                            {prop.mortgage > 0 && prop.payment > 0 ? `Payoff: ${calcAmortization(prop.mortgage, prop.rate, prop.payment)}` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* HOME UPGRADE UI */}
+                            <div className="col-12 mt-2 pt-3 border-top border-secondary border-opacity-25">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <i className="bi bi-house-up-fill text-info fs-5"></i>
+                                        <span className="fw-bold text-main small text-uppercase ls-1">Future Sell / Upgrade Plan</span>
+                                        <InfoBtn align="left" title="Home Upgrade" text="Simulate selling this property at a specific age. <br><br>If you enter a Replacement Value, it will buy a new home (applying 5% seller fees and 2% buyer fees), roll the equity, and calculate a new mortgage if needed. <br><br>If Replacement Value is $0, you downsize to renting and keep the cash." />
+                                    </div>
+                                    <div className="form-check form-switch mb-0">
+                                        <input className="form-check-input mt-0 cursor-pointer fs-5" type="checkbox" checked={prop.sellEnabled ?? false} onChange={(e) => updateArrayItem('properties', idx, 'sellEnabled', e.target.checked)} />
+                                    </div>
+                                </div>
+
+                                {prop.sellEnabled && (
+                                    <div className="row g-3 bg-info bg-opacity-10 p-3 rounded-4 border border-secondary border-opacity-50">
+                                        <div className="col-12 col-md-6">
+                                            <label className="form-label small text-muted mb-1 fw-bold">Sell at P1 Age</label>
+                                            <div style={{maxWidth: '200px'}}>
+                                                <StepperInput min={data.inputs.p1_age || 18} max={120} value={prop.sellAge ?? (data.inputs.p1_retireAge || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'sellAge', val)} />
+                                            </div>
+                                        </div>
+                                        <div className="col-12 col-md-6">
+                                            <label className="form-label small text-muted mb-1 fw-bold">Replacement Home Value</label>
+                                            <CurrencyInput className="form-control border-secondary bg-black bg-opacity-25" value={prop.replacementValue ?? 0} onChange={(val: any) => updateArrayItem('properties', idx, 'replacementValue', val)} placeholder="Target Price (Today's $)" />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
-              </div>
             ))}
           </div>
         </div>
@@ -557,22 +865,25 @@ export default function PlanTab() {
               <i className="bi bi-cash-coin text-warning fs-4 me-3"></i>
               <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
                   5. Income & Taxation
-                  <InfoBtn align="left" title="Income & Tax" text="Enter <b>Gross Annual Income</b> (before tax). The system automatically calculates Federal and Provincial taxes based on your selected Province. <br><br>Use 'Add Stream' for side hustles or rental income." />
+                  <InfoBtn align="left" title="Income & Tax" text="Enter <b>Gross Annual Income</b> (before tax). The system automatically calculates Federal and Provincial taxes based on your selected Province." />
               </h5>
           </div>
           <div className="card-body p-4">
-            <div className="col-md-4 mb-4">
-                <label className="form-label fw-bold">Province</label>
-                <select className="form-select fw-bold bg-input border border-secondary" value={data.inputs.tax_province} onChange={(e) => updateInput('tax_province', e.target.value)}>
-                    <option value="ON">Ontario</option><option value="AB">Alberta</option><option value="BC">British Columbia</option><option value="MB">Manitoba</option><option value="NB">New Brunswick</option><option value="NL">Newfoundland & Labrador</option><option value="NS">Nova Scotia</option><option value="PE">Prince Edward Island</option><option value="QC">Quebec</option><option value="SK">Saskatchewan</option><option value="NT">Northwest Territories</option><option value="NU">Nunavut</option><option value="YT">Yukon</option>
-                </select>
+            
+            <div className="mb-5">
+                <label className="form-label fw-bold small text-muted text-uppercase ls-1">Province of Residence</label>
+                <div className="d-flex w-100">
+                    <ProvinceSelector value={data.inputs.tax_province} onChange={(v) => updateInput('tax_province', v)} />
+                </div>
             </div>
+
             <div className="row g-4">
               {['p1', 'p2'].map((p) => {
                 if (!isCouple && p === 'p2') return null;
                 return (
                 <div className="col-12 col-xl-6" key={p}>
-                  <div className="card h-100 border-secondary surface-card shadow-none">
+                  
+                  <div className="card h-100 border-secondary surface-card shadow-none mb-4">
                     <div className="card-body p-4">
                       <div className="d-flex justify-content-between mb-4 border-bottom border-secondary pb-2">
                         <h6 className={`fw-bold text-uppercase ls-1 ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{p.toUpperCase()} Income</h6>
@@ -580,82 +891,104 @@ export default function PlanTab() {
                           <button type="button" className={`btn btn-sm btn-outline-${p === 'p1' ? 'info' : 'primary'} rounded-pill px-3 py-1 fw-bold`} style={p === 'p2' ? {color:'var(--bs-purple)', borderColor:'var(--bs-purple)'} : {}} onClick={() => addArrayItem('additionalIncome', { owner: p, name: 'Side Hustle', amount: 5000, freq: 'year', growth: 2.0, startMode: 'date', start: '2026-01', endMode: 'never', taxable: true })}>+ Stream</button>
                         </div>
                       </div>
-                      <div className="row g-3 mb-4">
-                        <div className="col-8">
-                            <label className="form-label d-flex align-items-center">Gross Income <InfoBtn align={p==='p2'?'right':'center'} title="Gross Annual Income" text="Your current base salary or gross income before taxes."/></label>
-                            <CurrencyInput className="form-control" value={data.inputs[`${p}_income`] ?? ''} onChange={(val: any) => updateInput(`${p}_income`, val)} />
-                        </div>
-                        <div className="col-4">
-                            <label className="form-label d-flex align-items-center">Growth <InfoBtn align="right" title="Growth" text="Estimated annual raise or growth rate of your income."/></label>
-                            <PercentInput className="form-control" value={data.inputs[`${p}_income_growth`]} onChange={(val: any) => updateInput(`${p}_income_growth`, val)} />
-                        </div>
-                      </div>
-                      <div className="row g-3 mb-4 border-top border-secondary pt-3">
-                        <div className="col-6">
-                            <label className="form-label d-flex align-items-center text-nowrap">RRSP Max Match <InfoBtn align={p==='p2'?'right':'center'} title="RRSP Max Match" text="The maximum percentage of your gross salary that your employer will contribute to your RRSP."/></label>
-                            <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match`]} onChange={(val: any) => updateInput(`${p}_rrsp_match`, val)} />
-                        </div>
-                        <div className="col-6">
-                            <label className="form-label d-flex align-items-center text-nowrap">Match Rate <InfoBtn align="right" title="Match Rate" text="The percentage of your contribution the employer matches. E.g., if they match 50 cents on the dollar, enter 50."/></label>
-                            <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match_tier`]} onChange={(val: any) => updateInput(`${p}_rrsp_match_tier`, val)} />
-                        </div>
+
+                      <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
+                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+                              <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-cash-stack"></i></div>
+                              <span className="fw-bold text-main small text-uppercase ls-1">Base Salary</span>
+                          </div>
+                          <div className="p-3 bg-input">
+                              <div className="row g-3">
+                                  <div className="col-12 col-md-7">
+                                      <label className="form-label small text-muted mb-1">Gross Annual Income</label>
+                                      <CurrencyInput className="form-control" value={data.inputs[`${p}_income`] ?? ''} onChange={(val: any) => updateInput(`${p}_income`, val)} />
+                                  </div>
+                                  <div className="col-12 col-md-5">
+                                      <label className="form-label small text-muted mb-1">Yearly Growth (%)</label>
+                                      <PercentInput className="form-control" value={data.inputs[`${p}_income_growth`]} onChange={(val: any) => updateInput(`${p}_income_growth`, val)} />
+                                  </div>
+                              </div>
+                          </div>
                       </div>
 
-                      {/* Addl Streams Map */}
+                      <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
+                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+                              <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-building"></i></div>
+                              <span className="fw-bold text-main small text-uppercase ls-1">Employer RRSP Match</span>
+                          </div>
+                          <div className="p-3 bg-input">
+                              <div className="row g-3">
+                                  <div className="col-12 col-md-6">
+                                      <label className="form-label small text-muted mb-1">Max Match (%)</label>
+                                      <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match`]} onChange={(val: any) => updateInput(`${p}_rrsp_match`, val)} />
+                                  </div>
+                                  <div className="col-12 col-md-6">
+                                      <label className="form-label small text-muted mb-1">Match Rate (%) <InfoBtn align="right" title="Match Rate" text="If they match 50 cents on the dollar, enter 50."/></label>
+                                      <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match_tier`]} onChange={(val: any) => updateInput(`${p}_rrsp_match_tier`, val)} />
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
                       {data.additionalIncome.filter((inc: any) => inc.owner === p).map((inc: any) => {
                           const realIdx = data.additionalIncome.indexOf(inc);
                           const updateInc = (field: string, val: any) => updateArrayItem('additionalIncome', realIdx, field, val);
                           return (
-                            <div className="p-3 border border-secondary rounded-4 bg-input mb-3 shadow-sm" key={`inc_${realIdx}`}>
-                              <div className="d-flex justify-content-between mb-3 align-items-center">
-                                  <input type="text" className={`form-control form-control-sm bg-transparent border-0 fw-bold fs-6 p-0 ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}} value={inc.name || ''} onChange={(e) => updateInc('name', e.target.value)} placeholder="Income Name" />
-                                  <button type="button" className="btn btn-sm btn-link text-danger p-1 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('additionalIncome', realIdx)}><i className="bi bi-x-lg fs-5"></i></button>
+                            <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm" key={`inc_${realIdx}`}>
+                              <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
+                                  <div className="d-flex align-items-center gap-3 w-100">
+                                      <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
+                                      <input type="text" maxLength={50} className="form-control bg-transparent border-0 text-main fw-bold p-0 shadow-none" value={inc.name || ''} onChange={(e) => updateInc('name', e.target.value)} placeholder="Stream Name" />
+                                  </div>
+                                  <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('additionalIncome', realIdx)}><i className="bi bi-x-lg fs-5"></i></button>
                               </div>
-                              <div className="row g-2 align-items-end mb-3">
-                                  <div className="col-4">
-                                      <label className="small text-muted mb-1">Amount ($)</label>
-                                      <CurrencyInput className="form-control form-control-sm" value={inc.amount} onChange={(val: any) => updateInc('amount', val)} />
+                              <div className="p-3 bg-input">
+                                  <div className="row g-3 mb-3">
+                                      <div className="col-12 col-md-5">
+                                          <label className="small text-muted mb-1 fw-medium">Amount ($)</label>
+                                          <CurrencyInput className="form-control form-control-sm" value={inc.amount} onChange={(val: any) => updateInc('amount', val)} />
+                                      </div>
+                                      <div className="col-6 col-md-4">
+                                          <label className="small text-muted mb-1 fw-medium">Frequency</label>
+                                          <FrequencyToggle mode="string" value={inc.freq || 'year'} onChange={(v: any) => updateInc('freq', v)} />
+                                      </div>
+                                      <div className="col-6 col-md-3">
+                                          <label className="small text-muted mb-1 fw-medium text-nowrap">Growth (%)</label>
+                                          <PercentInput className="form-control form-control-sm" value={inc.growth ?? 2.0} onChange={(val: any) => updateInc('growth', val)} />
+                                      </div>
                                   </div>
-                                  <div className="col-4">
-                                      <label className="small text-muted mb-1">Frequency</label>
-                                      <select className="form-select form-select-sm fw-bold text-muted cursor-pointer" value={inc.freq || 'year'} onChange={(e) => updateInc('freq', e.target.value)}><option value="year">/yr</option><option value="month">/mo</option></select>
-                                  </div>
-                                  <div className="col-4">
-                                      <label className="small text-muted mb-1">Growth (%)</label>
-                                      <PercentInput className="form-control form-control-sm" value={inc.growth ?? 2.0} onChange={(val: any) => updateInc('growth', val)} />
-                                  </div>
-                              </div>
-                              <div className="row g-2 align-items-end mb-1">
-                                  <div className="col-6">
-                                      <label className="small text-muted mb-1 d-block border-bottom border-secondary pb-1">Starts</label>
-                                      <select className="form-select form-select-sm border-secondary mb-1 text-muted cursor-pointer fw-bold" value={inc.startMode || 'date'} onChange={e => updateInc('startMode', e.target.value)}>
-                                          <option value="date">Specific Date</option>
-                                          <option value="ret_relative">Relative to Ret.</option>
-                                      </select>
-                                      {inc.startMode === 'ret_relative' ? (
-                                          <div className="input-group input-group-sm border border-secondary rounded overflow-hidden">
-                                            <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2" placeholder="Yrs" value={inc.startRelative ?? 0} onChange={e => updateInc('startRelative', e.target.value)} />
-                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                  <div className="row g-3">
+                                      <div className="col-12 col-md-6">
+                                          <label className="small text-muted mb-1 fw-medium d-block border-bottom border-secondary border-opacity-50 pb-1">Starts</label>
+                                          <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm mb-2 w-100">
+                                              <button type="button" onClick={() => updateInc('startMode', 'date')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.startMode === 'date' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Specific Date</button>
+                                              <button type="button" onClick={() => updateInc('startMode', 'ret_relative')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.startMode === 'ret_relative' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>At Retirement</button>
                                           </div>
-                                      ) : (
-                                          <input type="month" className="form-control form-control-sm fw-bold border-secondary bg-input text-main" value={inc.start} onChange={e => updateInc('start', e.target.value)} />
-                                      )}
-                                  </div>
-                                  <div className="col-6">
-                                      <label className="small text-muted mb-1 d-block border-bottom border-secondary pb-1">Ends</label>
-                                      <select className="form-select form-select-sm border-secondary mb-1 text-muted cursor-pointer fw-bold" value={inc.endMode || 'never'} onChange={e => updateInc('endMode', e.target.value)}>
-                                          <option value="never">Never (For Life)</option>
-                                          <option value="date">Specific Date</option>
-                                          <option value="ret_relative">Relative to Ret.</option>
-                                      </select>
-                                      {inc.endMode === 'ret_relative' ? (
-                                          <div className="input-group input-group-sm border border-secondary rounded overflow-hidden">
-                                            <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2" placeholder="Yrs" value={inc.endRelative ?? 0} onChange={e => updateInc('endRelative', e.target.value)} />
-                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                          {inc.startMode === 'ret_relative' ? (
+                                              <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
+                                                <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" placeholder="Yrs" value={inc.startRelative ?? 0} onChange={e => updateInc('startRelative', e.target.value)} />
+                                                <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                              </div>
+                                          ) : (
+                                              <MonthYearStepper value={inc.start} onChange={(val: string) => updateInc('start', val)} />
+                                          )}
+                                      </div>
+                                      <div className="col-12 col-md-6">
+                                          <label className="small text-muted mb-1 fw-medium d-block border-bottom border-secondary border-opacity-50 pb-1">Ends</label>
+                                          <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm mb-2 w-100">
+                                              <button type="button" onClick={() => updateInc('endMode', 'never')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'never' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Never</button>
+                                              <button type="button" onClick={() => updateInc('endMode', 'date')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'date' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Specific Date</button>
+                                              <button type="button" onClick={() => updateInc('endMode', 'ret_relative')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'ret_relative' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>At Retirement</button>
                                           </div>
-                                      ) : inc.endMode === 'date' ? (
-                                          <input type="month" className="form-control form-control-sm fw-bold border-secondary bg-input text-main" value={inc.end} onChange={e => updateInc('end', e.target.value)} />
-                                      ) : null}
+                                          {inc.endMode === 'ret_relative' ? (
+                                              <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
+                                                <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" placeholder="Yrs" value={inc.endRelative ?? 0} onChange={e => updateInc('endRelative', e.target.value)} />
+                                                <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                              </div>
+                                          ) : inc.endMode === 'date' ? (
+                                              <MonthYearStepper value={inc.end} onChange={(val: string) => updateInc('end', val)} />
+                                          ) : null}
+                                      </div>
                                   </div>
                               </div>
                             </div>
@@ -688,7 +1021,7 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 6. Living Expenses - MODERN REWORK */}
+        {/* 6. Living Expenses */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
@@ -706,18 +1039,18 @@ export default function PlanTab() {
             
             {expenseAdvancedMode && (
               <div className="row g-4 mb-4 p-4 border border-secondary rounded-4 surface-card shadow-sm">
-                <div className="col-md-6 d-flex align-items-center gap-3">
+                <div className="col-md-6 d-flex align-items-center justify-content-between bg-input p-2 px-3 rounded-3 border border-secondary">
                     <label className="form-label text-info fw-bold mb-0 text-nowrap">Go-Go Age Ends:</label>
-                    <StepperInput min={60} max={100} value={data.inputs.exp_gogo_age || 75} onChange={(val: any) => {
+                    <div style={{width: '180px'}}><StepperInput min={60} max={100} value={data.inputs.exp_gogo_age || 75} onChange={(val: any) => {
                         updateInput('exp_gogo_age', val);
                         if (val > (data.inputs.exp_slow_age || 85)) updateInput('exp_slow_age', val);
-                    }} />
+                    }} /></div>
                 </div>
-                <div className="col-md-6 d-flex align-items-center gap-3">
+                <div className="col-md-6 d-flex align-items-center justify-content-between bg-input p-2 px-3 rounded-3 border border-secondary">
                     <label className="form-label text-primary fw-bold mb-0 text-nowrap">Slow-Go Age Ends:</label>
-                    <StepperInput min={60} max={120} value={data.inputs.exp_slow_age || 85} onChange={(val: any) => {
+                    <div style={{width: '180px'}}><StepperInput min={60} max={120} value={data.inputs.exp_slow_age || 85} onChange={(val: any) => {
                         if (val >= (data.inputs.exp_gogo_age || 75)) updateInput('exp_slow_age', val);
-                    }} />
+                    }} /></div>
                 </div>
               </div>
             )}
@@ -725,7 +1058,7 @@ export default function PlanTab() {
             <div className="d-flex flex-column gap-4">
                 {Object.keys(data.expensesByCategory).map(cat => (
                     <div className="card surface-card border-secondary shadow-sm rounded-4 overflow-hidden" key={cat}>
-                        <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary d-flex justify-content-between align-items-center p-3">
+                        <div className="card-header bg-secondary bg-opacity-10 border-bottom border-secondary d-flex justify-content-between align-items-center p-3">
                             <h6 className="text-uppercase mb-0 fw-bold d-flex align-items-center gap-2">
                                 {getCategoryIcon(cat)} <span className="ls-1">{cat}</span>
                             </h6>
@@ -749,7 +1082,7 @@ export default function PlanTab() {
                                             <th className="py-3 fw-semibold text-end text-primary">Slow-Go<br/><span style={{fontSize:'0.65rem', letterSpacing:'normal'}} className="text-muted fw-normal text-nowrap">({data.inputs.exp_gogo_age || 75} to {data.inputs.exp_slow_age || 85})</span></th>
                                             <th className="py-3 fw-semibold text-end text-secondary">No-Go<br/><span style={{fontSize:'0.65rem', letterSpacing:'normal'}} className="text-muted fw-normal text-nowrap">({data.inputs.exp_slow_age || 85}+)</span></th>
                                         </>}
-                                        <th className="py-3 fw-semibold text-center" style={{width: '130px'}}>Frequency</th>
+                                        <th className="py-3 fw-semibold text-center" style={{width: '110px'}}>Frequency</th>
                                         <th className="pe-4 py-3 text-end" style={{width: '50px'}}></th>
                                     </tr>
                                 </thead>
@@ -757,23 +1090,20 @@ export default function PlanTab() {
                                     {data.expensesByCategory[cat].items.map((exp:any, idx:number) => (
                                         <tr key={`${cat}_${idx}`} className="border-bottom border-secondary border-opacity-25">
                                             <td className="ps-4 py-2">
-                                                <input type="text" className="form-control form-control-sm bg-transparent border-0 fw-bold text-main px-0 shadow-none" placeholder="Item name..." value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
+                                                <input type="text" maxLength={50} className="form-control form-control-sm bg-black bg-opacity-25 border border-secondary fw-bold text-main shadow-none rounded-3" placeholder="Item name..." value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
                                             </td>
-                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm" noBg={true} value={exp.curr ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'curr', val)} /></td>
-                                            {expenseAdvancedMode && <td className="py-2"><CurrencyInput className="form-control form-control-sm text-warning" noBg={true} value={exp.trans ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'trans', val)} /></td>}
-                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm" noBg={true} value={exp.ret ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'ret', val)} /></td>
+                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.curr ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'curr', val)} /></td>
+                                            {expenseAdvancedMode && <td className="py-2"><CurrencyInput className="form-control form-control-sm text-warning rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.trans ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'trans', val)} /></td>}
+                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.ret ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'ret', val)} /></td>
                                             {expenseAdvancedMode && (
                                                 <>
-                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-info" noBg={true} value={exp.gogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'gogo', val)} /></td>
-                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary" noBg={true} value={exp.slow ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'slow', val)} /></td>
-                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-secondary" noBg={true} value={exp.nogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'nogo', val)} /></td>
+                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-info rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.gogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'gogo', val)} /></td>
+                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.slow ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'slow', val)} /></td>
+                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-secondary rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.nogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'nogo', val)} /></td>
                                                 </>
                                             )}
                                             <td className="py-2 text-center">
-                                                <select className="form-select form-select-sm bg-input border-secondary text-muted rounded-pill px-3 py-1 w-100 fw-bold cursor-pointer" style={{fontSize: '0.8rem'}} value={exp.freq || 12} onChange={(e) => updateExpense(cat, idx, 'freq', parseInt(e.target.value))}>
-                                                    <option value={12}>Monthly</option>
-                                                    <option value={1}>Annually</option>
-                                                </select>
+                                                <FrequencyToggle mode="number" value={exp.freq || 12} onChange={(v: any) => updateExpense(cat, idx, 'freq', v)} />
                                             </td>
                                             <td className="pe-4 py-2 text-end">
                                                 <button type="button" className="btn btn-sm btn-link text-danger p-1 opacity-75 hover-opacity-100" onClick={() => { const newList = [...data.expensesByCategory[cat].items]; newList.splice(idx, 1); updateExpenseCategory(cat, newList); }}>
@@ -808,30 +1138,81 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 7. Future Expenses */}
+        {/* 7. Future Expenses - LOAN ENGINE ADDED */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
+                <i className="bi bi-cart-dash text-danger fs-4 me-3"></i>
                 <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                    <i className="bi bi-cart-plus text-danger me-3"></i>7. Future Expenses & Debts
+                    7. Future Expenses & Debts
                     <InfoBtn align="left" title="Large Purchases" text="Plan for future large expenses (like buying a car, renovation, or wedding) or lump-sum debt payoffs. <br><br>The amount will be deducted directly from your cash flow in the selected year." />
                 </h5>
             </div>
-            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('debt', { name: 'New Expense', amount: 20000, start: '2026-01' })}>
+            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('debt', { name: 'New Expense', amount: 20000, start: '2026-01', type: 'one', duration: 1, rate: 0 })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Expense
             </button>
           </div>
-          <div className="card-body p-4">{data.debt.map((d: any, idx: number) => (
-              <div className="row g-3 mb-3 align-items-end" key={`debt_${idx}`}>
-                  <div className="col-5"><label className="form-label small text-muted">Name</label><input type="text" className="form-control fw-medium" value={d.name || ''} onChange={(e) => updateArrayItem('debt', idx, 'name', e.target.value)} /></div>
-                  <div className="col-4"><label className="form-label small text-muted">Amount ($)</label><CurrencyInput className="form-control" value={d.amount ?? ''} onChange={(val: any) => updateArrayItem('debt', idx, 'amount', val)} /></div>
-                  <div className="col-2"><label className="form-label small text-muted">Year</label><input type="month" className="form-control fw-bold bg-input border-secondary text-main" value={d.start || ''} onChange={(e) => updateArrayItem('debt', idx, 'start', e.target.value)} /></div>
-                  <div className="col-1"><button type="button" className="btn btn-sm btn-link text-danger p-1 w-100 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('debt', idx)}><i className="bi bi-x-lg fs-5"></i></button></div>
-              </div>
-          ))}</div>
+          <div className="card-body p-4">
+            {data.debt.length === 0 && <div className="text-center text-muted small fst-italic">No future expenses added.</div>}
+            <div className="row g-3">
+                {data.debt.map((d: any, idx: number) => {
+                    const isRecurring = d.type === 'monthly' || d.type === 'yearly';
+                    return (
+                        <div className="col-12 col-xl-6" key={`debt_${idx}`}>
+                            <div className="d-flex flex-column p-3 border border-secondary rounded-4 bg-secondary bg-opacity-10 shadow-sm h-100 gap-3">
+                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                    <div className="d-flex align-items-center gap-3 flex-grow-1">
+                                        <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
+                                            <i className="bi bi-cart-x-fill fs-5"></i>
+                                        </div>
+                                        <input type="text" maxLength={50} className="form-control bg-transparent border-0 fw-bold fs-6 p-0 shadow-none text-main" placeholder="Expense Name" value={d.name || ''} onChange={(e) => updateArrayItem('debt', idx, 'name', e.target.value)} />
+                                    </div>
+                                    <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('debt', idx)}><i className="bi bi-x-lg fs-5"></i></button>
+                                </div>
+                                
+                                <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100">
+                                    <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'one')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${(!d.type || d.type === 'one') ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>One-Time</button>
+                                    <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'monthly')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${d.type === 'monthly' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Monthly</button>
+                                    <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'yearly')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${d.type === 'yearly' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Yearly</button>
+                                </div>
+
+                                <div className="d-flex flex-wrap align-items-sm-end gap-3 bg-input p-2 rounded-3">
+                                    <div className="flex-grow-1" style={{ minWidth: '140px' }}>
+                                        <label className="small text-muted mb-1 fw-bold">{isRecurring && d.rate > 0 ? 'Principal Amount ($)' : 'Amount ($)'}</label>
+                                        <CurrencyInput className="form-control form-control-sm border-secondary" value={d.amount ?? ''} onChange={(val: any) => updateArrayItem('debt', idx, 'amount', val)} placeholder="Amount ($)" />
+                                    </div>
+                                    
+                                    {isRecurring && (
+                                        <div style={{width: '90px'}}>
+                                            <label className="small text-muted mb-1 fw-bold">Rate (%)</label>
+                                            <PercentInput className="form-control form-control-sm border-secondary" value={d.rate ?? ''} onChange={(val: any) => updateArrayItem('debt', idx, 'rate', val)} />
+                                        </div>
+                                    )}
+
+                                    {isRecurring && (
+                                        <div style={{width: '110px'}}>
+                                            <label className="small text-muted mb-1 fw-bold">Term (Yrs)</label>
+                                            <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
+                                                <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" value={d.duration ?? 1} onChange={e => updateArrayItem('debt', idx, 'duration', e.target.value)} />
+                                                <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    <div style={{minWidth: '220px'}} className="flex-grow-1">
+                                        <label className="small text-muted mb-1 fw-bold">Start Date</label>
+                                        <MonthYearStepper value={d.start || ''} onChange={(e: any) => updateArrayItem('debt', idx, 'start', e)} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+          </div>
         </div>
 
-        {/* 8. Windfalls */}
+        {/* 8. Windfalls - MODERNIZED */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
@@ -840,21 +1221,49 @@ export default function PlanTab() {
                     <InfoBtn align="left" title="Windfalls" text="One-time cash inflows like inheritance, selling a business, or downsizing property. <br><b>Taxable:</b> Check this if the amount will be added to your taxable income for that year (e.g. severance, RRSP deregistration)." />
                 </h5>
             </div>
-            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('windfalls', { name: 'Inheritance', amount: 100000, start: '2030-01' })}>
+            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('windfalls', { name: 'Inheritance', amount: 100000, start: '2030-01', taxable: false })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Event
             </button>
           </div>
-          <div className="card-body p-4">{data.windfalls.map((w: any, idx: number) => (
-              <div className="row g-3 mb-3 align-items-end" key={`wind_${idx}`}>
-                  <div className="col-5"><label className="form-label small text-muted">Description</label><input type="text" className="form-control fw-medium" value={w.name || ''} onChange={(e) => updateArrayItem('windfalls', idx, 'name', e.target.value)} /></div>
-                  <div className="col-4"><label className="form-label small text-muted">Amount ($)</label><CurrencyInput className="form-control" value={w.amount ?? ''} onChange={(val: any) => updateArrayItem('windfalls', idx, 'amount', val)} /></div>
-                  <div className="col-2"><label className="form-label small text-muted">Year</label><input type="month" className="form-control fw-bold bg-input border-secondary text-main" value={w.start || ''} onChange={(e) => updateArrayItem('windfalls', idx, 'start', e.target.value)} /></div>
-                  <div className="col-1"><button type="button" className="btn btn-sm btn-link text-danger p-1 w-100 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('windfalls', idx)}><i className="bi bi-x-lg fs-5"></i></button></div>
-              </div>
-          ))}</div>
+          <div className="card-body p-4">
+            {data.windfalls.length === 0 && <div className="text-center text-muted small fst-italic">No windfalls added.</div>}
+            <div className="row g-3">
+                {data.windfalls.map((w: any, idx: number) => (
+                    <div className="col-12 col-xl-6" key={`wind_${idx}`}>
+                        <div className="d-flex flex-column p-3 border border-secondary rounded-4 bg-secondary bg-opacity-10 shadow-sm h-100 gap-3">
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                <div className="d-flex align-items-center gap-3 flex-grow-1">
+                                    <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
+                                        <i className="bi bi-gift-fill fs-5"></i>
+                                    </div>
+                                    <input type="text" maxLength={50} className="form-control bg-transparent border-0 fw-bold fs-6 p-0 shadow-none text-main" placeholder="Description" value={w.name || ''} onChange={(e) => updateArrayItem('windfalls', idx, 'name', e.target.value)} />
+                                </div>
+                                <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('windfalls', idx)}><i className="bi bi-x-lg fs-5"></i></button>
+                            </div>
+                            <div className="d-flex flex-wrap align-items-end gap-3 bg-input p-2 rounded-3">
+                                <div className="d-flex align-items-center gap-2 pe-3 border-end border-secondary border-opacity-50 pb-1">
+                                    <div className="form-check form-switch mb-0 d-flex align-items-center flex-shrink-0" style={{minHeight: 0}}>
+                                        <input className="form-check-input m-0 cursor-pointer shadow-none fs-5" type="checkbox" checked={w.taxable ?? false} onChange={(e) => updateArrayItem('windfalls', idx, 'taxable', e.target.checked)} />
+                                    </div>
+                                    <label className="form-check-label small text-muted fw-bold mb-0 text-nowrap mt-1">Taxable</label>
+                                </div>
+                                <div className="flex-grow-1" style={{minWidth: '140px'}}>
+                                    <label className="small text-muted mb-1 fw-bold">Amount ($)</label>
+                                    <CurrencyInput className="form-control form-control-sm border-secondary" value={w.amount ?? ''} onChange={(val: any) => updateArrayItem('windfalls', idx, 'amount', val)} placeholder="Amount ($)" />
+                                </div>
+                                <div style={{minWidth: '220px'}} className="flex-grow-1">
+                                    <label className="small text-muted mb-1 fw-bold">Receive Date</label>
+                                    <MonthYearStepper value={w.start || ''} onChange={(e: any) => updateArrayItem('windfalls', idx, 'start', e)} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+          </div>
         </div>
 
-        {/* 9. Gov Benefits */}
+        {/* 9. Government Benefits */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header border-bottom border-secondary p-3 surface-card">
               <div className="d-flex align-items-center">
@@ -865,110 +1274,176 @@ export default function PlanTab() {
           </div>
           <div className="card-body p-4">
             
-            {isCouple && (
-                <div className="row mb-4">
-                    <div className="col-12">
-                        <div className="p-3 border border-secondary rounded-3 surface-card bg-info bg-opacity-10">
-                            <div className="form-check form-switch d-flex align-items-center gap-3 ms-2 mb-0">
-                                <input className="form-check-input fs-4 mt-0 cursor-pointer" type="checkbox" id="pension_split_enabled" checked={data.inputs.pension_split_enabled ?? false} onChange={(e) => updateInput('pension_split_enabled', e.target.checked)} />
-                                <div>
-                                    <label className="form-check-label fw-bold cursor-pointer" htmlFor="pension_split_enabled">Enable Pension Income Splitting</label>
-                                    <div className="small text-muted">Automatically optimizes taxes by splitting eligible pension income (RRIF, LIF, DB Pension) between spouses aged 65+.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <div className="row g-4">
               {['p1', 'p2'].map((p) => {
                 if (!isCouple && p === 'p2') return null;
+                
+                // MATH: Dynamic UI Previews for CPP and OAS
+                const cppBase = Number(data.inputs[`${p}_cpp_est_base`]) || 0;
+                const cppStart = Number(data.inputs[`${p}_cpp_start`]) || 65;
+                const cppAdjYr = getAdjustedCPP(cppBase, cppStart);
+                const cppAdjMo = cppAdjYr / 12;
+                const isCppEarly = cppStart < 65;
+                const isCppLate = cppStart > 65;
+                const cppColor = isCppEarly ? 'text-danger' : isCppLate ? 'text-success' : 'text-info';
+
+                const oasStart = Number(data.inputs[`${p}_oas_start`]) || 65;
+                const oasYears = Number(data.inputs[`${p}_oas_years`]) ?? 40;
+                const oasAdjYr = getAdjustedOAS(oasYears, oasStart);
+                const oasAdjMo = oasAdjYr / 12;
+                const isOasLate = oasStart > 65;
+                const oasColor = isOasLate ? 'text-success' : 'text-info';
+
                 return (
-                <div className="col-12 col-md-6" key={p}>
-                    <div className="p-4 border border-secondary rounded-3 h-100 surface-card">
-                        <h6 className={`fw-bold text-uppercase mb-4 pb-2 border-bottom border-secondary ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color: 'var(--bs-purple)'} : {}}>{p.toUpperCase()} Benefits</h6>
-                        
-                        <div className="mb-4">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <label className="form-label mb-0 fw-bold fs-6 text-main">Canada Pension Plan (CPP)</label>
-                                <div className="form-check form-switch min-h-0 mb-0"><input className="form-check-input mt-0 fs-5 cursor-pointer" type="checkbox" role="switch" checked={data.inputs[`${p}_cpp_enabled`] ?? true} onChange={(e) => updateInput(`${p}_cpp_enabled`, e.target.checked)} /></div>
-                            </div>
-                            {(data.inputs[`${p}_cpp_enabled`] ?? true) && (
-                                <div>
-                                    <label className="form-label small text-muted mb-2">Est. Payout at 65/yr</label>
-                                    <CurrencyInput className="form-control mb-3" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} />
+                <div className="col-12 col-xl-6" key={p}>
+                    <div className="card h-100 border-secondary surface-card shadow-none">
+                        <div className="card-body p-4">
+                            <h6 className={`fw-bold text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{p.toUpperCase()} Benefits</h6>
+                            
+                            {/* CPP Box */}
+                            <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
+                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
                                     <div className="d-flex align-items-center gap-3">
-                                        <span className="small text-muted fw-bold">Starts at Age:</span>
-                                        <StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} />
+                                        <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-map-fill"></i></div>
+                                        <span className="fw-bold text-main small text-uppercase ls-1">CPP</span>
+                                    </div>
+                                    <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_cpp_enabled`] ?? true} onChange={(e) => updateInput(`${p}_cpp_enabled`, e.target.checked)} /></div>
+                                </div>
+                                {(data.inputs[`${p}_cpp_enabled`] ?? true) && (
+                                    <div className="p-3 bg-input d-flex flex-column gap-3">
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <label className="form-label small text-muted mb-0">Est. Base Payout (Age 65)</label>
+                                            <div style={{width: '170px'}}><CurrencyInput suffix="/yr" className="form-control form-control-sm" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} /></div>
+                                        </div>
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <span className="small text-muted fw-bold">Starts at Age:</span>
+                                            <div style={{width: '170px'}}><StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} /></div>
+                                        </div>
+                                        <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
+                                            <span className="small text-muted">Adjusted Payout:</span>
+                                            <div className="text-end">
+                                                <span className={`small fw-bold ${cppColor}`}>{formatCurrency(cppAdjMo)} <span className="text-muted fw-normal" style={{fontSize:'0.7rem'}}>/mo</span></span>
+                                                <div className="text-muted fw-normal" style={{fontSize: '0.65rem'}}>{formatCurrency(cppAdjYr)} /yr</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* OAS Box */}
+                            <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
+                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
+                                    <div className="d-flex align-items-center gap-3">
+                                        <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-shield-fill-check"></i></div>
+                                        <span className="fw-bold text-main small text-uppercase ls-1">OAS</span>
+                                    </div>
+                                    <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_oas_enabled`] ?? true} onChange={(e) => updateInput(`${p}_oas_enabled`, e.target.checked)} /></div>
+                                </div>
+                                {(data.inputs[`${p}_oas_enabled`] ?? true) && (
+                                    <div className="p-3 bg-input d-flex flex-column gap-3">
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <label className="form-label small text-muted mb-0">Years in Canada <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65."/></label>
+                                            <div style={{width: '170px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
+                                        </div>
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <span className="small text-muted fw-bold">Starts at Age:</span>
+                                            <div style={{width: '170px'}}><StepperInput min={65} max={70} value={oasStart} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} /></div>
+                                        </div>
+                                        <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
+                                            <span className="small text-muted">Adjusted Payout:</span>
+                                            <div className="text-end">
+                                                <span className={`small fw-bold ${oasColor}`}>{formatCurrency(oasAdjMo)} <span className="text-muted fw-normal" style={{fontSize:'0.7rem'}}>/mo</span></span>
+                                                <div className="text-muted fw-normal" style={{fontSize: '0.65rem'}}>{formatCurrency(oasAdjYr)} /yr</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* DB Pension Box */}
+                            <div className="border border-secondary rounded-4 overflow-hidden shadow-sm">
+                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
+                                    <div className="d-flex align-items-center gap-3">
+                                        <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
+                                        <span className="fw-bold text-main small text-uppercase ls-1">DB Pension</span>
+                                    </div>
+                                    <div className="form-check form-switch mb-0">
+                                        <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={p === 'p1' ? p1DbEnabled : p2DbEnabled} onChange={(e) => {
+                                            const isChecked = e.target.checked;
+                                            if(p==='p1') setP1DbEnabled(isChecked); else setP2DbEnabled(isChecked);
+                                            updateInput(`${p}_db_enabled`, isChecked);
+                                        }} />
                                     </div>
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="mb-4 pt-4 border-top border-secondary">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <label className="form-label mb-0 fw-bold fs-6 text-main">Old Age Security (OAS)</label>
-                                <div className="form-check form-switch min-h-0 mb-0"><input className="form-check-input mt-0 fs-5 cursor-pointer" type="checkbox" role="switch" checked={data.inputs[`${p}_oas_enabled`] ?? true} onChange={(e) => updateInput(`${p}_oas_enabled`, e.target.checked)} /></div>
-                            </div>
-                            {(data.inputs[`${p}_oas_enabled`] ?? true) && (
-                                <div>
-                                    <div className="d-flex align-items-center gap-3">
-                                        <span className="small text-muted fw-bold">Starts at Age:</span>
-                                        <StepperInput min={65} max={70} value={data.inputs[`${p}_oas_start`]} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="mt-4 pt-4 border-top border-secondary">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <label className="form-label mb-0 fw-bold fs-6 text-main">Defined Benefit (DB) Pension</label>
-                                <div className="form-check form-switch min-h-0 mb-0">
-                                    <input className="form-check-input mt-0 fs-5 cursor-pointer" type="checkbox" role="switch" checked={p === 'p1' ? p1DbEnabled : p2DbEnabled} onChange={(e) => p === 'p1' ? setP1DbEnabled(e.target.checked) : setP2DbEnabled(e.target.checked)} />
-                                </div>
-                            </div>
-                            {(p === 'p1' ? p1DbEnabled : p2DbEnabled) && (
-                                <>
-                                    <div className="mb-3 border-bottom border-secondary pb-3 mt-3">
-                                        <div className="d-flex justify-content-between align-items-center mb-3">
+                                {(p === 'p1' ? p1DbEnabled : p2DbEnabled) && (
+                                    <div className="p-3 bg-input d-flex flex-column gap-3">
+                                        <div className="d-flex justify-content-between align-items-center">
                                             <div className="d-flex align-items-center">
                                                 <label className="form-label small fw-bold text-muted mb-0">Index to Inflation</label>
                                                 <InfoBtn align={p==='p2'?'right':'center'} title="Index to Inflation" text="If checked, the pension amount will grow with inflation. If unchecked, the payout remains flat for life." />
                                             </div>
-                                            <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" role="switch" checked={data.inputs[`${p}_db_indexed`] ?? true} onChange={(e) => updateInput(`${p}_db_indexed`, e.target.checked)} /></div>
+                                            <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_db_indexed`] ?? true} onChange={(e) => updateInput(`${p}_db_indexed`, e.target.checked)} /></div>
                                         </div>
-                                        <label className="form-label small fw-bold mb-2" style={p === 'p2' ? {color: 'var(--bs-purple)'} : {color: 'var(--bs-info)'}}>Lifetime Pension / mo</label>
-                                        <CurrencyInput className="form-control mb-3" suffix="/mo" value={data.inputs[`${p}_db_lifetime`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_lifetime`, val)} />
-                                        <div className="d-flex align-items-center gap-3 mt-2">
-                                            <span className="small text-muted fw-bold">Starts at Age:</span>
-                                            <StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} />
+                                        
+                                        <div className="border-top border-secondary pt-3 mt-1">
+                                            <h6 className="small fw-bold mb-3" style={p === 'p2' ? {color: 'var(--bs-purple)'} : {color: 'var(--bs-info)'}}>Lifetime Pension</h6>
+                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                <label className="small text-muted mb-0">Amount</label>
+                                                <div style={{width: '170px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_lifetime`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_lifetime`, val)} /></div>
+                                            </div>
+                                            <div className="d-flex justify-content-between align-items-center">
+                                                <span className="small text-muted fw-bold">Starts at Age:</span>
+                                                <div style={{width: '170px'}}><StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} /></div>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div>
-                                        <label className="form-label small fw-bold mb-2" style={p === 'p2' ? {color: 'var(--bs-purple)'} : {color: 'var(--bs-info)'}}>Bridge Benefit <span className="text-muted fw-normal">(Ends at 65)</span></label>
-                                        <CurrencyInput className="form-control mb-3" suffix="/mo" value={data.inputs[`${p}_db_bridge`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_bridge`, val)} />
-                                        <div className="d-flex align-items-center gap-3 mt-2">
-                                            <span className="small text-muted fw-bold">Starts at Age:</span>
-                                            <StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} />
+                                        <div className="border-top border-secondary pt-3 mt-1">
+                                            <h6 className="small fw-bold text-muted mb-3">Bridge Benefit <span className="text-muted fw-normal">(Ends at 65)</span></h6>
+                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                <label className="small text-muted mb-0">Amount</label>
+                                                <div style={{width: '170px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_bridge`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_bridge`, val)} /></div>
+                                            </div>
+                                            <div className="d-flex justify-content-between align-items-center">
+                                                <span className="small text-muted fw-bold">Starts at Age:</span>
+                                                <div style={{width: '170px'}}><StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} /></div>
+                                            </div>
                                         </div>
                                     </div>
-                                </>
-                            )}
+                                )}
+                            </div>
+
                         </div>
-
                     </div>
                 </div>
-              )})}
+                )})}
             </div>
           </div>
         </div>
 
         {/* 10. Economic Assumptions */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
-          <div className="card-header surface-card border-bottom border-secondary p-3"><h5 className="mb-0 fw-bold text-uppercase ls-1"><i className="bi bi-graph-up-arrow text-secondary me-3"></i>10. Economic Assumptions</h5></div>
-          <div className="card-body p-4"><div className="col-md-4"><label className="form-label fw-bold mb-2 d-flex align-items-center">Long-term Inflation Rate <InfoBtn align="left" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%."/></label><PercentInput className="form-control mb-2" value={data.inputs.inflation_rate} onChange={(val: any) => updateInput('inflation_rate', val)} /></div></div>
+          <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
+              <i className="bi bi-graph-up-arrow text-secondary fs-4 me-3"></i>
+              <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">10. Economic Assumptions</h5>
+          </div>
+          <div className="card-body p-4">
+              <div className="row">
+                  <div className="col-12 col-md-6 col-xl-4">
+                      <div className="border border-secondary rounded-4 overflow-hidden shadow-sm">
+                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+                              <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
+                                  <i className="bi bi-percent"></i>
+                              </div>
+                              <span className="fw-bold text-main small text-uppercase ls-1">Inflation Rate</span>
+                          </div>
+                          <div className="p-3 bg-input">
+                              <label className="form-label small text-muted mb-2 d-flex align-items-center">Long-term Target <InfoBtn align="right" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%."/></label>
+                              <PercentInput className="form-control" value={data.inputs.inflation_rate} onChange={(val: any) => updateInput('inflation_rate', val)} />
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
         </div>
 
       </form>
