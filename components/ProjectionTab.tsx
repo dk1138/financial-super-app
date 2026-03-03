@@ -72,6 +72,69 @@ export default function ProjectionTab() {
       return Math.round(getRealValue(val, year) || 0).toLocaleString('en-US');
   };
 
+  // --- CSV Export Engine ---
+  const exportToCSV = () => {
+      if (!results || !results.timeline) return;
+
+      const headers = [
+          "Year", "P1 Age", "P2 Age", "Phase", "Gross Income", "Taxes Paid",
+          "Living Expenses", "Mortgage & Debt", "Contributions", "Withdrawals",
+          "Liquid Net Worth", "Real Estate Equity", "Total Estate"
+      ];
+
+      const rows = results.timeline.map((y: any) => {
+          const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+          const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
+          const isP1Ret = (y.p1Age || y.ageP1) >= p1Ret;
+          const isP2Ret = isCouple ? (y.p2Age || y.ageP2) >= p2Ret : true;
+          
+          let phase = "Working";
+          if (isP1Ret && isP2Ret) {
+              const maxAge = isCouple ? Math.max(y.p1Age, y.p2Age) : y.p1Age;
+              if (maxAge <= (Number(data.inputs.exp_gogo_age) || 75)) phase = "Go-Go";
+              else if (maxAge <= (Number(data.inputs.exp_slow_age) || 85)) phase = "Slow-Go";
+              else phase = "No-Go";
+          } else if (isP1Ret !== isP2Ret) {
+              phase = "Transition";
+          }
+
+          const totalWithdrawals = y.flows?.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
+          let engineContributions = 0;
+          if (y.flows && y.flows.contributions) {
+              engineContributions += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+              if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+          }
+
+          const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0);
+          const totalEstate = (y.afterTaxEstate !== undefined ? y.afterTaxEstate : (y.liquidNW + (y.reIncludedEq || 0)));
+
+          return [
+              y.year,
+              y.p1Age || y.ageP1 || '',
+              isCouple ? (y.p2Age || y.ageP2 || '') : 'N/A',
+              phase,
+              Math.round(getRealValue(y.grossInflow || 0, y.year)),
+              Math.round(getRealValue(totalTaxes, y.year)),
+              Math.round(getRealValue(y.expenses || 0, y.year)),
+              Math.round(getRealValue((y.mortgagePay || 0) + (y.debtRepayment || 0), y.year)),
+              Math.round(getRealValue(engineContributions, y.year)),
+              Math.round(getRealValue(totalWithdrawals as number, y.year)),
+              Math.round(getRealValue(y.liquidNW || 0, y.year)),
+              Math.round(getRealValue((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)),
+              Math.round(getRealValue(totalEstate, y.year))
+          ].join(",");
+      });
+
+      const csvContent = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
   // --- Quick Insights Aggregation ---
   let totalTaxPaid = 0;
   let peakNW = 0;
@@ -374,7 +437,7 @@ export default function ProjectionTab() {
       
       {/* QUICK INSIGHTS PILLS - GRID LAYOUT */}
       <div className="row g-2 g-md-3 mb-4">
-          <div className="col-12 col-md-6 col-xl">
+          <div className="col-12 col-md-4 col-xl">
               <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
                   <span className="small fw-bold text-uppercase ls-1 me-2" style={{color: planSuccess ? 'var(--bs-success)' : 'var(--bs-danger)'}}>Status</span>
                   <span className={`fw-bold text-nowrap ${planSuccess ? 'text-success' : 'text-danger'}`}>
@@ -383,7 +446,7 @@ export default function ProjectionTab() {
               </div>
           </div>
 
-          <div className="col-12 col-md-6 col-xl">
+          <div className="col-12 col-md-4 col-xl">
               <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100" title={`Reached at Age ${peakAge}`}>
                   <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Peak NW <span className="d-none d-xxl-inline text-opacity-50">({peakAge})</span></span>
                   <span className="fs-6 fw-bold text-info text-nowrap">{formatCurrency(peakNW)}</span>
@@ -410,6 +473,15 @@ export default function ProjectionTab() {
                       Estate <InfoBtn title="After-Tax Estate" text="The final value of your portfolio after applying terminal taxes to remaining RRSPs and Capital Gains." />
                   </span>
                   <span className="fs-6 fw-bold text-success text-nowrap">{formatCurrency(finalEstate, finalYear.year)}</span>
+              </div>
+          </div>
+
+          {/* Export to CSV Button positioned identically to the pills */}
+          <div className="col-12 col-md-4 col-xl cursor-pointer" onClick={exportToCSV}>
+              <div className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75">
+                  <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap">
+                      <i className="bi bi-filetype-csv fs-5 me-2"></i> Export
+                  </span>
               </div>
           </div>
       </div>
