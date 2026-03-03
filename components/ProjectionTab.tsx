@@ -172,7 +172,7 @@ export default function ProjectionTab() {
       return events.map((ev, i) => {
           let colorClass = "text-secondary";
           let icon = "bi-info-circle-fill";
-          if (ev.includes('Retires')) { colorClass = "text-warning"; icon = "bi-cup-hot-fill"; }
+          if (ev.includes('Retires')) { colorClass = "text-primary"; icon = "bi-cup-hot-fill"; }
           else if (ev.includes('Windfall')) { colorClass = "text-success"; icon = "bi-cash-coin"; }
           else if (ev.includes('Mortgage Paid')) { colorClass = "text-primary"; icon = "bi-house-check-fill"; }
           else if (ev.includes('Dies')) { colorClass = "text-danger"; icon = "bi-heartbreak-fill"; }
@@ -220,7 +220,7 @@ export default function ProjectionTab() {
       const slowgo = Number(data.inputs.exp_slow_age) || 85;
 
       if (maxAge <= gogo) return <span className="badge bg-success bg-opacity-25 text-success border border-success w-100 py-2">Go-Go Phase</span>;
-      if (maxAge <= slowgo) return <span className="badge bg-warning bg-opacity-25 text-warning border border-warning w-100 py-2">Slow-Go Phase</span>;
+      if (maxAge <= slowgo) return <span className="badge bg-opacity-25 border w-100 py-2" style={{ backgroundColor: 'rgba(217, 119, 6, 0.15)', color: '#d97706', borderColor: '#d97706' }}>Slow-Go Phase</span>;
       return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger w-100 py-2">No-Go Phase</span>;
   };
 
@@ -389,7 +389,7 @@ export default function ProjectionTab() {
                   else if (k.includes('Non-Reg') || k.includes('Crypto')) {
                       const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
                       if (mathObj) {
-                          info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-warning">+$${formatStr(mathObj.tax, year)}</span>`;
+                          info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
                       } else {
                           info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Withdrawal includes principal and capital gains. Only 50% of the capital gain is added to taxable income.`;
                       }
@@ -398,7 +398,7 @@ export default function ProjectionTab() {
                   return (
                       <div className="d-flex justify-content-between small mb-1 align-items-center" key={k}>
                           <span className="text-muted ms-2 d-flex align-items-center">{cleanName} W/D <InfoBtn align="left" title={`${cleanName} Math`} text={info} /></span>
-                          <span className="text-warning">+{formatCurrency(val, year)}</span>
+                          <span className="text-primary">+{formatCurrency(val, year)}</span>
                       </div>
                   );
               })}
@@ -422,7 +422,7 @@ export default function ProjectionTab() {
                           return (
                               <div className="d-flex justify-content-between small mb-1 align-items-center" key={k}>
                                   <span className="text-muted ms-2 d-flex align-items-center">{cleanName} W/D <InfoBtn align="left" title={`${cleanName} Withdrawal`} text={info} /></span>
-                                  <span className="text-warning">+{formatCurrency(val, year)}</span>
+                                  <span className="text-primary">+{formatCurrency(val, year)}</span>
                               </div>
                           );
                       })}
@@ -499,7 +499,7 @@ export default function ProjectionTab() {
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Total Income</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-warning" style={{ width: '14%' }}>Expenses</th>
+                <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>
                 <th className="py-3 pe-4 text-muted text-uppercase text-center border-bottom border-secondary text-success" style={{ width: '14%' }}>Net Worth</th>
               </tr>
             </thead>
@@ -561,7 +561,7 @@ export default function ProjectionTab() {
                       </td>
                       <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
                       <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
-                      <td className="py-3 text-center text-warning fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalExpenses, y.year)}</td>
+                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
                       <td className="py-3 pe-4 text-center text-success fw-bold fs-6 border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
                     </tr>
 
@@ -608,7 +608,7 @@ export default function ProjectionTab() {
 
                                 {/* Column 2: Cash Outflows */}
                                 <div className="col-12 col-lg-4 border-end border-secondary border-opacity-50 p-3 p-md-4 d-flex flex-column">
-                                    <h6 className="text-warning fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center">
+                                    <h6 className="fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center" style={{ color: '#d97706' }}>
                                         <i className="bi bi-box-arrow-right me-2"></i>
                                         <span className="text-uppercase">Cash Outflows</span>
                                         <InfoBtn align="center" title="Cash Outflows" text="All cash spent or allocated during the year, including living expenses, taxes, mortgage payments, and surplus cash saved into the portfolio." />
@@ -622,7 +622,7 @@ export default function ProjectionTab() {
                                                 <span>{formatCurrency(y.mortgagePay, y.year)}</span>
                                             </div>
                                         )}
-                                        {y.debtRepayment > 0 && <div className="d-flex justify-content-between small mb-1"><span className="text-muted ms-2 text-warning">Large Purchases/Debt</span><span className="text-warning">{formatCurrency(y.debtRepayment, y.year)}</span></div>}
+                                        {y.debtRepayment > 0 && <div className="d-flex justify-content-between small mb-1"><span className="text-muted ms-2 fw-bold" style={{ color: '#d97706' }}>Large Purchases/Debt</span><span className="fw-medium" style={{ color: '#d97706' }}>{formatCurrency(y.debtRepayment, y.year)}</span></div>}
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">

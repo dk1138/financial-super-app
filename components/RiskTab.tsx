@@ -93,7 +93,7 @@ export default function RiskTab() {
   const gaugeRadius = 100;
   const gaugeCircumference = Math.PI * gaugeRadius;
   const gaugeStrokeDashoffset = successRate !== null ? gaugeCircumference - (successRate / 100) * gaugeCircumference : gaugeCircumference;
-  const gaugeColor = successRate !== null ? (successRate >= 90 ? '#10b981' : successRate >= 75 ? '#f59e0b' : '#ef4444') : '#334155';
+  const gaugeColor = successRate !== null ? (successRate >= 90 ? '#10b981' : successRate >= 75 ? '#f59e0b' : '#ef4444') : '#6c757d';
 
   // PERFORMANCE FIREWALL: Prevents Chart from rebuilding during UI clicks
   const chartComponent = useMemo(() => {
@@ -105,7 +105,24 @@ export default function RiskTab() {
       
       return (
           <div style={{ height: '500px', position: 'relative', width: '100%', flexGrow: 1 }}>
-             <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index' as const, intersect: false }, plugins: { legend: { position: 'bottom' as const, labels: { color: '#cbd5e1' } } }, scales: { x: { grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } }, y: { grid: { color: '#334155' }, ticks: { color: '#cbd5e1', callback: (val: any) => '$' + (val / 1000000).toFixed(1) + 'M' } } } }} />
+             <Line data={chartData} options={{ 
+                 responsive: true, 
+                 maintainAspectRatio: false, 
+                 interaction: { mode: 'index' as const, intersect: false }, 
+                 plugins: { 
+                     legend: { position: 'bottom' as const, labels: { color: '#6c757d' } } // Neutral gray for legend
+                 }, 
+                 scales: { 
+                     x: { 
+                         grid: { color: 'rgba(108, 117, 125, 0.2)' }, // Soft transparent gray grid
+                         ticks: { color: '#6c757d' } // Neutral gray text
+                     }, 
+                     y: { 
+                         grid: { color: 'rgba(108, 117, 125, 0.2)' }, // Soft transparent gray grid
+                         ticks: { color: '#6c757d', callback: (val: any) => '$' + (val / 1000000).toFixed(1) + 'M' } // Neutral gray text
+                     } 
+                 } 
+             }} />
           </div>
       );
   }, [chartData]);
@@ -163,7 +180,7 @@ export default function RiskTab() {
             <h6 className="text-muted small fw-bold text-uppercase ls-1 mb-3">Probability of Success</h6>
             <div className="position-relative d-flex justify-content-center" style={{ width: '240px', height: '130px', overflow: 'hidden' }}>
                 <svg width="240" height="120" viewBox="0 0 240 120">
-                    <path d="M 20 120 A 100 100 0 0 1 220 120" fill="none" stroke="#334155" strokeWidth="25" strokeLinecap="round" />
+                    <path d="M 20 120 A 100 100 0 0 1 220 120" fill="none" stroke="rgba(108, 117, 125, 0.2)" strokeWidth="25" strokeLinecap="round" />
                     <path 
                         d="M 20 120 A 100 100 0 0 1 220 120" 
                         fill="none" 

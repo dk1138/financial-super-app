@@ -9,8 +9,7 @@ const ACCOUNT_TYPES = [
   { id: 'rrsp', label: 'RRSP', icon: 'bi-bank2', color: 'text-danger', tooltip: 'Registered Retirement Savings Plan. Tax-deductible contributions. Tax-deferred growth. 100% taxable withdrawals.' },
   { id: 'resp', label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', tooltip: 'Registered Education Savings Plan. 20% CESG match on first $2,500/yr.' },
   { id: 'lirf', label: 'LIRF', icon: 'bi-lock-fill', color: 'text-secondary', tooltip: 'Locked-in Retirement Account (LIRA). Pension funds locked until retirement. Tax-deferred.' },
-  { id: 'lif', label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', tooltip: 'Life Income Fund. Payout vehicle for LIRA. Has min/max annual limits. 100% taxable.' },
-  { id: 'rrif_acct', label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', tooltip: 'Registered Retirement Income Fund. Payout vehicle for RRSP. Mandatory minimum withdrawals. 100% taxable.' }
+  { id: 'lif', label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', tooltip: 'Life Income Fund. Payout vehicle for LIRA. Has min/max annual limits. 100% taxable.' }
 ];
 
 const calcAmortization = (principal: number, rate: number, payment: number) => {
@@ -925,7 +924,7 @@ export default function PlanTab() {
 
                       <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
                           <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
-                              <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-building"></i></div>
+                              <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-building"></i></div>
                               <span className="fw-bold text-main small text-uppercase ls-1">Employer RRSP Match</span>
                           </div>
                           <div className="p-3 bg-input">
@@ -1411,7 +1410,7 @@ export default function PlanTab() {
                             <div className="border border-secondary rounded-4 overflow-hidden shadow-sm">
                                 <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
                                     <div className="d-flex align-items-center gap-3">
-                                        <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
+                                        <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
                                         <span className="fw-bold text-main small text-uppercase ls-1">DB Pension</span>
                                     </div>
                                     <div className="form-check form-switch mb-0">

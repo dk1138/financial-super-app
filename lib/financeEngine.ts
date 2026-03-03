@@ -1,5 +1,5 @@
 /**
- * financeEngine.js
+ * financeEngine.ts
  * Shared financial logic core for both the main UI thread and Web Workers.
  * Refactored for readability, maintainability, and advanced optimization strategies.
  */
@@ -332,7 +332,8 @@ export class FinanceEngine {
 
         const getRates = (personPrefix: string, isRetired: boolean, age: number) => {
             const getRate = (id: string) => {
-                let baseRate = this.getVal(`${personPrefix}_${id}_ret` + (isAdvancedMode && isRetired ? '_retire' : '')) / 100;
+                let key = isAdvancedMode && isRetired ? `${personPrefix}_${id}_retire_ret` : `${personPrefix}_${id}_ret`;
+                let baseRate = this.getVal(key) / 100;
                 
                 if (useGlide && ['tfsa','rrsp','fhsa','nonreg','crypto','lirf','lif','rrif_acct','resp'].includes(id)) {
                     let ageOffset = Math.max(0, age - 50);
@@ -419,6 +420,10 @@ export class FinanceEngine {
         const calculateInflowsForPerson = (person: any, age: number, isRetired: boolean, prefix: string, maxCpp: number, maxOas: number) => {
             let inflows = { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, postRet:0, eiMat:0, topUp:0 };
             
+            const birthMonth = person.dob.getMonth(); // 0 = Jan, 11 = Dec
+            const startProration = (12 - birthMonth) / 12;
+            const endProration = birthMonth / 12;
+
             if (!isRetired) { 
                 let baseIncome = person.inc;
                 let workFraction = 1.0;
@@ -480,27 +485,55 @@ export class FinanceEngine {
                 const dbMultiplier = isIndexed ? baseInflation : 1.0;
                 
                 if (age >= lifetimeStart) {
-                    inflows.pension += this.getVal(`${prefix}_db_lifetime`) * 12 * dbMultiplier;
+                    let proration = (age === lifetimeStart) ? startProration : 1.0;
+                    inflows.pension += this.getVal(`${prefix}_db_lifetime`) * 12 * dbMultiplier * proration;
                 }
-                if (age >= bridgeStart && age < 65) {
-                    inflows.pension += this.getVal(`${prefix}_db_bridge`) * 12 * dbMultiplier;
+                
+                if (age >= bridgeStart && age <= 65) {
+                    let months = 12;
+                    if (age === bridgeStart) months -= birthMonth;
+                    if (age === 65) months -= (12 - birthMonth);
+                    
+                    if (months > 0) {
+                        inflows.pension += this.getVal(`${prefix}_db_bridge`) * months * dbMultiplier;
+                    }
                 }
             }
 
-            if (this.inputs[`${prefix}_cpp_enabled`] && age >= parseInt(this.getRaw(`${prefix}_cpp_start`))) {
-                inflows.cpp = this.calcBenefitAmount(maxCpp, parseInt(this.getRaw(`${prefix}_cpp_start`)), 1, person.retAge, 'cpp');
-                if (trackedEvents && age === parseInt(this.getRaw(`${prefix}_cpp_start`))) { 
+            const cppStart = parseInt(this.getRaw(`${prefix}_cpp_start`) || 65);
+            if (this.inputs[`${prefix}_cpp_enabled`] && age >= cppStart) {
+                let proration = (age === cppStart) ? startProration : 1.0;
+                inflows.cpp = this.calcBenefitAmount(maxCpp, cppStart, 1, person.retAge, 'cpp') * proration;
+                
+                if (trackedEvents && age === cppStart) { 
                     trackedEvents.add(`${prefix.toUpperCase()} CPP`); 
                 }
             }
             
-            if (this.inputs[`${prefix}_oas_enabled`] && age >= parseInt(this.getRaw(`${prefix}_oas_start`))) {
-                let baseOas = this.calcBenefitAmount(maxOas, parseInt(this.getRaw(`${prefix}_oas_start`)), 1, 65, 'oas');
+            const oasStart = parseInt(this.getRaw(`${prefix}_oas_start`) || 65);
+            if (this.inputs[`${prefix}_oas_enabled`] && age >= oasStart) {
+                let baseOas = this.calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas');
+                
+                // OAS 10% boost at 75 rules
                 if (age >= 75) {
-                    baseOas *= 1.10; 
+                    if (age === 75) {
+                        baseOas = (baseOas * endProration) + (baseOas * 1.10 * startProration);
+                    } else {
+                        baseOas *= 1.10; 
+                    }
                 }
-                inflows.oas = baseOas;
-                if (trackedEvents && age === parseInt(this.getRaw(`${prefix}_oas_start`))) { 
+
+                // Global proration for the start year
+                if (age === oasStart) {
+                    if (oasStart === 75) {
+                        baseOas = this.calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas') * 1.10;
+                    }
+                    inflows.oas = baseOas * startProration;
+                } else {
+                    inflows.oas = baseOas;
+                }
+
+                if (trackedEvents && age === oasStart) { 
                     trackedEvents.add(`${prefix.toUpperCase()} OAS`); 
                 }
             }
