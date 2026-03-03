@@ -368,8 +368,8 @@ export default function PlanTab() {
       
       ['p1', 'p2'].forEach(p => {
           ['tfsa', 'rrsp', 'nonreg', 'lirf', 'lif', 'rrif_acct', 'fhsa', 'resp'].forEach(acct => {
-              updates[`${p}_acct_ret`] = rate;
-              updates[`${p}_acct_retire_ret`] = rate;
+              updates[`${p}_${acct}_ret`] = rate;
+              updates[`${p}_${acct}_retire_ret`] = rate;
           });
           updates[`${p}_crypto_ret`] = rate + 2.0; 
           updates[`${p}_crypto_retire_ret`] = rate + 2.0;
@@ -458,7 +458,10 @@ export default function PlanTab() {
   const p1Gross = getActiveIncome('p1');
   const p2Gross = isCouple ? getActiveIncome('p2') : 0;
   const hhGross = p1Gross + p2Gross;
-  const hhNet = hhGross - (results?.timeline?.[0]?.taxDetailsP1?.totalTax || 0) - (isCouple ? (results?.timeline?.[0]?.taxDetailsP2?.totalTax || 0) : 0);
+  const totalTax = (results?.timeline?.[0]?.taxP1 || 0) + (isCouple ? (results?.timeline?.[0]?.taxP2 || 0) : 0);
+  
+  // FIX: Prevents negative Net Income if taxes on withdrawals exceed active salary
+  const hhNet = hhGross > 0 ? Math.max(0, hhGross - totalTax) : 0;
 
   return (
     <div className="p-3 p-md-4">
@@ -1029,7 +1032,7 @@ export default function PlanTab() {
             </div>
             <div className="form-check form-switch mb-0">
                 <input className="form-check-input mt-1 cursor-pointer" type="checkbox" checked={expenseAdvancedMode} onChange={(e) => setExpenseAdvancedMode(e.target.checked)} />
-                <label className="form-check-label small fw-bold text-muted ms-1 cursor-pointer">Adv. Mode</label>
+                <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-1 cursor-pointer">Adv. Mode</label>
             </div>
           </div>
           <div className="card-body p-3 p-md-4">
