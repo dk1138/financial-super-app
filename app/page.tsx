@@ -59,7 +59,7 @@ const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
 
 function DashboardLayout() {
   const financeContext = useFinance() as any; 
-  const { data, updateUseRealDollars, updateInput } = financeContext;
+  const { data, updateUseRealDollars, updateInput, resetData } = financeContext;
   
   const [activeTab, setActiveTab] = useState('plan');
   const [theme, setTheme] = useState('dark');
@@ -207,8 +207,13 @@ function DashboardLayout() {
   };
 
   const confirmReset = () => {
-      localStorage.removeItem('active_plan_name');
-      window.location.reload(); 
+      if (resetData) {
+          resetData();
+      }
+      localStorage.setItem('active_plan_name', 'Untitled Plan');
+      setActivePlanName('Untitled Plan');
+      setShowResetConfirm(false);
+      showToast("Current plan has been reset.");
   };
 
   const handleRetireAgeChange = (player: 'p1'|'p2', newAge: number) => {

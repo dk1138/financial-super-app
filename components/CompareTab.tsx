@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFinance } from '../lib/FinanceContext';
+import { useFinance, migrateLegacyData, emptyData } from '../lib/FinanceContext';
 import { FinanceEngine } from '../lib/financeEngine';
 
 export default function CompareTab() {
@@ -27,9 +27,10 @@ export default function CompareTab() {
                 const planStr = localStorage.getItem(`rp_saved_plan_${comparePlanName}`);
                 if (planStr) {
                     const parsed = JSON.parse(planStr);
-                    setCompareData(parsed);
+                    const migrated = migrateLegacyData(parsed, emptyData);
+                    setCompareData(migrated);
                     // Safe Clone for isolated engine run
-                    const engine = new FinanceEngine(JSON.parse(JSON.stringify(parsed)));
+                    const engine = new FinanceEngine(JSON.parse(JSON.stringify(migrated)));
                     const sim = engine.runSimulation(true, null);
                     setCompareResults(sim);
                 }
@@ -64,6 +65,7 @@ export default function CompareTab() {
         };
 
         const finalYear = planTimeline[planTimeline.length - 1];
+        const finalEstateVal = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
         
         // A plan is successful if liquid net worth never drops below zero
         const isSuccess = planTimeline.every((y: any) => Math.round(y.liquidNW) >= 0);
@@ -75,7 +77,7 @@ export default function CompareTab() {
             p2Income: planData.mode === 'Couple' ? (Number(planData.inputs.p2_income) || 0) : 0,
             p1RetAge: Number(planData.inputs.p1_retireAge) || 60,
             p2RetAge: planData.mode === 'Couple' ? (Number(planData.inputs.p2_retireAge) || 60) : null,
-            finalNW: getReal(finalYear.liquidNW + (finalYear.reIncludedEq || 0), finalYear.year),
+            finalNW: getReal(finalEstateVal, finalYear.year),
             isSuccess,
             isCouple: planData.mode === 'Couple'
         };

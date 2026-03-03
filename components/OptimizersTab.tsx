@@ -29,9 +29,71 @@ const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title:
     );
 };
 
+// --- Reusable Input Components ---
+const CurrencyInput = ({ value, onChange, className, placeholder, disabled }: any) => {
+    const [localValue, setLocalValue] = useState('');
+    useEffect(() => {
+        if (value !== undefined && value !== '' && value !== null) { setLocalValue(Number(Math.round(value)).toLocaleString('en-US')); } else { setLocalValue(''); }
+    }, [value]);
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let rawStr = e.target.value;
+        const rawValue = rawStr.replace(/[^0-9]/g, ''); 
+        if (rawValue === '') onChange(0); else onChange(parseInt(rawValue, 10));
+    };
+    return (
+        <div className="position-relative w-100 d-flex align-items-center">
+            <span className="position-absolute text-muted fw-bold" style={{ left: '12px', fontSize: '0.9em', pointerEvents: 'none' }}>$</span>
+            <input type="text" className={`${className} text-end shadow-sm border border-secondary bg-input text-main ${disabled ? 'opacity-50' : ''}`} style={{ paddingLeft: '28px', paddingRight: '12px', fontWeight: '600', outline: 'none' }} value={localValue} onChange={handleChange} placeholder={placeholder} disabled={disabled} />
+        </div>
+    );
+};
+
+const PercentInput = ({ value, onChange, className, disabled }: any) => {
+    const [focused, setFocused] = useState(false);
+    let displayValue = value ?? '';
+    if (!focused && displayValue !== '') displayValue = Number(displayValue).toFixed(2);
+    
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let val = e.target.value;
+        onChange(val === '' ? 0 : parseFloat(val));
+    };
+    return (
+        <div className="position-relative w-100 d-flex align-items-center">
+            <input type="number" step="0.01" className={`${className} text-end shadow-sm border border-secondary bg-input text-main ${disabled ? 'opacity-50' : ''}`} style={{ paddingRight: '28px', fontWeight: '600', outline: 'none' }} value={focused ? (value ?? '') : displayValue} onChange={handleChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} disabled={disabled} />
+            <span className="position-absolute text-muted fw-bold" style={{ right: '12px', fontSize: '0.9em', pointerEvents: 'none' }}>%</span>
+        </div>
+    );
+};
+
+// Historical YMPE Data for the Max Button and ratio calculations
+const getYMPE = (year: number) => {
+    const ympeMap: Record<number, number> = {
+        2026: 73200, 2025: 71300, 2024: 68500, 2023: 66600, 2022: 64900, 2021: 61600,
+        2020: 58700, 2019: 57400, 2018: 55900, 2017: 55300, 2016: 54900, 2015: 53600, 
+        2014: 52500, 2013: 51100, 2012: 50100, 2011: 48300, 2010: 47200, 2009: 46300, 
+        2008: 44900, 2007: 43700, 2006: 42100
+    };
+    if (year > 2026) return 73200 + ((year - 2026) * 1500); 
+    if (year < 2006) return 40000;
+    return ympeMap[year];
+};
+
+const getYAMPE = (year: number) => {
+    if (year === 2024) return 73200;
+    if (year === 2025) return 80500;
+    if (year >= 2026) return getYMPE(year) * 1.14; 
+    return getYMPE(year); 
+};
+
 export default function OptimizersTab() {
-  const { data, updateInput } = useFinance();
+  const { data, updateInput, results } = useFinance();
+  const [activeCategory, setActiveCategory] = useState('Master Simulations'); 
+  const [activeTool, setActiveTool] = useState('dwz'); 
   
+  // Format Helper
+  const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
+
+  // Engine States
   const [isCalculating, setIsCalculating] = useState(false);
   const [maxSpendResult, setMaxSpendResult] = useState<any>(null);
   const [earliestRetResult, setEarliestRetResult] = useState<any>(null);
@@ -39,22 +101,27 @@ export default function OptimizersTab() {
   const [rrspSweetSpot, setRrspSweetSpot] = useState<any>(null);
   const [tfsaRrspResult, setTfsaRrspResult] = useState<any>(null);
 
-  // States for Interactive Tools
+  // Interactive Tools States
   const [sweetSpotTab, setSweetSpotTab] = useState<'p1'|'p2'>('p1');
   const [grossUpTab, setGrossUpTab] = useState<'p1'|'p2'>('p1');
   const [grossUpCash, setGrossUpCash] = useState<number>(5000);
+  
+  // CPP Importer States
+  const [cppStep, setCppStep] = useState<'import'|'edit'|'results'>('import');
   const [cppPasteText, setCppPasteText] = useState<string>('');
+  const [cppRecords, setCppRecords] = useState<{id: string, year: number, earnings: number}[]>([]);
   const [cppAnalysis, setCppAnalysis] = useState<any>(null);
+  const [cppTargetTab, setCppTargetTab] = useState<'p1'|'p2'>('p1');
+  const [cppProjectFuture, setCppProjectFuture] = useState(true);
   
   const [toastMsg, setToastMsg] = useState('');
-
-  const isCouple = data.mode === 'Couple';
-  const stringifiedInputs = JSON.stringify(data.inputs);
-  
   const showToast = (msg: string) => {
       setToastMsg(msg);
       setTimeout(() => setToastMsg(''), 3000);
   };
+
+  const isCouple = data.mode === 'Couple';
+  const stringifiedInputs = JSON.stringify(data.inputs);
 
   // Real Dollars Discounting Helper
   const inflation = (data.inputs.inflation_rate || 2.1) / 100;
@@ -64,16 +131,11 @@ export default function OptimizersTab() {
       return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
 
-  const formatCurrency = (val: number) => {
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
-  };
-
-  // Safe Sandbox Engine Runner - WITH EXPENSE MULTIPLIER FIX
+  // Safe Sandbox Engine Runner
   const runSandbox = (inputOverrides: any = {}, expenseMultiplier: number = 1.0) => {
       const clonedData = JSON.parse(JSON.stringify(data));
       Object.assign(clonedData.inputs, inputOverrides);
       
-      // Physically multiply the expenses in the cloned data before running the engine
       if (expenseMultiplier !== 1.0) {
           Object.keys(clonedData.expensesByCategory).forEach(cat => {
               clonedData.expensesByCategory[cat].items.forEach((item: any) => {
@@ -91,16 +153,15 @@ export default function OptimizersTab() {
       return engine.runSimulation(true, null);
   };
 
-  const runAllOptimizers = () => {
+  // Run Master Engine Optimizers
+  const runEngineOptimizers = () => {
       setIsCalculating(true);
 
       setTimeout(() => {
           
-          // -------------------------------------------------------------
           // 1. MAX SPEND OPTIMIZER (Die With Zero)
-          // -------------------------------------------------------------
-          let low = 0.05; // Test down to 5% of current expenses
-          let high = 5.0; // Test up to 500% of current expenses
+          let low = 0.05; 
+          let high = 5.0; 
           let bestMultiplier = 0;
           let bestEstate = 0;
           let bestTimeline: any = null;
@@ -108,24 +169,20 @@ export default function OptimizersTab() {
           for (let i = 0; i < 15; i++) { 
               const mid = (low + high) / 2;
               const timeline = runSandbox({}, mid);
-              
-              // STRICT FIX: The plan only succeeds if liquid cash NEVER drops below zero
               const isSuccess = timeline.every((y: any) => y.liquidNW > 0);
 
               if (isSuccess) {
                   bestMultiplier = mid;
-                  bestEstate = timeline[timeline.length - 1].liquidNW + (timeline[timeline.length - 1].reIncludedEq || 0);
+                  bestEstate = timeline[timeline.length - 1].afterTaxEstate !== undefined ? timeline[timeline.length - 1].afterTaxEstate : (timeline[timeline.length - 1].liquidNW + (timeline[timeline.length - 1].reIncludedEq || 0));
                   bestTimeline = timeline;
-                  low = mid; // Can spend more
+                  low = mid; 
               } else {
-                  high = mid; // Spent too much, ran out of money during life
+                  high = mid; 
               }
           }
 
           if (bestTimeline && bestMultiplier > 0) {
               const baseTimeline = runSandbox();
-              
-              // Find the first year of retirement to extract the baseline expense number
               const baseRetYear = baseTimeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || baseTimeline[baseTimeline.length - 1];
               const optRetYear = bestTimeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || bestTimeline[bestTimeline.length - 1];
               
@@ -141,13 +198,10 @@ export default function OptimizersTab() {
                   finalEstate: getRealValue(bestEstate, startYear, bestTimeline[bestTimeline.length-1].year)
               });
           } else {
-              // The plan failed even at 5% of their current expenses (Severe deficit)
               setMaxSpendResult({ difference: -999999, optSpend: 0 });
           }
 
-          // -------------------------------------------------------------
           // 2. EARLIEST RETIREMENT AGE OPTIMIZER (Freedom Number)
-          // -------------------------------------------------------------
           const baseP1Age = Number(data.inputs.p1_retireAge) || 65;
           const baseP2Age = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : baseP1Age;
           const ageDiff = baseP2Age - baseP1Age;
@@ -156,7 +210,6 @@ export default function OptimizersTab() {
           let earliestP2 = baseP2Age;
           let earliestTimeline: any = null;
           
-          // Verify base age actually works first!
           const baseCheck = runSandbox();
           const baseSuccess = baseCheck.every((y: any) => y.liquidNW > 0);
 
@@ -168,7 +221,6 @@ export default function OptimizersTab() {
                   const overrides = { p1_retireAge: testAge, p2_retireAge: testP2 };
                   const timeline = runSandbox(overrides);
                   
-                  // STRICT FIX: The plan must survive every single year
                   const isSuccess = timeline.every((y: any) => y.liquidNW > 0);
 
                   if (isSuccess) {
@@ -176,13 +228,13 @@ export default function OptimizersTab() {
                       earliestP2 = testP2;
                       earliestTimeline = timeline;
                   } else {
-                      break; // Reached the breaking point
+                      break; 
                   }
               }
 
               if (earliestTimeline) {
                   const startYear = earliestTimeline[0].year;
-                  const finalEstate = earliestTimeline[earliestTimeline.length - 1].liquidNW + (earliestTimeline[earliestTimeline.length - 1].reIncludedEq || 0);
+                  const finalEstate = earliestTimeline[earliestTimeline.length - 1].afterTaxEstate !== undefined ? earliestTimeline[earliestTimeline.length - 1].afterTaxEstate : (earliestTimeline[earliestTimeline.length - 1].liquidNW + (earliestTimeline[earliestTimeline.length - 1].reIncludedEq || 0));
                   setEarliestRetResult({
                       failed: false,
                       p1Age: earliestP1,
@@ -195,9 +247,7 @@ export default function OptimizersTab() {
               }
           }
 
-          // -------------------------------------------------------------
           // 3. CPP/OAS GRID SEARCH OPTIMIZER
-          // -------------------------------------------------------------
           const cppResultsArr: any[] = [];
           for (let cpp = 60; cpp <= 70; cpp++) {
               for (let oas = 65; oas <= 70; oas++) {
@@ -207,7 +257,7 @@ export default function OptimizersTab() {
                   };
                   const timeline = runSandbox(overrides);
                   const startYear = timeline[0].year;
-                  const finalEstate = timeline[timeline.length - 1].liquidNW + (timeline[timeline.length - 1].reIncludedEq || 0);
+                  const finalEstate = timeline[timeline.length - 1].afterTaxEstate !== undefined ? timeline[timeline.length - 1].afterTaxEstate : (timeline[timeline.length - 1].liquidNW + (timeline[timeline.length - 1].reIncludedEq || 0));
                   
                   cppResultsArr.push({
                       cppAge: cpp,
@@ -223,9 +273,7 @@ export default function OptimizersTab() {
               scenarios: sortedCpp.slice(0, 5)
           });
 
-          // -------------------------------------------------------------
-          // 4. RRSP TAX BRACKET SWEET SPOT (P1 & P2)
-          // -------------------------------------------------------------
+          // 4. RRSP TAX BRACKET SWEET SPOT
           const engine = new FinanceEngine(data);
           const prov = data.inputs.tax_province || 'ON';
           const taxDataObj = engine.getInflatedTaxData(1);
@@ -264,18 +312,14 @@ export default function OptimizersTab() {
               p2: isCouple ? getSweetSpot(data.inputs.p2_income) : null
           });
 
-          // -------------------------------------------------------------
           // 5. TFSA vs RRSP ANALYZER
-          // -------------------------------------------------------------
           const p1CurrentInc = Number(data.inputs.p1_income) || 0;
           const p1CurrentTax = engine.calculateTaxDetailed(p1CurrentInc, prov, taxDataObj, 0, 0, p1CurrentInc, 1, 0);
           const currMarginal = p1CurrentTax.margRate;
 
           let totalRetTax = 0;
           let totalRetInc = 0;
-          const baseTimelineData = runSandbox();
-          
-          baseTimelineData.forEach((y: any) => {
+          baseCheck.forEach((y: any) => {
               if (y.p1Age >= (Number(data.inputs.p1_retireAge) || 65)) {
                   totalRetTax += y.taxP1;
                   totalRetInc += y.taxIncP1;
@@ -297,11 +341,12 @@ export default function OptimizersTab() {
   useEffect(() => {
       setIsCalculating(true);
       const timer = setTimeout(() => {
-          runAllOptimizers();
+          runEngineOptimizers();
       }, 500);
       return () => clearTimeout(timer);
   }, [stringifiedInputs]);
 
+  // Apply Action Handlers
   const applyEarliestRetirement = () => {
       if (earliestRetResult && !earliestRetResult.failed) {
           updateInput('p1_retireAge', earliestRetResult.p1Age);
@@ -324,48 +369,1004 @@ export default function OptimizersTab() {
       }
   };
 
-  // --- Tool 6: CPP Analyzer Logic ---
-  const analyzeCPP = () => {
-      const regex = /(19[5-9]\d|20[0-2]\d)[\s\t]+[\$]?([\d,]+(?:\.\d{2})?)/g;
-      let match;
-      const records = [];
-      while ((match = regex.exec(cppPasteText)) !== null) {
-          records.push({
-              year: parseInt(match[1]),
-              earnings: parseFloat(match[2].replace(/,/g, ''))
-          });
-      }
-      
-      if(records.length === 0) {
-          setCppAnalysis({ error: true });
-          return;
-      }
-      
-      records.sort((a,b) => b.earnings - a.earnings); 
-      const dropCount = Math.min(8, Math.floor(records.length * 0.17));
-      const keepCount = records.length - dropCount;
-      const kept = records.slice(0, keepCount);
-      
-      const sumEarnings = kept.reduce((s, r) => s + r.earnings, 0);
-      const avg = sumEarnings / keepCount;
 
-      const ratio = Math.min(1, avg / 65000); 
-      const projected = 16300 * ratio; 
+  // Auto-extracted Context Variables for Micro Tools
+  const householdIncome = (Number(data.inputs.p1_income) || 0) + (data.mode === 'Couple' ? (Number(data.inputs.p2_income) || 0) : 0);
+  const p1Marginal = results?.timeline?.[0]?.taxDetailsP1?.margRate * 100 || 30;
+  const kidsCount = data.dependents?.length || 0;
+  const firstMortgage = data.properties?.find((p: any) => p.mortgage > 0);
 
-      setCppAnalysis({ error: false, records: records.length, dropped: dropCount, average: avg, projected });
+  // ==========================================
+  // MICRO TOOL STATES & MATH
+  // ==========================================
+  
+  // CCB Maximizer
+  const [ccbIncome, setCcbIncome] = useState(householdIncome || 100000);
+  const [ccbKidsUnder6, setCcbKidsUnder6] = useState(kidsCount > 0 ? kidsCount : 1);
+  const [ccbKidsOver6, setCcbKidsOver6] = useState(0);
+  const [ccbRrspContrib, setCcbRrspContrib] = useState(5000);
+
+  const calcCCB = (netIncome: number, u6: number, o6: number) => {
+      const maxU6 = 7437; const maxO6 = 6275;
+      const t1 = 34863; const t2 = 75537;
+      const totalKids = u6 + o6;
+      if (totalKids === 0) return 0;
+      let maxBenefit = (u6 * maxU6) + (o6 * maxO6);
+      let rateIndex = Math.min(totalKids - 1, 3);
+      const rate1 = [0.07, 0.135, 0.19, 0.23];
+      const rate2 = [0.032, 0.057, 0.08, 0.095];
+      let reduction = 0;
+      if (netIncome > t2) {
+          reduction = ((t2 - t1) * rate1[rateIndex]) + ((netIncome - t2) * rate2[rateIndex]);
+      } else if (netIncome > t1) {
+          reduction = (netIncome - t1) * rate1[rateIndex];
+      }
+      return Math.max(0, maxBenefit - reduction);
   };
+  const currentCCB = calcCCB(ccbIncome, ccbKidsUnder6, ccbKidsOver6);
+  const newCCB = calcCCB(ccbIncome - ccbRrspContrib, ccbKidsUnder6, ccbKidsOver6);
+  const ccbBoost = newCCB - currentCCB;
+  const ccbTaxRefund = ccbRrspContrib * (p1Marginal / 100);
+  const ccbTotalROI = ((ccbBoost + ccbTaxRefund) / (ccbRrspContrib || 1)) * 100;
 
-  // RRSP Gross Up Active Math
+  // Pay Down Mortgage vs Invest
+  const [mviLumpSum, setMviLumpSum] = useState(10000);
+  const [mviMortgageRate, setMviMortgageRate] = useState(firstMortgage?.rate || 4.5);
+  const [mviInvestReturn, setMviInvestReturn] = useState(7.0);
+  const [mviYears, setMviYears] = useState(10);
+  const [mviTaxRate, setMviTaxRate] = useState(0); 
+
+  const mviInvestVal = mviLumpSum * Math.pow(1 + ((mviInvestReturn / 100) * (1 - (mviTaxRate / 100))), mviYears);
+  const mviMortgageVal = mviLumpSum * Math.pow(1 + (mviMortgageRate / 100), mviYears);
+  const mviDiff = mviInvestVal - mviMortgageVal;
+
+  // FHSA vs RRSP HBP
+  const [fhsaAmount, setFhsaAmount] = useState(8000);
+  const [fhsaTaxRate, setFhsaTaxRate] = useState(p1Marginal);
+  const [fhsaYears, setFhsaYears] = useState(5);
+  const [fhsaReturn, setFhsaReturn] = useState(6.0);
+
+  const fhsaGrowth = fhsaAmount * Math.pow(1 + (fhsaReturn/100), fhsaYears);
+  const fhsaTaxRefund = fhsaAmount * (fhsaTaxRate / 100);
+  const hbpRepaymentCost = (fhsaAmount / 15) * (1 / (1 - (fhsaTaxRate/100))) * 15; 
+
+  // Smith Maneuver
+  const [smLoan, setSmLoan] = useState(100000);
+  const [smHelocRate, setSmHelocRate] = useState(7.2);
+  const [smInvestReturn, setSmInvestReturn] = useState(8.0);
+  const [smTaxRate, setSmTaxRate] = useState(p1Marginal);
+
+  const smEffectiveBorrowingRate = smHelocRate * (1 - (smTaxRate / 100));
+  const smSpread = smInvestReturn - smEffectiveBorrowingRate;
+  const smAnnualProfit = smLoan * (smSpread / 100);
+
+  // Emergency Fund Sizer
+  const [emMonthlyExp, setEmMonthlyExp] = useState(5000);
+  const [emMonthsToHire, setEmMonthsToHire] = useState(6);
+  const [emEiEligible, setEmEiEligible] = useState(true);
+  const [emSeverance, setEmSeverance] = useState(1);
+
+  const emEiWeekly = 668; 
+  const emEiMonthly = (emEiWeekly * 52) / 12;
+  const emTotalNeeded = emMonthlyExp * emMonthsToHire;
+  const emSeveranceCash = emMonthlyExp * emSeverance;
+  const emEiCash = emEiEligible ? Math.max(0, (emMonthsToHire - emSeverance - 0.5)) * emEiMonthly : 0; 
+  const emCashRequired = Math.max(0, emTotalNeeded - emSeveranceCash - emEiCash);
+
+  // Buy vs Lease Car
+  const [carLeaseMo, setCarLeaseMo] = useState(550);
+  const [carLeaseDown, setCarLeaseDown] = useState(3000);
+  const [carLeaseBuyout, setCarLeaseBuyout] = useState(20000);
+  const [carFinanceMo, setCarFinanceMo] = useState(700);
+  const [carFinanceDown, setCarFinanceDown] = useState(5000);
+  const [carTerm, setCarTerm] = useState(48);
+
+  const totalLeaseToOwn = carLeaseDown + (carLeaseMo * carTerm) + carLeaseBuyout;
+  const totalFinance = carFinanceDown + (carFinanceMo * carTerm);
+  const carDiff = totalLeaseToOwn - totalFinance;
+
+  // RRSP Gross Up Math
   const activeSweetSpot = rrspSweetSpot?.[grossUpTab];
-  const activeMargRate = activeSweetSpot ? activeSweetSpot.marginalRate : 0.40;
+  const activeMargRate = activeSweetSpot ? activeSweetSpot.marginalRate : (p1Marginal / 100);
   const grossedUpAmount = grossUpCash / (1 - activeMargRate);
   const loanAmount = grossedUpAmount - grossUpCash;
   const expectedRefund = grossedUpAmount * activeMargRate;
-
   const currentSweetSpot = rrspSweetSpot?.[sweetSpotTab];
 
+
+  // ==========================================
+  // CPP Smart Importer Logic (Enhanced)
+  // ==========================================
+  const handleHTMLUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+          const html = evt.target?.result as string;
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const rows = doc.querySelectorAll('table tbody tr');
+          let newRecords: any[] = [];
+          
+          rows.forEach(row => {
+              const th = row.querySelector('th');
+              if(!th) return;
+              const yearText = th.innerText.trim();
+              const yearMatch = yearText.match(/(\d{4})\s*to\s*(\d{4})|(\d{4})/);
+              
+              const baseTd = row.querySelector('td[headers*="base-earnings"]');
+              const secEnhTd = row.querySelector('td[headers*="second-additional-earnings"]');
+              
+              let earnings = 0;
+              if(baseTd) earnings += parseFloat(baseTd.innerText.replace(/[^\d.]/g, '')) || 0;
+              if(secEnhTd) earnings += parseFloat(secEnhTd.innerText.replace(/[^\d.]/g, '')) || 0; // Combine Base + Second Additional
+
+              if(yearMatch) {
+                  if(yearMatch[1] && yearMatch[2]) {
+                      const startY = parseInt(yearMatch[1]);
+                      const endY = parseInt(yearMatch[2]);
+                      for(let y=startY; y<=endY; y++) {
+                          newRecords.push({ id: Math.random().toString(), year: y, earnings });
+                      }
+                  } else if(yearMatch[3]) {
+                      newRecords.push({ id: Math.random().toString(), year: parseInt(yearMatch[3]), earnings });
+                  }
+              }
+          });
+          
+          if (newRecords.length > 0) {
+              // Deduplicate overlapping years by keeping the maximum earning found for that year
+              const map = new Map();
+              newRecords.forEach(r => {
+                  if (!map.has(r.year) || map.get(r.year).earnings < r.earnings) {
+                      map.set(r.year, r);
+                  }
+              });
+              const deduped = Array.from(map.values()).sort((a,b) => b.year - a.year);
+              setCppRecords(deduped);
+              setCppStep('edit');
+              setCppAnalysis(null);
+          } else {
+              showToast("Could not extract table data from HTML.");
+          }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+  };
+
+  const parseText = () => {
+      const regex = /(19[5-9]\d|20[0-2]\d)[\s\t]+[\$]?([\d,]+(?:\.\d{2})?)/g;
+      let match;
+      const newRecords = [];
+      while ((match = regex.exec(cppPasteText)) !== null) {
+          newRecords.push({ id: Math.random().toString(), year: parseInt(match[1]), earnings: parseFloat(match[2].replace(/,/g, '')) });
+      }
+      if (newRecords.length > 0) {
+          const map = new Map();
+          newRecords.forEach(r => {
+              if (!map.has(r.year) || map.get(r.year).earnings < r.earnings) {
+                  map.set(r.year, r);
+              }
+          });
+          const deduped = Array.from(map.values()).sort((a,b) => b.year - a.year);
+          setCppRecords(deduped);
+          setCppStep('edit');
+          setCppAnalysis(null);
+      } else {
+          showToast("Could not find any matching years/earnings in text.");
+      }
+  };
+
+  const updateCppRecord = (index: number, field: string, val: string) => {
+      const updated = [...cppRecords];
+      updated[index] = { ...updated[index], [field]: Number(val) || 0 };
+      setCppRecords(updated);
+  };
+
+  const removeCppRecord = (index: number) => {
+      const updated = [...cppRecords];
+      updated.splice(index, 1);
+      setCppRecords(updated);
+  };
+
+  const addCppRecord = () => {
+      const maxYear = cppRecords.length > 0 ? Math.max(...cppRecords.map(r => r.year)) : new Date().getFullYear();
+      setCppRecords([{ id: Math.random().toString(), year: maxYear + 1, earnings: 0 }, ...cppRecords]);
+  };
+
+  const runCPPAnalysis = () => {
+      if(cppRecords.length === 0) return;
+      
+      const p = cppTargetTab;
+      const age = Number(data.inputs[`${p}_age`]) || 35;
+      const retireAge = Number(data.inputs[`${p}_retireAge`]) || 60;
+      const cppStartAge = Number(data.inputs[`${p}_cpp_start`]) || 65;
+      const currentIncome = Number(data.inputs[`${p}_income`]) || 0;
+      const incomeGrowth = (Number(data.inputs[`${p}_income_growth`]) || 2.0) / 100;
+      
+      const currentYear = new Date().getFullYear();
+      const birthYear = currentYear - age;
+      const age18Year = birthYear + 18;
+      const retireYear = birthYear + retireAge;
+      const cppStartYear = birthYear + cppStartAge;
+      
+      let augmentedRecords: {year: number, earnings: number, isProjected: boolean}[] = [];
+      const recordMap = new Map(cppRecords.map(r => [r.year, r.earnings]));
+      
+      let projectedCount = 0;
+      let zeroCount = 0;
+
+      // Span the entire Contributory Period (Age 18 to CPP Start Age)
+      for (let y = age18Year; y < cppStartYear; y++) {
+          if (recordMap.has(y)) {
+              augmentedRecords.push({ year: y, earnings: recordMap.get(y), isProjected: false });
+          } else {
+              let e = 0;
+              let isProj = false;
+              if (y >= currentYear && cppProjectFuture) {
+                  if (y < retireYear) {
+                      e = currentIncome * Math.pow(1 + incomeGrowth, y - currentYear);
+                      isProj = true;
+                      projectedCount++;
+                  } else {
+                      zeroCount++;
+                  }
+              }
+              augmentedRecords.push({ year: y, earnings: e, isProjected: isProj });
+          }
+      }
+      
+      // Calculate true ratio against YMPE for base portion
+      const ratios = augmentedRecords.map(r => {
+          const ympe = getYMPE(r.year);
+          const cappedBaseEarnings = Math.min(r.earnings, ympe);
+          return cappedBaseEarnings / ympe;
+      });
+      
+      // Sort ratios descending to apply drop out correctly
+      const sortedRatios = [...ratios].sort((a,b) => b - a);
+      
+      const totalYears = cppStartYear - age18Year;
+      const dropYears = Math.floor(totalYears * 0.17);
+      const keepYears = Math.max(1, totalYears - dropYears);
+      
+      const keptRatios = sortedRatios.slice(0, keepYears);
+      const avgRatio = keptRatios.reduce((a,b) => a+b, 0) / keepYears;
+      
+      const projectedBase = 16375 * avgRatio;
+      
+      // Enhancements (First & Second) Post 2019
+      const recent = augmentedRecords.filter(r => r.year >= 2019);
+      let avgRecentRatio = 0;
+      if (recent.length > 0) {
+          const recentRatios = recent.map(r => Math.min(1, r.earnings / getYAMPE(r.year)));
+          avgRecentRatio = recentRatios.reduce((a,b)=>a+b,0) / recent.length;
+      }
+      const projectedEnhanced = 2500 * avgRecentRatio;
+      const totalProjected = projectedBase + projectedEnhanced;
+
+      // Avg nominal earnings for display
+      const sortedByEarnings = [...augmentedRecords].sort((a,b) => b.earnings - a.earnings);
+      const keptEarnings = sortedByEarnings.slice(0, keepYears);
+      const avgEarnings = keptEarnings.reduce((s, r) => s + r.earnings, 0) / keepYears;
+
+      setCppAnalysis({ 
+          error: false, 
+          totalYears,
+          keepYears,
+          dropYears,
+          projectedCount,
+          zeroCount,
+          average: avgEarnings, 
+          projected: totalProjected 
+      });
+      setCppStep('results');
+  };
+
+  // --- Category Grouping ---
+  const toolCategories = [
+    { title: "Master Simulations", keys: ['dwz', 'freedom', 'cpp'] },
+    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa'] },
+    { title: "Debt, Cash & Life", keys: ['mvi', 'smith', 'emerg', 'car'] },
+    { title: "Data Importers", keys: ['cppimport'] }
+  ];
+
+  // --- Component Renderer for Grid Layout ---
+  const renderToolCard = (id: string) => {
+      switch (id) {
+          case 'dwz': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-bullseye fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-success mb-0 text-uppercase ls-1">Die With Zero</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculates the absolute maximum lifestyle you can afford every year without running out of money before your life expectancy.</p>
+
+                      <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4 position-relative overflow-hidden">
+                          {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center" style={{zIndex: 10}}><span className="spinner-border text-success"></span></div>}
+                          
+                          {maxSpendResult ? (
+                              maxSpendResult.difference > 0 ? (
+                                  <>
+                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Max Safe Spend</span>
+                                      <span className="fs-2 fw-bolder text-success mb-3">{formatCurrency(maxSpendResult.optSpend)} <span className="fs-6 text-muted fw-normal">/yr</span></span>
+                                      <span className="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-3 py-2 mx-auto shadow-sm">
+                                          <i className="bi bi-arrow-up-circle-fill me-2"></i>You can spend {formatCurrency(maxSpendResult.difference)} more per year
+                                      </span>
+                                  </>
+                              ) : (
+                                  <>
+                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Current Plan Status</span>
+                                      <span className="fs-3 fw-bolder text-danger mb-3">Overspending</span>
+                                      <span className="badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill px-3 py-2 mx-auto text-wrap shadow-sm" style={{lineHeight: 1.5}}>
+                                          <i className="bi bi-exclamation-triangle-fill me-2"></i>Cut expenses by {formatCurrency(Math.abs(maxSpendResult.difference))} /yr
+                                      </span>
+                                  </>
+                              )
+                          ) : (
+                              <span className="text-muted fst-italic">Awaiting calculation...</span>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'freedom': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-calendar-heart fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">Freedom Number</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Finds the earliest possible age you can trigger retirement based on your current savings rate and projected expenses.</p>
+
+                      <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4 position-relative overflow-hidden">
+                          {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center" style={{zIndex: 10}}><span className="spinner-border text-info"></span></div>}
+                          
+                          {earliestRetResult ? (
+                              earliestRetResult.failed ? (
+                                  <>
+                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
+                                      <span className="fs-4 fw-bolder text-danger mb-3">Target Unreachable</span>
+                                      <span className="small text-muted px-2">Your current plan fails even at your selected retirement age.</span>
+                                  </>
+                              ) : earliestRetResult.yearsSaved > 0 ? (
+                                  <>
+                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
+                                      <span className="fs-1 fw-bolder text-info mb-3">Age {earliestRetResult.p1Age} {isCouple && `/ ${earliestRetResult.p2Age}`}</span>
+                                      <span className="badge bg-info bg-opacity-25 text-info border border-info rounded-pill px-3 py-2 mx-auto shadow-sm">
+                                          <i className="bi bi-stars me-2"></i>Retire {earliestRetResult.yearsSaved} years earlier
+                                      </span>
+                                  </>
+                              ) : (
+                                  <>
+                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
+                                      <span className="fs-2 fw-bolder text-muted mb-3">Age {earliestRetResult.p1Age} {isCouple && `/ ${earliestRetResult.p2Age}`}</span>
+                                      <span className="small text-warning fw-bold px-2 mt-2 bg-warning bg-opacity-10 border border-warning rounded-pill py-2 mx-auto shadow-sm"><i className="bi bi-check-circle-fill me-2"></i>Absolute earliest safe limit.</span>
+                                  </>
+                              )
+                          ) : (
+                              <span className="text-muted fst-italic">Awaiting calculation...</span>
+                          )}
+                      </div>
+
+                      <button 
+                          className="btn btn-outline-info fw-bold w-100 d-flex align-items-center justify-content-center py-2 mt-auto" 
+                          disabled={!earliestRetResult || earliestRetResult.failed || earliestRetResult.yearsSaved <= 0}
+                          onClick={applyEarliestRetirement}
+                      >
+                          <i className="bi bi-box-arrow-in-down-right me-2"></i> Apply to Plan
+                      </button>
+                  </div>
+              </div>
+          );
+
+          case 'cpp': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0, color:'var(--bs-purple)', backgroundColor: 'rgba(111, 66, 193, 0.25)'}}>
+                              <i className="bi bi-bank fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold mb-0 text-uppercase ls-1" style={{color:'var(--bs-purple)'}}>CPP / OAS Grid Search</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Tests all 66 combinations of taking CPP (60-70) and OAS (65-70) to find the absolute highest after-tax final estate.</p>
+
+                      <div className="flex-grow-1 d-flex flex-column p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4 position-relative">
+                          {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}><span className="spinner-border" style={{color: 'var(--bs-purple)'}}></span></div>}
+                          
+                          {cppResult ? (
+                              <div className="d-flex flex-column w-100 gap-3">
+                                  {cppResult.scenarios.map((sc: any, idx: number) => {
+                                      const isWinner = idx === 0;
+                                      const pctOfWinner = (sc.finalEstate / cppResult.winner.finalEstate) * 100;
+                                      return (
+                                          <div key={idx} className="d-flex flex-column w-100">
+                                              <div className="d-flex justify-content-between align-items-center mb-1">
+                                                  <span className={`fw-bold small ${isWinner ? 'text-purple' : 'text-muted'}`} style={isWinner ? {color:'var(--bs-purple)'} : {}}>
+                                                      CPP: {sc.cppAge} <span className="mx-1 opacity-25">|</span> OAS: {sc.oasAge} {isWinner && <i className="bi bi-trophy-fill ms-1"></i>}
+                                                  </span>
+                                                  <span className={`fw-bold small ${isWinner ? 'text-main' : 'text-muted'}`}>{formatCurrency(sc.finalEstate)}</span>
+                                              </div>
+                                              <div className="w-100 bg-black bg-opacity-25 rounded-pill overflow-hidden shadow-inner" style={{height: '6px'}}>
+                                                  <div className="h-100 rounded-pill transition-all" style={{width: `${Math.max(2, pctOfWinner)}%`, backgroundColor: isWinner ? 'var(--bs-purple)' : '#6c757d'}}></div>
+                                              </div>
+                                          </div>
+                                      );
+                                  })}
+                              </div>
+                          ) : (
+                              <div className="d-flex align-items-center justify-content-center h-100">
+                                  <span className="text-muted fst-italic text-center">Awaiting calculation...</span>
+                              </div>
+                          )}
+                      </div>
+
+                      <button 
+                          className="btn fw-bold w-100 d-flex align-items-center justify-content-center text-white py-2 mt-auto" 
+                          style={{backgroundColor: 'var(--bs-purple)', borderColor: 'var(--bs-purple)'}}
+                          disabled={!cppResult}
+                          onClick={applyCppStrategy}
+                      >
+                          <i className="bi bi-box-arrow-in-down-right me-2"></i> Apply Winner
+                      </button>
+                  </div>
+              </div>
+          );
+
+          case 'sweetspot': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-arrow-down-up fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">RRSP Sweet Spot</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculates the exact RRSP contribution needed to ride your current marginal tax bracket all the way to the floor before it drops.</p>
+
+                      {isCouple && (
+                          <div className="d-flex bg-black bg-opacity-25 rounded-pill p-1 mb-3">
+                              <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${sweetSpotTab === 'p1' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setSweetSpotTab('p1')}>Player 1</button>
+                              <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${sweetSpotTab === 'p2' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setSweetSpotTab('p2')}>Player 2</button>
+                          </div>
+                      )}
+
+                      <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-2 position-relative">
+                          {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}><span className="spinner-border text-primary"></span></div>}
+                          {currentSweetSpot && currentSweetSpot.contribution > 0 ? (
+                              <>
+                                  <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Optimal Contribution</span>
+                                  <span className="fs-2 fw-bolder text-primary mb-2">{formatCurrency(currentSweetSpot.contribution)}</span>
+                                  
+                                  <div className="d-flex justify-content-between w-100 px-2 mt-3 pt-3 border-top border-secondary border-opacity-50">
+                                      <div className="d-flex flex-column text-start">
+                                          <span className="small text-muted fw-bold">Marginal Rate</span>
+                                          <span className="fw-bold text-danger">{(currentSweetSpot.marginalRate * 100).toFixed(1)}%</span>
+                                      </div>
+                                      <div className="d-flex flex-column text-end">
+                                          <span className="small text-muted fw-bold">Tax Refund</span>
+                                          <span className="fw-bold text-success">+{formatCurrency(currentSweetSpot.refund)}</span>
+                                      </div>
+                                  </div>
+                                  <span className="small text-muted mt-3 fst-italic"><i className="bi bi-info-circle me-1"></i> Contributing more drops your refund rate to {(currentSweetSpot.nextRate * 100).toFixed(1)}%.</span>
+                              </>
+                          ) : (
+                              <span className="text-muted fst-italic">You are already in the lowest tax bracket, or income is $0.</span>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'grossup': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-piggy-bank-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-warning mb-0 text-uppercase ls-1">RRSP Gross-Up</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculate how to maximize your RRSP using a short-term loan that is completely paid off by the resulting tax refund.</p>
+
+                      {isCouple && (
+                          <div className="d-flex bg-black bg-opacity-25 rounded-pill p-1 mb-3">
+                              <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${grossUpTab === 'p1' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setGrossUpTab('p1')}>Player 1</button>
+                              <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${grossUpTab === 'p2' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setGrossUpTab('p2')}>Player 2</button>
+                          </div>
+                      )}
+
+                      <div className="flex-grow-1 d-flex flex-column justify-content-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-2">
+                          <div className="d-flex justify-content-between align-items-center mb-4">
+                              <label className="fw-bold text-muted small">Cash on Hand:</label>
+                              <div className="input-group input-group-sm w-50 shadow-sm">
+                                  <span className="input-group-text bg-secondary border-secondary text-white">$</span>
+                                  <input type="number" className="form-control bg-dark border-secondary text-white text-end fw-bold" value={grossUpCash} onChange={(e) => setGrossUpCash(Number(e.target.value) || 0)} />
+                              </div>
+                          </div>
+
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                              <span className="text-muted fw-bold small">1. Borrow Short-Term Loan</span>
+                              <span className="fw-bold text-danger">+{formatCurrency(loanAmount)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-50">
+                              <span className="text-muted fw-bold small">2. Total RRSP Contribution</span>
+                              <span className="fw-bold text-main">{formatCurrency(grossedUpAmount)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-2 mt-2">
+                              <span className="text-muted fw-bold small">3. Resulting Tax Refund</span>
+                              <span className="fw-bold text-success">+{formatCurrency(expectedRefund)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                              <span className="text-muted fw-bold small">4. Pay Off Loan</span>
+                              <span className="fw-bold text-danger">-{formatCurrency(loanAmount)}</span>
+                          </div>
+                          
+                          <span className="small text-muted text-center fst-italic mt-4"><i className="bi bi-info-circle me-1"></i> Based on your current {(activeMargRate * 100).toFixed(1)}% marginal rate.</span>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'tfsavsrrsp': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-scale fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">TFSA vs RRSP</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Compares your current marginal tax rate against your projected effective tax rate in retirement to tell you where your next dollar should go.</p>
+
+                      <div className="flex-grow-1 d-flex flex-column justify-content-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-2 position-relative">
+                          {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}><span className="spinner-border text-info"></span></div>}
+                          
+                          {tfsaRrspResult ? (
+                              <>
+                                  <div className="d-flex justify-content-between align-items-center mb-2">
+                                      <span className="text-muted fw-bold small">Current Marginal Rate:</span>
+                                      <span className="fw-bold text-danger fs-5">{(tfsaRrspResult.currentMarginal * 100).toFixed(1)}%</span>
+                                  </div>
+                                  <div className="d-flex justify-content-between align-items-center mb-4 pb-4 border-bottom border-secondary border-opacity-50">
+                                      <span className="text-muted fw-bold small">Est. Retirement Tax Rate:</span>
+                                      <span className="fw-bold text-info fs-5">{(tfsaRrspResult.avgRetTaxRate * 100).toFixed(1)}%</span>
+                                  </div>
+                                  <div className="text-center mt-2">
+                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-1 d-block">Mathematical Winner</span>
+                                      <span className={`display-6 fw-bolder ${tfsaRrspResult.winner === 'RRSP' ? 'text-warning' : 'text-primary'}`}>{tfsaRrspResult.winner}</span>
+                                  </div>
+                              </>
+                          ) : (
+                              <span className="text-muted fst-italic text-center">Awaiting calculation...</span>
+                          )}
+                      </div>
+                      <span className="small text-muted text-center fst-italic mt-2"><i className="bi bi-info-circle me-1"></i> If current rate &gt; retirement rate, RRSP wins. Otherwise TFSA.</span>
+                  </div>
+              </div>
+          );
+
+          case 'ccb': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-people-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">CCB Maximizer</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Because CCB payouts are tied to Adjusted Family Net Income (AFNI), RRSP contributions do double-duty: they generate a tax refund AND boost your monthly CCB payments. Find your true ROI.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Adj. Family Net Income</label>
+                              <CurrencyInput className="form-control form-control-sm" value={ccbIncome} onChange={setCcbIncome} />
+                          </div>
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Hypothetical RRSP Contrib.</label>
+                              <CurrencyInput className="form-control form-control-sm border-success text-success" value={ccbRrspContrib} onChange={setCcbRrspContrib} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Kids &lt;6</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={ccbKidsUnder6} onChange={e => setCcbKidsUnder6(parseInt(e.target.value)||0)} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Kids 6-17</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={ccbKidsOver6} onChange={e => setCcbKidsOver6(parseInt(e.target.value)||0)} />
+                          </div>
+                      </div>
+
+                      <div className="bg-success bg-opacity-10 border border-success border-opacity-50 rounded-4 p-3 mt-auto shadow-inner">
+                          <div className="d-flex justify-content-between align-items-center mb-1">
+                              <span className="text-muted fw-bold small">Tax Refund <span className="fw-normal">(@ {p1Marginal.toFixed(0)}%)</span></span>
+                              <span className="fw-bold text-main">+{formatCurrency(ccbTaxRefund)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-success border-opacity-25">
+                              <span className="text-muted fw-bold small">CCB Boost <span className="fw-normal">(Annual)</span></span>
+                              <span className="fw-bold text-info">+{formatCurrency(ccbBoost)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                              <span className="text-success fw-bolder">Effective ROI</span>
+                              <span className="fw-bolder fs-4 text-success">{ccbTotalROI.toFixed(1)}%</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'fhsa': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-house-add-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-warning mb-0 text-uppercase ls-1">FHSA vs RRSP HBP</h5>
+                      </div>
+                      <p className="text-muted small mb-4">The FHSA gives you an RRSP tax deduction without the forced 15-year repayment of the HBP. See the cash flow difference.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Amount Saved</label>
+                              <CurrencyInput className="form-control form-control-sm" value={fhsaAmount} onChange={setFhsaAmount} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Marginal Tax</label>
+                              <PercentInput className="form-control form-control-sm" value={fhsaTaxRate} onChange={setFhsaTaxRate} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Yrs to Buy</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={fhsaYears} onChange={e => setFhsaYears(parseInt(e.target.value)||0)} />
+                          </div>
+                      </div>
+
+                      <div className="mt-auto d-flex flex-column gap-3">
+                          <div className="p-3 rounded-4 border border-primary bg-primary bg-opacity-10 shadow-inner">
+                              <h6 className="fw-bold text-primary text-uppercase ls-1 mb-2 small"><i className="bi bi-house-add-fill me-1"></i>Using FHSA</h6>
+                              <div className="d-flex justify-content-between small text-muted">Cash for Home: <span className="fw-bold text-main">{formatCurrency(fhsaGrowth)}</span></div>
+                              <div className="text-success fw-bold small mt-1"><i className="bi bi-check-circle-fill me-1"></i> No Repayment Required</div>
+                          </div>
+                          <div className="p-3 rounded-4 border border-warning bg-warning bg-opacity-10 shadow-inner">
+                              <h6 className="fw-bold text-warning text-uppercase ls-1 mb-2 small"><i className="bi bi-bank2 me-1"></i>Using RRSP HBP</h6>
+                              <div className="d-flex justify-content-between small text-muted">Cash for Home: <span className="fw-bold text-main">{formatCurrency(fhsaGrowth)}</span></div>
+                              <div className="text-danger fw-bold small mt-1"><i className="bi bi-exclamation-triangle-fill me-1"></i> 15yr Pre-Tax Repayment: {formatCurrency(hbpRepaymentCost)}</div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'mvi': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-house-check fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Mortgage vs Invest</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Compare the guaranteed tax-free return of paying down debt versus compounding the money in the market.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Lump Sum Available</label>
+                              <CurrencyInput className="form-control form-control-sm" value={mviLumpSum} onChange={setMviLumpSum} />
+                          </div>
+                          <div className="col-4">
+                              <label className="form-label small fw-bold text-muted mb-1">Yrs</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={mviYears} onChange={e => setMviYears(parseInt(e.target.value)||0)} />
+                          </div>
+                          <div className="col-4">
+                              <label className="form-label small fw-bold text-muted mb-1">Mort %</label>
+                              <PercentInput className="form-control form-control-sm border-danger" value={mviMortgageRate} onChange={setMviMortgageRate} />
+                          </div>
+                          <div className="col-4">
+                              <label className="form-label small fw-bold text-muted mb-1">Inv %</label>
+                              <PercentInput className="form-control form-control-sm border-success" value={mviInvestReturn} onChange={setMviInvestReturn} />
+                          </div>
+                      </div>
+
+                      <div className="row g-2 mt-auto text-center">
+                          <div className="col-6">
+                              <div className={`p-2 rounded-3 border h-100 d-flex flex-column justify-content-center ${mviDiff > 0 ? 'bg-black bg-opacity-25 border-secondary' : 'bg-success bg-opacity-10 border-success'}`}>
+                                  <div className="text-muted fw-bold" style={{fontSize: '0.65rem'}}>GUARANTEED SAVED</div>
+                                  <div className="fs-5 fw-bold text-main">{formatCurrency(mviMortgageVal - mviLumpSum)}</div>
+                              </div>
+                          </div>
+                          <div className="col-6">
+                              <div className={`p-2 rounded-3 border h-100 d-flex flex-column justify-content-center ${mviDiff > 0 ? 'bg-success bg-opacity-10 border-success' : 'bg-black bg-opacity-25 border-secondary'}`}>
+                                  <div className="text-muted fw-bold" style={{fontSize: '0.65rem'}}>AFTER-TAX PROFIT</div>
+                                  <div className="fs-5 fw-bold text-success">{formatCurrency(mviInvestVal - mviLumpSum)}</div>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <div className="text-center mt-3 pt-2 border-top border-secondary">
+                          <h6 className="fw-bold mb-1 small">Winner: <span className={mviDiff > 0 ? 'text-success' : 'text-primary'}>{mviDiff > 0 ? 'INVESTING' : 'PAYING MORTGAGE'}</span></h6>
+                          <span className="text-muted" style={{fontSize: '0.7rem'}}>Diff: <b>{formatCurrency(Math.abs(mviDiff))}</b></span>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'smith': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-arrow-repeat fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-danger mb-0 text-uppercase ls-1">Smith Maneuver</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculate the arbitrage of converting your non-deductible mortgage into a tax-deductible investment loan.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">HELOC Amount to Invest</label>
+                              <CurrencyInput className="form-control form-control-sm" value={smLoan} onChange={setSmLoan} />
+                          </div>
+                          <div className="col-4">
+                              <label className="form-label small fw-bold text-muted mb-1">Tax %</label>
+                              <PercentInput className="form-control form-control-sm" value={smTaxRate} onChange={setSmTaxRate} />
+                          </div>
+                          <div className="col-4">
+                              <label className="form-label small fw-bold text-muted mb-1">Loan %</label>
+                              <PercentInput className="form-control form-control-sm border-danger" value={smHelocRate} onChange={setSmHelocRate} />
+                          </div>
+                          <div className="col-4">
+                              <label className="form-label small fw-bold text-muted mb-1">Inv %</label>
+                              <PercentInput className="form-control form-control-sm border-success" value={smInvestReturn} onChange={setSmInvestReturn} />
+                          </div>
+                      </div>
+
+                      <div className="bg-input border border-secondary rounded-4 p-3 text-center mt-auto shadow-inner">
+                          <div className="d-flex justify-content-center align-items-center gap-3 mb-3">
+                              <div>
+                                  <div className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Effective Loan</div>
+                                  <div className="fs-5 fw-bold text-danger">{smEffectiveBorrowingRate.toFixed(2)}%</div>
+                              </div>
+                              <div className="text-muted opacity-50"><i className="bi bi-arrow-right"></i></div>
+                              <div>
+                                  <div className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Arb Spread</div>
+                                  <div className={`fs-5 fw-bold ${smSpread > 0 ? 'text-success' : 'text-danger'}`}>{smSpread > 0 ? '+' : ''}{smSpread.toFixed(2)}%</div>
+                              </div>
+                          </div>
+                          <div className="pt-2 border-top border-secondary">
+                              <div className="fw-bold text-muted text-uppercase ls-1 mb-1" style={{fontSize: '0.65rem'}}>Est. Net Annual Wealth Created</div>
+                              <div className={`fs-3 fw-bold ${smAnnualProfit > 0 ? 'text-success' : 'text-danger'}`}>
+                                  {smAnnualProfit > 0 ? '+' : ''}{formatCurrency(smAnnualProfit)}
+                              </div>
+                              {smSpread <= 0 && <span className="badge bg-danger mt-1 px-2 py-1" style={{fontSize:'0.65rem'}}>NOT FEASIBLE - LOAN TOO EXPENSIVE</span>}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'emerg': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-life-preserver fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">Emergency Fund Sizer</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Factor in Employment Insurance (EI) and Severance to calculate exactly how much cash you actually need to hoard.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Monthly Core Expenses</label>
+                              <CurrencyInput className="form-control form-control-sm" value={emMonthlyExp} onChange={setEmMonthlyExp} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Mos to find job</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={emMonthsToHire} onChange={e => setEmMonthsToHire(parseInt(e.target.value)||0)} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Est. Severance (Mos)</label>
+                              <input type="number" step="0.5" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={emSeverance} onChange={e => setEmSeverance(parseFloat(e.target.value)||0)} />
+                          </div>
+                          <div className="col-12">
+                              <div className="form-check form-switch d-flex align-items-center ps-0 mt-1">
+                                  <input className="form-check-input cursor-pointer ms-0 me-2" type="checkbox" checked={emEiEligible} onChange={e => setEmEiEligible(e.target.checked)} />
+                                  <label className="form-check-label small fw-bold text-muted mt-1">Eligible for Max EI ($668/wk)</label>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="bg-info bg-opacity-10 border border-info border-opacity-50 rounded-4 p-3 mt-auto text-center shadow-inner">
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                              <span className="text-muted fw-bold small">Total Cash Needed</span>
+                              <span className="fw-bold text-main">{formatCurrency(emTotalNeeded)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-1 text-success small">
+                              <span>- Severance Payout</span>
+                              <span>-{formatCurrency(emSeveranceCash)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-2 text-success small pb-2 border-bottom border-info border-opacity-25">
+                              <span>- Est. EI Payouts</span>
+                              <span>-{formatCurrency(emEiCash)}</span>
+                          </div>
+                          
+                          <div className="d-flex justify-content-between align-items-center mt-2">
+                              <span className="text-info fw-bolder text-uppercase ls-1 small">Actual Cash Needed</span>
+                              <span className="fw-bolder fs-4 text-info">{formatCurrency(emCashRequired)}</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'car': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-car-front-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-secondary mb-0 text-uppercase ls-1">Buy vs Lease Car</h5>
+                      </div>
+                      <p className="text-muted small mb-3">Calculate the true Total Cost of Ownership (TCO) at the end of the term.</p>
+                      
+                      <div className="row g-3 mb-3 flex-grow-1">
+                          <div className="col-6">
+                              <div className="p-3 h-100 border border-info rounded-4 bg-info bg-opacity-10 shadow-sm d-flex flex-column gap-2">
+                                  <h6 className="fw-bold text-info small text-uppercase ls-1 mb-2 text-center">Lease to Own</h6>
+                                  <div><label className="small text-muted mb-1 fw-bold" style={{fontSize:'0.65rem'}}>Down Pmt</label><CurrencyInput className="form-control form-control-sm" value={carLeaseDown} onChange={setCarLeaseDown} /></div>
+                                  <div><label className="small text-muted mb-1 fw-bold" style={{fontSize:'0.65rem'}}>Monthly</label><CurrencyInput className="form-control form-control-sm" value={carLeaseMo} onChange={setCarLeaseMo} /></div>
+                                  <div><label className="small text-muted mb-1 fw-bold" style={{fontSize:'0.65rem'}}>Residual</label><CurrencyInput className="form-control form-control-sm" value={carLeaseBuyout} onChange={setCarLeaseBuyout} /></div>
+                              </div>
+                          </div>
+                          <div className="col-6">
+                              <div className="p-3 h-100 border border-warning rounded-4 bg-warning bg-opacity-10 shadow-sm d-flex flex-column gap-2">
+                                  <h6 className="fw-bold text-warning small text-uppercase ls-1 mb-2 text-center">Finance</h6>
+                                  <div><label className="small text-muted mb-1 fw-bold" style={{fontSize:'0.65rem'}}>Down Pmt</label><CurrencyInput className="form-control form-control-sm" value={carFinanceDown} onChange={setCarFinanceDown} /></div>
+                                  <div><label className="small text-muted mb-1 fw-bold" style={{fontSize:'0.65rem'}}>Monthly</label><CurrencyInput className="form-control form-control-sm" value={carFinanceMo} onChange={setCarFinanceMo} /></div>
+                                  <div><label className="small text-muted mb-1 fw-bold" style={{fontSize:'0.65rem'}}>Term (Mos)</label><input type="number" className="form-control form-control-sm text-center fw-bold bg-input border-secondary" value={carTerm} onChange={e => setCarTerm(parseInt(e.target.value)||0)} /></div>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="row g-2 text-center mt-auto">
+                          <div className="col-6">
+                              <div className={`p-2 rounded-4 border shadow-inner ${carDiff > 0 ? 'bg-black bg-opacity-25 border-secondary' : 'bg-info bg-opacity-25 border-info'}`}>
+                                  <div className="text-muted fw-bold text-uppercase ls-1 mb-1" style={{fontSize:'0.65rem'}}>TCO (Lease)</div>
+                                  <div className="fs-5 fw-bold text-main">{formatCurrency(totalLeaseToOwn)}</div>
+                              </div>
+                          </div>
+                          <div className="col-6">
+                              <div className={`p-2 rounded-4 border shadow-inner ${carDiff < 0 ? 'bg-black bg-opacity-25 border-secondary' : 'bg-warning bg-opacity-25 border-warning'}`}>
+                                  <div className="text-muted fw-bold text-uppercase ls-1 mb-1" style={{fontSize:'0.65rem'}}>TCO (Finance)</div>
+                                  <div className="fs-5 fw-bold text-main">{formatCurrency(totalFinance)}</div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'cppimport': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-secondary bg-opacity-25 text-white rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-file-earmark-spreadsheet fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-white mb-0 text-uppercase ls-1">CPP Smart Importer</h5>
+                      </div>
+                      <p className="text-muted small mb-3">Import your Service Canada earnings to project your base benefit using the exact 17% drop-out rules and YMPE ratios.</p>
+
+                      <div className="d-flex bg-black bg-opacity-25 rounded-pill p-1 mb-3">
+                          <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${cppStep === 'import' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setCppStep('import')}>Import</button>
+                          <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${cppStep === 'edit' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setCppStep('edit')} disabled={cppRecords.length === 0}>Review</button>
+                          <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${cppStep === 'results' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setCppStep('results')} disabled={!cppAnalysis}>Results</button>
+                      </div>
+
+                      <div className="flex-grow-1 d-flex flex-column min-h-0">
+                          {cppStep === 'import' && (
+                              <div className="d-flex flex-column h-100 gap-3 mt-2">
+                                  <div className="border border-secondary rounded-3 p-3 bg-input text-center">
+                                      <label className="fw-bold text-muted small mb-2 d-block">Upload HTML File</label>
+                                      <input type="file" accept=".html" className="form-control form-control-sm bg-dark text-muted border-secondary" onChange={handleHTMLUpload} />
+                                  </div>
+                                  <div className="text-center text-muted small fw-bold">OR</div>
+                                  <textarea 
+                                      className="form-control bg-input border-secondary text-muted small flex-grow-1 shadow-inner" 
+                                      placeholder="Paste earnings text here..."
+                                      style={{resize: 'none'}}
+                                      value={cppPasteText}
+                                      onChange={(e) => setCppPasteText(e.target.value)}
+                                  ></textarea>
+                                  <button className="btn py-2 btn-outline-secondary fw-bold" onClick={parseText} disabled={!cppPasteText}>
+                                      <i className="bi bi-cpu-fill me-2"></i> Parse Text
+                                  </button>
+                              </div>
+                          )}
+
+                          {cppStep === 'edit' && (
+                              <div className="d-flex flex-column h-100">
+                                  <div className="d-flex bg-black bg-opacity-25 rounded-pill p-1 mb-2">
+                                      <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${cppTargetTab === 'p1' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setCppTargetTab('p1')}>Target P1</button>
+                                      {isCouple && <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${cppTargetTab === 'p2' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setCppTargetTab('p2')}>Target P2</button>}
+                                  </div>
+                                  
+                                  <div className="form-check form-switch mb-3 d-flex align-items-center">
+                                      <input className="form-check-input cursor-pointer m-0 me-2 fs-5" type="checkbox" checked={cppProjectFuture} onChange={e => setCppProjectFuture(e.target.checked)} />
+                                      <label className="form-check-label small fw-bold text-muted">Auto-fill future years from Inputs tab</label>
+                                  </div>
+
+                                  <div className="d-flex justify-content-between px-2 mb-1 pe-4">
+                                      <span className="small fw-bold text-muted" style={{width: '70px'}}>Year</span>
+                                      <span className="small fw-bold text-muted flex-grow-1 ps-1">Earnings ($)</span>
+                                  </div>
+                                  
+                                  <div className="flex-grow-1 overflow-auto pe-1 mb-3 custom-scrollbar" style={{minHeight: 0}}>
+                                      {cppRecords.map((rec, i) => (
+                                          <div key={rec.id} className="d-flex gap-1 mb-2 align-items-center">
+                                              <input type="number" className="form-control form-control-sm bg-input border-secondary text-main fw-bold" style={{width: '70px'}} value={rec.year} onChange={e => updateCppRecord(i, 'year', e.target.value)} />
+                                              <input type="number" className="form-control form-control-sm bg-input border-secondary text-main flex-grow-1" value={rec.earnings} onChange={e => updateCppRecord(i, 'earnings', e.target.value)} />
+                                              <button className="btn btn-sm btn-outline-warning fw-bold px-2 flex-shrink-0" style={{fontSize:'0.65rem'}} title="Auto-fill Max Earning limit for this year" onClick={() => updateCppRecord(i, 'earnings', getYAMPE(rec.year).toString())}>MAX</button>
+                                              <button className="btn btn-sm btn-link text-danger px-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeCppRecord(i)}><i className="bi bi-x-lg"></i></button>
+                                          </div>
+                                      ))}
+                                  </div>
+                                  <div className="d-flex gap-2 mt-auto">
+                                      <button className="btn btn-sm btn-outline-secondary w-50 fw-bold" onClick={addCppRecord}>+ Add Row</button>
+                                      <button className="btn btn-sm btn-primary w-50 fw-bold" onClick={runCPPAnalysis}>Analyze</button>
+                                  </div>
+                              </div>
+                          )}
+
+                          {cppStep === 'results' && cppAnalysis && (
+                              <div className="bg-input border border-secondary rounded-4 p-4 h-100 d-flex flex-column shadow-inner">
+                                  <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Contributory Period:</span><span className="text-main fw-bold">{cppAnalysis.totalYears} years</span></div>
+                                  {cppAnalysis.projectedCount > 0 && <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold text-success">Proj. Working Years:</span><span className="text-success fw-bold">+{cppAnalysis.projectedCount}</span></div>}
+                                  {cppAnalysis.zeroCount > 0 && <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold text-warning">Proj. Early Ret. (Zeros):</span><span className="text-warning fw-bold">+{cppAnalysis.zeroCount}</span></div>}
+                                  
+                                  <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Dropped (17%):</span><span className="text-danger fw-bold">-{cppAnalysis.dropYears} years</span></div>
+                                  <div className="d-flex justify-content-between small mb-3 pb-3 border-bottom border-secondary border-opacity-50"><span className="text-muted fw-bold">Average Earnings (Kept):</span><span className="text-main fw-bold">{formatCurrency(cppAnalysis.average)}</span></div>
+                                  
+                                  <div className="d-flex justify-content-between align-items-center mb-4">
+                                      <span className="text-muted fw-bold small text-uppercase ls-1">Projected Max</span>
+                                      <span className="fs-4 fw-bold text-success">~{formatCurrency(cppAnalysis.projected)} <span className="fs-6 text-muted fw-normal">/yr</span></span>
+                                  </div>
+                                  
+                                  <div className="d-flex gap-2 mt-auto">
+                                      <button className="btn btn-outline-success fw-bold w-100" onClick={() => {
+                                          updateInput('p1_cpp_est_base', cppAnalysis.projected);
+                                          showToast('Applied to P1 Base CPP!');
+                                      }}>
+                                          <i className="bi bi-box-arrow-in-down-right me-2"></i> P1
+                                      </button>
+                                      {isCouple && (
+                                          <button className="btn btn-outline-purple fw-bold w-100" style={{color: 'var(--bs-purple)', borderColor: 'var(--bs-purple)'}} onClick={() => {
+                                              updateInput('p2_cpp_est_base', cppAnalysis.projected);
+                                              showToast('Applied to P2 Base CPP!');
+                                          }}>
+                                              <i className="bi bi-box-arrow-in-down-right me-2"></i> P2
+                                          </button>
+                                      )}
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          );
+
+          default: return null;
+      }
+  };
+
   return (
-    <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
+    <div className="p-3 p-md-4 h-100 d-flex flex-column">
       
       {/* Toast Notification */}
       {toastMsg && (
@@ -377,339 +1378,32 @@ export default function OptimizersTab() {
           </div>
       )}
 
+      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
           <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
-              <i className="bi bi-magic me-3"></i> Smart Optimizer
+              <i className="bi bi-magic me-3"></i> Smart Optimizers
           </h5>
           {isCalculating && <span className="badge bg-primary bg-opacity-25 text-primary border border-primary rounded-pill px-3 py-2"><span className="spinner-border spinner-border-sm me-2"></span> Analyzing...</span>}
       </div>
 
-      <div className="row g-4 mb-5">
-          
-          {/* Tool 1: Die With Zero */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                  {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}></div>}
-                  
-                  <div className="d-flex align-items-center mb-3">
-                      <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                          <i className="bi bi-bullseye fs-4"></i>
-                      </div>
-                      <h5 className="fw-bold text-success mb-0 text-uppercase ls-1" style={{fontSize: '1rem'}}>Die With Zero</h5>
-                  </div>
-                  <p className="text-muted small mb-4">Calculates the absolute maximum lifestyle you can afford every year without running out of money before your life expectancy.</p>
-
-                  <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4">
-                      {maxSpendResult ? (
-                          maxSpendResult.difference > 0 ? (
-                              <>
-                                  <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Max Safe Retirement Spend</span>
-                                  <span className="fs-1 fw-bolder text-success mb-2">{formatCurrency(maxSpendResult.optSpend)} <span className="fs-5 text-muted fw-normal">/yr</span></span>
-                                  <span className="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-3 py-2 mx-auto">
-                                      <i className="bi bi-arrow-up-circle-fill me-2"></i>You can spend {formatCurrency(maxSpendResult.difference)} more per year!
-                                  </span>
-                              </>
-                          ) : (
-                              <>
-                                  <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Current Plan Status</span>
-                                  <span className="fs-3 fw-bolder text-danger mb-2">Overspending</span>
-                                  <span className="badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill px-3 py-2 mx-auto text-wrap" style={{lineHeight: 1.5}}>
-                                      <i className="bi bi-exclamation-triangle-fill me-2"></i>You need to cut expenses by {formatCurrency(Math.abs(maxSpendResult.difference))} /yr to survive.
-                                  </span>
-                              </>
-                          )
-                      ) : (
-                          <span className="text-muted fst-italic">Awaiting calculation...</span>
-                      )}
-                  </div>
-
-                  <span className="small text-muted text-center fst-italic mt-auto mb-2">
-                      <i className="bi bi-info-circle me-1"></i> To apply this, adjust Lifestyle Expenses on the Inputs tab.
-                  </span>
-              </div>
-          </div>
-
-          {/* Tool 2: Freedom Number */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                  {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}></div>}
-                  
-                  <div className="d-flex align-items-center mb-3">
-                      <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                          <i className="bi bi-calendar-heart fs-4"></i>
-                      </div>
-                      <h5 className="fw-bold text-info mb-0 text-uppercase ls-1" style={{fontSize: '1rem'}}>Freedom Number</h5>
-                  </div>
-                  <p className="text-muted small mb-4">Finds the earliest possible age you can trigger retirement based on your current savings rate and projected expenses.</p>
-
-                  <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4">
-                      {earliestRetResult ? (
-                          earliestRetResult.failed ? (
-                              <>
-                                  <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
-                                  <span className="fs-3 fw-bolder text-danger mb-2">Target Unreachable</span>
-                                  <span className="small text-muted px-2">Your current plan fails even at your selected retirement age. Reduce expenses or save more to unlock this tool.</span>
-                              </>
-                          ) : earliestRetResult.yearsSaved > 0 ? (
-                              <>
-                                  <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
-                                  <span className="fs-1 fw-bolder text-info mb-2">Age {earliestRetResult.p1Age} {isCouple && `/ ${earliestRetResult.p2Age}`}</span>
-                                  <span className="badge bg-info bg-opacity-25 text-info border border-info rounded-pill px-3 py-2 mx-auto">
-                                      <i className="bi bi-stars me-2"></i>You can retire {earliestRetResult.yearsSaved} years earlier!
-                                  </span>
-                              </>
-                          ) : (
-                              <>
-                                  <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
-                                  <span className="fs-2 fw-bolder text-muted mb-2">Age {earliestRetResult.p1Age} {isCouple && `/ ${earliestRetResult.p2Age}`}</span>
-                                  <span className="small text-muted text-warning fw-bold px-2 mt-2"><i className="bi bi-check-circle-fill me-2"></i>Your current target is the absolute earliest you can safely retire.</span>
-                              </>
-                          )
-                      ) : (
-                          <span className="text-muted fst-italic">Awaiting calculation...</span>
-                      )}
-                  </div>
-
-                  <div className="mt-auto d-flex justify-content-center w-100">
-                      <button 
-                          className="btn btn-outline-info fw-bold w-100 d-flex align-items-center justify-content-center" 
-                          disabled={!earliestRetResult || earliestRetResult.failed || earliestRetResult.yearsSaved <= 0}
-                          onClick={applyEarliestRetirement}
-                      >
-                          <i className="bi bi-box-arrow-in-down-right me-2"></i> Apply to Plan
-                      </button>
-                  </div>
-              </div>
-          </div>
-
-          {/* Tool 3: CPP Strategy */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                  {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}></div>}
-                  
-                  <div className="d-flex align-items-center mb-3">
-                      <div className="bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0, color:'var(--bs-purple)', backgroundColor: 'rgba(111, 66, 193, 0.25)'}}>
-                          <i className="bi bi-bank fs-4"></i>
-                      </div>
-                      <h5 className="fw-bold mb-0 text-uppercase ls-1" style={{fontSize: '1rem', color:'var(--bs-purple)'}}>CPP/OAS Grid Search</h5>
-                  </div>
-                  <p className="text-muted small mb-4">Tests all 66 combinations of taking CPP (60-70) and OAS (65-70) to find the absolute highest final estate.</p>
-
-                  <div className="flex-grow-1 d-flex flex-column justify-content-center p-3 bg-input border border-secondary rounded-4 shadow-inner mb-4">
-                      {cppResult ? (
-                          <div className="d-flex flex-column w-100 gap-3">
-                              {cppResult.scenarios.map((sc: any, idx: number) => {
-                                  const isWinner = idx === 0;
-                                  const pctOfWinner = (sc.finalEstate / cppResult.winner.finalEstate) * 100;
-                                  return (
-                                      <div key={idx} className="d-flex flex-column w-100">
-                                          <div className="d-flex justify-content-between align-items-center small mb-1">
-                                              <span className={`fw-bold ${isWinner ? 'text-purple' : 'text-muted'}`} style={isWinner ? {color:'var(--bs-purple)'} : {}}>
-                                                  CPP: {sc.cppAge} <span className="mx-1 opacity-25">|</span> OAS: {sc.oasAge} {isWinner && <i className="bi bi-trophy-fill ms-2"></i>}
-                                              </span>
-                                              <span className={`fw-bold ${isWinner ? 'text-main' : 'text-muted'}`}>{formatCurrency(sc.finalEstate)}</span>
-                                          </div>
-                                          <div className="w-100 bg-black bg-opacity-25 rounded-pill overflow-hidden shadow-inner" style={{height: '6px'}}>
-                                              <div className="h-100 rounded-pill transition-all" style={{width: `${Math.max(2, pctOfWinner)}%`, backgroundColor: isWinner ? 'var(--bs-purple)' : '#6c757d'}}></div>
-                                          </div>
-                                      </div>
-                                  );
-                              })}
-                          </div>
-                      ) : (
-                          <span className="text-muted fst-italic text-center">Awaiting calculation...</span>
-                      )}
-                  </div>
-
-                  <div className="mt-auto d-flex justify-content-center w-100">
-                      <button 
-                          className="btn fw-bold w-100 d-flex align-items-center justify-content-center text-white" 
-                          style={{backgroundColor: 'var(--bs-purple)', borderColor: 'var(--bs-purple)'}}
-                          disabled={!cppResult}
-                          onClick={applyCppStrategy}
-                      >
-                          <i className="bi bi-box-arrow-in-down-right me-2"></i> Apply Winner
-                      </button>
-                  </div>
-              </div>
-          </div>
-
-          {/* Tool 4: Optimal RRSP Sweet Spot */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                  {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}></div>}
-                  
-                  <div className="d-flex align-items-center mb-3">
-                      <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                          <i className="bi bi-arrow-down-up fs-4"></i>
-                      </div>
-                      <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1" style={{fontSize: '1rem'}}>Tax Bracket Sweet Spot</h5>
-                  </div>
-                  <p className="text-muted small mb-4">Calculates the exact RRSP contribution needed to ride your current marginal tax bracket all the way to the floor before it drops.</p>
-
-                  {isCouple && (
-                      <div className="d-flex bg-black bg-opacity-25 rounded-pill p-1 mb-3">
-                          <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${sweetSpotTab === 'p1' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setSweetSpotTab('p1')}>Player 1</button>
-                          <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${sweetSpotTab === 'p2' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setSweetSpotTab('p2')}>Player 2</button>
-                      </div>
-                  )}
-
-                  <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4">
-                      {currentSweetSpot && currentSweetSpot.contribution > 0 ? (
-                          <>
-                              <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Optimal Contribution</span>
-                              <span className="fs-2 fw-bolder text-primary mb-2">{formatCurrency(currentSweetSpot.contribution)}</span>
-                              
-                              <div className="d-flex justify-content-between w-100 px-3 mt-3 pt-3 border-top border-secondary border-opacity-50">
-                                  <div className="d-flex flex-column text-start">
-                                      <span className="small text-muted fw-bold">Marginal Rate</span>
-                                      <span className="fw-bold text-danger">{(currentSweetSpot.marginalRate * 100).toFixed(1)}%</span>
-                                  </div>
-                                  <div className="d-flex flex-column text-end">
-                                      <span className="small text-muted fw-bold">Tax Refund</span>
-                                      <span className="fw-bold text-success">+{formatCurrency(currentSweetSpot.refund)}</span>
-                                  </div>
-                              </div>
-                              <span className="small text-muted mt-3 fst-italic"><i className="bi bi-info-circle me-1"></i> Contributing more drops your refund rate to {(currentSweetSpot.nextRate * 100).toFixed(1)}%.</span>
-                          </>
-                      ) : (
-                          <span className="text-muted fst-italic">You are already in the lowest tax bracket, or income is $0.</span>
-                      )}
-                  </div>
-              </div>
-          </div>
-
-          {/* Tool 5: RRSP Gross-Up Calculator */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                  
-                  <div className="d-flex align-items-center mb-3">
-                      <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                          <i className="bi bi-piggy-bank-fill fs-4"></i>
-                      </div>
-                      <h5 className="fw-bold text-warning mb-0 text-uppercase ls-1" style={{fontSize: '1rem'}}>RRSP Gross-Up Optimizer</h5>
-                  </div>
-                  <p className="text-muted small mb-4">Calculate how to maximize your RRSP using a short-term loan that is completely paid off by the resulting tax refund.</p>
-
-                  {isCouple && (
-                      <div className="d-flex bg-black bg-opacity-25 rounded-pill p-1 mb-3">
-                          <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${grossUpTab === 'p1' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setGrossUpTab('p1')}>Player 1</button>
-                          <button className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${grossUpTab === 'p2' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} onClick={() => setGrossUpTab('p2')}>Player 2</button>
-                      </div>
-                  )}
-
-                  <div className="flex-grow-1 d-flex flex-column justify-content-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4">
-                      
-                      <div className="d-flex justify-content-between align-items-center mb-4">
-                          <label className="fw-bold text-muted small">Cash on Hand:</label>
-                          <div className="input-group input-group-sm w-50 shadow-sm">
-                              <span className="input-group-text bg-secondary border-secondary text-white">$</span>
-                              <input type="number" className="form-control bg-dark border-secondary text-white text-end fw-bold" value={grossUpCash} onChange={(e) => setGrossUpCash(Number(e.target.value) || 0)} />
-                          </div>
-                      </div>
-
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                          <span className="text-muted fw-bold small">1. Borrow Short-Term Loan</span>
-                          <span className="fw-bold text-danger">+{formatCurrency(loanAmount)}</span>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-50">
-                          <span className="text-muted fw-bold small">2. Total RRSP Contribution</span>
-                          <span className="fw-bold text-main">{formatCurrency(grossedUpAmount)}</span>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center mb-2 mt-2">
-                          <span className="text-muted fw-bold small">3. Resulting Tax Refund</span>
-                          <span className="fw-bold text-success">+{formatCurrency(expectedRefund)}</span>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center">
-                          <span className="text-muted fw-bold small">4. Pay Off Loan</span>
-                          <span className="fw-bold text-danger">-{formatCurrency(loanAmount)}</span>
-                      </div>
-                  </div>
-                  <span className="small text-muted text-center fst-italic mt-auto mb-2"><i className="bi bi-info-circle me-1"></i> Based on your current {(activeMargRate * 100).toFixed(1)}% marginal rate.</span>
-              </div>
-          </div>
-          
-          {/* Tool 7: TFSA vs RRSP Analyzer */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                  {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center rounded-4" style={{zIndex: 10}}></div>}
-                  
-                  <div className="d-flex align-items-center mb-3">
-                      <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                          <i className="bi bi-scale fs-4"></i>
-                      </div>
-                      <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1" style={{fontSize: '1rem'}}>TFSA vs RRSP Analyzer</h5>
-                  </div>
-                  <p className="text-muted small mb-4">Compares your current marginal tax rate against your projected effective tax rate in retirement to tell you where your next dollar should go.</p>
-
-                  <div className="flex-grow-1 d-flex flex-column justify-content-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4">
-                      {tfsaRrspResult ? (
-                          <>
-                              <div className="d-flex justify-content-between align-items-center mb-2">
-                                  <span className="text-muted fw-bold small">Current Marginal Rate:</span>
-                                  <span className="fw-bold text-danger">{(tfsaRrspResult.currentMarginal * 100).toFixed(1)}%</span>
-                              </div>
-                              <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-secondary border-opacity-50">
-                                  <span className="text-muted fw-bold small">Est. Retirement Tax Rate:</span>
-                                  <span className="fw-bold text-info">{(tfsaRrspResult.avgRetTaxRate * 100).toFixed(1)}%</span>
-                              </div>
-                              <div className="text-center mt-2">
-                                  <span className="text-muted fw-bold small text-uppercase ls-1 mb-1 d-block">Mathematical Winner</span>
-                                  <span className={`fs-2 fw-bolder ${tfsaRrspResult.winner === 'RRSP' ? 'text-primary' : 'text-success'}`}>{tfsaRrspResult.winner}</span>
-                              </div>
-                          </>
-                      ) : (
-                          <span className="text-muted fst-italic text-center">Awaiting calculation...</span>
-                      )}
-                  </div>
-                  <span className="small text-muted text-center fst-italic mt-auto mb-2"><i className="bi bi-info-circle me-1"></i> If current rate &gt; retirement rate, RRSP wins. Otherwise TFSA.</span>
-              </div>
-          </div>
-
-          {/* Tool 6: CPP Smart Importer */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                  
-                  <div className="d-flex align-items-center mb-3">
-                      <div className="bg-secondary bg-opacity-25 text-white rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                          <i className="bi bi-file-earmark-spreadsheet fs-4"></i>
-                      </div>
-                      <h5 className="fw-bold text-white mb-0 text-uppercase ls-1" style={{fontSize: '1rem'}}>CPP Smart Importer</h5>
-                  </div>
-                  <p className="text-muted small mb-3">Paste your Service Canada earnings table here. We will apply the 17% drop-out rule to project your base benefit.</p>
-
-                  <div className="flex-grow-1 d-flex flex-column mb-3">
-                      <textarea 
-                          className="form-control bg-input border-secondary text-muted small flex-grow-1 shadow-inner mb-3" 
-                          placeholder="Paste earnings table here (Year & Amount)..."
-                          style={{resize: 'none', minHeight: '80px'}}
-                          value={cppPasteText}
-                          onChange={(e) => setCppPasteText(e.target.value)}
-                      ></textarea>
-                      <button className="btn btn-sm btn-outline-secondary fw-bold" onClick={analyzeCPP} disabled={!cppPasteText}>
-                          <i className="bi bi-cpu-fill me-2"></i> Analyze Data
-                      </button>
-                  </div>
-
-                  {cppAnalysis && (
-                      cppAnalysis.error ? (
-                          <div className="alert alert-danger py-2 small fw-bold text-center mb-0"><i className="bi bi-exclamation-triangle-fill me-2"></i>Could not parse valid years/earnings.</div>
-                      ) : (
-                          <div className="bg-input border border-secondary rounded-3 p-3 mt-auto">
-                              <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Years Processed:</span><span className="text-main">{cppAnalysis.records}</span></div>
-                              <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Years Dropped (17% rule):</span><span className="text-danger">-{cppAnalysis.dropped}</span></div>
-                              <div className="d-flex justify-content-between small mb-2 pb-2 border-bottom border-secondary border-opacity-50"><span className="text-muted fw-bold">Lifetime Average (Kept):</span><span className="text-main">{formatCurrency(cppAnalysis.average)}</span></div>
-                              <div className="d-flex justify-content-between align-items-center">
-                                  <span className="text-muted fw-bold small text-uppercase ls-1">Projected Base CPP</span>
-                                  <span className="fs-5 fw-bold text-success">~{formatCurrency(cppAnalysis.projected)}</span>
-                              </div>
-                          </div>
-                      )
-                  )}
-              </div>
-          </div>
-
+      {/* Category Pills Header */}
+      <div className="d-flex flex-wrap justify-content-center gap-2 gap-md-3 mb-4 pb-2">
+          {toolCategories.map(cat => (
+              <button 
+                  key={cat.title}
+                  onClick={() => setActiveCategory(cat.title)}
+                  className={`btn rounded-pill fw-bold px-3 px-md-4 py-2 transition-all border-0 shadow-sm ${activeCategory === cat.title ? 'bg-primary text-white' : 'bg-input text-muted border border-secondary hover-opacity-100'}`}
+              >
+                  {cat.title}
+              </button>
+          ))}
       </div>
+
+      {/* Tools Grid for Active Category */}
+      <div className="row g-4 mb-5">
+          {toolCategories.find(c => c.title === activeCategory)?.keys.map(toolId => renderToolCard(toolId))}
+      </div>
+
     </div>
   );
 }

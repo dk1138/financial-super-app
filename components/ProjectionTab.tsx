@@ -135,7 +135,7 @@ export default function ProjectionTab() {
 
   const sumAccounts = (assets: any) => {
       if (!assets) return 0;
-      return (assets.cash||0) + (assets.tfsa||0) + (assets.fhsa||0) + (assets.rrsp||0) + (assets.lirf||0) + (assets.lif||0) + (assets.rrif_acct||0) + (assets.nreg||0) + (assets.crypto||0);
+      return (assets.cash||0) + (assets.tfsa||0) + (assets.fhsa||0) + (assets.rrsp||0) + (assets.lirf||0) + (assets.lif||0) + (assets.rrif_acct||0) + (assets.nonreg||0) + (assets.crypto||0);
   };
 
   const getAccountFlow = (y: any, player: string, acctKeys: string[], wdKeys: string[], year: number) => {
@@ -206,6 +206,7 @@ export default function ProjectionTab() {
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
       const db = isP1 ? y.dbP1 : y.dbP2;
+      const ccb = isP1 ? (y.ccbP1 || 0) : 0;
       const invInc = isP1 ? y.invIncP1 : y.invIncP2;
       const taxInc = isP1 ? y.taxIncP1 : y.taxIncP2;
       const taxDetails = isP1 ? y.taxDetailsP1 : y.taxDetailsP2;
@@ -262,6 +263,12 @@ export default function ProjectionTab() {
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Pension (DB) <InfoBtn title="Pension" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Defined Benefit Pension payout." align="left" /></span>
                       <span>{formatCurrency(db, year)}</span>
+                  </div>
+              )}
+              {ccb > 0 && (
+                  <div className="d-flex justify-content-between small mb-1 mt-1">
+                      <span className="text-muted ms-2 d-flex align-items-center">CCB <InfoBtn title="Canada Child Benefit" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Tax-free monthly payment for eligible children." align="left" /></span>
+                      <span className="text-success">+{formatCurrency(ccb, year)}</span>
                   </div>
               )}
               {invInc > 0 && (
@@ -367,11 +374,12 @@ export default function ProjectionTab() {
               {results.timeline.map((y: any, index: number) => {
                 const isExpanded = expandedYear === y.year;
                 
-                // Add RRSP Refunds into the Total Income UI visual
-                const totalIncome = (y.incomeP1 || 0) + (y.incomeP2 || 0) + (y.cppP1 || 0) + (y.oasP1 || 0) + (y.dbP1 || 0) + (y.cppP2 || 0) + (y.oasP2 || 0) + (y.dbP2 || 0) + (y.windfall || 0) + (y.invIncP1 || 0) + (y.invIncP2 || 0) + (y.rrspRefundP1 || 0) + (y.rrspRefundP2 || 0);
+                // Tie directly to the backend engine's explicit math variable, no more manual recreation bugs
+                const totalWithdrawals = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
+                const totalIncome = (y.grossInflow || 0) - (totalWithdrawals as number);
+                
                 const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0);
                 const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0);
-                const totalWithdrawals = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
                 
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
                 const totalNW = y.liquidNW + (y.reIncludedEq || 0); 
@@ -382,15 +390,15 @@ export default function ProjectionTab() {
                     if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
                 }
 
-                // Dynamic Balancing Logic
-                const totalSourcedRaw = totalIncome + (totalWithdrawals as number);
+                // Dynamic Balancing Logic - 0.5 threshold added to prevent arbitrary floating point misfires
+                const totalSourcedRaw = y.grossInflow || 0;
                 const totalSpentRaw = totalExpenses + totalTaxes + engineContributions;
                 
                 let shortfall = 0;
                 let unallocated = 0;
                 
-                if (totalSourcedRaw < totalSpentRaw) shortfall = totalSpentRaw - totalSourcedRaw;
-                else if (totalSourcedRaw > totalSpentRaw) unallocated = totalSourcedRaw - totalSpentRaw;
+                if (totalSourcedRaw < totalSpentRaw - 0.5) shortfall = totalSpentRaw - totalSourcedRaw;
+                else if (totalSourcedRaw > totalSpentRaw + 0.5) unallocated = totalSourcedRaw - totalSpentRaw;
 
                 const finalBalancedTotal = Math.max(totalSourcedRaw, totalSpentRaw);
 
@@ -588,8 +596,8 @@ export default function ProjectionTab() {
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
-                                                        {getAccountFlow(y, 'p1', ['nreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.nreg || 0, y.year)}</span>
+                                                        {getAccountFlow(y, 'p1', ['nonreg'], ['Non-Reg'], y.year)}
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -679,8 +687,8 @@ export default function ProjectionTab() {
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
-                                                        {getAccountFlow(y, 'p2', ['nreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.nreg || 0, y.year)}</span>
+                                                        {getAccountFlow(y, 'p2', ['nonreg'], ['Non-Reg'], y.year)}
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 

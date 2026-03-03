@@ -140,8 +140,9 @@ export default function DashboardTab() {
       mortgageFreeYear = freeYear ? `${freeYear.year} (Age ${freeYear.p1Age})` : "Never";
   }
 
-  const finalEstateRaw = results.timeline[results.timeline.length - 1].liquidNW + (results.timeline[results.timeline.length - 1].reIncludedEq || 0);
-  const finalEstate = getRealValue(finalEstateRaw, results.timeline[results.timeline.length - 1].year);
+  const finalEstateObj = results.timeline[results.timeline.length - 1];
+  const finalEstateRaw = finalEstateObj.afterTaxEstate !== undefined ? finalEstateObj.afterTaxEstate : (finalEstateObj.liquidNW + (finalEstateObj.reIncludedEq || 0));
+  const finalEstate = getRealValue(finalEstateRaw, finalEstateObj.year);
   const planHealth = finalEstateRaw > 0 ? "Success" : "Failed";
 
   // --- Donut Chart 1: Lifetime Cash Distribution ---
@@ -197,7 +198,7 @@ export default function DashboardTab() {
       const fhsa = Math.max(0, getRealValue((p1.fhsa||0) + (p2.fhsa||0), y.year) || 0);
       const rrsp_rrif = Math.max(0, getRealValue((p1.rrsp||0) + (p1.rrif_acct||0) + (p2.rrsp||0) + (p2.rrif_acct||0), y.year) || 0);
       const lira_lif = Math.max(0, getRealValue((p1.lirf||0) + (p1.lif||0) + (p2.lirf||0) + (p2.lif||0), y.year) || 0);
-      const nreg = Math.max(0, getRealValue((p1.nreg||0) + (p2.nreg||0), y.year) || 0);
+      const nreg = Math.max(0, getRealValue((p1.nonreg||0) + (p2.nonreg||0), y.year) || 0);
       const cash = Math.max(0, getRealValue((p1.cash||0) + (p2.cash||0), y.year) || 0);
       const crypto = Math.max(0, getRealValue((p1.crypto||0) + (p2.crypto||0), y.year) || 0);
       const realEstate = Math.max(0, getRealValue(y.reIncludedEq || 0, y.year) || 0);
@@ -311,7 +312,7 @@ export default function DashboardTab() {
                           <span className="fw-bold text-primary">{mortgageFreeYear}</span>
                       </div>
                       <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                          <span className="text-muted fw-bold">Final Estate Value</span>
+                          <span className="text-muted fw-bold d-flex align-items-center">Final Estate Value <InfoBtn align="left" title="After-Tax Estate" text="The final value of your entire portfolio and real estate <b>after</b> applying the terminal tax on remaining RRSPs/RRIFs and Capital Gains at death."/></span>
                           <span className="fw-bold fs-5 text-success" title={formatExact(finalEstate)}>{formatCurrency(finalEstate)}</span>
                       </div>
                       <div className="d-flex justify-content-between align-items-center p-3 bg-black bg-opacity-10">

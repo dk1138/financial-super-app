@@ -1,3 +1,4 @@
+// dk1138/financial-super-app/financial-super-app-d2ee1d8b2788b3d51f52e6eb868ad325b5b7eaf4/components/StrategyTab.tsx
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 
@@ -5,7 +6,7 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
   tfsa: { label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', desc: 'Tax-Free Savings' },
   rrsp: { label: 'RRSP', icon: 'bi-bank2', color: 'text-warning', desc: 'Registered Retirement' },
   fhsa: { label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', desc: 'First Home Savings' },
-  nreg: { label: 'Non-Reg', icon: 'bi-graph-up-arrow', color: 'text-success', desc: 'Taxable Investments' },
+  nonreg: { label: 'Non-Reg', icon: 'bi-graph-up-arrow', color: 'text-success', desc: 'Taxable Investments' },
   cash: { label: 'Cash / HYSA', icon: 'bi-cash-stack', color: 'text-secondary', desc: 'High-Yield Savings' },
   crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-warning', desc: 'Digital Assets' },
   resp: { label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', desc: 'Education Savings' },
@@ -270,7 +271,7 @@ export default function StrategyTab() {
                     <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center p-3 bg-input border border-secondary rounded-4 shadow-sm gap-3">
                         <div>
                             <h6 className="fw-bold mb-1 text-success small text-uppercase ls-1">Dynamic Tax Optimization</h6>
-                            <span className="small text-muted" style={{fontSize: '0.75rem'}}>Overrides decumulation priorities to aggressively melt down accounts in the lowest tax brackets.</span>
+                            <span className="small text-muted" style={{fontSize: '0.75rem'}}>Overrides decumulation priorities to fully fund the 0% tax bracket with RRSP/RRIF money, completely shelters your TFSA, and aggressively clears Non-Reg accounts to eliminate tax-drag.</span>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0">
                             <input className="form-check-input fs-4 mt-0 cursor-pointer" type="checkbox" checked={data.inputs.fully_optimize_tax ?? false} onChange={(e) => updateInput('fully_optimize_tax', e.target.checked)} />
@@ -280,7 +281,7 @@ export default function StrategyTab() {
                     <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center p-3 bg-input border border-secondary rounded-4 shadow-sm gap-3">
                         <div>
                             <h6 className="fw-bold mb-1 text-warning small text-uppercase ls-1">Early RRSP Meltdown</h6>
-                            <span className="small text-muted" style={{fontSize: '0.75rem'}}>Between ages 55 and 71, preemptively drain RRSPs into TFSAs to avoid massive RRIF tax bombs.</span>
+                            <span className="small text-muted" style={{fontSize: '0.75rem'}}>Between ages 55 and 71, preemptively drain RRSPs <b>tax-free</b> into the Basic Personal Amount limit or directly into your TFSA to avoid massive RRIF tax bombs.</span>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0">
                             <input className="form-check-input fs-4 mt-0 cursor-pointer" type="checkbox" checked={data.inputs.rrsp_meltdown_enabled ?? false} onChange={(e) => updateInput('rrsp_meltdown_enabled', e.target.checked)} />

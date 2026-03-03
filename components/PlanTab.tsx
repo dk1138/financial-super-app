@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { FINANCIAL_CONSTANTS } from '../lib/config';
 
-// ADDED ICON AND COLOR PROPERTIES TO FIX TYPE ERROR
 const ACCOUNT_TYPES = [
   { id: 'cash', label: 'Cash', icon: 'bi-cash-stack', color: 'text-success', tooltip: 'Interest income is 100% taxable at your marginal rate. No tax sheltering.' },
   { id: 'tfsa', label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', tooltip: 'Tax-Free Savings Account. Growth and withdrawals are 100% tax-free.' },
@@ -369,8 +368,8 @@ export default function PlanTab() {
       
       ['p1', 'p2'].forEach(p => {
           ['tfsa', 'rrsp', 'nonreg', 'lirf', 'lif', 'rrif_acct', 'fhsa', 'resp'].forEach(acct => {
-              updates[`${p}_${acct}_ret`] = rate;
-              updates[`${p}_${acct}_retire_ret`] = rate;
+              updates[`${p}_acct_ret`] = rate;
+              updates[`${p}_acct_retire_ret`] = rate;
           });
           updates[`${p}_crypto_ret`] = rate + 2.0; 
           updates[`${p}_crypto_retire_ret`] = rate + 2.0;
