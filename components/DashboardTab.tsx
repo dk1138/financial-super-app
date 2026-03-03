@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import html2canvas from 'html2canvas';
 
 const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
     const [open, setOpen] = useState(false);
@@ -9,7 +10,7 @@ const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: strin
     else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
 
     return (
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
+        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore>
             <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
                 <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
             </button>
@@ -25,6 +26,52 @@ const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: strin
 
 export default function DashboardTab() {
   const { data, results } = useFinance();
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+
+  const showToast = (msg: string) => {
+      setToastMsg(msg);
+      setTimeout(() => setToastMsg(''), 4000);
+  };
+
+  const handleCopyToClipboard = async () => {
+      if (!dashboardRef.current) return;
+      setIsExporting(true);
+      showToast('Generating high-res image...');
+      try {
+          const canvas = await html2canvas(dashboardRef.current, { backgroundColor: '#16181d', scale: 2 });
+          canvas.toBlob(async (blob) => {
+              if (blob) {
+                  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                  showToast('✅ Copied to clipboard! Ready to paste (Ctrl+V) into Reddit/Discord.');
+              }
+          });
+      } catch (err) {
+          console.error(err);
+          showToast('❌ Failed to copy image.');
+      }
+      setIsExporting(false);
+  };
+
+  const handleDownloadPNG = async () => {
+      if (!dashboardRef.current) return;
+      setIsExporting(true);
+      showToast('Generating high-res image...');
+      try {
+          const canvas = await html2canvas(dashboardRef.current, { backgroundColor: '#16181d', scale: 2 });
+          const url = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'Retirement_Summary.png';
+          link.click();
+          showToast('✅ Image downloaded successfully!');
+      } catch (err) {
+          console.error(err);
+          showToast('❌ Failed to download image.');
+      }
+      setIsExporting(false);
+  };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
     return (
@@ -213,277 +260,320 @@ export default function DashboardTab() {
   const yAxisTicks = [1, 0.75, 0.5, 0.25, 0].map(f => maxTotalNW * f);
 
   return (
-    <div className="p-3 p-md-4 pb-5 mb-5">
-      <h5 className="fw-bold text-uppercase ls-1 text-primary mb-4 d-flex align-items-center">
-          <i className="bi bi-clipboard2-data me-2"></i> Executive Summary
-      </h5>
-
-      {/* 6 Top Metric Cards - Centered */}
-      <div className="row g-4 mb-4">
-          <div className="col-12 col-md-6 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
-                  <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                      <i className="bi bi-cash-stack text-success me-2"></i>
-                      <span className="me-1">Total Gross Inflow</span>
-                      <InfoBtn align="center" title="Gross Inflow" text="All cash sourced over your lifetime, including salaries, pensions, benefits, and portfolio withdrawals." />
-                  </div>
-                  <div className="fs-3 fw-bold text-main" title={formatExact(totalGrossInflow)}>{formatCurrency(totalGrossInflow)}</div>
+    <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
+        
+      {/* Toast Notification for Export */}
+      {toastMsg && (
+          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
+              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
+                  {toastMsg}
               </div>
           </div>
+      )}
+
+      {/* Header and Export Buttons */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+          <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
+              <i className="bi bi-clipboard2-data me-2"></i> Executive Summary
+          </h5>
           
-          <div className="col-12 col-md-6 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
-                  <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                      <i className="bi bi-graph-up-arrow text-primary me-2"></i>
-                      <span className="me-1">Investment Growth</span>
-                      <InfoBtn align="center" title="Investment Growth" text="Total compound interest and market growth generated by your portfolio over the entire simulation." />
-                  </div>
-                  <div className="fs-3 fw-bold text-primary" title={formatExact(totalInvestmentGrowth)}>{formatCurrency(totalInvestmentGrowth)}</div>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-6 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
-                  <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                      <i className="bi bi-bank text-purple me-2" style={{color:'var(--bs-purple)'}}></i>
-                      <span className="me-1" style={{color:'var(--bs-purple)'}}>Govt Benefits Collected</span>
-                      <InfoBtn align="center" title="Govt Benefits" text="Total CPP and OAS collected over your lifetime." />
-                  </div>
-                  <div className="fs-3 fw-bold" style={{color:'var(--bs-purple)'}} title={formatExact(totalBenefits)}>{formatCurrency(totalBenefits)}</div>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-6 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
-                  <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                      <i className="bi bi-receipt text-danger me-2"></i>
-                      <span className="me-1">Lifetime Tax Paid</span>
-                      <InfoBtn align="center" title="Lifetime Tax" text="Total federal and provincial tax paid, including capital gains taxes and OAS clawbacks." />
-                  </div>
-                  <div className="fs-3 fw-bold text-danger" title={formatExact(totalTaxPaid)}>
-                      {formatCurrency(totalTaxPaid)} 
-                      <span className="fs-6 text-muted ms-2 fw-medium">({effTaxRate.toFixed(1)}% Eff.)</span>
-                  </div>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-6 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
-                  <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                      <i className="bi bi-cart-dash text-warning me-2"></i>
-                      <span className="me-1">Total Living Expenses</span>
-                      <InfoBtn align="center" title="Living Expenses" text="Total amount spent on lifestyle, debt, and baseline expenses over the simulation." />
-                  </div>
-                  <div className="fs-3 fw-bold text-warning" title={formatExact(totalExpenses)}>{formatCurrency(totalExpenses)}</div>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-6 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
-                  <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                      <i className="bi bi-calendar-heart text-info me-2"></i>
-                      <span className="me-1">Avg Retirement Spend</span>
-                      <InfoBtn align="center" title="Retirement Spend" text="Average annual spending during your retirement years, adjusted for today's dollars if toggled." />
-                  </div>
-                  <div className="fs-3 fw-bold text-info" title={formatExact(avgRetSpending)}>{formatCurrency(avgRetSpending)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
-              </div>
+          <div className="d-flex gap-2" data-html2canvas-ignore>
+              <button 
+                  className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  onClick={handleCopyToClipboard}
+                  disabled={isExporting}
+              >
+                  {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-clipboard me-2"></i>}
+                  Copy Image to Clipboard
+              </button>
+              <button 
+                  className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  onClick={handleDownloadPNG}
+                  disabled={isExporting}
+              >
+                  <i className="bi bi-download me-2"></i> Save PNG
+              </button>
           </div>
       </div>
 
-      <div className="row g-4 mb-4">
+      {/* The Dashboard Container to Capture */}
+      <div ref={dashboardRef} className="bg-body pb-3" style={{ margin: '-1rem', padding: '1rem' }}>
           
-          {/* Milestones Panel */}
-          <div className="col-12 col-xl-4">
-              <div className="rp-card border-secondary rounded-4 h-100 overflow-hidden shadow-sm">
-                  <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3">
-                      <h6 className="mb-0 fw-bold text-uppercase ls-1 text-center"><i className="bi bi-flag-fill text-warning me-2"></i>Milestones & Estate</h6>
+          {/* Watermark only visible in the exported image */}
+          {isExporting && (
+              <div className="text-center text-muted fw-bold small text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary">
+                  Generated by Retirement Planner Pro
+              </div>
+          )}
+
+          {/* 6 Top Metric Cards - Centered */}
+          <div className="row g-4 mb-4">
+              <div className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                      <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
+                          <i className="bi bi-cash-stack text-success me-2"></i>
+                          <span className="me-1">Total Gross Inflow</span>
+                          <InfoBtn align="center" title="Gross Inflow" text="All cash sourced over your lifetime, including salaries, pensions, benefits, and portfolio withdrawals." />
+                      </div>
+                      <div className="fs-3 fw-bold text-main" title={formatExact(totalGrossInflow)}>{formatCurrency(totalGrossInflow)}</div>
                   </div>
-                  <div className="card-body p-0">
-                      <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                          <span className="text-muted fw-bold">Retirement Day NW <span className="small fw-normal ms-1">(Age {data.inputs.p1_retireAge})</span></span>
-                          <span className="fw-bold text-info" title={formatExact(retDayNW)}>{formatCurrency(retDayNW)}</span>
+              </div>
+              
+              <div className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                      <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
+                          <i className="bi bi-graph-up-arrow text-primary me-2"></i>
+                          <span className="me-1">Investment Growth</span>
+                          <InfoBtn align="center" title="Investment Growth" text="Total compound interest and market growth generated by your portfolio over the entire simulation." />
                       </div>
-                      <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                          <span className="text-muted fw-bold">Peak Net Worth</span>
-                          <span className="fw-bold text-success" title={formatExact(peakNW)}>{formatCurrency(peakNW)} <span className="text-muted small fw-normal ms-1">(Age {peakAge})</span></span>
+                      <div className="fs-3 fw-bold text-primary" title={formatExact(totalInvestmentGrowth)}>{formatCurrency(totalInvestmentGrowth)}</div>
+                  </div>
+              </div>
+
+              <div className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                      <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
+                          <i className="bi bi-bank text-purple me-2" style={{color:'var(--bs-purple)'}}></i>
+                          <span className="me-1" style={{color:'var(--bs-purple)'}}>Govt Benefits Collected</span>
+                          <InfoBtn align="center" title="Govt Benefits" text="Total CPP and OAS collected over your lifetime." />
                       </div>
-                      <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                          <span className="text-muted fw-bold">Mortgage Free</span>
-                          <span className="fw-bold text-primary">{mortgageFreeYear}</span>
+                      <div className="fs-3 fw-bold" style={{color:'var(--bs-purple)'}} title={formatExact(totalBenefits)}>{formatCurrency(totalBenefits)}</div>
+                  </div>
+              </div>
+
+              <div className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                      <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
+                          <i className="bi bi-receipt text-danger me-2"></i>
+                          <span className="me-1">Lifetime Tax Paid</span>
+                          <InfoBtn align="center" title="Lifetime Tax" text="Total federal and provincial tax paid, including capital gains taxes and OAS clawbacks." />
                       </div>
-                      <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                          <span className="text-muted fw-bold d-flex align-items-center">Final Estate Value <InfoBtn align="left" title="After-Tax Estate" text="The final value of your entire portfolio and real estate <b>after</b> applying the terminal tax on remaining RRSPs/RRIFs and Capital Gains at death."/></span>
-                          <span className="fw-bold fs-5 text-success" title={formatExact(finalEstate)}>{formatCurrency(finalEstate)}</span>
+                      <div className="fs-3 fw-bold text-danger" title={formatExact(totalTaxPaid)}>
+                          {formatCurrency(totalTaxPaid)} 
+                          <span className="fs-6 text-muted ms-2 fw-medium">({effTaxRate.toFixed(1)}% Eff.)</span>
                       </div>
-                      <div className="d-flex justify-content-between align-items-center p-3 bg-black bg-opacity-10">
-                          <span className="text-muted fw-bold">Plan Health</span>
-                          {planHealth === "Success" 
-                            ? <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 fs-6 shadow-sm">SUCCESS</span>
-                            : <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2 fs-6 shadow-sm">FAILED</span>
-                          }
+                  </div>
+              </div>
+
+              <div className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                      <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
+                          <i className="bi bi-cart-dash text-warning me-2"></i>
+                          <span className="me-1">Total Living Expenses</span>
+                          <InfoBtn align="center" title="Living Expenses" text="Total amount spent on lifestyle, debt, and baseline expenses over the simulation." />
                       </div>
+                      <div className="fs-3 fw-bold text-warning" title={formatExact(totalExpenses)}>{formatCurrency(totalExpenses)}</div>
+                  </div>
+              </div>
+
+              <div className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                      <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
+                          <i className="bi bi-calendar-heart text-info me-2"></i>
+                          <span className="me-1">Avg Retirement Spend</span>
+                          <InfoBtn align="center" title="Retirement Spend" text="Average annual spending during your retirement years, adjusted for today's dollars if toggled." />
+                      </div>
+                      <div className="fs-3 fw-bold text-info" title={formatExact(avgRetSpending)}>{formatCurrency(avgRetSpending)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
                   </div>
               </div>
           </div>
 
-          {/* Double Donut Charts Container */}
-          <div className="col-12 col-xl-8">
-              <div className="row g-4 h-100">
-                  
-                  {/* Lifetime Cash Distribution Donut */}
-                  <div className="col-12 col-md-6">
-                      <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
-                          <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-pie-chart-fill text-primary me-2"></i>Cash Distribution</h6>
-                          
-                          {totalPie > 1 ? (
-                              <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
-                                  {/* Pure CSS Donut Chart */}
-                                  <div className="position-relative d-flex align-items-center justify-content-center shadow-sm" style={{width: '180px', height: '180px', borderRadius: '50%', background: `conic-gradient(${conicStr1})`, flexShrink: 0}}>
-                                      <div className="rounded-circle d-flex flex-column align-items-center justify-content-center shadow-inner" style={{width: '110px', height: '110px', backgroundColor: 'var(--bg-card)'}}>
-                                          <span className="small text-muted fw-bold" style={{fontSize: '0.65rem'}}>TOTAL</span>
-                                          <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalExpenses + totalTaxPaid + finalEstate)}</span>
-                                      </div>
-                                  </div>
-                                  
-                                  {/* Legend */}
-                                  <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
-                                      {pieData.map((d, i) => (
-                                          <div className="d-flex justify-content-between align-items-center" key={i}>
-                                              <div className="d-flex align-items-center">
-                                                  <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
-                                                  <span className="small text-muted fw-bold">{d.label}</span>
-                                              </div>
-                                              <span className="fw-bold text-main small">{((d.value / totalPie) * 100).toFixed(1)}%</span>
-                                          </div>
-                                      ))}
-                                  </div>
-                              </div>
-                          ) : (
-                              <div className="text-center text-muted fst-italic py-4">Not enough data.</div>
-                          )}
+          <div className="row g-4 mb-4">
+              
+              {/* Milestones Panel */}
+              <div className="col-12 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 h-100 overflow-hidden shadow-sm">
+                      <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3">
+                          <h6 className="mb-0 fw-bold text-uppercase ls-1 text-center"><i className="bi bi-flag-fill text-warning me-2"></i>Milestones & Estate</h6>
                       </div>
-                  </div>
-
-                  {/* Retirement Funding Sources Donut */}
-                  <div className="col-12 col-md-6">
-                      <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
-                          <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-wallet-fill text-info me-2"></i>Retirement Funding</h6>
-                          
-                          {totalFund > 1 ? (
-                              <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
-                                  {/* Pure CSS Donut Chart */}
-                                  <div className="position-relative d-flex align-items-center justify-content-center shadow-sm" style={{width: '180px', height: '180px', borderRadius: '50%', background: `conic-gradient(${conicStr2})`, flexShrink: 0}}>
-                                      <div className="rounded-circle d-flex flex-column align-items-center justify-content-center shadow-inner" style={{width: '110px', height: '110px', backgroundColor: 'var(--bg-card)'}}>
-                                          <span className="small text-muted fw-bold text-center lh-1 mb-1" style={{fontSize: '0.65rem'}}>RETIREMENT<br/>INCOME</span>
-                                          <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalFund)}</span>
-                                      </div>
-                                  </div>
-                                  
-                                  {/* Legend */}
-                                  <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
-                                      {fundData.map((d, i) => (
-                                          <div className="d-flex justify-content-between align-items-center" key={i}>
-                                              <div className="d-flex align-items-center">
-                                                  <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
-                                                  <span className="small text-muted fw-bold">{d.label}</span>
-                                              </div>
-                                              <span className="fw-bold text-main small">{((d.value / totalFund) * 100).toFixed(1)}%</span>
-                                          </div>
-                                      ))}
-                                  </div>
-                              </div>
-                          ) : (
-                              <div className="text-center text-muted fst-italic py-4">No retirement data.</div>
-                          )}
-                      </div>
-                  </div>
-
-              </div>
-          </div>
-
-      </div>
-
-      {/* FULL WIDTH: Timeline Stacked Bar Chart */}
-      <div className="row mt-2">
-          <div className="col-12">
-              <div className="rp-card border-secondary rounded-4 p-4 shadow-sm" style={{ height: '560px' }}>
-                  <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-bar-chart-line-fill text-primary me-2"></i>Net Worth Composition Over Time</h6>
-                  
-                  {maxTotalNW > 1 ? (
-                      <div className="d-flex flex-column h-100 w-100" style={{ paddingBottom: '75px' }}>
-                          
-                          {/* Legend Grid */}
-                          <div className="d-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-secondary flex-shrink-0">
-                              {[...categories].reverse().map(c => (
-                                  <div className="d-flex align-items-center" key={c.key}>
-                                      <span className="rounded-circle me-2 shadow-sm border border-secondary border-opacity-25" style={{width: '12px', height: '12px', backgroundColor: c.color, display: 'inline-block'}}></span>
-                                      <span className="small text-muted fw-bold ls-1" style={{fontSize: '0.75rem'}}>{c.label}</span>
-                                  </div>
-                              ))}
+                      <div className="card-body p-0">
+                          <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
+                              <span className="text-muted fw-bold">Retirement Day NW <span className="small fw-normal ms-1">(Age {data.inputs.p1_retireAge})</span></span>
+                              <span className="fw-bold text-info" title={formatExact(retDayNW)}>{formatCurrency(retDayNW)}</span>
                           </div>
+                          <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
+                              <span className="text-muted fw-bold">Peak Net Worth</span>
+                              <span className="fw-bold text-success" title={formatExact(peakNW)}>{formatCurrency(peakNW)} <span className="text-muted small fw-normal ms-1">(Age {peakAge})</span></span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
+                              <span className="text-muted fw-bold">Mortgage Free</span>
+                              <span className="fw-bold text-primary">{mortgageFreeYear}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
+                              <span className="text-muted fw-bold d-flex align-items-center">Final Estate Value <InfoBtn align="left" title="After-Tax Estate" text="The final value of your entire portfolio and real estate <b>after</b> applying the terminal tax on remaining RRSPs/RRIFs and Capital Gains at death."/></span>
+                              <span className="fw-bold fs-5 text-success" title={formatExact(finalEstate)}>{formatCurrency(finalEstate)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center p-3 bg-black bg-opacity-10">
+                              <span className="text-muted fw-bold">Plan Health</span>
+                              {planHealth === "Success" 
+                                ? <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 fs-6 shadow-sm">SUCCESS</span>
+                                : <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2 fs-6 shadow-sm">FAILED</span>
+                              }
+                          </div>
+                      </div>
+                  </div>
+              </div>
 
-                          {/* Chart Area with Left Y-Axis */}
-                          <div className="d-flex w-100 flex-grow-1 h-100">
+              {/* Double Donut Charts Container */}
+              <div className="col-12 col-xl-8">
+                  <div className="row g-4 h-100">
+                      
+                      {/* Lifetime Cash Distribution Donut */}
+                      <div className="col-12 col-md-6">
+                          <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
+                              <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-pie-chart-fill text-primary me-2"></i>Cash Distribution</h6>
                               
-                              {/* Y-Axis */}
-                              <div className="d-flex flex-column justify-content-between align-items-end pe-2 h-100 border-end border-secondary border-opacity-50" style={{ width: '55px', flexShrink: 0 }}>
-                                  {yAxisTicks.map((tick, i) => (
-                                      <span key={i} className="text-muted fw-bold lh-1" style={{ fontSize: '0.65rem', position: 'relative', top: i===0 ? '0' : (i===4 ? '0' : '-6px') }}>
-                                          {formatYAxis(tick)}
-                                      </span>
+                              {totalPie > 1 ? (
+                                  <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
+                                      {/* Pure CSS Donut Chart */}
+                                      <div className="position-relative d-flex align-items-center justify-content-center shadow-sm" style={{width: '180px', height: '180px', borderRadius: '50%', background: `conic-gradient(${conicStr1})`, flexShrink: 0}}>
+                                          <div className="rounded-circle d-flex flex-column align-items-center justify-content-center shadow-inner" style={{width: '110px', height: '110px', backgroundColor: 'var(--bg-card)'}}>
+                                              <span className="small text-muted fw-bold" style={{fontSize: '0.65rem'}}>TOTAL</span>
+                                              <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalExpenses + totalTaxPaid + finalEstate)}</span>
+                                          </div>
+                                      </div>
+                                      
+                                      {/* Legend */}
+                                      <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
+                                          {pieData.map((d, i) => (
+                                              <div className="d-flex justify-content-between align-items-center" key={i}>
+                                                  <div className="d-flex align-items-center">
+                                                      <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
+                                                      <span className="small text-muted fw-bold">{d.label}</span>
+                                                  </div>
+                                                  <span className="fw-bold text-main small">{((d.value / totalPie) * 100).toFixed(1)}%</span>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              ) : (
+                                  <div className="text-center text-muted fst-italic py-4">Not enough data.</div>
+                              )}
+                          </div>
+                      </div>
+
+                      {/* Retirement Funding Sources Donut */}
+                      <div className="col-12 col-md-6">
+                          <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
+                              <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-wallet-fill text-info me-2"></i>Retirement Funding</h6>
+                              
+                              {totalFund > 1 ? (
+                                  <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
+                                      {/* Pure CSS Donut Chart */}
+                                      <div className="position-relative d-flex align-items-center justify-content-center shadow-sm" style={{width: '180px', height: '180px', borderRadius: '50%', background: `conic-gradient(${conicStr2})`, flexShrink: 0}}>
+                                          <div className="rounded-circle d-flex flex-column align-items-center justify-content-center shadow-inner" style={{width: '110px', height: '110px', backgroundColor: 'var(--bg-card)'}}>
+                                              <span className="small text-muted fw-bold text-center lh-1 mb-1" style={{fontSize: '0.65rem'}}>RETIREMENT<br/>INCOME</span>
+                                              <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalFund)}</span>
+                                          </div>
+                                      </div>
+                                      
+                                      {/* Legend */}
+                                      <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
+                                          {fundData.map((d, i) => (
+                                              <div className="d-flex justify-content-between align-items-center" key={i}>
+                                                  <div className="d-flex align-items-center">
+                                                      <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
+                                                      <span className="small text-muted fw-bold">{d.label}</span>
+                                                  </div>
+                                                  <span className="fw-bold text-main small">{((d.value / totalFund) * 100).toFixed(1)}%</span>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              ) : (
+                                  <div className="text-center text-muted fst-italic py-4">No retirement data.</div>
+                              )}
+                          </div>
+                      </div>
+
+                  </div>
+              </div>
+
+          </div>
+
+          {/* FULL WIDTH: Timeline Stacked Bar Chart */}
+          <div className="row mt-2">
+              <div className="col-12">
+                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm" style={{ height: '560px' }}>
+                      <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-bar-chart-line-fill text-primary me-2"></i>Net Worth Composition Over Time</h6>
+                      
+                      {maxTotalNW > 1 ? (
+                          <div className="d-flex flex-column h-100 w-100" style={{ paddingBottom: '75px' }}>
+                              
+                              {/* Legend Grid */}
+                              <div className="d-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-secondary flex-shrink-0">
+                                  {[...categories].reverse().map(c => (
+                                      <div className="d-flex align-items-center" key={c.key}>
+                                          <span className="rounded-circle me-2 shadow-sm border border-secondary border-opacity-25" style={{width: '12px', height: '12px', backgroundColor: c.color, display: 'inline-block'}}></span>
+                                          <span className="small text-muted fw-bold ls-1" style={{fontSize: '0.75rem'}}>{c.label}</span>
+                                      </div>
                                   ))}
                               </div>
 
-                              {/* CSS Stacked Bar Chart */}
-                              <div className="w-100 flex-grow-1 d-flex align-items-end ps-2" style={{ gap: '2px' }}>
-                                  {chartData.map((d: any, i: number) => {
-                                      const showLabel = i === 0 || i === chartData.length - 1 || d.year % 5 === 0;
-                                      
-                                      return (
-                                          <div key={d.year} className="d-flex flex-column justify-content-end align-items-center h-100 flex-grow-1 position-relative group" title={`Year: ${d.year} (Age ${d.age})\nTotal Net Worth: ${formatExact(d.total)}`}>
-                                              
-                                              {/* The Bar - Stacked from Bottom Up */}
-                                              <div className="d-flex flex-column-reverse w-100 rounded-top overflow-hidden shadow-sm transition-all hover-opacity-75 bg-black bg-opacity-25 mt-auto" style={{ height: `${(d.total / maxTotalNW) * 100}%`, minHeight: d.total > 0 ? '4px' : '0' }}>
-                                                  {[...categories].map(c => {
-                                                      const val = d[c.key as keyof typeof d] as number;
-                                                      if (val <= 0) return null;
-                                                      return (
-                                                          <div 
-                                                              key={c.key} 
-                                                              style={{ height: `${(val / d.total) * 100}%`, backgroundColor: c.color }} 
-                                                              className="w-100 border-top border-black border-opacity-25 flex-shrink-0" 
-                                                              title={`${c.label}: ${formatExact(val)}`}
-                                                          ></div>
-                                                      );
-                                                  })}
-                                              </div>
-                                              
-                                              {/* X-Axis Label - Rotated Vertically and positioned absolutely to prevent stretching */}
-                                              <div className="position-absolute text-muted fw-bold" style={{ 
-                                                  fontSize: '0.65rem', 
-                                                  top: '100%', 
-                                                  left: '50%', 
-                                                  transform: 'translateX(-50%) rotate(-90deg)', 
-                                                  transformOrigin: 'center center',
-                                                  marginTop: '25px', 
-                                                  visibility: showLabel ? 'visible' : 'hidden', 
-                                                  pointerEvents: 'none',
-                                                  whiteSpace: 'nowrap'
-                                              }}>
-                                                  {d.year}
-                                              </div>
-                                          </div>
-                                      );
-                                  })}
-                              </div>
-                          </div>
+                              {/* Chart Area with Left Y-Axis */}
+                              <div className="d-flex w-100 flex-grow-1 h-100">
+                                  
+                                  {/* Y-Axis */}
+                                  <div className="d-flex flex-column justify-content-between align-items-end pe-2 h-100 border-end border-secondary border-opacity-50" style={{ width: '55px', flexShrink: 0 }}>
+                                      {yAxisTicks.map((tick, i) => (
+                                          <span key={i} className="text-muted fw-bold lh-1" style={{ fontSize: '0.65rem', position: 'relative', top: i===0 ? '0' : (i===4 ? '0' : '-6px') }}>
+                                              {formatYAxis(tick)}
+                                          </span>
+                                      ))}
+                                  </div>
 
-                      </div>
-                  ) : (
-                      <div className="text-center text-muted fst-italic py-5 my-auto">No assets tracked.</div>
-                  )}
+                                  {/* CSS Stacked Bar Chart */}
+                                  <div className="w-100 flex-grow-1 d-flex align-items-end ps-2" style={{ gap: '2px' }}>
+                                      {chartData.map((d: any, i: number) => {
+                                          const showLabel = i === 0 || i === chartData.length - 1 || d.year % 5 === 0;
+                                          
+                                          return (
+                                              <div key={d.year} className="d-flex flex-column justify-content-end align-items-center h-100 flex-grow-1 position-relative group" title={`Year: ${d.year} (Age ${d.age})\nTotal Net Worth: ${formatExact(d.total)}`}>
+                                                  
+                                                  {/* The Bar - Stacked from Bottom Up */}
+                                                  <div className="d-flex flex-column-reverse w-100 rounded-top overflow-hidden shadow-sm transition-all hover-opacity-75 bg-black bg-opacity-25 mt-auto" style={{ height: `${(d.total / maxTotalNW) * 100}%`, minHeight: d.total > 0 ? '4px' : '0' }}>
+                                                      {[...categories].map(c => {
+                                                          const val = d[c.key as keyof typeof d] as number;
+                                                          if (val <= 0) return null;
+                                                          return (
+                                                              <div 
+                                                                  key={c.key} 
+                                                                  style={{ height: `${(val / d.total) * 100}%`, backgroundColor: c.color }} 
+                                                                  className="w-100 border-top border-black border-opacity-25 flex-shrink-0" 
+                                                                  title={`${c.label}: ${formatExact(val)}`}
+                                                              ></div>
+                                                          );
+                                                      })}
+                                                  </div>
+                                                  
+                                                  {/* X-Axis Label - Rotated Vertically and positioned absolutely to prevent stretching */}
+                                                  <div className="position-absolute text-muted fw-bold" style={{ 
+                                                      fontSize: '0.65rem', 
+                                                      top: '100%', 
+                                                      left: '50%', 
+                                                      transform: 'translateX(-50%) rotate(-90deg)', 
+                                                      transformOrigin: 'center center',
+                                                      marginTop: '25px', 
+                                                      visibility: showLabel ? 'visible' : 'hidden', 
+                                                      pointerEvents: 'none',
+                                                      whiteSpace: 'nowrap'
+                                                  }}>
+                                                      {d.year}
+                                                  </div>
+                                              </div>
+                                          );
+                                      })}
+                                  </div>
+                              </div>
+
+                          </div>
+                      ) : (
+                          <div className="text-center text-muted fst-italic py-5 my-auto">No assets tracked.</div>
+                      )}
+                  </div>
               </div>
           </div>
+          
       </div>
 
     </div>
