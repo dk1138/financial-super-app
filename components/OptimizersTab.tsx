@@ -475,7 +475,7 @@ export default function OptimizersTab() {
 
 
   // ==========================================
-  // CPP Smart Importer Logic (Enhanced)
+  // CPP Smart Importer Logic (Enhanced with textContent fix)
   // ==========================================
   const handleHTMLUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -491,15 +491,15 @@ export default function OptimizersTab() {
           rows.forEach(row => {
               const th = row.querySelector('th');
               if(!th) return;
-              const yearText = th.innerText.trim();
-              const yearMatch = yearText.match(/(\d{4})\s*to\s*(\d{4})|(\d{4})/);
+              const yearText = th.textContent || '';
+              const yearMatch = yearText.trim().match(/(\d{4})\s*to\s*(\d{4})|(\d{4})/);
               
               const baseTd = row.querySelector('td[headers*="base-earnings"]');
               const secEnhTd = row.querySelector('td[headers*="second-additional-earnings"]');
               
               let earnings = 0;
-              if(baseTd) earnings += parseFloat(baseTd.innerText.replace(/[^\d.]/g, '')) || 0;
-              if(secEnhTd) earnings += parseFloat(secEnhTd.innerText.replace(/[^\d.]/g, '')) || 0; // Combine Base + Second Additional
+              if(baseTd) earnings += parseFloat((baseTd.textContent || '').replace(/[^\d.]/g, '')) || 0;
+              if(secEnhTd) earnings += parseFloat((secEnhTd.textContent || '').replace(/[^\d.]/g, '')) || 0; // Combine Base + Second Additional
 
               if(yearMatch) {
                   if(yearMatch[1] && yearMatch[2]) {
@@ -599,7 +599,7 @@ export default function OptimizersTab() {
       // Span the entire Contributory Period (Age 18 to CPP Start Age)
       for (let y = age18Year; y < cppStartYear; y++) {
           if (recordMap.has(y)) {
-              augmentedRecords.push({ year: y, earnings: recordMap.get(y), isProjected: false });
+              augmentedRecords.push({ year: y, earnings: recordMap.get(y) || 0, isProjected: false });
           } else {
               let e = 0;
               let isProj = false;
@@ -1299,7 +1299,7 @@ export default function OptimizersTab() {
                                   
                                   <div className="form-check form-switch mb-3 d-flex align-items-center">
                                       <input className="form-check-input cursor-pointer m-0 me-2 fs-5" type="checkbox" checked={cppProjectFuture} onChange={e => setCppProjectFuture(e.target.checked)} />
-                                      <label className="form-check-label small fw-bold text-muted">Auto-fill future years from Inputs tab</label>
+                                      <label className="form-check-label small fw-bold text-muted mt-1" style={{lineHeight: 1.2}}>Auto-fill future years from Inputs tab until Target Retirement Age</label>
                                   </div>
 
                                   <div className="d-flex justify-content-between px-2 mb-1 pe-4">
@@ -1330,7 +1330,7 @@ export default function OptimizersTab() {
                                   {cppAnalysis.projectedCount > 0 && <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold text-success">Proj. Working Years:</span><span className="text-success fw-bold">+{cppAnalysis.projectedCount}</span></div>}
                                   {cppAnalysis.zeroCount > 0 && <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold text-warning">Proj. Early Ret. (Zeros):</span><span className="text-warning fw-bold">+{cppAnalysis.zeroCount}</span></div>}
                                   
-                                  <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Dropped (17%):</span><span className="text-danger fw-bold">-{cppAnalysis.dropYears} years</span></div>
+                                  <div className="d-flex justify-content-between small mb-1 mt-2 pt-2 border-top border-secondary border-opacity-50"><span className="text-muted fw-bold">Dropped (17%):</span><span className="text-danger fw-bold">-{cppAnalysis.dropYears} years</span></div>
                                   <div className="d-flex justify-content-between small mb-3 pb-3 border-bottom border-secondary border-opacity-50"><span className="text-muted fw-bold">Average Earnings (Kept):</span><span className="text-main fw-bold">{formatCurrency(cppAnalysis.average)}</span></div>
                                   
                                   <div className="d-flex justify-content-between align-items-center mb-4">

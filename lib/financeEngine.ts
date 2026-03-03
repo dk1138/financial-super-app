@@ -1244,7 +1244,7 @@ export class FinanceEngine {
         runPass(Infinity, Infinity, withdrawalStrategies, false);
     }
 
-    runSimulation(detailed = false, simContext: any = null) {
+    runSimulation(detailed = false, simContext: any = null): any[] {
         
         // --- META-SIMULATION: DYNAMIC TAX OPTIMIZATION ENGINE ---
         // If the user checked "Dynamic Tax Optimization", we run a pure mathematical test
