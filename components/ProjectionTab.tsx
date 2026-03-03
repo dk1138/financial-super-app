@@ -72,6 +72,34 @@ export default function ProjectionTab() {
       return Math.round(getRealValue(val, year) || 0).toLocaleString('en-US');
   };
 
+  // --- Quick Insights Aggregation ---
+  let totalTaxPaid = 0;
+  let peakNW = 0;
+  let peakAge = 0;
+  let minLiquid = Infinity;
+  let retYears = 0;
+
+  results.timeline.forEach((y: any) => {
+      const realTax = getRealValue((y.taxP1 || 0) + (y.taxP2 || 0), y.year);
+      totalTaxPaid += realTax;
+
+      const realNW = getRealValue(y.liquidNW + (y.reIncludedEq || 0), y.year);
+      if (realNW > peakNW) {
+          peakNW = realNW;
+          peakAge = y.p1Age;
+      }
+      if (y.liquidNW < minLiquid) {
+          minLiquid = y.liquidNW;
+      }
+      if (y.p1Age >= (data.inputs.p1_retireAge || 65)) {
+          retYears++;
+      }
+  });
+
+  const planSuccess = minLiquid >= 0;
+  const finalYear = results.timeline[results.timeline.length - 1];
+  const finalEstate = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
+
   const toggleRow = (year: number) => {
     setExpandedYear(expandedYear === year ? null : year);
   };
@@ -343,12 +371,46 @@ export default function ProjectionTab() {
 
   return (
     <div className="p-3 p-md-4">
-      <div className="d-flex justify-content-end mb-4">
-          <div className="bg-input border border-secondary px-4 py-2 rounded-pill shadow-sm d-inline-flex align-items-center">
-              <span className="small text-muted text-uppercase fw-bold ls-1 me-3">Final Estate Value</span>
-              <span className="fs-5 fw-bold text-success">
-                  {formatCurrency(results.dashboard.finalNetWorth, results.timeline[results.timeline.length - 1].year)}
-              </span>
+      
+      {/* QUICK INSIGHTS PILLS - GRID LAYOUT */}
+      <div className="row g-2 g-md-3 mb-4">
+          <div className="col-12 col-md-6 col-xl">
+              <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
+                  <span className="small fw-bold text-uppercase ls-1 me-2" style={{color: planSuccess ? 'var(--bs-success)' : 'var(--bs-danger)'}}>Status</span>
+                  <span className={`fw-bold text-nowrap ${planSuccess ? 'text-success' : 'text-danger'}`}>
+                      {planSuccess ? <><i className="bi bi-check-circle-fill me-1"></i> SUCCESS</> : <><i className="bi bi-exclamation-triangle-fill me-1"></i> FAILED</>}
+                  </span>
+              </div>
+          </div>
+
+          <div className="col-12 col-md-6 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100" title={`Reached at Age ${peakAge}`}>
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Peak NW <span className="d-none d-xxl-inline text-opacity-50">({peakAge})</span></span>
+                  <span className="fs-6 fw-bold text-info text-nowrap">{formatCurrency(peakNW)}</span>
+              </div>
+          </div>
+
+          <div className="col-12 col-md-4 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Ret. Years</span>
+                  <span className="fs-6 fw-bold text-primary text-nowrap">{retYears} Yrs</span>
+              </div>
+          </div>
+
+          <div className="col-12 col-md-4 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Tax Paid</span>
+                  <span className="fs-6 fw-bold text-danger text-nowrap">{formatCurrency(totalTaxPaid)}</span>
+              </div>
+          </div>
+
+          <div className="col-12 col-md-4 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2 d-flex align-items-center">
+                      Estate <InfoBtn title="After-Tax Estate" text="The final value of your portfolio after applying terminal taxes to remaining RRSPs and Capital Gains." />
+                  </span>
+                  <span className="fs-6 fw-bold text-success text-nowrap">{formatCurrency(finalEstate, finalYear.year)}</span>
+              </div>
           </div>
       </div>
 

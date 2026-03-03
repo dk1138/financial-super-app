@@ -305,16 +305,16 @@ const MonthYearStepper = ({ value, onChange, minYear = 1900, maxYear = 2100 }: a
 export default function PlanTab() {
   const { data, results, updateInput, updateMultipleInputs, updateMode, addArrayItem, updateArrayItem, removeArrayItem, updateExpenseCategory } = useFinance(); 
   
-  const [assetAdvancedMode, setAssetAdvancedMode] = useState(false);
   const [expenseAdvancedMode, setExpenseAdvancedMode] = useState(false);
   const [p1DbEnabled, setP1DbEnabled] = useState(data.inputs.p1_db_enabled ?? false);
   const [p2DbEnabled, setP2DbEnabled] = useState(data.inputs.p2_db_enabled ?? false);
   
-  const [p1AssetsOpen, setP1AssetsOpen] = useState(true);
-  const [p2AssetsOpen, setP2AssetsOpen] = useState(true);
+  // Single state to open/collapse both P1 and P2 assets simultaneously
+  const [assetsOpen, setAssetsOpen] = useState(true);
 
   const isCouple = data.mode === 'Couple';
   const hasAutoAllocation = data.inputs.portfolio_allocation !== 'custom' && data.inputs.portfolio_allocation !== undefined;
+  const showAssetMixUI = data.inputs.asset_mode_advanced ?? false;
 
   const [localAlloc, setLocalAlloc] = useState(data.inputs.portfolio_allocation || 'custom');
   const [localGlide, setLocalGlide] = useState(data.inputs.use_glide_path || false);
@@ -593,7 +593,7 @@ export default function PlanTab() {
               </h5>
             </div>
             <div className="form-check form-switch mb-0">
-              <input className="form-check-input mt-1 cursor-pointer" type="checkbox" checked={assetAdvancedMode} onChange={(e) => setAssetAdvancedMode(e.target.checked)} />
+              <input className="form-check-input mt-1 cursor-pointer" type="checkbox" checked={showAssetMixUI} onChange={(e) => updateInput('asset_mode_advanced', e.target.checked)} />
               <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-1 cursor-pointer">Adv. Mode</label>
             </div>
           </div>
@@ -635,20 +635,18 @@ export default function PlanTab() {
               {['p1', 'p2'].map((p) => {
                 if (!isCouple && p === 'p2') return null;
                 const isP1 = p === 'p1';
-                const isOpen = isP1 ? p1AssetsOpen : p2AssetsOpen;
-                const toggleOpen = isP1 ? () => setP1AssetsOpen(!p1AssetsOpen) : () => setP2AssetsOpen(!p2AssetsOpen);
 
                 return (
                 <div className="col-12 col-xl-6" key={p}>
                   <div className="card border-secondary surface-card shadow-none h-100">
                     <div className="card-body p-3 p-md-4">
                       
-                      <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary cursor-pointer user-select-none" onClick={toggleOpen}>
+                      <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary cursor-pointer user-select-none" onClick={() => setAssetsOpen(!assetsOpen)}>
                           <h6 className={`fw-bold text-uppercase ls-1 mb-0 ${isP1 ? 'text-info' : ''}`} style={!isP1 ? {color: 'var(--bs-purple)'} : {}}>{p.toUpperCase()} Asset Mix</h6>
-                          <button type="button" className="btn btn-sm btn-link text-muted p-0"><i className={`bi bi-chevron-${isOpen ? 'up' : 'down'} fs-5`}></i></button>
+                          <button type="button" className="btn btn-sm btn-link text-muted p-0"><i className={`bi bi-chevron-${assetsOpen ? 'up' : 'down'} fs-5`}></i></button>
                       </div>
 
-                      {isOpen && (
+                      {assetsOpen && (
                           <div className="d-flex flex-column gap-2 mb-2 transition-all">
                               {ACCOUNT_TYPES.map(acct => (
                                   <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3" key={`${p}_${acct.id}`}>
@@ -664,7 +662,7 @@ export default function PlanTab() {
                                           <div style={{width: '90px'}}>
                                               <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
                                           </div>
-                                          {assetAdvancedMode && (
+                                          {showAssetMixUI && (
                                               <div style={{width: '90px'}}>
                                                   <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
                                               </div>
@@ -690,15 +688,15 @@ export default function PlanTab() {
                                               <label className="small text-muted mb-1 fw-bold">Book Value / ACB ($)</label>
                                               <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} />
                                           </div>
-                                          <div className={assetAdvancedMode ? "col-4" : "col-6"}>
+                                          <div className={showAssetMixUI ? "col-4" : "col-6"}>
                                               <label className="small text-muted mb-1 fw-bold">Total Return (%)</label>
                                               <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_ret`, val)} />
                                           </div>
-                                          <div className={assetAdvancedMode ? "col-4" : "col-6"}>
+                                          <div className={showAssetMixUI ? "col-4" : "col-6"}>
                                               <label className="small text-muted mb-1 fw-bold">Dividend Yield (%)</label>
                                               <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} />
                                           </div>
-                                          {assetAdvancedMode && (
+                                          {showAssetMixUI && (
                                               <div className="col-4">
                                                   <label className="small text-warning mb-1 fw-bold">Ret. Return (%)</label>
                                                   <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_retire_ret`, val)} />
@@ -710,7 +708,7 @@ export default function PlanTab() {
                           </div>
                       )}
 
-                      {!isOpen && <div className="text-center text-muted small fst-italic py-2" onClick={toggleOpen} style={{cursor: 'pointer'}}>Click to expand account details</div>}
+                      {!assetsOpen && <div className="text-center text-muted small fst-italic py-2" onClick={() => setAssetsOpen(!assetsOpen)} style={{cursor: 'pointer'}}>Click to expand account details</div>}
 
                     </div>
                   </div>
@@ -741,7 +739,7 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 4. Real Estate - MODERNIZED WITH UPGRADE UI */}
+        {/* 4. Real Estate */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
@@ -1220,7 +1218,7 @@ export default function PlanTab() {
                     <InfoBtn align="left" title="Windfalls" text="One-time cash inflows like inheritance, selling a business, or downsizing property. <br><b>Taxable:</b> Check this if the amount will be added to your taxable income for that year (e.g. severance, RRSP deregistration)." />
                 </h5>
             </div>
-            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('windfalls', { name: 'Inheritance', amount: 100000, start: '2030-01', taxable: false })}>
+            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('windfalls', { name: 'Inheritance', amount: 100000, start: '2030-01', freq: 'one', end: '', taxable: false })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Event
             </button>
           </div>
@@ -1230,6 +1228,7 @@ export default function PlanTab() {
                 {data.windfalls.map((w: any, idx: number) => (
                     <div className="col-12 col-xl-6" key={`wind_${idx}`}>
                         <div className="d-flex flex-column p-3 border border-secondary rounded-4 bg-secondary bg-opacity-10 shadow-sm h-100 gap-3">
+                            
                             <div className="d-flex justify-content-between align-items-center mb-1">
                                 <div className="d-flex align-items-center gap-3 flex-grow-1">
                                     <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
@@ -1239,22 +1238,40 @@ export default function PlanTab() {
                                 </div>
                                 <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('windfalls', idx)}><i className="bi bi-x-lg fs-5"></i></button>
                             </div>
+
+                            <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100" style={{maxWidth: '300px'}}>
+                                <button type="button" onClick={() => updateArrayItem('windfalls', idx, 'freq', 'one')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${(!w.freq || w.freq === 'one') ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>One-Time</button>
+                                <button type="button" onClick={() => updateArrayItem('windfalls', idx, 'freq', 'month')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${w.freq === 'month' ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Monthly</button>
+                                <button type="button" onClick={() => updateArrayItem('windfalls', idx, 'freq', 'year')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${w.freq === 'year' ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Yearly</button>
+                            </div>
+
                             <div className="d-flex flex-wrap align-items-end gap-3 bg-input p-2 rounded-3">
-                                <div className="d-flex align-items-center gap-2 pe-3 border-end border-secondary border-opacity-50 pb-1">
+                                
+                                <div className="flex-grow-1" style={{minWidth: '140px'}}>
+                                    <label className="small text-muted mb-1 fw-bold">Amount ($)</label>
+                                    <CurrencyInput className="form-control form-control-sm border-secondary" value={w.amount ?? ''} onChange={(val: any) => updateArrayItem('windfalls', idx, 'amount', val)} placeholder="Amount ($)" />
+                                </div>
+                                
+                                <div className="d-flex align-items-center gap-2 pe-3 border-end border-secondary border-opacity-50 pb-1" style={{height: '31px'}}>
                                     <div className="form-check form-switch mb-0 d-flex align-items-center flex-shrink-0" style={{minHeight: 0}}>
                                         <input className="form-check-input m-0 cursor-pointer shadow-none fs-5" type="checkbox" checked={w.taxable ?? false} onChange={(e) => updateArrayItem('windfalls', idx, 'taxable', e.target.checked)} />
                                     </div>
                                     <label className="form-check-label small text-muted fw-bold mb-0 text-nowrap mt-1">Taxable</label>
                                 </div>
-                                <div className="flex-grow-1" style={{minWidth: '140px'}}>
-                                    <label className="small text-muted mb-1 fw-bold">Amount ($)</label>
-                                    <CurrencyInput className="form-control form-control-sm border-secondary" value={w.amount ?? ''} onChange={(val: any) => updateArrayItem('windfalls', idx, 'amount', val)} placeholder="Amount ($)" />
-                                </div>
-                                <div style={{minWidth: '220px'}} className="flex-grow-1">
+                                
+                                <div style={{minWidth: '170px'}} className="flex-grow-1">
                                     <label className="small text-muted mb-1 fw-bold">Receive Date</label>
                                     <MonthYearStepper value={w.start || ''} onChange={(e: any) => updateArrayItem('windfalls', idx, 'start', e)} />
                                 </div>
+
+                                {w.freq && w.freq !== 'one' && (
+                                    <div style={{minWidth: '170px'}} className="flex-grow-1">
+                                        <label className="small text-muted mb-1 fw-bold">End Date</label>
+                                        <MonthYearStepper value={w.end || ''} onChange={(e: any) => updateArrayItem('windfalls', idx, 'end', e)} />
+                                    </div>
+                                )}
                             </div>
+
                         </div>
                     </div>
                 ))}
@@ -1265,10 +1282,26 @@ export default function PlanTab() {
         {/* 9. Government Benefits */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header border-bottom border-secondary p-3 surface-card">
-              <div className="d-flex align-items-center">
-                  <i className="bi bi-bank text-primary fs-4 me-3"></i>
-                  <h5 className="mb-0 fw-bold text-uppercase ls-1">9. Government Benefits</h5>
-                  <InfoBtn align="left" title="CPP / OAS / Pension" text="<b>CPP:</b> Enter the estimate from your Service Canada account. The app will automatically adjust it if you take it early (age 60) or late (age 70).<br><br><b>OAS:</b> Max OAS requires 40 years of residency in Canada between ages 18 and 65. If you have less, it is prorated." />
+              <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                  <div className="d-flex align-items-center">
+                      <i className="bi bi-bank text-primary fs-4 me-3"></i>
+                      <h5 className="mb-0 fw-bold text-uppercase ls-1">9. Government Benefits</h5>
+                      <InfoBtn align="left" title="CPP / OAS / Pension" text="<b>CPP:</b> Enter the estimate from your Service Canada account. The app will automatically adjust it if you take it early (age 60) or late (age 70).<br><br><b>OAS:</b> Max OAS requires 40 years of residency in Canada between ages 18 and 65. If you have less, it is prorated." />
+                  </div>
+                  {isCouple && (
+                      <div className="form-check form-switch m-0 d-flex align-items-center bg-black bg-opacity-25 px-3 py-2 rounded-pill border border-secondary shadow-inner">
+                          <input 
+                              className="form-check-input cursor-pointer m-0 me-2 fs-5" 
+                              type="checkbox" 
+                              checked={data.inputs.pension_split_enabled} 
+                              onChange={(e) => updateInput('pension_split_enabled', e.target.checked)} 
+                          />
+                          <label className="form-check-label fw-bold text-muted small mt-1 d-flex align-items-center">
+                              Pension Income Splitting
+                              <InfoBtn align="right" title="Pension Income Splitting" text="Allows you to allocate up to 50% of eligible pension income to your spouse for tax purposes. <br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/pension-income-splitting.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
+                          </label>
+                      </div>
+                  )}
               </div>
           </div>
           <div className="card-body p-4">

@@ -53,6 +53,36 @@ export default function CashFlowTab() {
       return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
   };
 
+  // --- Phase Logic ---
+  const getPhaseBadge = () => {
+      const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+      const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
+      const p1Age = yData.p1Age || 0;
+      const p2Age = isCouple ? (yData.p2Age || 0) : p1Age;
+
+      const isP1Ret = p1Age >= p1Ret;
+      const isP2Ret = isCouple ? p2Age >= p2Ret : true;
+
+      if (!isP1Ret && !isP2Ret) {
+          return <span className="badge bg-secondary bg-opacity-25 text-secondary border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex align-items-center"><i className="bi bi-briefcase-fill me-2"></i> Working</span>;
+      }
+      if (isCouple && (isP1Ret !== isP2Ret)) {
+          return <span className="badge bg-info bg-opacity-25 text-info border border-info px-3 py-2 rounded-pill shadow-sm d-flex align-items-center"><i className="bi bi-arrow-left-right me-2"></i> Transition</span>;
+      }
+
+      if (data.expenseMode === 'Advanced') {
+          const maxAge = isCouple ? Math.max(p1Age, p2Age) : p1Age;
+          const gogo = Number(data.inputs.exp_gogo_age) || 75;
+          const slowgo = Number(data.inputs.exp_slow_age) || 85;
+
+          if (maxAge <= gogo) return <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 rounded-pill shadow-sm d-flex align-items-center"><i className="bi bi-airplane-fill me-2"></i> Go-Go Phase</span>;
+          if (maxAge <= slowgo) return <span className="badge bg-warning bg-opacity-25 text-warning border border-warning px-3 py-2 rounded-pill shadow-sm d-flex align-items-center"><i className="bi bi-car-front-fill me-2"></i> Slow-Go Phase</span>;
+          return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2 rounded-pill shadow-sm d-flex align-items-center"><i className="bi bi-house-heart-fill me-2"></i> No-Go Phase</span>;
+      }
+
+      return <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 rounded-pill shadow-sm d-flex align-items-center"><i className="bi bi-cup-hot-fill me-2"></i> Retirement</span>;
+  };
+
   // --- Data Extraction & Balancing ---
   const p1BaseSalary = (yData.incomeP1 || 0) - (yData.rrspMatchP1 || 0);
   const p2BaseSalary = (yData.incomeP2 || 0) - (yData.rrspMatchP2 || 0);
@@ -173,14 +203,15 @@ export default function CashFlowTab() {
   const leftData = rawLeftNodes.filter(d => d.value >= 1);
   const rightData = rawRightNodes.filter(d => d.value >= 1);
 
-  // --- Sankey SVG Math Engine ---
+  // --- Sankey SVG Math Engine (WIDENED) ---
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
   const PADDING = 20; 
-  const LEFT_X = 280; 
-  const RIGHT_X = 920; 
-  const CENTER_LEFT = 585;
-  const CENTER_RIGHT = 615;
+  // Pushed Left X further left, Right X further right to use up space
+  const LEFT_X = 140; 
+  const RIGHT_X = 1060; 
+  const CENTER_LEFT = 570;
+  const CENTER_RIGHT = 630;
   const NODE_W = 15;
   const SAFE_PADDING_Y = 50;
   const SAFE_H = VIEWBOX_H - (SAFE_PADDING_Y * 2);
@@ -248,6 +279,12 @@ export default function CashFlowTab() {
 
   const getOpacity = (id: string) => (!hovered || hovered === id) ? 1 : 0.15;
 
+  // --- Insights Math ---
+  const topInflowNode = [...leftData].sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
+  const topOutflowNode = [...rightData].filter(d => d.id !== 'sav').sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
+  const savingsRate = totalSourcedRaw > 0 ? ((contsRaw + unallocatedRaw) / totalSourcedRaw) * 100 : 0;
+  const effectiveTax = totalSourcedRaw > 0 ? (taxRaw / totalSourcedRaw) * 100 : 0;
+
   return (
     <div className="p-3 p-md-4">
       
@@ -261,16 +298,19 @@ export default function CashFlowTab() {
               <i className={`bi ${isPlaying ? 'bi-stop-fill' : 'bi-play-fill'} fs-3`}></i>
           </button>
           <div className="flex-grow-1 mx-md-4 w-100">
-              <div className="d-flex justify-content-between align-items-center text-muted small fw-bold mb-2">
-                  <span>{startYear}</span>
-                  <span className="text-main fs-5 fw-bolder px-3 py-1 bg-black bg-opacity-25 rounded-pill border border-secondary shadow-inner d-flex align-items-center">
-                      <i className="bi bi-calendar-event me-2 text-primary"></i> 
-                      {currentVal} 
-                      <span className="ms-2 small text-muted fw-normal">
-                          (Age {yData.p1Age}{isCouple && yData.p2Age ? ` / ${yData.p2Age}` : ''})
+              <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center text-muted small fw-bold mb-2 gap-2">
+                  <span className="d-none d-md-block">{startYear}</span>
+                  <div className="d-flex flex-wrap align-items-center justify-content-center gap-2">
+                      <span className="text-main fs-5 fw-bolder px-3 py-1 bg-black bg-opacity-25 rounded-pill border border-secondary shadow-inner d-flex align-items-center">
+                          <i className="bi bi-calendar-event me-2 text-primary"></i> 
+                          {currentVal} 
+                          <span className="ms-2 small text-muted fw-normal">
+                              (Age {yData.p1Age}{isCouple && yData.p2Age ? ` / ${yData.p2Age}` : ''})
+                          </span>
                       </span>
-                  </span>
-                  <span>{endYear}</span>
+                      {getPhaseBadge()}
+                  </div>
+                  <span className="d-none d-md-block">{endYear}</span>
               </div>
               <input 
                   type="range" 
@@ -284,13 +324,13 @@ export default function CashFlowTab() {
       </div>
 
       {/* Sankey Chart Container */}
-      <div className="rp-card border border-secondary rounded-4 shadow-sm p-3 p-md-4 overflow-hidden position-relative">
-          <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="rp-card border border-secondary rounded-4 shadow-sm p-3 p-md-4 overflow-hidden position-relative mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="fw-bold text-uppercase ls-1 text-info mb-0">Cash Flow Diagram</h5>
-              <span className="small text-muted fst-italic"><i className="bi bi-hand-index-thumb me-1"></i> Click any stream for details</span>
+              <span className="small text-muted fst-italic d-none d-sm-inline"><i className="bi bi-hand-index-thumb me-1"></i> Click any stream for details</span>
           </div>
           
-          <div className="w-100 position-relative d-flex justify-content-center align-items-center" style={{ minHeight: '550px', height: '70vh' }}>
+          <div className="w-100 position-relative d-flex justify-content-center align-items-center" style={{ minHeight: '550px', height: '65vh' }}>
               <svg viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
                   
                   {/* Left Nodes & Text */}
@@ -298,8 +338,8 @@ export default function CashFlowTab() {
                       <g key={`L-${i}`} className="transition-all cursor-pointer" style={{ opacity: getOpacity(n.id) }} 
                          onMouseEnter={() => setHovered(n.id)} onMouseLeave={() => setHovered(null)} onClick={() => setSelectedNode(n.id)}>
                           <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} rx="2" />
-                          <text x={LEFT_X - NODE_W - 15} y={n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                          <text x={LEFT_X - NODE_W - 15} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                          <text x={LEFT_X - NODE_W - 10} y={n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
+                          <text x={LEFT_X - NODE_W - 10} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
                               {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
                           </text>
                       </g>
@@ -324,8 +364,8 @@ export default function CashFlowTab() {
                       <g key={`R-${i}`} className="transition-all cursor-pointer" style={{ opacity: getOpacity(n.id) }} 
                          onMouseEnter={() => setHovered(n.id)} onMouseLeave={() => setHovered(null)} onClick={() => setSelectedNode(n.id)}>
                           <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} rx="2" />
-                          <text x={RIGHT_X + NODE_W + 15} y={n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                          <text x={RIGHT_X + NODE_W + 15} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                          <text x={RIGHT_X + NODE_W + 10} y={n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
+                          <text x={RIGHT_X + NODE_W + 10} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
                               {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
                           </text>
                       </g>
@@ -349,7 +389,7 @@ export default function CashFlowTab() {
                   </defs>
               </svg>
 
-              {/* FLOATING DETAIL OVERLAY - OPAQUE & SHARP */}
+              {/* FLOATING DETAIL OVERLAY */}
               {selectedNode && (
                   <div className="position-absolute top-50 start-50 translate-middle border border-secondary rounded-4 p-4 slide-down" 
                        style={{ minWidth: '320px', zIndex: 10, backgroundColor: '#1e1e24', boxShadow: '0 10px 60px rgba(0,0,0,0.85)' }}>
@@ -372,7 +412,36 @@ export default function CashFlowTab() {
                       </div>
                   </div>
               )}
+          </div>
+      </div>
 
+      {/* Added Quick Insights Cards */}
+      <div className="row g-3">
+          <div className="col-12 col-md-3">
+              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Top Inflow</span>
+                  <span className="fw-bold text-info" style={{fontSize: '1.1rem'}}>{topInflowNode.label}</span>
+                  <span className="fw-bold fs-4 text-main mt-1">{formatCurrency(topInflowNode.value)}</span>
+              </div>
+          </div>
+          <div className="col-12 col-md-3">
+              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Top Outflow</span>
+                  <span className="fw-bold text-warning" style={{fontSize: '1.1rem'}}>{topOutflowNode.label}</span>
+                  <span className="fw-bold fs-4 text-main mt-1">{formatCurrency(topOutflowNode.value)}</span>
+              </div>
+          </div>
+          <div className="col-12 col-md-3">
+              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Savings Rate</span>
+                  <span className="fw-bold text-success mt-1" style={{fontSize: '1.75rem'}}>{savingsRate.toFixed(1)}%</span>
+              </div>
+          </div>
+          <div className="col-12 col-md-3">
+              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Effective Tax Rate</span>
+                  <span className="fw-bold text-danger mt-1" style={{fontSize: '1.75rem'}}>{effectiveTax.toFixed(1)}%</span>
+              </div>
           </div>
       </div>
 
