@@ -3,13 +3,13 @@ import { useFinance } from '../lib/FinanceContext';
 
 const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, desc: string }> = {
   tfsa: { label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', desc: 'Tax-Free Savings' },
-  rrsp: { label: 'RRSP', icon: 'bi-bank2', color: 'text-warning', desc: 'Registered Retirement' },
+  rrsp: { label: 'RRSP', icon: 'bi-bank2', color: 'text-danger', desc: 'Registered Retirement' },
   fhsa: { label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', desc: 'First Home Savings' },
   nonreg: { label: 'Non-Reg', icon: 'bi-graph-up-arrow', color: 'text-success', desc: 'Taxable Investments' },
   cash: { label: 'Cash / HYSA', icon: 'bi-cash-stack', color: 'text-secondary', desc: 'High-Yield Savings' },
-  crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-warning', desc: 'Digital Assets' },
+  crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-primary', desc: 'Digital Assets' },
   resp: { label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', desc: 'Education Savings' },
-  rrif_acct: { label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-warning', desc: 'Converted RRSP' },
+  rrif_acct: { label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', desc: 'Converted RRSP' },
   lif: { label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', desc: 'Life Income Fund' },
   lirf: { label: 'LIRA / LIRF', icon: 'bi-lock-fill', color: 'text-muted', desc: 'Locked-In Retirement' },
 };
@@ -62,13 +62,17 @@ export default function StrategyTab() {
 
   // --- INSTANT-SWAP DRAG & DROP ENGINE ---
   const [draggingType, setDraggingType] = useState<'accum' | 'decum' | null>(null);
+  
+  // HARD FILTER: Prevent non-contributable accounts from ever showing in Accumulation Queue
+  const filterAccum = (list: string[]) => list.filter(a => !['rrif_acct', 'lif', 'lirf'].includes(a));
+
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
-  const [localAccum, setLocalAccum] = useState<string[]>(data.strategies.accum);
+  const [localAccum, setLocalAccum] = useState<string[]>(filterAccum(data.strategies.accum));
   const [localDecum, setLocalDecum] = useState<string[]>(data.strategies.decum);
 
   useEffect(() => {
       if (!draggingType) {
-          setLocalAccum(data.strategies.accum);
+          setLocalAccum(filterAccum(data.strategies.accum));
           setLocalDecum(data.strategies.decum);
       }
   }, [data.strategies, draggingType]);
@@ -179,12 +183,12 @@ export default function StrategyTab() {
                 {/* Decumulation */}
                 <div className="col-12 col-xl-6">
                     <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
-                        <div className="bg-warning bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
-                            <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
+                        <div className="bg-primary bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
+                            <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
                                 <i className="bi bi-wallet2 fs-5"></i>
                             </div>
                             <div>
-                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-warning">Decumulation Route</h6>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary">Decumulation Route</h6>
                                 <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of draining accounts during retirement</span>
                             </div>
                         </div>
@@ -219,7 +223,7 @@ export default function StrategyTab() {
                         <div className="col-6">
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <span className="small fw-bold text-warning text-uppercase ls-1">RRSP Max</span>
+                                    <span className="small fw-bold text-danger text-uppercase ls-1">RRSP Max</span>
                                     <InfoBtn align="right" title="RRSP Limit" text="The absolute maximum RRSP contribution cap set by the CRA for the year." />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_rrsp_limit} onChange={(val: any) => updateInput('cfg_rrsp_limit', val)} />
@@ -262,7 +266,7 @@ export default function StrategyTab() {
             
             <div className="rp-card border border-secondary rounded-4">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
-                    <i className="bi bi-cpu text-warning fs-4 me-3"></i>
+                    <i className="bi bi-cpu text-primary fs-4 me-3"></i>
                     <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">3. Engine Optimizations</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
