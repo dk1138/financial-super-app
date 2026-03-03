@@ -1,4 +1,3 @@
-// dk1138/financial-super-app/financial-super-app-d2ee1d8b2788b3d51f52e6eb868ad325b5b7eaf4/components/StrategyTab.tsx
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 
@@ -268,30 +267,33 @@ export default function StrategyTab() {
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
                     
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center p-3 bg-input border border-secondary rounded-4 shadow-sm gap-3">
-                        <div>
-                            <h6 className="fw-bold mb-1 text-success small text-uppercase ls-1">Dynamic Tax Optimization</h6>
-                            <span className="small text-muted" style={{fontSize: '0.75rem'}}>Overrides decumulation priorities to fully fund the 0% tax bracket with RRSP/RRIF money, completely shelters your TFSA, and aggressively clears Non-Reg accounts to eliminate tax-drag.</span>
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4">
+                        <div className="flex-grow-1 pe-md-3">
+                            <h6 className="fw-bold mb-2 text-success text-uppercase ls-1 d-flex align-items-center">
+                                <i className="bi bi-magic me-2 fs-5"></i> Smart RRSP Meltdown & Tax Optimizer
+                            </h6>
+                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
+                                Overrides your manual withdrawal order to mathematically minimize lifetime taxes. It proactively draws down your RRSP early (a "Meltdown") to completely fill your lowest tax brackets, while aggressively sheltering your TFSA for as long as possible. 
+                                <br/><br/>
+                                <span className="fw-bold text-main">Example:</span> If you have $20,000 of 0% tax room left in a year, the engine will automatically withdraw exactly $20,000 from your RRSP before touching any other account.
+                            </p>
                         </div>
-                        <div className="form-check form-switch mb-0 flex-shrink-0">
-                            <input className="form-check-input fs-4 mt-0 cursor-pointer" type="checkbox" checked={data.inputs.fully_optimize_tax ?? false} onChange={(e) => updateInput('fully_optimize_tax', e.target.checked)} />
-                        </div>
-                    </div>
-
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center p-3 bg-input border border-secondary rounded-4 shadow-sm gap-3">
-                        <div>
-                            <h6 className="fw-bold mb-1 text-warning small text-uppercase ls-1">Early RRSP Meltdown</h6>
-                            <span className="small text-muted" style={{fontSize: '0.75rem'}}>Between ages 55 and 71, preemptively drain RRSPs <b>tax-free</b> into the Basic Personal Amount limit or directly into your TFSA to avoid massive RRIF tax bombs.</span>
-                        </div>
-                        <div className="form-check form-switch mb-0 flex-shrink-0">
-                            <input className="form-check-input fs-4 mt-0 cursor-pointer" type="checkbox" checked={data.inputs.rrsp_meltdown_enabled ?? false} onChange={(e) => updateInput('rrsp_meltdown_enabled', e.target.checked)} />
+                        <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
+                            <input className="form-check-input mt-0 cursor-pointer" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.fully_optimize_tax ?? false} onChange={(e) => updateInput('fully_optimize_tax', e.target.checked)} />
                         </div>
                     </div>
 
-                    <div className="d-flex justify-content-between align-items-center p-3 bg-input border border-secondary rounded-4 shadow-sm gap-3">
-                        <span className="fw-bold text-info small text-uppercase ls-1">Avoid OAS Clawbacks</span>
-                        <div className="form-check form-switch mb-0 flex-shrink-0">
-                            <input className="form-check-input fs-4 mt-0 cursor-pointer" type="checkbox" checked={data.inputs.oas_clawback_optimize ?? false} onChange={(e) => updateInput('oas_clawback_optimize', e.target.checked)} />
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4">
+                        <div className="flex-grow-1 pe-md-3">
+                            <h6 className="fw-bold mb-2 text-info text-uppercase ls-1 d-flex align-items-center">
+                                <i className="bi bi-shield-check me-2 fs-5"></i> Avoid OAS Clawbacks
+                            </h6>
+                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
+                                Prioritizes withdrawing from non-taxable accounts (like your TFSA) or strictly limiting RRSP/RRIF withdrawals to stay below the CRA's OAS repayment threshold, preserving your full government benefits.
+                            </p>
+                        </div>
+                        <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
+                            <input className="form-check-input mt-0 cursor-pointer" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.oas_clawback_optimize ?? false} onChange={(e) => updateInput('oas_clawback_optimize', e.target.checked)} />
                         </div>
                     </div>
 

@@ -6,11 +6,11 @@ const ACCOUNT_TYPES = [
   { id: 'cash', label: 'Cash', icon: 'bi-cash-stack', color: 'text-success', tooltip: 'Interest income is 100% taxable at your marginal rate. No tax sheltering.' },
   { id: 'tfsa', label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', tooltip: 'Tax-Free Savings Account. Growth and withdrawals are 100% tax-free.' },
   { id: 'fhsa', label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', tooltip: 'First Home Savings Account. Tax-deductible contributions, tax-free withdrawals for a qualifying first home.' },
-  { id: 'rrsp', label: 'RRSP', icon: 'bi-bank2', color: 'text-warning', tooltip: 'Registered Retirement Savings Plan. Tax-deductible contributions. Tax-deferred growth. 100% taxable withdrawals.' },
+  { id: 'rrsp', label: 'RRSP', icon: 'bi-bank2', color: 'text-danger', tooltip: 'Registered Retirement Savings Plan. Tax-deductible contributions. Tax-deferred growth. 100% taxable withdrawals.' },
   { id: 'resp', label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', tooltip: 'Registered Education Savings Plan. 20% CESG match on first $2,500/yr.' },
   { id: 'lirf', label: 'LIRF', icon: 'bi-lock-fill', color: 'text-secondary', tooltip: 'Locked-in Retirement Account (LIRA). Pension funds locked until retirement. Tax-deferred.' },
   { id: 'lif', label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', tooltip: 'Life Income Fund. Payout vehicle for LIRA. Has min/max annual limits. 100% taxable.' },
-  { id: 'rrif_acct', label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-warning', tooltip: 'Registered Retirement Income Fund. Payout vehicle for RRSP. Mandatory minimum withdrawals. 100% taxable.' }
+  { id: 'rrif_acct', label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', tooltip: 'Registered Retirement Income Fund. Payout vehicle for RRSP. Mandatory minimum withdrawals. 100% taxable.' }
 ];
 
 const calcAmortization = (principal: number, rate: number, payment: number) => {
@@ -430,7 +430,7 @@ export default function PlanTab() {
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Federal Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span></div>
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Provincial Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.prov/gross)*100).toFixed(1)}%</span></span></div>
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">CPP / EI Premiums</span> <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
-              <div className="d-flex justify-content-between mt-1"><span className="text-warning fw-bold small">Total Tax Paid</span> <span className="text-warning fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
+              <div className="d-flex justify-content-between mt-1"><span className="text-danger fw-bold small">Total Tax Paid</span> <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
               <div className="d-flex justify-content-between"><span className="text-muted small fw-medium">Marginal Rate</span> <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span></div>
               <div className="d-flex justify-content-between mt-2 pt-3 border-top border-secondary"><span className="text-success fw-bold">After-Tax Net</span> <span className="text-success fw-bold fs-5">${Math.round(gross - taxDetails.totalTax).toLocaleString()}</span></div>
             </div>
@@ -442,7 +442,7 @@ export default function PlanTab() {
       const icons: Record<string, any> = {
           housing: <i className="bi bi-house-door-fill text-primary"></i>,
           transport: <i className="bi bi-car-front-fill text-info"></i>,
-          lifestyle: <i className="bi bi-airplane-fill text-warning"></i>,
+          lifestyle: <i className="bi bi-airplane-fill text-primary"></i>,
           essentials: <i className="bi bi-basket3-fill text-success"></i>,
           other: <i className="bi bi-grid-3x3-gap-fill text-secondary"></i>
       };
@@ -626,7 +626,7 @@ export default function PlanTab() {
                     />
                     
                     <div className="form-check form-switch mb-0 d-flex align-items-center px-0 justify-content-start flex-shrink-0 border-start border-secondary ps-lg-3 ms-lg-1 pt-2 pt-lg-0">
-                        <label className="form-check-label small fw-bold text-warning cursor-pointer me-2 text-nowrap" htmlFor="use_glide_path">
+                        <label className="form-check-label small fw-bold text-primary cursor-pointer me-2 text-nowrap" htmlFor="use_glide_path">
                             Glide Path <InfoBtn align="right" title="Glide Path" text="Automatically reduces your equity exposure (risk) by 0.1% per year starting at Age 50 to protect your wealth heading into retirement." />
                         </label>
                         <input className="form-check-input ms-0 mt-0 cursor-pointer fs-5" type="checkbox" id="use_glide_path" checked={localGlide} onChange={e => handleGlideChangeWrapper(e.target.checked)} />
@@ -651,6 +651,18 @@ export default function PlanTab() {
 
                       {assetsOpen && (
                           <div className="d-flex flex-column gap-2 mb-2 transition-all">
+                              
+                              {/* DYNAMIC HEADER ROW FOR PRE/POST RETIREMENT PERCENTAGES */}
+                              {showAssetMixUI && (
+                                  <div className="d-flex align-items-center justify-content-between px-3 mb-1 pe-3">
+                                      <div className="flex-grow-1"></div>
+                                      <div className="d-flex gap-2 justify-content-end">
+                                          <div style={{width: '90px', fontSize: '0.65rem'}} className="text-muted fw-bold text-center text-uppercase ls-1">Pre-Ret %</div>
+                                          <div style={{width: '90px', fontSize: '0.65rem'}} className="fw-bold text-center text-uppercase ls-1 text-primary">Post-Ret %</div>
+                                      </div>
+                                  </div>
+                              )}
+
                               {ACCOUNT_TYPES.map(acct => (
                                   <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3" key={`${p}_${acct.id}`}>
                                       <div className="d-flex align-items-center gap-2" style={{minWidth: '130px'}}>
@@ -667,7 +679,7 @@ export default function PlanTab() {
                                           </div>
                                           {showAssetMixUI && (
                                               <div style={{width: '90px'}}>
-                                                  <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
+                                                  <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
                                               </div>
                                           )}
                                       </div>
@@ -692,7 +704,7 @@ export default function PlanTab() {
                                               <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} />
                                           </div>
                                           <div className={showAssetMixUI ? "col-4" : "col-6"}>
-                                              <label className="small text-muted mb-1 fw-bold">Total Return (%)</label>
+                                              <label className="small text-muted mb-1 fw-bold">Pre-Ret. Return (%)</label>
                                               <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_ret`, val)} />
                                           </div>
                                           <div className={showAssetMixUI ? "col-4" : "col-6"}>
@@ -701,8 +713,8 @@ export default function PlanTab() {
                                           </div>
                                           {showAssetMixUI && (
                                               <div className="col-4">
-                                                  <label className="small text-warning mb-1 fw-bold">Ret. Return (%)</label>
-                                                  <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_retire_ret`, val)} />
+                                                  <label className="small text-primary mb-1 fw-bold">Post-Ret. Return (%)</label>
+                                                  <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm border-primary text-primary" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_retire_ret`, val)} />
                                               </div>
                                           )}
                                       </div>
@@ -800,7 +812,7 @@ export default function PlanTab() {
                                     <h6 className="fw-bold text-danger small text-uppercase ls-1 mb-0"><i className="bi bi-bank me-2"></i>Mortgage Details</h6>
                                     {prop.mortgage > 0 && prop.rate > 0 && (
                                         <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 fw-bold" style={{fontSize: '0.7rem'}} onClick={() => updateArrayItem('properties', idx, 'payment', Math.round(calc25YearPayment(prop.mortgage, prop.rate)))}>
-                                            <i className="bi bi-magic me-1 text-warning"></i> Auto 25-Yr
+                                            <i className="bi bi-magic me-1 text-primary"></i> Auto 25-Yr
                                         </button>
                                     )}
                                 </div>
@@ -862,7 +874,7 @@ export default function PlanTab() {
         {/* 5. Income & Taxation */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
-              <i className="bi bi-cash-coin text-warning fs-4 me-3"></i>
+              <i className="bi bi-cash-coin text-success fs-4 me-3"></i>
               <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
                   5. Income & Taxation
                   <InfoBtn align="left" title="Income & Tax" text="Enter <b>Gross Annual Income</b> (before tax). The system automatically calculates Federal and Provincial taxes based on your selected Province." />
@@ -913,7 +925,7 @@ export default function PlanTab() {
 
                       <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
                           <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
-                              <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-building"></i></div>
+                              <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-building"></i></div>
                               <span className="fw-bold text-main small text-uppercase ls-1">Employer RRSP Match</span>
                           </div>
                           <div className="p-3 bg-input">
@@ -1040,7 +1052,7 @@ export default function PlanTab() {
             {expenseAdvancedMode && (
               <div className="row g-4 mb-4 p-4 border border-secondary rounded-4 surface-card shadow-sm">
                 <div className="col-md-6 d-flex align-items-center justify-content-between bg-input p-2 px-3 rounded-3 border border-secondary">
-                    <label className="form-label text-info fw-bold mb-0 text-nowrap">Go-Go Age Ends:</label>
+                    <label className="form-label text-success fw-bold mb-0 text-nowrap">Go-Go Age Ends:</label>
                     <div style={{width: '180px'}}><StepperInput min={60} max={100} value={data.inputs.exp_gogo_age || 75} onChange={(val: any) => {
                         updateInput('exp_gogo_age', val);
                         if (val > (data.inputs.exp_slow_age || 85)) updateInput('exp_slow_age', val);
@@ -1075,12 +1087,12 @@ export default function PlanTab() {
                                     <tr>
                                         <th className="ps-4 py-3 fw-semibold" style={{ width: '25%' }}>Expense Item</th>
                                         <th className="py-3 fw-semibold text-end">Working</th>
-                                        {expenseAdvancedMode && <th className="py-3 fw-semibold text-end text-warning">Transition</th>}
+                                        {expenseAdvancedMode && <th className="py-3 fw-semibold text-end text-primary">Transition</th>}
                                         <th className="py-3 fw-semibold text-end">Retire (Base)</th>
                                         {expenseAdvancedMode && <>
-                                            <th className="py-3 fw-semibold text-end text-info">Go-Go<br/><span style={{fontSize:'0.65rem', letterSpacing:'normal'}} className="text-muted fw-normal text-nowrap">(Ret. to {data.inputs.exp_gogo_age || 75})</span></th>
+                                            <th className="py-3 fw-semibold text-end text-success">Go-Go<br/><span style={{fontSize:'0.65rem', letterSpacing:'normal'}} className="text-muted fw-normal text-nowrap">(Ret. to {data.inputs.exp_gogo_age || 75})</span></th>
                                             <th className="py-3 fw-semibold text-end text-primary">Slow-Go<br/><span style={{fontSize:'0.65rem', letterSpacing:'normal'}} className="text-muted fw-normal text-nowrap">({data.inputs.exp_gogo_age || 75} to {data.inputs.exp_slow_age || 85})</span></th>
-                                            <th className="py-3 fw-semibold text-end text-secondary">No-Go<br/><span style={{fontSize:'0.65rem', letterSpacing:'normal'}} className="text-muted fw-normal text-nowrap">({data.inputs.exp_slow_age || 85}+)</span></th>
+                                            <th className="py-3 fw-semibold text-end text-danger">No-Go<br/><span style={{fontSize:'0.65rem', letterSpacing:'normal'}} className="text-muted fw-normal text-nowrap">({data.inputs.exp_slow_age || 85}+)</span></th>
                                         </>}
                                         <th className="py-3 fw-semibold text-center" style={{width: '110px'}}>Frequency</th>
                                         <th className="pe-4 py-3 text-end" style={{width: '50px'}}></th>
@@ -1093,13 +1105,13 @@ export default function PlanTab() {
                                                 <input type="text" maxLength={50} className="form-control form-control-sm bg-black bg-opacity-25 border border-secondary fw-bold text-main shadow-none rounded-3" placeholder="Item name..." value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
                                             </td>
                                             <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.curr ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'curr', val)} /></td>
-                                            {expenseAdvancedMode && <td className="py-2"><CurrencyInput className="form-control form-control-sm text-warning rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.trans ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'trans', val)} /></td>}
+                                            {expenseAdvancedMode && <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.trans ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'trans', val)} /></td>}
                                             <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.ret ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'ret', val)} /></td>
                                             {expenseAdvancedMode && (
                                                 <>
-                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-info rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.gogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'gogo', val)} /></td>
+                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-success rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.gogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'gogo', val)} /></td>
                                                 <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.slow ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'slow', val)} /></td>
-                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-secondary rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.nogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'nogo', val)} /></td>
+                                                <td className="py-2"><CurrencyInput className="form-control form-control-sm text-danger rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.nogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'nogo', val)} /></td>
                                                 </>
                                             )}
                                             <td className="py-2 text-center">
@@ -1320,14 +1332,14 @@ export default function PlanTab() {
                 const cppAdjMo = cppAdjYr / 12;
                 const isCppEarly = cppStart < 65;
                 const isCppLate = cppStart > 65;
-                const cppColor = isCppEarly ? 'text-danger' : isCppLate ? 'text-success' : 'text-info';
+                const cppColor = isCppEarly ? 'text-danger' : isCppLate ? 'text-success' : 'text-primary';
 
                 const oasStart = Number(data.inputs[`${p}_oas_start`]) || 65;
                 const oasYears = Number(data.inputs[`${p}_oas_years`]) ?? 40;
                 const oasAdjYr = getAdjustedOAS(oasYears, oasStart);
                 const oasAdjMo = oasAdjYr / 12;
                 const isOasLate = oasStart > 65;
-                const oasColor = isOasLate ? 'text-success' : 'text-info';
+                const oasColor = isOasLate ? 'text-success' : 'text-primary';
 
                 return (
                 <div className="col-12 col-xl-6" key={p}>
@@ -1399,7 +1411,7 @@ export default function PlanTab() {
                             <div className="border border-secondary rounded-4 overflow-hidden shadow-sm">
                                 <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
                                     <div className="d-flex align-items-center gap-3">
-                                        <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
+                                        <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
                                         <span className="fw-bold text-main small text-uppercase ls-1">DB Pension</span>
                                     </div>
                                     <div className="form-check form-switch mb-0">
