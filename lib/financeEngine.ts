@@ -332,8 +332,18 @@ export class FinanceEngine {
 
         const getRates = (personPrefix: string, isRetired: boolean, age: number) => {
             const getRate = (id: string) => {
-                let key = isAdvancedMode && isRetired ? `${personPrefix}_${id}_retire_ret` : `${personPrefix}_${id}_ret`;
-                let baseRate = this.getVal(key) / 100;
+                let baseKey = `${personPrefix}_${id}_ret`;
+                let retireKey = `${personPrefix}_${id}_retire_ret`;
+                
+                // Fallback matching UI: If advanced mode is on but retire rate is undefined, fallback to base rate.
+                let rawVal;
+                if (isAdvancedMode && isRetired) {
+                    rawVal = this.inputs[retireKey] !== undefined ? this.inputs[retireKey] : this.inputs[baseKey];
+                } else {
+                    rawVal = this.inputs[baseKey];
+                }
+                
+                let baseRate = (rawVal !== undefined ? parseFormattedNumber(rawVal) : 0) / 100;
                 
                 if (useGlide && ['tfsa','rrsp','fhsa','nonreg','crypto','lirf','lif','rrif_acct','resp'].includes(id)) {
                     let ageOffset = Math.max(0, age - 50);
