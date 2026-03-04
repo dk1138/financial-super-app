@@ -309,7 +309,7 @@ export default function ProjectionTab() {
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash'));
       const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash'));
 
-      const oasClawback = taxDetails?.oasClawback || 0;
+      const oasClawback = taxDetails?.oas_Clawback || 0;
       const oasGross = oas + oasClawback;
 
       // Extract prior year balance for RRIF Math
