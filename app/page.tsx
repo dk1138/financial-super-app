@@ -10,6 +10,7 @@ import CashFlowTab from '../components/CashFlowTab';
 import OptimizersTab from '../components/OptimizersTab';
 import CompareTab from '../components/CompareTab';
 import { FinanceProvider, useFinance } from '../lib/FinanceContext';
+import { signIn, signOut, useSession } from 'next-auth/react';
 
 // --- TYPABLE STEPPER ---
 const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
@@ -57,7 +58,30 @@ const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
     );
 };
 
+// --- SMART TOOLTIP ---
+const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
+    const [open, setOpen] = useState(false);
+    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '280px' };
+    if (align === 'right') { posStyles.right = '0'; }
+    else if (align === 'left') { posStyles.left = '0'; }
+    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
+    return (
+        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
+            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+                <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+            </button>
+            {open && (
+                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
+                    <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 function DashboardLayout() {
+    const { data: session } = useSession();
   const financeContext = useFinance() as any; 
   const { data, updateUseRealDollars, updateInput, resetData } = financeContext;
   
@@ -260,7 +284,9 @@ function DashboardLayout() {
           </div>
       )}
 
+      {/* TOP HEADER CONTROLS */}
       <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm gap-3 mb-4 rounded-4 p-3 border border-secondary rp-card mb-0">
+        
         <div className="d-flex align-items-center flex-wrap gap-3">
           <h4 className="mb-0 text-nowrap fw-bold d-flex align-items-center">
             <i className="bi bi-graph-up-arrow text-primary me-3 fs-3"></i>Retirement Planner
@@ -270,18 +296,52 @@ function DashboardLayout() {
           </h4>
         </div>
         
-        <div className="d-flex align-items-center flex-wrap gap-3">
-          <div className="form-check form-switch mb-0 d-flex align-items-center me-2">
-             <input className="form-check-input mt-0 cursor-pointer" type="checkbox" id="useRealDollars" checked={data.useRealDollars ?? false} onChange={(e) => updateUseRealDollars(e.target.checked)} />
-             <label className="form-check-label small text-nowrap fw-bold text-info ms-2 cursor-pointer" htmlFor="useRealDollars">Today's $</label>
-          </div>
+        <div className="d-flex align-items-center flex-wrap gap-2">
           
-          <button className="btn btn-outline-secondary d-flex align-items-center justify-content-center bg-input" style={{ width: '40px', height: '40px' }} onClick={toggleTheme} title="Toggle Light/Dark Mode">
+          {/* Today's Dollar Toggle (Improved styling and InfoBtn) */}
+          <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all me-1" style={{ height: '40px' }}>
+              <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
+                  <input 
+                      className="form-check-input m-0 cursor-pointer" 
+                      type="checkbox" 
+                      id="useRealDollars" 
+                      checked={data.useRealDollars ?? false} 
+                      onChange={(e) => updateUseRealDollars(e.target.checked)} 
+                      style={{width: '2.2em', height: '1.2em'}}
+                  />
+                  <label className="form-check-label small text-nowrap fw-bold text-info ms-2 cursor-pointer d-flex align-items-center" htmlFor="useRealDollars" style={{marginTop: '2px'}}>
+                      Today's $
+                      <InfoBtn 
+                          align="right" 
+                          title="Real vs Nominal Dollars" 
+                          text="<b>Enabled (Real Dollars):</b> All future values are automatically discounted by inflation. This tells you exactly what your future money will be able to buy in today's purchasing power.<br><br><b>Disabled (Nominal):</b> Shows the actual inflated values you will see in your bank account in the future." 
+                      />
+                  </label>
+              </div>
+          </div>
+          {/* --- NEW AUTH UI START --- */}
+          {session ? (
+            <div className="d-flex align-items-center gap-2 bg-input border border-secondary rounded-pill p-1 pe-3">
+              {session.user?.image && <img src={session.user.image} alt="User" className="rounded-circle" width="32" height="32" />}
+              <span className="small fw-bold text-main d-none d-md-block">{session.user?.name?.split(' ')[0]}</span>
+              <button onClick={() => signOut()} className="btn btn-sm btn-link text-danger p-0 ms-2 hover-opacity-100" title="Sign Out">
+                <i className="bi bi-box-arrow-right fs-5"></i>
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => signIn('google')} className="btn btn-outline-primary d-flex align-items-center fw-bold rounded-pill shadow-sm px-3 py-1">
+              <i className="bi bi-google me-2"></i> Sign In
+            </button>
+          )}
+          {/* --- NEW AUTH UI END --- */}
+          {/* Theme Toggle */}
+          <button className="btn btn-outline-secondary d-flex align-items-center justify-content-center bg-input shadow-sm" style={{ width: '40px', height: '40px' }} onClick={toggleTheme} title="Toggle Light/Dark Mode">
             <i className={theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}></i>
           </button>
 
+          {/* File Menu Dropdown */}
           <div className="position-relative">
-            <button className="btn btn-outline-secondary d-flex align-items-center fw-bold bg-input px-3" type="button" onClick={() => setFileMenuOpen(!fileMenuOpen)}>
+            <button className="btn btn-outline-secondary d-flex align-items-center fw-bold bg-input px-3 shadow-sm" type="button" onClick={() => setFileMenuOpen(!fileMenuOpen)} style={{ height: '40px' }}>
                 <i className="bi bi-file-earmark-text me-2 text-primary"></i> File
             </button>
             {fileMenuOpen && (
@@ -303,6 +363,18 @@ function DashboardLayout() {
                 </>
             )}
           </div>
+
+          {/* Ko-fi Support Button */}
+          <a 
+              href="https://ko-fi.com/P5P11UYZUD" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="btn d-flex align-items-center fw-bold px-3 shadow-sm transition-all hover-opacity-75" 
+              style={{ height: '40px', backgroundColor: '#72a4f2', color: '#ffffff', border: 'none' }}
+          >
+              <i className="bi bi-cup-hot-fill me-2"></i> Support me
+          </a>
+
         </div>
       </div>
 

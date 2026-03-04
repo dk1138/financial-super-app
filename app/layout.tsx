@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import SessionWrapper from "../components/SessionWrapper"; // <-- 1. Import the wrapper
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,8 +21,10 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
       </head>
       <body>
-        {children}
-        <Analytics />
+        <SessionWrapper> {/* <-- 2. Wrap your children and Analytics */}
+          {children}
+          <Analytics />
+        </SessionWrapper>
       </body>
     </html>
   );
