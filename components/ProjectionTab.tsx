@@ -77,7 +77,7 @@ export default function ProjectionTab() {
       if (!results || !results.timeline) return;
 
       const headers = [
-          "Year", "P1 Age", "P2 Age", "Phase", "Gross Income", "Taxes Paid",
+          "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
           "Living Expenses", "Mortgage & Debt", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
@@ -105,7 +105,11 @@ export default function ProjectionTab() {
               if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
           }
 
-          const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0);
+          const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
+          const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
+          const totalClawback = p1Clawback + p2Clawback;
+
+          const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
           const totalEstate = (y.afterTaxEstate !== undefined ? y.afterTaxEstate : (y.liquidNW + (y.reIncludedEq || 0)));
 
           return [
@@ -113,7 +117,7 @@ export default function ProjectionTab() {
               y.p1Age || y.ageP1 || '',
               isCouple ? (y.p2Age || y.ageP2 || '') : 'N/A',
               phase,
-              Math.round(getRealValue(y.grossInflow || 0, y.year)),
+              Math.round(getRealValue((y.grossInflow || 0) - totalClawback, y.year)),
               Math.round(getRealValue(totalTaxes, y.year)),
               Math.round(getRealValue(y.expenses || 0, y.year)),
               Math.round(getRealValue((y.mortgagePay || 0) + (y.debtRepayment || 0), y.year)),
@@ -143,7 +147,11 @@ export default function ProjectionTab() {
   let retYears = 0;
 
   results.timeline.forEach((y: any) => {
-      const realTax = getRealValue((y.taxP1 || 0) + (y.taxP2 || 0), y.year);
+      const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
+      const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
+      const totalClawback = p1Clawback + p2Clawback;
+
+      const realTax = getRealValue((y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback, y.year);
       totalTaxPaid += realTax;
 
       const realNW = getRealValue(y.liquidNW + (y.reIncludedEq || 0), y.year);
@@ -265,17 +273,15 @@ export default function ProjectionTab() {
       return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
   };
 
-  const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number) => {
-      if (clawback <= 0) return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<br>No clawback applied.`;
-      return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<br><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<hr class="my-1 border-secondary"><span class="text-danger"><b>Clawback (15% over threshold):</b> -$${formatStr(clawback, year)}</span><br><b>Net OAS Received:</b> $${formatStr(gross - clawback, year)}`;
-  };
+  const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number, threshold: number) => {
+      const eliminationThreshold = threshold + (gross / 0.15);
+      const isFullyEliminated = clawback >= (gross - 0.01);
 
-  const buildRrspTooltip = (flows: any, playerKey: string, y: any, year: number) => {
-      let totalAdded = flows?.contributions?.[playerKey]?.rrsp || 0;
-      let empPortion = playerKey === 'p1' ? y.rrspMatchP1 : y.rrspMatchP2;
-      let personalPortion = totalAdded - empPortion;
-      if (totalAdded <= 0) return "No contributions this year.";
-      return `<b>Total Added:</b> $${formatStr(totalAdded, year)}<hr class="my-1 border-secondary"><b>Employer Match:</b> $${formatStr(empPortion, year)}<br><b>Your Contribution:</b> $${formatStr(personalPortion, year)}`;
+      if (clawback <= 0) {
+          return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br>No clawback applied.`;
+      }
+      
+      return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br><span class="text-danger"><b>Clawback Penalty:</b> -$${formatStr(clawback, year)}${isFullyEliminated ? ' <br><i>(OAS Fully Eliminated)</i>' : ''}</span><br><b>Net OAS Received:</b> $${formatStr(Math.max(0, gross - clawback), year)}`;
   };
 
   const buildContributionTooltip = (flows: any, isCouple: boolean, year: number) => {
@@ -309,10 +315,10 @@ export default function ProjectionTab() {
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash'));
       const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash'));
 
-      const oasClawback = taxDetails?.oas_Clawback || 0;
-      const oasGross = oas + oasClawback;
+      const oasClawback = taxDetails?.oas_clawback || 0;
+      const oasGross = oas;
+      const netOas = Math.max(0, oasGross - oasClawback);
 
-      // Extract prior year balance for RRIF Math
       let priorRrifBal = 0;
       const prevYear = index > 0 ? timeline[index - 1] : null;
       if (prevYear) {
@@ -344,10 +350,10 @@ export default function ProjectionTab() {
                       <span>{formatCurrency(cpp, year)}</span>
                   </div>
               )}
-              {oas > 0 && (
+              {oasGross > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">OAS <InfoBtn title="OAS Math" text={buildOasTooltip(oasGross, oasClawback, taxInc, year)} align="left" /></span>
-                      <span>{formatCurrency(oas, year)}</span>
+                      <span className="text-muted ms-2 d-flex align-items-center">OAS <InfoBtn title="OAS Math" text={buildOasTooltip(oasGross, oasClawback, taxInc, year, y.oasThreshold)} align="left" /></span>
+                      <span>{formatCurrency(netOas, year)}</span>
                   </div>
               )}
               {db > 0 && (
@@ -497,7 +503,7 @@ export default function ProjectionTab() {
                 <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '16%' }}>Year & Events</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Total Income</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>
                 <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>
                 <th className="py-3 pe-4 text-muted text-uppercase text-center border-bottom border-secondary text-success" style={{ width: '14%' }}>Net Worth</th>
@@ -508,13 +514,17 @@ export default function ProjectionTab() {
               {results.timeline.map((y: any, index: number) => {
                 const isExpanded = expandedYear === y.year;
                 
-                // Tie directly to the backend engine's explicit math variable, no more manual recreation bugs
+                const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
+                const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
+                const totalClawback = p1Clawback + p2Clawback;
+
                 const totalWithdrawals = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
-                const totalIncome = (y.grossInflow || 0) - (totalWithdrawals as number);
                 
-                const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0);
+                // Adjusted Math for UI Display: Exclude clawbacks from both Income and Taxes to show pure Net Cash Flow
+                const totalIncome = (y.grossInflow || 0) - (totalWithdrawals as number) - totalClawback;
+                const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
+                
                 const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0);
-                
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
                 const totalNW = y.liquidNW + (y.reIncludedEq || 0); 
                 
@@ -524,8 +534,8 @@ export default function ProjectionTab() {
                     if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
                 }
 
-                // Dynamic Balancing Logic - 0.5 threshold added to prevent arbitrary floating point misfires
-                const totalSourcedRaw = y.grossInflow || 0;
+                // Dynamic Balancing Logic 
+                const totalSourcedRaw = totalIncome + (totalWithdrawals as number);
                 const totalSpentRaw = totalExpenses + totalTaxes + engineContributions;
                 
                 let shortfall = 0;
@@ -627,12 +637,12 @@ export default function ProjectionTab() {
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP1, y.taxIncP1, (y.discTaxSavingsP1||0) + (y.matchTaxSavingsP1||0), y.year)} /></span>
-                                                <span className="text-danger fw-medium">{formatCurrency(y.taxP1, y.year)}</span>
+                                                <span className="text-danger fw-medium">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
                                             </div>
                                             {isCouple && (
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP2, y.taxIncP2, (y.discTaxSavingsP2||0) + (y.matchTaxSavingsP2||0), y.year)} /></span>
-                                                    <span className="text-danger fw-medium">{formatCurrency(y.taxP2, y.year)}</span>
+                                                    <span className="text-danger fw-medium">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
                                                 </div>
                                             )}
                                         </div>
