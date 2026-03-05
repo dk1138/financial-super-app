@@ -263,13 +263,11 @@ export class FinanceEngine {
         let fedAgeCredit = 0;
         let provAgeCredit = 0;
         if (age >= 65) {
-            // 2024 Federal Values: Max $8,790, reduced by 15% of income over $42,335
             let ageAmt = Math.max(0, 8790 * baseInflation - Math.max(0, income - 42335 * baseInflation) * 0.15);
-            fedAgeCredit = ageAmt * 0.15; // 15% federal non-refundable credit rate
+            fedAgeCredit = ageAmt * 0.15; 
             
-            // 2024 Ontario Proxy Values: Max $5,740, reduced by 15% of income over $45,000
             let provAgeAmt = Math.max(0, 5740 * baseInflation - Math.max(0, income - 45000 * baseInflation) * 0.15);
-            provAgeCredit = provAgeAmt * 0.0505; // ~5.05% lowest prov rate (using ON as universal proxy for simplicity)
+            provAgeCredit = provAgeAmt * 0.0505; 
         }
         
         let fedPensionCredit = 0;
@@ -279,7 +277,6 @@ export class FinanceEngine {
             provPensionCredit = Math.min(eligiblePension, 1600) * 0.0505; 
         }
         
-        // Subtract non-refundable credits before processing surtaxes
         fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit);
         provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit);
         
@@ -406,7 +403,6 @@ export class FinanceEngine {
             ratesP2.crypto = -0.40; 
         }
 
-        // Apply Sequence of Returns Risk shock sequence if passed from the Risk Tab
         if (simContext && simContext.shockSequence && simContext.shockSequence[yearIndex] !== undefined) {
             let manualShock = simContext.shockSequence[yearIndex];
             if (manualShock !== 0) {
@@ -460,7 +456,7 @@ export class FinanceEngine {
         const calculateInflowsForPerson = (person: any, age: number, isRetired: boolean, prefix: string, maxCpp: number, maxOas: number) => {
             let inflows = { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, postRet:0, eiMat:0, topUp:0 };
             
-            const birthMonth = person.dob.getMonth(); // 0 = Jan, 11 = Dec
+            const birthMonth = person.dob.getMonth(); 
             const startProration = (12 - birthMonth) / 12;
             const endProration = birthMonth / 12;
 
@@ -554,7 +550,6 @@ export class FinanceEngine {
             if (this.inputs[`${prefix}_oas_enabled`] && age >= oasStart) {
                 let baseOas = this.calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas');
                 
-                // OAS 10% boost at 75 rules
                 if (age >= 75) {
                     if (age === 75) {
                         baseOas = (baseOas * endProration) + (baseOas * 1.10 * startProration);
@@ -563,7 +558,6 @@ export class FinanceEngine {
                     }
                 }
 
-                // Global proration for the start year
                 if (age === oasStart) {
                     if (oasStart === 75) {
                         baseOas = this.calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas') * 1.10;
@@ -815,8 +809,6 @@ export class FinanceEngine {
         }
 
         finalExpenses += activePhasesAmount;
-        
-        // APPLY GUYTON-KLINGER GUARDRAIL HAIRCUT
         finalExpenses *= haircut;
 
         return {
@@ -1336,8 +1328,6 @@ export class FinanceEngine {
             }
         };
 
-        // If Dynamic Tax Optimization is running, it will already have the BEST order in withdrawalStrategies.
-        // We just need to obey OAS ceilings if that sub-toggle is also ON, and then proceed with the order.
         if (optimizeOasFlag && (p1OasCeiling < Infinity || p2OasCeiling < Infinity)) {
             runPass(p1OasCeiling, p2OasCeiling, withdrawalStrategies, true); 
             runPass(Infinity, Infinity, ['tfsa', 'fhsa', 'cash'], false);
@@ -1346,10 +1336,6 @@ export class FinanceEngine {
     }
 
     runSimulation(detailed = false, simContext: any = null): any[] {
-        
-        // --- META-SIMULATION: DYNAMIC TAX OPTIMIZATION ENGINE ---
-        // If the user checked "Dynamic Tax Optimization", we run a pure mathematical test
-        // of every major withdrawal strategy combination in the background to find the absolute max Net Worth.
         if (this.inputs['fully_optimize_tax'] && !simContext?.isMetaRun) {
             let bestNW = -Infinity;
             let bestData: any = null;
@@ -1395,8 +1381,6 @@ export class FinanceEngine {
                 
                 if (tempResult && tempResult.length > 0) {
                     let finalYear = tempResult[tempResult.length - 1];
-                    // We must use the AFTER TAX ESTATE VALUE, otherwise the engine will falsely assume 
-                    // a $1M RRSP is worth more than an $800k TFSA, when in reality the TFSA is vastly superior.
                     let finalNW = finalYear.afterTaxEstate; 
                     
                     if (finalNW > bestNW) {
@@ -1473,7 +1457,6 @@ export class FinanceEngine {
             p2: Math.max(0, 40000 - (this.getVal('p2_fhsa') || 0)) 
         };
 
-        // GUARDRAILS STATE
         let initialWithdrawalRate = 0;
         let currentExpenseHaircut = 1.0;
 
@@ -1582,31 +1565,27 @@ export class FinanceEngine {
                 inflows.events.push(...deathEvents);
             }
 
-            // --- GUYTON-KLINGER GUARDRAILS CHECK ---
             let isFullyRetired = isRet1 && (this.mode === 'Single' || isRet2);
             let currentLiquidNW = person1.tfsa + person1.tfsa_successor + person1.rrsp + person1.crypto + person1.nonreg + person1.cash + person1.rrif_acct + (person1.fhsa || 0);
             if (this.mode === 'Couple') currentLiquidNW += person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nonreg + person2.cash + person2.rrif_acct + (person2.fhsa || 0);
 
             if (this.inputs['enable_guardrails'] && isFullyRetired) {
-                // Calculate what they *want* to spend this year without a haircut
                 let baseExpObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, 1.0);
                 let currentWR = currentLiquidNW > 0 ? (baseExpObj.total / currentLiquidNW) : 0;
 
                 if (initialWithdrawalRate === 0 && currentLiquidNW > 0) {
                     initialWithdrawalRate = currentWR;
                 } else if (initialWithdrawalRate > 0 && currentLiquidNW > 0) {
-                    // If withdrawal rate shoots up 20% beyond original target (market crash)
                     if (currentWR > initialWithdrawalRate * 1.2) {
-                        currentExpenseHaircut *= 0.90; // Apply 10% Cut
-                        initialWithdrawalRate = currentWR; // Reset anchor
+                        currentExpenseHaircut *= 0.90; 
+                        initialWithdrawalRate = currentWR; 
                         if (detailed && !trackedEvents.has('Guardrails Activated')) {
                             inflows.events.push('Guardrails: Spending Cut (-10%)');
                         }
                     } 
-                    // If withdrawal rate drops 20% below original target (market boom)
                     else if (currentWR < initialWithdrawalRate * 0.8) {
-                        currentExpenseHaircut *= 1.10; // Apply 10% Raise
-                        if (currentExpenseHaircut > 1.0) currentExpenseHaircut = 1.0; // Don't raise above original lifestyle target
+                        currentExpenseHaircut *= 1.10; 
+                        if (currentExpenseHaircut > 1.0) currentExpenseHaircut = 1.0; 
                         initialWithdrawalRate = currentWR;
                         if (detailed && currentExpenseHaircut <= 1.0 && !trackedEvents.has('Guardrails Lifted')) {
                             inflows.events.push('Guardrails: Spending Raised (+10%)');
@@ -1615,14 +1594,13 @@ export class FinanceEngine {
                 }
             }
 
-            // MATHEMATICALLY OPTIMIZED RRSP MELTDOWN: Only withdraw to 0% tax bracket (BPA) to guarantee free money
             if (this.inputs['rrsp_meltdown_enabled']) {
                 const taxBrackets = this.getInflatedTaxData(baseInflation);
                 const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: string) => {
                     if (isAlive && currentAge >= 55 && currentAge < this.CONSTANTS.RRIF_START_AGE && person.rrsp > 0) {
                         let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield);
                         
-                        let bpa = 15705 * baseInflation; // Basic Personal Amount 
+                        let bpa = 15705 * baseInflation; 
                         let tfsaRoom = consts.tfsaLimit * baseInflation;
                         let targetBracketCap = bpa; 
                         
@@ -1744,7 +1722,6 @@ export class FinanceEngine {
             lifMax1 = Math.max(0, lifMax1 - regMins.lifTaken1);
             lifMax2 = Math.max(0, lifMax2 - regMins.lifTaken2);
 
-            // Pass the calculated haircut to the outflows calculator
             const outflowsObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, currentExpenseHaircut);
             const expenses = outflowsObj.total;
             const activeExpensePhases = outflowsObj.activePhases;
@@ -1806,7 +1783,6 @@ export class FinanceEngine {
             });
             simProperties = keptProperties;
 
-            // --- FUTURE EXPENSES LOAN ENGINE ---
             let futureExpenseAmt = 0;
             this.debt.forEach(d => {
                 let startYear = new Date((d.start || new Date().toISOString().slice(0,7)) + "-01").getFullYear();
@@ -1918,7 +1894,6 @@ export class FinanceEngine {
 
             previousAFNI = Math.max(0, (taxableIncome1 - actualDeductions.p1) + (taxableIncome2 - actualDeductions.p2));
 
-            // Force Liquid assets to floor at 0 rather than tracking mathematical negative balances from unpayable debt
             person1.tfsa = Math.max(0, person1.tfsa); person1.rrsp = Math.max(0, person1.rrsp); person1.cash = Math.max(0, person1.cash); person1.nonreg = Math.max(0, person1.nonreg); person1.crypto = Math.max(0, person1.crypto);
             person2.tfsa = Math.max(0, person2.tfsa); person2.rrsp = Math.max(0, person2.rrsp); person2.cash = Math.max(0, person2.cash); person2.nonreg = Math.max(0, person2.nonreg); person2.crypto = Math.max(0, person2.crypto);
 
@@ -1934,7 +1909,6 @@ export class FinanceEngine {
             });
             finalNetWorth = liquidNetWorth + (realEstateValue - realEstateDebt);
 
-            // --- TERMINAL ESTATE TAX CALCULATION ---
             let termInc1 = person1.rrsp + person1.rrif_acct + person1.lif + person1.lirf;
             let termInc2 = (this.mode === 'Couple') ? (person2.rrsp + person2.rrif_acct + person2.lif + person2.lirf) : 0;
             
@@ -2007,4 +1981,66 @@ export class FinanceEngine {
         
         return detailed ? projectionData : netWorthArray;
     }
+}
+
+export interface ScoreBreakdown {
+    totalScore: number;
+    retirementReadiness: number; // out of 50
+    debtHealth: number;          // out of 20
+    savingsRate: number;         // out of 20
+    emergencyFund: number;       // out of 10
+}
+
+export function calculatePlanScore(data: any, timeline: any[]): ScoreBreakdown {
+    let score = { totalScore: 0, retirementReadiness: 0, debtHealth: 0, savingsRate: 0, emergencyFund: 0 };
+    if (!timeline || timeline.length === 0) return score;
+
+    const year0 = timeline[0];
+    const inflation = (data.inputs.inflation_rate || 2.1) / 100;
+    
+    // 1. Emergency Fund (Max 10 points) - Targets 6 months of expenses
+    const annualExpenses = (year0.expenses || 0) + (year0.mortgagePay || 0) + (year0.debtRepayment || 0);
+    const monthlyExpenses = annualExpenses / 12;
+    const liquidCash = (year0.assetsP1?.cash || 0) + (data.mode === 'Couple' ? (year0.assetsP2?.cash || 0) : 0) + 
+                       (year0.assetsP1?.tfsa || 0) + (data.mode === 'Couple' ? (year0.assetsP2?.tfsa || 0) : 0);
+    const monthsCovered = monthlyExpenses > 0 ? liquidCash / monthlyExpenses : 12;
+    score.emergencyFund = Math.min(10, Math.max(0, (monthsCovered / 6) * 10));
+
+    // 2. Savings Rate (Max 20 points) - Targets 20%+ savings rate of gross flow
+    let contsRaw = Object.values(year0.flows?.contributions?.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+    if (data.mode === 'Couple') contsRaw += Object.values(year0.flows?.contributions?.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+    const grossInflow = year0.grossInflow || 1;
+    const savingsRateVal = contsRaw / grossInflow;
+    score.savingsRate = Math.min(20, Math.max(0, (savingsRateVal / 0.20) * 20));
+
+    // 3. Debt Health (Max 20 points) - Targets < 36% DTI (Debt to Income ratio)
+    const debtPayments = (year0.mortgagePay || 0) + (year0.debtRepayment || 0);
+    const dti = debtPayments / grossInflow;
+    if (dti <= 0.20) score.debtHealth = 20;
+    else if (dti <= 0.36) score.debtHealth = 20 - ((dti - 0.20) / 0.16) * 10;
+    else score.debtHealth = Math.max(0, 10 - ((dti - 0.36) / 0.14) * 10);
+
+    // 4. Retirement Readiness (Max 50 points) - Using the FI percentage and checking for shortfalls
+    const failed = timeline.some(y => y.liquidNW <= 0 && y.p1Age >= data.inputs.p1_retireAge);
+    if (failed) {
+        score.retirementReadiness = 0;
+    } else {
+        const firstRetYearObj = timeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || timeline[timeline.length - 1];
+        const firstRetNominalSpend = (firstRetYearObj.expenses || 0) + (firstRetYearObj.mortgagePay || 0);
+        const yearsToRet = Math.max(0, firstRetYearObj.year - year0.year);
+        const firstRetRealSpend = firstRetNominalSpend / Math.pow(1 + inflation, yearsToRet);
+        const fiTarget = firstRetRealSpend * 25;
+        const fiPercent = fiTarget > 0 ? year0.liquidNW / fiTarget : 1;
+        // Base 30 for surviving, up to 20 for FI trajectory
+        score.retirementReadiness = 30 + Math.min(20, fiPercent * 20);
+    }
+
+    // Final Rounding
+    score.totalScore = Math.round(score.emergencyFund + score.savingsRate + score.debtHealth + score.retirementReadiness);
+    score.emergencyFund = Math.round(score.emergencyFund);
+    score.savingsRate = Math.round(score.savingsRate);
+    score.debtHealth = Math.round(score.debtHealth);
+    score.retirementReadiness = Math.round(score.retirementReadiness);
+
+    return score;
 }

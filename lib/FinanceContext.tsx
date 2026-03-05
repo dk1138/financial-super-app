@@ -3,6 +3,7 @@
 import React, { useEffect, ReactNode, useRef } from 'react';
 import { create } from 'zustand';
 import { FINANCIAL_CONSTANTS } from './config';
+import { calculatePlanScore } from './financeEngine'; // NEW IMPORT
 
 // --- STRICT SANITIZATION ENGINE ---
 const sanitizeValue = (val: any): any => {
@@ -214,9 +215,15 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
 export const useFinanceStore = create<any>((set) => ({
   data: defaultData,
   results: null,
+  planScore: null,
   isCalculating: true,
   setData: (updater: any) => set((state: any) => ({ data: typeof updater === 'function' ? updater(state.data) : updater })),
-  setResults: (results: any) => set({ results, isCalculating: false }),
+  // Calculate score whenever new results come back from the worker
+  setResults: (results: any) => set((state: any) => ({ 
+      results, 
+      planScore: calculatePlanScore(state.data, results?.timeline), 
+      isCalculating: false 
+  })),
   setIsCalculating: (isCalculating: boolean) => set({ isCalculating })
 }));
 
@@ -279,6 +286,7 @@ export function useFinance() {
   return {
     data: store.data,
     results: store.results,
+    planScore: store.planScore, // NEW EXPORT
     isCalculating: store.isCalculating,
     updateInput: (key: string, value: any) => store.setData((prev: any) => ({ ...prev, inputs: { ...prev.inputs, [key]: sanitizeValue(value) } })),
     updateMultipleInputs: (updates: Record<string, any>) => {

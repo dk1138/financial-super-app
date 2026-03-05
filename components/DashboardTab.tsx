@@ -25,8 +25,17 @@ const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: strin
     );
 };
 
+function ScoreCard({ title, score, max }: { title: string, score: number, max: number }) {
+  return (
+    <div className="p-3 border border-secondary rounded-3 bg-black bg-opacity-10 text-center h-100 shadow-sm d-flex flex-column justify-content-center">
+      <div className="text-muted fw-bold text-uppercase ls-1 small mb-1" style={{fontSize: '0.7rem'}}>{title}</div>
+      <div className="fs-5 fw-bolder text-main">{Math.round(score)} <span className="text-muted fw-normal" style={{fontSize: '0.8rem'}}>/ {max}</span></div>
+    </div>
+  );
+}
+
 export default function DashboardTab() {
-  const { data, results } = useFinance();
+  const { data, results, planScore } = useFinance();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
@@ -41,7 +50,6 @@ export default function DashboardTab() {
       setIsExporting(true);
       showToast('Generating high-res image...');
       try {
-          // A brief timeout helps Recharts finish any initial rendering before capturing
           setTimeout(async () => {
               const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
               canvas.toBlob(async (blob) => {
@@ -90,7 +98,6 @@ export default function DashboardTab() {
     );
   }
 
-  // --- Real Dollars Discounting Math ---
   const baseYear = results.timeline[0]?.year || new Date().getFullYear();
   const inflation = (data.inputs.inflation_rate || 2.1) / 100;
 
@@ -117,7 +124,6 @@ export default function DashboardTab() {
       return `$${Math.round(val)}`;
   };
 
-  // --- Premium Custom Tooltip for Charts ---
   const CustomTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
           const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
@@ -125,7 +131,6 @@ export default function DashboardTab() {
               <div className="bg-input border border-secondary p-3 rounded-4 shadow-lg" style={{ minWidth: '220px' }}>
                   {label && <p className="fw-bold mb-2 border-bottom border-secondary pb-2 text-muted text-uppercase ls-1" style={{fontSize: '0.75rem'}}>Year: {label}</p>}
                   <div className="d-flex flex-column gap-1 mb-2">
-                      {/* Reverse payload array so the list matches the visual stack order (top to bottom) */}
                       {[...payload].reverse().map((entry: any, index: number) => {
                           if (entry.value === 0) return null;
                           return (
@@ -151,7 +156,24 @@ export default function DashboardTab() {
       return null;
   };
 
-  // --- Dashboard Aggregations ---
+  const getScoreColorText = (score: number) => {
+      if (score >= 80) return 'text-success';
+      if (score >= 60) return 'text-warning';
+      return 'text-danger';
+  };
+
+  const getScoreGradient = (score: number) => {
+      if (score >= 80) return 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'; // Green
+      if (score >= 60) return 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'; // Yellow
+      return 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)'; // Red
+  };
+
+  const getScoreShadow = (score: number) => {
+      if (score >= 80) return '0 0 15px rgba(52, 211, 153, 0.4)';
+      if (score >= 60) return '0 0 15px rgba(245, 158, 11, 0.4)';
+      return '0 0 15px rgba(239, 68, 68, 0.4)';
+  };
+
   let totalGrossInflow = 0;
   let totalTaxPaid = 0;
   let totalExpenses = 0;
@@ -191,15 +213,12 @@ export default function DashboardTab() {
       totalContributions += getRealValue(contsRaw, y.year);
       totalWithdrawals += getRealValue(wdsRaw, y.year);
 
-      // STRICT CASH-FLOW SHORTFALL CHECK
-      // If total cash sourced is less than cash needed for expenses/taxes, the plan has failed.
       const totalSourcedRaw = y.grossInflow || 0;
       const totalSpentRaw = yrExpRaw + yrTaxRaw + contsRaw;
       if (totalSourcedRaw < totalSpentRaw - 1) {
           hasShortfall = true;
       }
 
-      // Retirement specific aggregations
       if (y.p1Age >= data.inputs.p1_retireAge) {
           retYears++;
           retSpent += getRealValue(y.expenses + y.mortgagePay, y.year); 
@@ -217,7 +236,6 @@ export default function DashboardTab() {
   const totalInvestmentGrowth = finalPort - initialPort - totalContributions + totalWithdrawals;
   const effTaxRate = totalGrossInflow > 0 ? (totalTaxPaid / totalGrossInflow) * 100 : 0;
 
-  // --- Milestones ---
   const retYearData = results.timeline.find((y: any) => y.p1Age === data.inputs.p1_retireAge) || results.timeline[0];
   const retDayNW = getRealValue(retYearData.liquidNW + (retYearData.reIncludedEq || 0), retYearData.year);
 
@@ -243,7 +261,6 @@ export default function DashboardTab() {
   const finalEstate = getRealValue(finalEstateRaw, finalEstateObj.year);
   const planHealth = hasShortfall ? "Failed" : "Success";
 
-  // --- Donut Chart 1: Lifetime Cash Distribution ---
   const pieData = [
       { name: 'Living & Debt', value: totalExpenses, color: '#f59e0b' },
       { name: 'Taxes Paid', value: totalTaxPaid, color: '#ef4444' },
@@ -251,7 +268,6 @@ export default function DashboardTab() {
   ].filter(d => d.value > 0);
   const totalPie = pieData.reduce((sum, d) => sum + d.value, 0) || 1; 
 
-  // --- Donut Chart 2: Retirement Funding Sources ---
   const fundData = [
       { name: 'Portfolio W/D', value: retPortfolioWd, color: '#3b82f6' },
       { name: 'Govt Benefits', value: retGovtBen, color: '#8b5cf6' },
@@ -260,7 +276,6 @@ export default function DashboardTab() {
   ].filter(d => d.value > 0);
   const totalFund = fundData.reduce((sum, d) => sum + d.value, 0) || 1; 
 
-  // --- Stacked Composition Chart Over Time ---
   const categories = [
       { key: 'realEstate', label: 'Real Estate', color: '#0ea5e9' },
       { key: 'nreg', label: 'Non-Reg', color: '#10b981' },
@@ -290,29 +305,26 @@ export default function DashboardTab() {
       return { year: y.year, age: y.p1Age, tfsa, fhsa, rrsp_rrif, lira_lif, nreg, cash, crypto, realEstate, total };
   });
 
-  // Dynamically filter categories to only show ones that actually have > $0 balance at some point
   const activeCategories = categories.filter(c => chartData.some((d: any) => d[c.key] > 0));
 
   const rawMaxNW = Math.max(1, ...chartData.map((d: any) => d.total));
-  const maxTotalNW = rawMaxNW * 1.05; // 5% buffer at the top
+  const maxTotalNW = rawMaxNW * 1.05; 
   const yAxisTicks = [1, 0.75, 0.5, 0.25, 0].map(f => maxTotalNW * f);
 
-  // --- FI Freedom Target Math ---
+  // --- FI Readiness Math ---
   const firstRetYearObj = results.timeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || results.timeline[results.timeline.length - 1];
   const firstRetNominalSpend = (firstRetYearObj.expenses || 0) + (firstRetYearObj.mortgagePay || 0);
-  // Deflate back to today's dollars to compare against today's portfolio
   const yearsToRet = Math.max(0, firstRetYearObj.year - baseYear);
   const firstRetRealSpend = firstRetNominalSpend / Math.pow(1 + inflation, yearsToRet);
   
   const fiTarget = firstRetRealSpend * 25;
-  const currentLiquidNW = results.timeline[0].liquidNW; // Today's portfolio
+  const currentLiquidNW = results.timeline[0].liquidNW; 
   const fiPercent = fiTarget > 0 ? (currentLiquidNW / fiTarget) * 100 : 0;
   const isFI = fiPercent >= 100;
 
   return (
     <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
         
-      {/* Toast Notification for Export */}
       {toastMsg && (
           <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
               <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
@@ -321,7 +333,6 @@ export default function DashboardTab() {
           </div>
       )}
 
-      {/* Header and Export Buttons */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
           <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
               <i className="bi bi-clipboard2-data me-2"></i> Executive Summary
@@ -346,17 +357,97 @@ export default function DashboardTab() {
           </div>
       </div>
 
-      {/* The Dashboard Container to Capture */}
       <div ref={dashboardRef}>
           
-          {/* Watermark only visible in the exported image */}
           {isExporting && (
               <div className="text-center text-muted fw-bold small text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary">
                   Generated by Retirement Planner Pro
               </div>
           )}
 
-          {/* 6 Top Metric Cards - Centered */}
+          {/* COMBINED PLAN HEALTH & FI READINESS OVERVIEW */}
+          {planScore && (
+            <div className="rp-card border-secondary rounded-4 p-4 shadow-sm mb-4">
+              <h6 className="fw-bold text-uppercase ls-1 text-muted mb-4 d-flex align-items-center border-bottom border-secondary pb-3">
+                  <i className="bi bi-shield-check text-primary me-2"></i> Quick Overview
+              </h6>
+              
+              <div className="row g-5 mb-2">
+                  {/* Overall Plan Health Pill */}
+                  <div className="col-12 col-md-6 d-flex flex-column justify-content-center border-end-md border-secondary">
+                      <div className="d-flex flex-column gap-1 mb-2">
+                          <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-main">
+                              Overall Plan Health
+                              <InfoBtn align="left" title="Plan Health" text="A comprehensive score out of 100 based on your savings rate, debt-load, emergency reserves, and projected retirement trajectory." />
+                          </h6>
+                          <div className="d-flex justify-content-between align-items-end mt-2">
+                              <span className="text-muted small fw-medium">Based on 4 Core Pillars</span>
+                              <span className={`fw-bold fs-5 ${getScoreColorText(planScore.totalScore)}`}>{planScore.totalScore} / 100</span>
+                          </div>
+                      </div>
+                      
+                      <div className="position-relative" style={{ height: '36px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '100px', padding: '4px' }}>
+                          <div 
+                              className="h-100 rounded-pill d-flex align-items-center justify-content-end px-3 transition-all"
+                              style={{ 
+                                  width: `${Math.max(planScore.totalScore, 2)}%`, 
+                                  background: getScoreGradient(planScore.totalScore),
+                                  boxShadow: getScoreShadow(planScore.totalScore),
+                              }} 
+                          >
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* FI Readiness Pill */}
+                  <div className="col-12 col-md-6 d-flex flex-column justify-content-center">
+                      <div className="d-flex flex-column gap-1 mb-2">
+                          <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-primary">
+                              Freedom Target (FI) Readiness
+                              <InfoBtn align="left" title="Financial Independence Target" text="Your Freedom Target is 25x your projected annual retirement spending (The 4% Rule) calculated in today's dollars.<br><br>This bar shows your current liquid net worth vs your target, focusing purely on present-day readiness instead of backward-looking estimates." />
+                          </h6>
+                          <div className="d-flex justify-content-between align-items-end mt-2">
+                              <span className="text-muted small fw-medium">Target: {formatCurrency(fiTarget)}</span>
+                              <div className="text-md-end lh-1">
+                                  <span className="fw-bold fs-5 text-main">{formatCurrency(currentLiquidNW)}</span>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <div className="position-relative" style={{ height: '36px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '100px', padding: '4px' }}>
+                          <div 
+                              className="h-100 rounded-pill d-flex align-items-center justify-content-end px-3 transition-all"
+                              style={{ 
+                                  width: `${Math.min(Math.max(fiPercent, 2), 100)}%`, 
+                                  background: isFI ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' : 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)',
+                                  boxShadow: isFI ? '0 0 15px rgba(52, 211, 153, 0.4)' : '0 0 15px rgba(96, 165, 250, 0.4)',
+                              }} 
+                          >
+                              {fiPercent >= 10 && <span className="fw-bolder text-white small" style={{textShadow: '0 1px 2px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>{fiPercent.toFixed(1)}%</span>}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              {/* 4 Health Breakdown Cards */}
+              <div className="row g-3 pt-4 mt-1 border-top border-secondary border-opacity-50">
+                  <div className="col-6 col-md-3">
+                      <ScoreCard title="Retirement Funding" score={planScore.retirementReadiness} max={50} />
+                  </div>
+                  <div className="col-6 col-md-3">
+                      <ScoreCard title="Debt Health" score={planScore.debtHealth} max={20} />
+                  </div>
+                  <div className="col-6 col-md-3">
+                      <ScoreCard title="Savings Rate" score={planScore.savingsRate} max={20} />
+                  </div>
+                  <div className="col-6 col-md-3">
+                      <ScoreCard title="Emergency Reserves" score={planScore.emergencyFund} max={10} />
+                  </div>
+              </div>
+            </div>
+          )}
+
+          {/* Core Dashboard Metric Cards */}
           <div className="row g-4 mb-4">
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
@@ -428,55 +519,7 @@ export default function DashboardTab() {
               </div>
           </div>
 
-          {/* FIRE Readiness Progress Bar */}
-          <div className="row mb-4">
-              <div className="col-12">
-                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm">
-                      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2">
-                          <div className="d-flex flex-column gap-1">
-                              <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-primary">
-                                  <i className="bi bi-rocket-takeoff-fill me-2 fs-5"></i> Freedom Target (FI) Readiness
-                                  <InfoBtn align="left" title="Financial Independence Target" text="Your Freedom Target is 25x your projected annual retirement spending (The 4% Rule) calculated in today's dollars.<br><br>This bar shows your current liquid net worth vs your target, focusing purely on present-day readiness instead of backward-looking estimates." />
-                              </h6>
-                              <span className="text-muted small fw-medium">Based on a target of {formatCurrency(firstRetRealSpend)}/yr starting at Age {data.inputs.p1_retireAge}.</span>
-                          </div>
-                          <div className="text-md-end">
-                              <span className="fw-bold fs-4 text-main">{formatCurrency(currentLiquidNW)}</span>
-                              <span className="text-muted mx-2 fw-light fs-5">/</span>
-                              <span className="fw-bold text-muted fs-5">{formatCurrency(fiTarget)}</span>
-                          </div>
-                      </div>
-                      
-                      {/* Premium Modern Padded Bar */}
-                      <div className="position-relative my-4" style={{ height: '36px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '100px', padding: '4px' }}>
-                          <div 
-                              className="h-100 rounded-pill d-flex align-items-center justify-content-end px-3 transition-all"
-                              style={{ 
-                                  width: `${Math.min(Math.max(fiPercent, 2), 100)}%`, 
-                                  background: isFI ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' : 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)',
-                                  boxShadow: isFI ? '0 0 15px rgba(52, 211, 153, 0.4)' : '0 0 15px rgba(96, 165, 250, 0.4)',
-                              }} 
-                          >
-                              {fiPercent >= 10 && <span className="fw-bolder text-white small" style={{textShadow: '0 1px 2px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>{fiPercent.toFixed(1)}%</span>}
-                          </div>
-                      </div>
-                      
-                      {isFI ? (
-                          <div className="text-success small fw-bold text-end lh-1">
-                              <i className="bi bi-check-circle-fill me-1"></i> You have reached Financial Independence! Your current portfolio can safely support your target retirement lifestyle.
-                          </div>
-                      ) : (
-                          <div className="text-muted small text-end fst-italic lh-1">
-                              You need {formatCurrency(Math.max(0, fiTarget - currentLiquidNW))} more to reach your Freedom Target.
-                          </div>
-                      )}
-                  </div>
-              </div>
-          </div>
-
           <div className="row g-4 mb-4">
-              
-              {/* Milestones Panel */}
               <div className="col-12 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 h-100 overflow-hidden shadow-sm">
                       <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3">
@@ -510,18 +553,15 @@ export default function DashboardTab() {
                   </div>
               </div>
 
-              {/* Double Donut Charts Container (RECHARTS) */}
               <div className="col-12 col-xl-8">
                   <div className="row g-4 h-100">
                       
-                      {/* Lifetime Cash Distribution Donut */}
                       <div className="col-12 col-md-6">
                           <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
                               <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-pie-chart-fill text-primary me-2"></i>Cash Distribution</h6>
                               
                               {totalPie > 1 ? (
                                   <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
-                                      {/* RECHARTS PIE */}
                                       <div className="position-relative d-flex align-items-center justify-content-center w-100" style={{height: '200px'}}>
                                           <div className="position-absolute d-flex flex-column align-items-center justify-content-center pointer-events-none text-center" style={{ zIndex: 1 }}>
                                               <span className="small text-muted fw-bold" style={{fontSize: '0.65rem'}}>TOTAL</span>
@@ -549,7 +589,6 @@ export default function DashboardTab() {
                                           </div>
                                       </div>
                                       
-                                      {/* Custom UI Legend */}
                                       <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
                                           {pieData.map((d, i) => (
                                               <div className="d-flex justify-content-between align-items-center" key={i}>
@@ -568,14 +607,12 @@ export default function DashboardTab() {
                           </div>
                       </div>
 
-                      {/* Retirement Funding Sources Donut */}
                       <div className="col-12 col-md-6">
                           <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
                               <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-wallet-fill text-info me-2"></i>Retirement Funding</h6>
                               
                               {totalFund > 1 ? (
                                   <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
-                                      {/* RECHARTS PIE */}
                                       <div className="position-relative d-flex align-items-center justify-content-center w-100" style={{height: '200px'}}>
                                           <div className="position-absolute d-flex flex-column align-items-center justify-content-center pointer-events-none text-center" style={{ zIndex: 1 }}>
                                               <span className="small text-muted fw-bold text-center lh-1 mb-1" style={{fontSize: '0.65rem'}}>RETIREMENT<br/>INCOME</span>
@@ -603,7 +640,6 @@ export default function DashboardTab() {
                                           </div>
                                       </div>
                                       
-                                      {/* Custom UI Legend */}
                                       <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
                                           {fundData.map((d, i) => (
                                               <div className="d-flex justify-content-between align-items-center" key={i}>
@@ -627,7 +663,6 @@ export default function DashboardTab() {
 
           </div>
 
-          {/* FULL WIDTH: Timeline Stacked Bar Chart (RECHARTS) */}
           <div className="row mt-2">
               <div className="col-12">
                   <div className="rp-card border-secondary rounded-4 p-4 shadow-sm d-flex flex-column" style={{ height: '600px' }}>
@@ -635,7 +670,6 @@ export default function DashboardTab() {
                       
                       {maxTotalNW > 1 ? (
                           <>
-                              {/* Custom Legend Grid - Filtered to Active Categories */}
                               <div className="d-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-secondary flex-shrink-0">
                                   {[...activeCategories].reverse().map(c => (
                                       <div className="d-flex align-items-center" key={c.key}>
@@ -645,7 +679,6 @@ export default function DashboardTab() {
                                   ))}
                               </div>
 
-                              {/* Recharts BarChart Area */}
                               <div className="w-100 flex-grow-1" style={{ minHeight: 0 }}>
                                   <ResponsiveContainer width="100%" height="100%">
                                       <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -667,7 +700,6 @@ export default function DashboardTab() {
                                           />
                                           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bs-primary)', opacity: 0.1 }} offset={20} wrapperStyle={{ zIndex: 1000 }} />
                                           
-                                          {/* Stack mapping filtered dynamically */}
                                           {[...activeCategories].map(c => (
                                               <Bar 
                                                   key={c.key} 
