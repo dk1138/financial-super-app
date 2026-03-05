@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
     const [open, setOpen] = useState(false);
@@ -40,18 +41,22 @@ export default function DashboardTab() {
       setIsExporting(true);
       showToast('Generating high-res image...');
       try {
-          const canvas = await html2canvas(dashboardRef.current, { backgroundColor: '#16181d', scale: 2 });
-          canvas.toBlob(async (blob) => {
-              if (blob) {
-                  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                  showToast('✅ Copied to clipboard! Ready to paste (Ctrl+V) into Reddit/Discord.');
-              }
-          });
+          // A brief timeout helps Recharts finish any initial rendering before capturing
+          setTimeout(async () => {
+              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+              canvas.toBlob(async (blob) => {
+                  if (blob) {
+                      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                      showToast('✅ Copied to clipboard! Ready to paste (Ctrl+V) into Reddit/Discord.');
+                  }
+              });
+              setIsExporting(false);
+          }, 300);
       } catch (err) {
           console.error(err);
           showToast('❌ Failed to copy image.');
+          setIsExporting(false);
       }
-      setIsExporting(false);
   };
 
   const handleDownloadPNG = async () => {
@@ -59,18 +64,21 @@ export default function DashboardTab() {
       setIsExporting(true);
       showToast('Generating high-res image...');
       try {
-          const canvas = await html2canvas(dashboardRef.current, { backgroundColor: '#16181d', scale: 2 });
-          const url = canvas.toDataURL('image/png');
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'Retirement_Summary.png';
-          link.click();
-          showToast('✅ Image downloaded successfully!');
+          setTimeout(async () => {
+              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+              const url = canvas.toDataURL('image/png');
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'Retirement_Summary.png';
+              link.click();
+              showToast('✅ Image downloaded successfully!');
+              setIsExporting(false);
+          }, 300);
       } catch (err) {
           console.error(err);
           showToast('❌ Failed to download image.');
+          setIsExporting(false);
       }
-      setIsExporting(false);
   };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
@@ -109,6 +117,40 @@ export default function DashboardTab() {
       return `$${Math.round(val)}`;
   };
 
+  // --- Premium Custom Tooltip for Charts ---
+  const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+          const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
+          return (
+              <div className="bg-input border border-secondary p-3 rounded-4 shadow-lg" style={{ minWidth: '220px' }}>
+                  {label && <p className="fw-bold mb-2 border-bottom border-secondary pb-2 text-muted text-uppercase ls-1" style={{fontSize: '0.75rem'}}>Year: {label}</p>}
+                  <div className="d-flex flex-column gap-1 mb-2">
+                      {/* Reverse payload array so the list matches the visual stack order (top to bottom) */}
+                      {[...payload].reverse().map((entry: any, index: number) => {
+                          if (entry.value === 0) return null;
+                          return (
+                              <div key={index} className="d-flex justify-content-between align-items-center gap-4">
+                                  <div className="d-flex align-items-center">
+                                      <span className="rounded-circle me-2" style={{width: '8px', height: '8px', backgroundColor: entry.color}}></span>
+                                      <span className="fw-medium small text-muted">{entry.name}</span>
+                                  </div>
+                                  <span className="fw-bold text-main small">{formatExact(entry.value)}</span>
+                              </div>
+                          );
+                      })}
+                  </div>
+                  {payload.length > 1 && (
+                      <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
+                          <span className="fw-bold small text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>Total</span>
+                          <span className="fw-bolder text-main">{formatExact(total)}</span>
+                      </div>
+                  )}
+              </div>
+          );
+      }
+      return null;
+  };
+
   // --- Dashboard Aggregations ---
   let totalGrossInflow = 0;
   let totalTaxPaid = 0;
@@ -125,6 +167,7 @@ export default function DashboardTab() {
 
   let totalContributions = 0;
   let totalWithdrawals = 0;
+  let hasShortfall = false;
 
   results.timeline.forEach((y: any) => {
       const wdsRaw = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number : 0;
@@ -147,6 +190,14 @@ export default function DashboardTab() {
       
       totalContributions += getRealValue(contsRaw, y.year);
       totalWithdrawals += getRealValue(wdsRaw, y.year);
+
+      // STRICT CASH-FLOW SHORTFALL CHECK
+      // If total cash sourced is less than cash needed for expenses/taxes, the plan has failed.
+      const totalSourcedRaw = y.grossInflow || 0;
+      const totalSpentRaw = yrExpRaw + yrTaxRaw + contsRaw;
+      if (totalSourcedRaw < totalSpentRaw - 1) {
+          hasShortfall = true;
+      }
 
       // Retirement specific aggregations
       if (y.p1Age >= data.inputs.p1_retireAge) {
@@ -190,40 +241,24 @@ export default function DashboardTab() {
   const finalEstateObj = results.timeline[results.timeline.length - 1];
   const finalEstateRaw = finalEstateObj.afterTaxEstate !== undefined ? finalEstateObj.afterTaxEstate : (finalEstateObj.liquidNW + (finalEstateObj.reIncludedEq || 0));
   const finalEstate = getRealValue(finalEstateRaw, finalEstateObj.year);
-  const planHealth = finalEstateRaw > 0 ? "Success" : "Failed";
+  const planHealth = hasShortfall ? "Failed" : "Success";
 
   // --- Donut Chart 1: Lifetime Cash Distribution ---
   const pieData = [
-      { label: 'Living & Debt', value: totalExpenses, color: '#f59e0b' },
-      { label: 'Taxes Paid', value: totalTaxPaid, color: '#ef4444' },
-      { label: 'Final Estate', value: Math.max(0, finalEstate), color: '#10b981' }
+      { name: 'Living & Debt', value: totalExpenses, color: '#f59e0b' },
+      { name: 'Taxes Paid', value: totalTaxPaid, color: '#ef4444' },
+      { name: 'Final Estate', value: Math.max(0, finalEstate), color: '#10b981' }
   ].filter(d => d.value > 0);
-  
   const totalPie = pieData.reduce((sum, d) => sum + d.value, 0) || 1; 
-  let cumulativePercent1 = 0;
-  const conicStr1 = pieData.map(d => {
-      const pct = (d.value / totalPie) * 100;
-      const start = cumulativePercent1;
-      cumulativePercent1 += pct;
-      return `${d.color} ${start}% ${cumulativePercent1}%`;
-  }).join(', ');
 
   // --- Donut Chart 2: Retirement Funding Sources ---
   const fundData = [
-      { label: 'Portfolio W/D', value: retPortfolioWd, color: '#3b82f6' },
-      { label: 'Govt Benefits', value: retGovtBen, color: '#8b5cf6' },
-      { label: 'Pensions', value: retPensions, color: '#06b6d4' },
-      { label: 'Work/Yield', value: retOtherInc, color: '#ec4899' }
+      { name: 'Portfolio W/D', value: retPortfolioWd, color: '#3b82f6' },
+      { name: 'Govt Benefits', value: retGovtBen, color: '#8b5cf6' },
+      { name: 'Pensions', value: retPensions, color: '#06b6d4' },
+      { name: 'Work/Yield', value: retOtherInc, color: '#ec4899' }
   ].filter(d => d.value > 0);
-
   const totalFund = fundData.reduce((sum, d) => sum + d.value, 0) || 1; 
-  let cumulativePercent2 = 0;
-  const conicStr2 = fundData.map(d => {
-      const pct = (d.value / totalFund) * 100;
-      const start = cumulativePercent2;
-      cumulativePercent2 += pct;
-      return `${d.color} ${start}% ${cumulativePercent2}%`;
-  }).join(', ');
 
   // --- Stacked Composition Chart Over Time ---
   const categories = [
@@ -254,6 +289,9 @@ export default function DashboardTab() {
 
       return { year: y.year, age: y.p1Age, tfsa, fhsa, rrsp_rrif, lira_lif, nreg, cash, crypto, realEstate, total };
   });
+
+  // Dynamically filter categories to only show ones that actually have > $0 balance at some point
+  const activeCategories = categories.filter(c => chartData.some((d: any) => d[c.key] > 0));
 
   const rawMaxNW = Math.max(1, ...chartData.map((d: any) => d.total));
   const maxTotalNW = rawMaxNW * 1.05; // 5% buffer at the top
@@ -409,13 +447,17 @@ export default function DashboardTab() {
                           </div>
                       </div>
                       
-                      <div className="progress bg-black bg-opacity-25 shadow-inner rounded-pill overflow-hidden border border-secondary border-opacity-50 my-4" style={{ height: '28px' }}>
+                      {/* Premium Modern Padded Bar */}
+                      <div className="position-relative my-4" style={{ height: '36px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '100px', padding: '4px' }}>
                           <div 
-                              className={`progress-bar progress-bar-striped progress-bar-animated ${isFI ? 'bg-success' : 'bg-primary'}`} 
-                              role="progressbar" 
-                              style={{ width: `${Math.min(fiPercent, 100)}%`, transition: 'width 1s ease-in-out' }} 
+                              className="h-100 rounded-pill d-flex align-items-center justify-content-end px-3 transition-all"
+                              style={{ 
+                                  width: `${Math.min(Math.max(fiPercent, 2), 100)}%`, 
+                                  background: isFI ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' : 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)',
+                                  boxShadow: isFI ? '0 0 15px rgba(52, 211, 153, 0.4)' : '0 0 15px rgba(96, 165, 250, 0.4)',
+                              }} 
                           >
-                              {fiPercent >= 5 && <span className="fw-bold px-2 small text-white shadow-sm">{fiPercent.toFixed(1)}%</span>}
+                              {fiPercent >= 10 && <span className="fw-bolder text-white small" style={{textShadow: '0 1px 2px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>{fiPercent.toFixed(1)}%</span>}
                           </div>
                       </div>
                       
@@ -468,7 +510,7 @@ export default function DashboardTab() {
                   </div>
               </div>
 
-              {/* Double Donut Charts Container */}
+              {/* Double Donut Charts Container (RECHARTS) */}
               <div className="col-12 col-xl-8">
                   <div className="row g-4 h-100">
                       
@@ -479,21 +521,41 @@ export default function DashboardTab() {
                               
                               {totalPie > 1 ? (
                                   <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
-                                      {/* Pure CSS Donut Chart */}
-                                      <div className="position-relative d-flex align-items-center justify-content-center shadow-sm" style={{width: '180px', height: '180px', borderRadius: '50%', background: `conic-gradient(${conicStr1})`, flexShrink: 0}}>
-                                          <div className="rounded-circle d-flex flex-column align-items-center justify-content-center shadow-inner" style={{width: '110px', height: '110px', backgroundColor: 'var(--bg-card)'}}>
+                                      {/* RECHARTS PIE */}
+                                      <div className="position-relative d-flex align-items-center justify-content-center w-100" style={{height: '200px'}}>
+                                          <div className="position-absolute d-flex flex-column align-items-center justify-content-center pointer-events-none text-center" style={{ zIndex: 1 }}>
                                               <span className="small text-muted fw-bold" style={{fontSize: '0.65rem'}}>TOTAL</span>
                                               <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalExpenses + totalTaxPaid + finalEstate)}</span>
                                           </div>
+                                          <div className="w-100 h-100 position-relative" style={{ zIndex: 2 }}>
+                                              <ResponsiveContainer width="100%" height="100%">
+                                                  <PieChart>
+                                                      <Pie 
+                                                          data={pieData} 
+                                                          innerRadius={75} 
+                                                          outerRadius={95} 
+                                                          paddingAngle={4} 
+                                                          dataKey="value" 
+                                                          stroke="none"
+                                                          isAnimationActive={!isExporting}
+                                                      >
+                                                          {pieData.map((entry, index) => (
+                                                              <Cell key={`cell-${index}`} fill={entry.color} />
+                                                          ))}
+                                                      </Pie>
+                                                      <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} offset={20} wrapperStyle={{ zIndex: 1000 }} />
+                                                  </PieChart>
+                                              </ResponsiveContainer>
+                                          </div>
                                       </div>
                                       
-                                      {/* Legend */}
+                                      {/* Custom UI Legend */}
                                       <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
                                           {pieData.map((d, i) => (
                                               <div className="d-flex justify-content-between align-items-center" key={i}>
                                                   <div className="d-flex align-items-center">
                                                       <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
-                                                      <span className="small text-muted fw-bold">{d.label}</span>
+                                                      <span className="small text-muted fw-bold">{d.name}</span>
                                                   </div>
                                                   <span className="fw-bold text-main small">{((d.value / totalPie) * 100).toFixed(1)}%</span>
                                               </div>
@@ -513,21 +575,41 @@ export default function DashboardTab() {
                               
                               {totalFund > 1 ? (
                                   <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
-                                      {/* Pure CSS Donut Chart */}
-                                      <div className="position-relative d-flex align-items-center justify-content-center shadow-sm" style={{width: '180px', height: '180px', borderRadius: '50%', background: `conic-gradient(${conicStr2})`, flexShrink: 0}}>
-                                          <div className="rounded-circle d-flex flex-column align-items-center justify-content-center shadow-inner" style={{width: '110px', height: '110px', backgroundColor: 'var(--bg-card)'}}>
+                                      {/* RECHARTS PIE */}
+                                      <div className="position-relative d-flex align-items-center justify-content-center w-100" style={{height: '200px'}}>
+                                          <div className="position-absolute d-flex flex-column align-items-center justify-content-center pointer-events-none text-center" style={{ zIndex: 1 }}>
                                               <span className="small text-muted fw-bold text-center lh-1 mb-1" style={{fontSize: '0.65rem'}}>RETIREMENT<br/>INCOME</span>
                                               <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalFund)}</span>
                                           </div>
+                                          <div className="w-100 h-100 position-relative" style={{ zIndex: 2 }}>
+                                              <ResponsiveContainer width="100%" height="100%">
+                                                  <PieChart>
+                                                      <Pie 
+                                                          data={fundData} 
+                                                          innerRadius={75} 
+                                                          outerRadius={95} 
+                                                          paddingAngle={4} 
+                                                          dataKey="value" 
+                                                          stroke="none"
+                                                          isAnimationActive={!isExporting}
+                                                      >
+                                                          {fundData.map((entry, index) => (
+                                                              <Cell key={`cell-${index}`} fill={entry.color} />
+                                                          ))}
+                                                      </Pie>
+                                                      <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} offset={20} wrapperStyle={{ zIndex: 1000 }} />
+                                                  </PieChart>
+                                              </ResponsiveContainer>
+                                          </div>
                                       </div>
                                       
-                                      {/* Legend */}
+                                      {/* Custom UI Legend */}
                                       <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
                                           {fundData.map((d, i) => (
                                               <div className="d-flex justify-content-between align-items-center" key={i}>
                                                   <div className="d-flex align-items-center">
                                                       <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
-                                                      <span className="small text-muted fw-bold">{d.label}</span>
+                                                      <span className="small text-muted fw-bold">{d.name}</span>
                                                   </div>
                                                   <span className="fw-bold text-main small">{((d.value / totalFund) * 100).toFixed(1)}%</span>
                                               </div>
@@ -545,18 +627,17 @@ export default function DashboardTab() {
 
           </div>
 
-          {/* FULL WIDTH: Timeline Stacked Bar Chart */}
+          {/* FULL WIDTH: Timeline Stacked Bar Chart (RECHARTS) */}
           <div className="row mt-2">
               <div className="col-12">
-                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm" style={{ height: '560px' }}>
+                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm d-flex flex-column" style={{ height: '600px' }}>
                       <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-bar-chart-line-fill text-primary me-2"></i>Net Worth Composition Over Time</h6>
                       
                       {maxTotalNW > 1 ? (
-                          <div className="d-flex flex-column h-100 w-100" style={{ paddingBottom: '75px' }}>
-                              
-                              {/* Legend Grid */}
+                          <>
+                              {/* Custom Legend Grid - Filtered to Active Categories */}
                               <div className="d-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-secondary flex-shrink-0">
-                                  {[...categories].reverse().map(c => (
+                                  {[...activeCategories].reverse().map(c => (
                                       <div className="d-flex align-items-center" key={c.key}>
                                           <span className="rounded-circle me-2 shadow-sm border border-secondary border-opacity-25" style={{width: '12px', height: '12px', backgroundColor: c.color, display: 'inline-block'}}></span>
                                           <span className="small text-muted fw-bold ls-1" style={{fontSize: '0.75rem'}}>{c.label}</span>
@@ -564,63 +645,43 @@ export default function DashboardTab() {
                                   ))}
                               </div>
 
-                              {/* Chart Area with Left Y-Axis */}
-                              <div className="d-flex w-100 flex-grow-1 h-100">
-                                  
-                                  {/* Y-Axis */}
-                                  <div className="d-flex flex-column justify-content-between align-items-end pe-2 h-100 border-end border-secondary border-opacity-50" style={{ width: '55px', flexShrink: 0 }}>
-                                      {yAxisTicks.map((tick, i) => (
-                                          <span key={i} className="text-muted fw-bold lh-1" style={{ fontSize: '0.65rem', position: 'relative', top: i===0 ? '0' : (i===4 ? '0' : '-6px') }}>
-                                              {formatYAxis(tick)}
-                                          </span>
-                                      ))}
-                                  </div>
-
-                                  {/* CSS Stacked Bar Chart */}
-                                  <div className="w-100 flex-grow-1 d-flex align-items-end ps-2" style={{ gap: '2px' }}>
-                                      {chartData.map((d: any, i: number) => {
-                                          const showLabel = i === 0 || i === chartData.length - 1 || d.year % 5 === 0;
+                              {/* Recharts BarChart Area */}
+                              <div className="w-100 flex-grow-1" style={{ minHeight: 0 }}>
+                                  <ResponsiveContainer width="100%" height="100%">
+                                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.4} />
+                                          <XAxis 
+                                              dataKey="year" 
+                                              stroke="#888" 
+                                              tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} 
+                                              tickMargin={12} 
+                                              minTickGap={25} 
+                                          />
+                                          <YAxis 
+                                              tickFormatter={(val) => formatYAxis(val)} 
+                                              stroke="#888" 
+                                              tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} 
+                                              width={65} 
+                                              axisLine={false}
+                                              tickLine={false}
+                                          />
+                                          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bs-primary)', opacity: 0.1 }} offset={20} wrapperStyle={{ zIndex: 1000 }} />
                                           
-                                          return (
-                                              <div key={d.year} className="d-flex flex-column justify-content-end align-items-center h-100 flex-grow-1 position-relative group" title={`Year: ${d.year} (Age ${d.age})\nTotal Net Worth: ${formatExact(d.total)}`}>
-                                                  
-                                                  {/* The Bar - Stacked from Bottom Up */}
-                                                  <div className="d-flex flex-column-reverse w-100 rounded-top overflow-hidden shadow-sm transition-all hover-opacity-75 bg-black bg-opacity-25 mt-auto" style={{ height: `${(d.total / maxTotalNW) * 100}%`, minHeight: d.total > 0 ? '4px' : '0' }}>
-                                                      {[...categories].map(c => {
-                                                          const val = d[c.key as keyof typeof d] as number;
-                                                          if (val <= 0) return null;
-                                                          return (
-                                                              <div 
-                                                                  key={c.key} 
-                                                                  style={{ height: `${(val / d.total) * 100}%`, backgroundColor: c.color }} 
-                                                                  className="w-100 border-top border-black border-opacity-25 flex-shrink-0" 
-                                                                  title={`${c.label}: ${formatExact(val)}`}
-                                                              ></div>
-                                                          );
-                                                      })}
-                                                  </div>
-                                                  
-                                                  {/* X-Axis Label - Rotated Vertically and positioned absolutely to prevent stretching */}
-                                                  <div className="position-absolute text-muted fw-bold" style={{ 
-                                                      fontSize: '0.65rem', 
-                                                      top: '100%', 
-                                                      left: '50%', 
-                                                      transform: 'translateX(-50%) rotate(-90deg)', 
-                                                      transformOrigin: 'center center',
-                                                      marginTop: '25px', 
-                                                      visibility: showLabel ? 'visible' : 'hidden', 
-                                                      pointerEvents: 'none',
-                                                      whiteSpace: 'nowrap'
-                                                  }}>
-                                                      {d.year}
-                                                  </div>
-                                              </div>
-                                          );
-                                      })}
-                                  </div>
+                                          {/* Stack mapping filtered dynamically */}
+                                          {[...activeCategories].map(c => (
+                                              <Bar 
+                                                  key={c.key} 
+                                                  dataKey={c.key} 
+                                                  name={c.label} 
+                                                  stackId="a" 
+                                                  fill={c.color} 
+                                                  isAnimationActive={!isExporting} 
+                                              />
+                                          ))}
+                                      </BarChart>
+                                  </ResponsiveContainer>
                               </div>
-
-                          </div>
+                          </>
                       ) : (
                           <div className="text-center text-muted fst-italic py-5 my-auto">No assets tracked.</div>
                       )}

@@ -118,3 +118,18 @@ body {
 [data-bs-theme="light"] .table-dark thead tr {
   background-color: var(--bg-surface) !important;
 }
+/* Premium UI Transitions */
+@keyframes fadeInUp {
+  0% { 
+    opacity: 0; 
+    transform: translateY(12px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.fade-in-tab {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

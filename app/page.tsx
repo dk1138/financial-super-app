@@ -458,7 +458,8 @@ function DashboardLayout() {
       <div className="row g-4 flex-grow-1">
         <div className="col-12">
           <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
-            <div className="card-body p-0">
+            {/* APPLY FADE-IN ANIMATION AND KEY HERE */}
+            <div className="card-body p-0 fade-in-tab" key={activeTab}>
               {activeTab === 'plan' && <PlanTab />}
               {activeTab === 'strategy' && <StrategyTab />}
               {activeTab === 'dashboard' && <DashboardTab />}
@@ -487,7 +488,7 @@ function DashboardLayout() {
       </footer>
 
       {/* --- MODALS --- */}
-
+      {/* ... (Modals remain unchanged) ... */}
       {showSaveModal && (
           <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
               <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
@@ -632,7 +633,7 @@ function DashboardLayout() {
           </div>
       )}
 
-      {/* Quick Adjust Floating Overlay - BACKGROUND OPACITY FIXED */}
+      {/* Quick Adjust Floating Overlay */}
       {showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 transition-all" 
                style={{ 

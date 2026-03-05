@@ -361,7 +361,6 @@ export class FinanceEngine {
                 let baseKey = `${personPrefix}_${id}_ret`;
                 let retireKey = `${personPrefix}_${id}_retire_ret`;
                 
-                // Fallback matching UI: If advanced mode is on but retire rate is undefined, fallback to base rate.
                 let rawVal;
                 if (isAdvancedMode && isRetired) {
                     rawVal = this.inputs[retireKey] !== undefined ? this.inputs[retireKey] : this.inputs[baseKey];
@@ -407,18 +406,23 @@ export class FinanceEngine {
             ratesP2.crypto = -0.40; 
         }
 
-        if (simContext) {
-            let shock = 0;
-            if (simContext.method === 'historical' && simContext.histSequence) {
-                shock = simContext.histSequence[yearIndex] - 0.10;
-            } else if (simContext.volatility) {
-                shock = this.randn_bm() * simContext.volatility;
+        // Apply Sequence of Returns Risk shock sequence if passed from the Risk Tab
+        if (simContext && simContext.shockSequence && simContext.shockSequence[yearIndex] !== undefined) {
+            let manualShock = simContext.shockSequence[yearIndex];
+            if (manualShock !== 0) {
+                const accountsToShock = ['tfsa','rrsp','nonreg','crypto','lirf','lif','rrif_acct', 'fhsa', 'resp'];
+                accountsToShock.forEach(acc => { 
+                    if (ratesP1[acc as keyof typeof ratesP1] !== undefined) (ratesP1 as any)[acc] += manualShock; 
+                    if (ratesP2[acc as keyof typeof ratesP2] !== undefined) (ratesP2 as any)[acc] += manualShock; 
+                });
             }
+        } else if (simContext && simContext.volatility) {
+            let shock = this.randn_bm() * simContext.volatility;
             if (shock !== 0) {
                 const accountsToShock = ['tfsa','rrsp','nonreg','crypto','lirf','lif','rrif_acct', 'fhsa', 'resp'];
-                accountsToShock.forEach(account => { 
-                    if (ratesP1[account as keyof typeof ratesP1] !== undefined) (ratesP1 as any)[account] += shock; 
-                    if (ratesP2[account as keyof typeof ratesP2] !== undefined) (ratesP2 as any)[account] += shock; 
+                accountsToShock.forEach(acc => { 
+                    if (ratesP1[acc as keyof typeof ratesP1] !== undefined) (ratesP1 as any)[acc] += shock; 
+                    if (ratesP2[acc as keyof typeof ratesP2] !== undefined) (ratesP2 as any)[acc] += shock; 
                 });
             }
         }
@@ -755,7 +759,7 @@ export class FinanceEngine {
         return result;
     }
 
-    calcOutflows(currentYear: number, yearIndex: number, age: number, baseInflation: number, isRet1: boolean, isRet2: boolean, simContext: any) {
+    calcOutflows(currentYear: number, yearIndex: number, age: number, baseInflation: number, isRet1: boolean, isRet2: boolean, simContext: any, haircut: number = 1.0) {
         let expenseTotals = { curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0 };
         
         if (this.expensesByCategory) {
@@ -811,6 +815,9 @@ export class FinanceEngine {
         }
 
         finalExpenses += activePhasesAmount;
+        
+        // APPLY GUYTON-KLINGER GUARDRAIL HAIRCUT
+        finalExpenses *= haircut;
 
         return {
             total: finalExpenses * baseInflation,
@@ -1466,6 +1473,10 @@ export class FinanceEngine {
             p2: Math.max(0, 40000 - (this.getVal('p2_fhsa') || 0)) 
         };
 
+        // GUARDRAILS STATE
+        let initialWithdrawalRate = 0;
+        let currentExpenseHaircut = 1.0;
+
         for (let i = 0; i <= yearsToRun; i++) {
             const yr = currentYear + i;
             const age1 = p1StartAge + i;
@@ -1566,9 +1577,42 @@ export class FinanceEngine {
 
             this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
 
-            const inflows = this.calcInflows(yr, i, person1, person2, age1, age2, alive1, alive2, isRet1, isRet2, consts, baseInflation, detailed ? trackedEvents : null);
+            let inflows = this.calcInflows(yr, i, person1, person2, age1, age2, alive1, alive2, isRet1, isRet2, consts, baseInflation, detailed ? trackedEvents : null);
             if (detailed && deathEvents.length > 0) {
                 inflows.events.push(...deathEvents);
+            }
+
+            // --- GUYTON-KLINGER GUARDRAILS CHECK ---
+            let isFullyRetired = isRet1 && (this.mode === 'Single' || isRet2);
+            let currentLiquidNW = person1.tfsa + person1.tfsa_successor + person1.rrsp + person1.crypto + person1.nonreg + person1.cash + person1.rrif_acct + (person1.fhsa || 0);
+            if (this.mode === 'Couple') currentLiquidNW += person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nonreg + person2.cash + person2.rrif_acct + (person2.fhsa || 0);
+
+            if (this.inputs['enable_guardrails'] && isFullyRetired) {
+                // Calculate what they *want* to spend this year without a haircut
+                let baseExpObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, 1.0);
+                let currentWR = currentLiquidNW > 0 ? (baseExpObj.total / currentLiquidNW) : 0;
+
+                if (initialWithdrawalRate === 0 && currentLiquidNW > 0) {
+                    initialWithdrawalRate = currentWR;
+                } else if (initialWithdrawalRate > 0 && currentLiquidNW > 0) {
+                    // If withdrawal rate shoots up 20% beyond original target (market crash)
+                    if (currentWR > initialWithdrawalRate * 1.2) {
+                        currentExpenseHaircut *= 0.90; // Apply 10% Cut
+                        initialWithdrawalRate = currentWR; // Reset anchor
+                        if (detailed && !trackedEvents.has('Guardrails Activated')) {
+                            inflows.events.push('Guardrails: Spending Cut (-10%)');
+                        }
+                    } 
+                    // If withdrawal rate drops 20% below original target (market boom)
+                    else if (currentWR < initialWithdrawalRate * 0.8) {
+                        currentExpenseHaircut *= 1.10; // Apply 10% Raise
+                        if (currentExpenseHaircut > 1.0) currentExpenseHaircut = 1.0; // Don't raise above original lifestyle target
+                        initialWithdrawalRate = currentWR;
+                        if (detailed && currentExpenseHaircut <= 1.0 && !trackedEvents.has('Guardrails Lifted')) {
+                            inflows.events.push('Guardrails: Spending Raised (+10%)');
+                        }
+                    }
+                }
             }
 
             // MATHEMATICALLY OPTIMIZED RRSP MELTDOWN: Only withdraw to 0% tax bracket (BPA) to guarantee free money
@@ -1700,7 +1744,8 @@ export class FinanceEngine {
             lifMax1 = Math.max(0, lifMax1 - regMins.lifTaken1);
             lifMax2 = Math.max(0, lifMax2 - regMins.lifTaken2);
 
-            const outflowsObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext);
+            // Pass the calculated haircut to the outflows calculator
+            const outflowsObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, currentExpenseHaircut);
             const expenses = outflowsObj.total;
             const activeExpensePhases = outflowsObj.activePhases;
 
@@ -1873,6 +1918,10 @@ export class FinanceEngine {
 
             previousAFNI = Math.max(0, (taxableIncome1 - actualDeductions.p1) + (taxableIncome2 - actualDeductions.p2));
 
+            // Force Liquid assets to floor at 0 rather than tracking mathematical negative balances from unpayable debt
+            person1.tfsa = Math.max(0, person1.tfsa); person1.rrsp = Math.max(0, person1.rrsp); person1.cash = Math.max(0, person1.cash); person1.nonreg = Math.max(0, person1.nonreg); person1.crypto = Math.max(0, person1.crypto);
+            person2.tfsa = Math.max(0, person2.tfsa); person2.rrsp = Math.max(0, person2.rrsp); person2.cash = Math.max(0, person2.cash); person2.nonreg = Math.max(0, person2.nonreg); person2.crypto = Math.max(0, person2.crypto);
+
             const liquidAssets1 = person1.tfsa + person1.tfsa_successor + person1.rrsp + person1.crypto + person1.nonreg + person1.cash + person1.lirf + person1.lif + person1.rrif_acct + (person1.fhsa || 0);
             const liquidAssets2 = this.mode === 'Couple' ? (person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nonreg + person2.cash + person2.lirf + person2.lif + person2.rrif_acct + (person2.fhsa || 0)) : 0;
             const liquidNetWorth = (liquidAssets1 + liquidAssets2);
@@ -1886,7 +1935,6 @@ export class FinanceEngine {
             finalNetWorth = liquidNetWorth + (realEstateValue - realEstateDebt);
 
             // --- TERMINAL ESTATE TAX CALCULATION ---
-            // Calculate the true After-Tax value of the estate by taxing remaining RRSPs and Capital Gains at death.
             let termInc1 = person1.rrsp + person1.rrif_acct + person1.lif + person1.lirf;
             let termInc2 = (this.mode === 'Couple') ? (person2.rrsp + person2.rrif_acct + person2.lif + person2.lirf) : 0;
             

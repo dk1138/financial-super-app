@@ -215,7 +215,7 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-info text-uppercase ls-1">TFSA</span>
-                                    <InfoBtn align="right" title="TFSA Limit" text="The annual contribution room granted by the CRA for a Tax-Free Savings Account." />
+                                    <InfoBtn align="right" title="TFSA Limit" text="The annual contribution room granted by the CRA for a Tax-Free Savings Account.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account/contributions.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_tfsa_limit} onChange={(val: any) => updateInput('cfg_tfsa_limit', val)} />
                             </div>
@@ -224,7 +224,7 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-danger text-uppercase ls-1">RRSP Max</span>
-                                    <InfoBtn align="right" title="RRSP Limit" text="The absolute maximum RRSP contribution cap set by the CRA for the year." />
+                                    <InfoBtn align="right" title="RRSP Limit" text="The absolute maximum RRSP contribution cap set by the CRA for the year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/contributing-a-rrsp-prpp/contributions-affect-your-rrsp-prpp-deduction-limit.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_rrsp_limit} onChange={(val: any) => updateInput('cfg_rrsp_limit', val)} />
                             </div>
@@ -233,7 +233,7 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-primary text-uppercase ls-1">FHSA</span>
-                                    <InfoBtn align="right" title="FHSA Limit" text="The annual contribution limit for a First Home Savings Account (Max $8,000/yr)." />
+                                    <InfoBtn align="right" title="FHSA Limit" text="The annual contribution limit for a First Home Savings Account (Max $8,000/yr).<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account/contributing-your-fhsa.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_fhsa_limit} onChange={(val: any) => updateInput('cfg_fhsa_limit', val)} />
                             </div>
@@ -242,7 +242,7 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-purple text-uppercase ls-1">RESP</span>
-                                    <InfoBtn align="right" title="RESP Target" text="The optimal annual contribution to maximize the 20% CESG government match ($2,500)." />
+                                    <InfoBtn align="right" title="RESP Target" text="The optimal annual contribution to maximize the 20% CESG government match ($2,500).<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/registered-education-savings-plans-resps.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_resp_limit} onChange={(val: any) => updateInput('cfg_resp_limit', val)} />
                             </div>
@@ -298,6 +298,21 @@ export default function StrategyTab() {
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
                             <input className="form-check-input mt-0 cursor-pointer" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.oas_clawback_optimize ?? false} onChange={(e) => updateInput('oas_clawback_optimize', e.target.checked)} />
+                        </div>
+                    </div>
+
+                    {/* RESTORED GUARDRAILS TOGGLE */}
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4">
+                        <div className="flex-grow-1 pe-md-3">
+                            <h6 className="fw-bold mb-2 text-warning text-uppercase ls-1 d-flex align-items-center">
+                                <i className="bi bi-arrow-down-up me-2 fs-5"></i> Variable Spending (Guardrails)
+                            </h6>
+                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
+                                Implements the Guyton-Klinger Guardrails rule. If a market crash pushes your withdrawal rate 20% higher than your initial retirement withdrawal rate, the engine automatically cuts your lifestyle spending by 10% to preserve capital.
+                            </p>
+                        </div>
+                        <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
+                            <input className="form-check-input mt-0 cursor-pointer" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.enable_guardrails ?? false} onChange={(e) => updateInput('enable_guardrails', e.target.checked)} />
                         </div>
                     </div>
 

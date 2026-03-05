@@ -143,7 +143,7 @@ export default function ProjectionTab() {
   let totalTaxPaid = 0;
   let peakNW = 0;
   let peakAge = 0;
-  let minLiquid = Infinity;
+  let hasShortfall = false;
   let retYears = 0;
 
   results.timeline.forEach((y: any) => {
@@ -159,15 +159,27 @@ export default function ProjectionTab() {
           peakNW = realNW;
           peakAge = y.p1Age;
       }
-      if (y.liquidNW < minLiquid) {
-          minLiquid = y.liquidNW;
+      
+      // STRICT CASH-FLOW SHORTFALL CHECK
+      let contsRaw = 0;
+      if (y.flows && y.flows.contributions) {
+          contsRaw += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+          if (isCouple) contsRaw += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
       }
+
+      const totalSourced = y.grossInflow || 0;
+      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
+      
+      if (totalSourced < totalSpent - 1) {
+          hasShortfall = true;
+      }
+
       if (y.p1Age >= (data.inputs.p1_retireAge || 65)) {
           retYears++;
       }
   });
 
-  const planSuccess = minLiquid >= 0;
+  const planSuccess = !hasShortfall;
   const finalYear = results.timeline[results.timeline.length - 1];
   const finalEstate = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
 
