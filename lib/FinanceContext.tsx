@@ -44,34 +44,34 @@ export const defaultData = {
   expenseMode: 'Simple',
   inputs: {
     // Player 1 Defaults
-    p1_dob: '1987-01', p1_age: 38, p1_retireAge: 60, p1_lifeExp: 90,
-    p1_income: 95000, p1_income_growth: 2.0, p1_rrsp_match: 0.0, p1_rrsp_match_tier: 100.0,
-    p1_cash: 20000, p1_cash_ret: 2.0,
-    p1_tfsa: 52000, p1_tfsa_ret: 6.0,
+    p1_dob: '1996-01', p1_age: 30, p1_retireAge: 65, p1_lifeExp: 90,
+    p1_income: 85000, p1_income_growth: 2.0, p1_rrsp_match: 3.0, p1_rrsp_match_tier: 100.0,
+    p1_cash: 10000, p1_cash_ret: 2.0,
+    p1_tfsa: 25000, p1_tfsa_ret: 6.0,
     p1_fhsa: 0, p1_fhsa_ret: 6.0,
-    p1_rrsp: 85000, p1_rrsp_ret: 6.0,
+    p1_rrsp: 35000, p1_rrsp_ret: 6.0,
     p1_resp: 0, p1_resp_ret: 6.0,
     p1_lirf: 0, p1_lirf_ret: 6.0,
     p1_lif: 0, p1_lif_ret: 5.0,
     p1_rrif_acct: 0, p1_rrif_acct_ret: 5.0,
-    p1_nonreg: 10000, p1_nonreg_acb: 10000, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0,
-    p1_crypto: 5000, p1_crypto_acb: 5000, p1_crypto_ret: 8.0,
-    p1_cpp_enabled: true, p1_cpp_est_base: 10000, p1_cpp_start: 65,
+    p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0,
+    p1_crypto: 0, p1_crypto_acb: 0, p1_crypto_ret: 8.0,
+    p1_cpp_enabled: true, p1_cpp_est_base: 12000, p1_cpp_start: 65,
     p1_oas_enabled: true, p1_oas_years: 40, p1_oas_start: 65,
 
     // Player 2 Defaults
-    p2_dob: '1991-01', p2_age: 34, p2_retireAge: 60, p2_lifeExp: 95,
-    p2_income: 70000, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 100.0,
-    p2_cash: 15000, p2_cash_ret: 2.0,
-    p2_tfsa: 35000, p2_tfsa_ret: 6.0,
+    p2_dob: '1996-01', p2_age: 30, p2_retireAge: 65, p2_lifeExp: 90,
+    p2_income: 75000, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 100.0,
+    p2_cash: 5000, p2_cash_ret: 2.0,
+    p2_tfsa: 15000, p2_tfsa_ret: 6.0,
     p2_fhsa: 0, p2_fhsa_ret: 6.0,
-    p2_rrsp: 42000, p2_rrsp_ret: 6.0,
+    p2_rrsp: 25000, p2_rrsp_ret: 6.0,
     p2_resp: 0, p2_resp_ret: 6.0,
     p2_lirf: 0, p2_lirf_ret: 6.0,
     p2_lif: 0, p2_lif_ret: 5.0,
     p2_rrif_acct: 0, p2_rrif_acct_ret: 5.0,
-    p2_nonreg: 5000, p2_nonreg_acb: 5000, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0,
-    p2_crypto: 2000, p2_crypto_acb: 2000, p2_crypto_ret: 8.0,
+    p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0,
+    p2_crypto: 0, p2_crypto_acb: 0, p2_crypto_ret: 8.0,
     p2_cpp_enabled: true, p2_cpp_est_base: 10000, p2_cpp_start: 65,
     p2_oas_enabled: true, p2_oas_years: 40, p2_oas_start: 65,
 
@@ -92,17 +92,30 @@ export const defaultData = {
     exp_gogo_age: 75, exp_slow_age: 85,
     pension_split_enabled: false
   },
-  properties: [], windfalls: [], additionalIncome: [], leaves: [], dependents: [], debt: [],
+  properties: [
+    {
+        name: 'Primary Residence',
+        value: 700000,
+        mortgage: 350000,
+        rate: 4.5,
+        payment: 1945, // roughly 25-yr ammortization
+        growth: 3.0,
+        includeInNW: true,
+        sellEnabled: false
+    }
+  ], 
+  windfalls: [], additionalIncome: [], leaves: [], dependents: [], debt: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
   },
   expensesByCategory: {
-    housing: { items: [{ name: 'Rent / Mortgage', curr: 2500, ret: 1500, trans: 2000, gogo: 1500, slow: 1500, nogo: 1500, freq: 12 }] },
-    transport: { items: [{ name: 'Vehicle / Insurance', curr: 500, ret: 250, trans: 300, gogo: 250, slow: 150, nogo: 50, freq: 12 }] },
-    lifestyle: { items: [{ name: 'Travel & Hobbies', curr: 400, ret: 1000, trans: 1500, gogo: 1000, slow: 500, nogo: 200, freq: 12 }] },
-    essentials: { items: [{ name: 'Groceries / Health', curr: 800, ret: 800, trans: 800, gogo: 800, slow: 900, nogo: 1200, freq: 12 }] },
-    other: { items: [{ name: 'Miscellaneous', curr: 200, ret: 200, trans: 200, gogo: 200, slow: 200, nogo: 200, freq: 12 }] }
+    // Housing specifically excludes mortgage here because the property engine handles the mortgage deduction automatically.
+    housing: { items: [{ name: 'Property Tax, Insurance & Utilities', curr: 800, ret: 800, trans: 800, gogo: 800, slow: 800, nogo: 800, freq: 12 }] },
+    transport: { items: [{ name: 'Vehicle / Insurance / Gas', curr: 800, ret: 600, trans: 700, gogo: 600, slow: 400, nogo: 150, freq: 12 }] },
+    lifestyle: { items: [{ name: 'Dining, Travel & Hobbies', curr: 1200, ret: 1800, trans: 1500, gogo: 1800, slow: 800, nogo: 300, freq: 12 }] },
+    essentials: { items: [{ name: 'Groceries / Health', curr: 1000, ret: 1000, trans: 1000, gogo: 1000, slow: 1200, nogo: 1500, freq: 12 }] },
+    other: { items: [{ name: 'Miscellaneous', curr: 500, ret: 300, trans: 400, gogo: 300, slow: 300, nogo: 300, freq: 12 }] }
   },
   constants: FINANCIAL_CONSTANTS 
 };
@@ -216,6 +229,9 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
             merged.inputs[newKey] = val;
         });
     }
+
+    // HARD FALLBACK: Always enforce valid financial constants 
+    merged.constants = FINANCIAL_CONSTANTS;
 
     return merged;
 };

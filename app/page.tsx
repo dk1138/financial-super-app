@@ -81,7 +81,7 @@ const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: strin
 };
 
 function DashboardLayout() {
-    const { data: session } = useSession();
+  const { data: session } = useSession();
   const financeContext = useFinance() as any; 
   const { data, updateUseRealDollars, updateInput, resetData } = financeContext;
   
@@ -100,6 +100,8 @@ function DashboardLayout() {
   
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
+  const [pastedJsonText, setPastedJsonText] = useState('');
   const [planToLoad, setPlanToLoad] = useState<string | null>(null);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -230,6 +232,36 @@ function DashboardLayout() {
       setFileMenuOpen(false);
   };
 
+  const handleLoadFromPaste = () => {
+      if (!pastedJsonText.trim()) return;
+      try {
+          const parsedData = JSON.parse(pastedJsonText);
+          if (!parsedData.inputs) throw new Error("Invalid plan data structure");
+
+          const importedName = "Pasted Plan";
+          localStorage.setItem(`rp_saved_plan_${importedName}`, JSON.stringify(parsedData));
+          localStorage.setItem('active_plan_name', importedName);
+
+          let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
+          if (!plans.includes(importedName)) {
+              plans.push(importedName);
+              localStorage.setItem('rp_plan_list', JSON.stringify(plans));
+              setSavedPlans(plans);
+          }
+
+          if (financeContext.loadData) {
+              financeContext.loadData(parsedData);
+              setActivePlanName(importedName);
+              showToast(`Successfully loaded Pasted Plan!`);
+          }
+          setShowPasteJsonModal(false);
+          setPastedJsonText('');
+      } catch (err) {
+          console.error("Paste Import Error:", err);
+          alert("Error loading pasted text. Please ensure it is valid JSON data from this app.");
+      }
+  };
+
   const confirmReset = () => {
       if (resetData) {
           resetData();
@@ -285,69 +317,33 @@ function DashboardLayout() {
       )}
 
       {/* TOP HEADER CONTROLS */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm gap-3 mb-4 rounded-4 p-3 border border-secondary rp-card mb-0">
+      <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-4 rounded-4 p-2 p-md-3 border border-secondary rp-card mb-0 gap-3">
         
-        <div className="d-flex align-items-center flex-wrap gap-3">
-          <h4 className="mb-0 text-nowrap fw-bold d-flex align-items-center">
-            <i className="bi bi-graph-up-arrow text-primary me-3 fs-3"></i>Retirement Planner
-            <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary ms-3 fs-6 fw-medium d-none d-md-inline-block">
-                {activePlanName}
-            </span>
+        {/* LEFT: Branding & File Management */}
+        <div className="d-flex align-items-center gap-2 gap-md-3">
+          <h4 className="mb-0 text-nowrap fw-bold d-flex align-items-center me-1">
+            <i className="bi bi-graph-up-arrow text-primary me-2 fs-4"></i>
+            <span className="d-none d-lg-inline fs-5">Retirement Planner</span>
           </h4>
-        </div>
-        
-        <div className="d-flex align-items-center flex-wrap gap-2">
           
-          {/* Today's Dollar Toggle (Improved styling and InfoBtn) */}
-          <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all me-1" style={{ height: '40px' }}>
-              <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
-                  <input 
-                      className="form-check-input m-0 cursor-pointer" 
-                      type="checkbox" 
-                      id="useRealDollars" 
-                      checked={data.useRealDollars ?? false} 
-                      onChange={(e) => updateUseRealDollars(e.target.checked)} 
-                      style={{width: '2.2em', height: '1.2em'}}
-                  />
-                  <label className="form-check-label small text-nowrap fw-bold text-info ms-2 cursor-pointer d-flex align-items-center" htmlFor="useRealDollars" style={{marginTop: '2px'}}>
-                      Today's $
-                      <InfoBtn 
-                          align="right" 
-                          title="Real vs Nominal Dollars" 
-                          text="<b>Enabled (Real Dollars):</b> All future values are automatically discounted by inflation. This tells you exactly what your future money will be able to buy in today's purchasing power.<br><br><b>Disabled (Nominal):</b> Shows the actual inflated values you will see in your bank account in the future." 
-                      />
-                  </label>
-              </div>
-          </div>
-          {/* --- NEW AUTH UI START --- */}
-          {session ? (
-            <div className="d-flex align-items-center gap-2 bg-input border border-secondary rounded-pill p-1 pe-3">
-              {session.user?.image && <img src={session.user.image} alt="User" className="rounded-circle" width="32" height="32" />}
-              <span className="small fw-bold text-main d-none d-md-block">{session.user?.name?.split(' ')[0]}</span>
-              <button onClick={() => signOut()} className="btn btn-sm btn-link text-danger p-0 ms-2 hover-opacity-100" title="Sign Out">
-                <i className="bi bi-box-arrow-right fs-5"></i>
-              </button>
-            </div>
-          ) : (
-            <button onClick={() => signIn('google')} className="btn btn-outline-primary d-flex align-items-center fw-bold rounded-pill shadow-sm px-3 py-1">
-              <i className="bi bi-google me-2"></i> Sign In
-            </button>
-          )}
-          {/* --- NEW AUTH UI END --- */}
-          {/* Theme Toggle */}
-          <button className="btn btn-outline-secondary d-flex align-items-center justify-content-center bg-input shadow-sm" style={{ width: '40px', height: '40px' }} onClick={toggleTheme} title="Toggle Light/Dark Mode">
-            <i className={theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}></i>
-          </button>
-
-          {/* File Menu Dropdown */}
+          {/* File Menu combined with Active Plan Name */}
           <div className="position-relative">
-            <button className="btn btn-outline-secondary d-flex align-items-center fw-bold bg-input px-3 shadow-sm" type="button" onClick={() => setFileMenuOpen(!fileMenuOpen)} style={{ height: '40px' }}>
-                <i className="bi bi-file-earmark-text me-2 text-primary"></i> File
+            <button 
+                className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
+                type="button" 
+                onClick={() => setFileMenuOpen(!fileMenuOpen)} 
+                style={{ height: '40px' }}
+            >
+                <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
+                <span className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>{activePlanName}</span>
+                <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
             </button>
+            
             {fileMenuOpen && (
                 <>
                     <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
-                    <ul className="dropdown-menu dropdown-menu-end shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1050, top: '100%', right: 0}}>
+                    <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', left: 0, minWidth: '240px'}}>
+                        <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
                         <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
@@ -357,24 +353,87 @@ function DashboardLayout() {
                                 <i className="bi bi-upload me-2"></i> Load from PC (.json)
                             </button>
                         </li>
+                        <li>
+                            <button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}>
+                                <i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan
+                            </button>
+                        </li>
                         <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                         <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
                     </ul>
                 </>
             )}
           </div>
+        </div>
+        
+        {/* RIGHT: Global Utilities & Display Toggles */}
+        <div className="d-flex align-items-center gap-2">
+          
+          {/* Today's Dollar Toggle (Pill) */}
+          <div 
+              className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" 
+              style={{ height: '40px' }} 
+              title="Toggle Real vs Nominal Dollars. When enabled, future values are discounted by inflation to show today's purchasing power."
+          >
+              <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
+                  <input 
+                      className="form-check-input m-0 cursor-pointer shadow-none" 
+                      type="checkbox" 
+                      id="useRealDollars" 
+                      checked={data.useRealDollars ?? false} 
+                      onChange={(e) => updateUseRealDollars(e.target.checked)} 
+                  />
+                  <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block pt-1" htmlFor="useRealDollars">
+                      Today's $
+                  </label>
+              </div>
+          </div>
 
-          {/* Ko-fi Support Button */}
+          {/* Theme Toggle (Circular) */}
+          <button 
+              type="button"
+              className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
+              style={{ width: '40px', height: '40px' }} 
+              onClick={toggleTheme} 
+              title="Toggle Light/Dark Mode"
+          >
+              <i className={`fs-5 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
+          </button>
+
+          {/* Ko-fi Support Button (Circular) */}
           <a 
               href="https://ko-fi.com/P5P11UYZUD" 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="btn d-flex align-items-center fw-bold px-3 shadow-sm transition-all hover-opacity-75" 
-              style={{ height: '40px', backgroundColor: '#72a4f2', color: '#ffffff', border: 'none' }}
+              className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
+              style={{ width: '40px', height: '40px' }}
+              title="Support me on Ko-fi"
           >
-              <i className="bi bi-cup-hot-fill me-2"></i> Support me
+              <i className="bi bi-cup-hot-fill fs-5" style={{ color: '#72a4f2' }}></i>
           </a>
 
+          {/* Google Login (Greyed out Circular) */}
+          {session ? (
+            <div className="position-relative cursor-pointer" onClick={() => signOut()} title="Sign Out">
+                {session.user?.image ? (
+                    <img src={session.user.image} alt="User" className="rounded-circle shadow-sm border border-secondary" width="40" height="40" />
+                ) : (
+                    <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm" style={{ width: '40px', height: '40px' }}>
+                        <i className="bi bi-person-fill fs-5"></i>
+                    </button>
+                )}
+            </div>
+          ) : (
+              <button 
+                  disabled 
+                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50" 
+                  style={{ width: '40px', height: '40px', cursor: 'not-allowed' }} 
+                  title="Sign in is temporarily disabled"
+              >
+                  <i className="bi bi-google fs-5"></i> 
+              </button>
+          )}
+          
         </div>
       </div>
 
@@ -476,6 +535,34 @@ function DashboardLayout() {
                                   ))}
                               </div>
                           )}
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {showPasteJsonModal && (
+          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
+              <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowPasteJsonModal(false)}></div>
+              <div className="modal-dialog modal-dialog-centered modal-lg position-relative" style={{zIndex: 1060}}>
+                  <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
+                      <div className="modal-header border-bottom border-secondary p-3">
+                          <h6 className="modal-title fw-bold d-flex align-items-center"><i className="bi bi-clipboard-check text-info me-2"></i> Paste JSON Plan</h6>
+                          <button type="button" className="btn-close" onClick={() => setShowPasteJsonModal(false)}></button>
+                      </div>
+                      <div className="modal-body p-4">
+                          <textarea 
+                              className="form-control bg-input border-secondary text-main mb-3" 
+                              rows={10} 
+                              value={pastedJsonText} 
+                              onChange={e => setPastedJsonText(e.target.value)} 
+                              placeholder="Paste your JSON data here..." 
+                              autoFocus 
+                          ></textarea>
+                          <div className="d-flex gap-2 justify-content-end">
+                              <button className="btn btn-outline-secondary fw-bold rounded-pill px-4" onClick={() => setShowPasteJsonModal(false)}>Cancel</button>
+                              <button className="btn btn-info fw-bold rounded-pill text-dark px-4" onClick={handleLoadFromPaste}>Load Plan</button>
+                          </div>
                       </div>
                   </div>
               </div>

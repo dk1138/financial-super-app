@@ -263,9 +263,16 @@ export default function ProjectionTab() {
   };
 
   // --- Dynamic Math Tooltips ---
-  const buildTaxTooltip = (taxData: any, taxableInc: number, refund: number, year: number) => {
+  const buildTaxTooltip = (taxData: any, taxIncAfter: number, taxIncBefore: number, refund: number, year: number) => {
       if (!taxData) return "No tax generated.";
-      return `<b>Total Taxable Income:</b> $${formatStr(taxableInc, year)}<hr class="my-1 border-secondary"><b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}<hr class="my-1 border-secondary"><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
+      
+      let incStr = `<b>Total Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
+      // If there's a difference of more than $1 between before/after, show the split impact
+      if (Math.abs(taxIncAfter - taxIncBefore) > 1) {
+          incStr = `<b>Taxable Inc (Before Split):</b> $${formatStr(taxIncBefore, year)}<br><b>Taxable Inc (After Split):</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
+      }
+
+      return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}<hr class="my-1 border-secondary"><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
   };
 
   const buildYieldTooltip = (math: any, year: number) => {
@@ -546,6 +553,9 @@ export default function ProjectionTab() {
 
                 const finalBalancedTotal = Math.max(totalSourcedRaw, totalSpentRaw);
 
+                const p1BeforeSplit = y.taxIncP1 + (y.pensionSplit?.p1ToP2 || 0) - (y.pensionSplit?.p2ToP1 || 0);
+                const p2BeforeSplit = y.taxIncP2 + (y.pensionSplit?.p2ToP1 || 0) - (y.pensionSplit?.p1ToP2 || 0);
+
                 return (
                   <React.Fragment key={y.year}>
                     
@@ -636,12 +646,12 @@ export default function ProjectionTab() {
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP1, y.taxIncP1, (y.discTaxSavingsP1||0) + (y.matchTaxSavingsP1||0), y.year)} /></span>
+                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, (y.discTaxSavingsP1||0) + (y.matchTaxSavingsP1||0), y.year)} /></span>
                                                 <span className="text-danger fw-medium">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
                                             </div>
                                             {isCouple && (
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP2, y.taxIncP2, (y.discTaxSavingsP2||0) + (y.matchTaxSavingsP2||0), y.year)} /></span>
+                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, (y.discTaxSavingsP2||0) + (y.matchTaxSavingsP2||0), y.year)} /></span>
                                                     <span className="text-danger fw-medium">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
                                                 </div>
                                             )}

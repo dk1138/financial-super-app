@@ -96,7 +96,6 @@ export default function OptimizersTab() {
   // Engine States
   const [isCalculating, setIsCalculating] = useState(false);
   const [maxSpendResult, setMaxSpendResult] = useState<any>(null);
-  const [earliestRetResult, setEarliestRetResult] = useState<any>(null);
   const [cppResult, setCppResult] = useState<any>(null);
   const [rrspSweetSpot, setRrspSweetSpot] = useState<any>(null);
   const [tfsaRrspResult, setTfsaRrspResult] = useState<any>(null);
@@ -201,53 +200,7 @@ export default function OptimizersTab() {
               setMaxSpendResult({ difference: -999999, optSpend: 0 });
           }
 
-          // 2. EARLIEST RETIREMENT AGE OPTIMIZER (Freedom Number)
-          const baseP1Age = Number(data.inputs.p1_retireAge) || 65;
-          const baseP2Age = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : baseP1Age;
-          const ageDiff = baseP2Age - baseP1Age;
-
-          let earliestP1 = baseP1Age;
-          let earliestP2 = baseP2Age;
-          let earliestTimeline: any = null;
-          
-          const baseCheck = runSandbox();
-          const baseSuccess = baseCheck.every((y: any) => y.liquidNW > 0);
-
-          if (!baseSuccess) {
-              setEarliestRetResult({ failed: true });
-          } else {
-              for (let testAge = baseP1Age - 1; testAge >= 40; testAge--) {
-                  const testP2 = isCouple ? testAge + ageDiff : testAge;
-                  const overrides = { p1_retireAge: testAge, p2_retireAge: testP2 };
-                  const timeline = runSandbox(overrides);
-                  
-                  const isSuccess = timeline.every((y: any) => y.liquidNW > 0);
-
-                  if (isSuccess) {
-                      earliestP1 = testAge;
-                      earliestP2 = testP2;
-                      earliestTimeline = timeline;
-                  } else {
-                      break; 
-                  }
-              }
-
-              if (earliestTimeline) {
-                  const startYear = earliestTimeline[0].year;
-                  const finalEstate = earliestTimeline[earliestTimeline.length - 1].afterTaxEstate !== undefined ? earliestTimeline[earliestTimeline.length - 1].afterTaxEstate : (earliestTimeline[earliestTimeline.length - 1].liquidNW + (earliestTimeline[earliestTimeline.length - 1].reIncludedEq || 0));
-                  setEarliestRetResult({
-                      failed: false,
-                      p1Age: earliestP1,
-                      p2Age: earliestP2,
-                      yearsSaved: baseP1Age - earliestP1,
-                      finalEstate: getRealValue(finalEstate, startYear, earliestTimeline[earliestTimeline.length-1].year)
-                  });
-              } else {
-                  setEarliestRetResult({ failed: false, yearsSaved: 0, p1Age: baseP1Age, p2Age: baseP2Age });
-              }
-          }
-
-          // 3. CPP/OAS GRID SEARCH OPTIMIZER
+          // 2. CPP/OAS GRID SEARCH OPTIMIZER
           const cppResultsArr: any[] = [];
           for (let cpp = 60; cpp <= 70; cpp++) {
               for (let oas = 65; oas <= 70; oas++) {
@@ -273,7 +226,7 @@ export default function OptimizersTab() {
               scenarios: sortedCpp.slice(0, 5)
           });
 
-          // 4. RRSP TAX BRACKET SWEET SPOT
+          // 3. RRSP TAX BRACKET SWEET SPOT
           const engine = new FinanceEngine(data);
           const prov = data.inputs.tax_province || 'ON';
           const taxDataObj = engine.getInflatedTaxData(1);
@@ -312,11 +265,12 @@ export default function OptimizersTab() {
               p2: isCouple ? getSweetSpot(data.inputs.p2_income) : null
           });
 
-          // 5. TFSA vs RRSP ANALYZER
+          // 4. TFSA vs RRSP ANALYZER
           const p1CurrentInc = Number(data.inputs.p1_income) || 0;
           const p1CurrentTax = engine.calculateTaxDetailed(p1CurrentInc, prov, taxDataObj, 0, 0, p1CurrentInc, 1, 0);
           const currMarginal = p1CurrentTax.margRate;
 
+          const baseCheck = runSandbox();
           let totalRetTax = 0;
           let totalRetInc = 0;
           baseCheck.forEach((y: any) => {
@@ -347,14 +301,6 @@ export default function OptimizersTab() {
   }, [stringifiedInputs]);
 
   // Apply Action Handlers
-  const applyEarliestRetirement = () => {
-      if (earliestRetResult && !earliestRetResult.failed) {
-          updateInput('p1_retireAge', earliestRetResult.p1Age);
-          if (isCouple) updateInput('p2_retireAge', earliestRetResult.p2Age);
-          showToast("Retirement ages successfully applied!");
-      }
-  };
-
   const applyCppStrategy = () => {
       if (cppResult && cppResult.winner) {
           const optCpp = cppResult.winner.cppAge;
@@ -665,7 +611,7 @@ export default function OptimizersTab() {
 
   // --- Category Grouping ---
   const toolCategories = [
-    { title: "Master Simulations", keys: ['dwz', 'freedom', 'cpp'] },
+    { title: "Master Simulations", keys: ['dwz', 'cpp'] },
     { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa'] },
     { title: "Debt, Cash & Life", keys: ['mvi', 'smith', 'emerg', 'car'] },
     { title: "Data Importers", keys: ['cppimport'] }
@@ -710,58 +656,6 @@ export default function OptimizersTab() {
                               <span className="text-muted fst-italic">Awaiting calculation...</span>
                           )}
                       </div>
-                  </div>
-              </div>
-          );
-
-          case 'freedom': return (
-              <div key={id} className="col-12 col-md-6 col-xl-4">
-                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                      <div className="d-flex align-items-center mb-3">
-                          <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                              <i className="bi bi-calendar-heart fs-4"></i>
-                          </div>
-                          <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">Freedom Number</h5>
-                      </div>
-                      <p className="text-muted small mb-4">Finds the earliest possible age you can trigger retirement based on your current savings rate and projected expenses.</p>
-
-                      <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4 position-relative overflow-hidden">
-                          {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center" style={{zIndex: 10}}><span className="spinner-border text-info"></span></div>}
-                          
-                          {earliestRetResult ? (
-                              earliestRetResult.failed ? (
-                                  <>
-                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
-                                      <span className="fs-4 fw-bolder text-danger mb-3">Target Unreachable</span>
-                                      <span className="small text-muted px-2">Your current plan fails even at your selected retirement age.</span>
-                                  </>
-                              ) : earliestRetResult.yearsSaved > 0 ? (
-                                  <>
-                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
-                                      <span className="fs-1 fw-bolder text-info mb-3">Age {earliestRetResult.p1Age} {isCouple && `/ ${earliestRetResult.p2Age}`}</span>
-                                      <span className="badge bg-info bg-opacity-25 text-info border border-info rounded-pill px-3 py-2 mx-auto shadow-sm">
-                                          <i className="bi bi-stars me-2"></i>Retire {earliestRetResult.yearsSaved} years earlier
-                                      </span>
-                                  </>
-                              ) : (
-                                  <>
-                                      <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Earliest Safe Retirement</span>
-                                      <span className="fs-2 fw-bolder text-muted mb-3">Age {earliestRetResult.p1Age} {isCouple && `/ ${earliestRetResult.p2Age}`}</span>
-                                      <span className="small text-warning fw-bold px-2 mt-2 bg-warning bg-opacity-10 border border-warning rounded-pill py-2 mx-auto shadow-sm"><i className="bi bi-check-circle-fill me-2"></i>Absolute earliest safe limit.</span>
-                                  </>
-                              )
-                          ) : (
-                              <span className="text-muted fst-italic">Awaiting calculation...</span>
-                          )}
-                      </div>
-
-                      <button 
-                          className="btn btn-outline-info fw-bold w-100 d-flex align-items-center justify-content-center py-2 mt-auto" 
-                          disabled={!earliestRetResult || earliestRetResult.failed || earliestRetResult.yearsSaved <= 0}
-                          onClick={applyEarliestRetirement}
-                      >
-                          <i className="bi bi-box-arrow-in-down-right me-2"></i> Apply to Plan
-                      </button>
                   </div>
               </div>
           );

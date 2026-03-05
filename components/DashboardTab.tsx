@@ -259,6 +259,18 @@ export default function DashboardTab() {
   const maxTotalNW = rawMaxNW * 1.05; // 5% buffer at the top
   const yAxisTicks = [1, 0.75, 0.5, 0.25, 0].map(f => maxTotalNW * f);
 
+  // --- FI Freedom Target Math ---
+  const firstRetYearObj = results.timeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || results.timeline[results.timeline.length - 1];
+  const firstRetNominalSpend = (firstRetYearObj.expenses || 0) + (firstRetYearObj.mortgagePay || 0);
+  // Deflate back to today's dollars to compare against today's portfolio
+  const yearsToRet = Math.max(0, firstRetYearObj.year - baseYear);
+  const firstRetRealSpend = firstRetNominalSpend / Math.pow(1 + inflation, yearsToRet);
+  
+  const fiTarget = firstRetRealSpend * 25;
+  const currentLiquidNW = results.timeline[0].liquidNW; // Today's portfolio
+  const fiPercent = fiTarget > 0 ? (currentLiquidNW / fiTarget) * 100 : 0;
+  const isFI = fiPercent >= 100;
+
   return (
     <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
         
@@ -297,7 +309,7 @@ export default function DashboardTab() {
       </div>
 
       {/* The Dashboard Container to Capture */}
-      <div ref={dashboardRef} className="bg-body pb-3" style={{ margin: '-1rem', padding: '1rem' }}>
+      <div ref={dashboardRef}>
           
           {/* Watermark only visible in the exported image */}
           {isExporting && (
@@ -374,6 +386,48 @@ export default function DashboardTab() {
                           <InfoBtn align="center" title="Retirement Spend" text="Average annual spending during your retirement years, adjusted for today's dollars if toggled." />
                       </div>
                       <div className="fs-3 fw-bold text-info" title={formatExact(avgRetSpending)}>{formatCurrency(avgRetSpending)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
+                  </div>
+              </div>
+          </div>
+
+          {/* FIRE Readiness Progress Bar */}
+          <div className="row mb-4">
+              <div className="col-12">
+                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm">
+                      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2">
+                          <div className="d-flex flex-column gap-1">
+                              <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-primary">
+                                  <i className="bi bi-rocket-takeoff-fill me-2 fs-5"></i> Freedom Target (FI) Readiness
+                                  <InfoBtn align="left" title="Financial Independence Target" text="Your Freedom Target is 25x your projected annual retirement spending (The 4% Rule) calculated in today's dollars.<br><br>This bar shows your current liquid net worth vs your target, focusing purely on present-day readiness instead of backward-looking estimates." />
+                              </h6>
+                              <span className="text-muted small fw-medium">Based on a target of {formatCurrency(firstRetRealSpend)}/yr starting at Age {data.inputs.p1_retireAge}.</span>
+                          </div>
+                          <div className="text-md-end">
+                              <span className="fw-bold fs-4 text-main">{formatCurrency(currentLiquidNW)}</span>
+                              <span className="text-muted mx-2 fw-light fs-5">/</span>
+                              <span className="fw-bold text-muted fs-5">{formatCurrency(fiTarget)}</span>
+                          </div>
+                      </div>
+                      
+                      <div className="progress bg-black bg-opacity-25 shadow-inner rounded-pill overflow-hidden border border-secondary border-opacity-50 my-4" style={{ height: '28px' }}>
+                          <div 
+                              className={`progress-bar progress-bar-striped progress-bar-animated ${isFI ? 'bg-success' : 'bg-primary'}`} 
+                              role="progressbar" 
+                              style={{ width: `${Math.min(fiPercent, 100)}%`, transition: 'width 1s ease-in-out' }} 
+                          >
+                              {fiPercent >= 5 && <span className="fw-bold px-2 small text-white shadow-sm">{fiPercent.toFixed(1)}%</span>}
+                          </div>
+                      </div>
+                      
+                      {isFI ? (
+                          <div className="text-success small fw-bold text-end lh-1">
+                              <i className="bi bi-check-circle-fill me-1"></i> You have reached Financial Independence! Your current portfolio can safely support your target retirement lifestyle.
+                          </div>
+                      ) : (
+                          <div className="text-muted small text-end fst-italic lh-1">
+                              You need {formatCurrency(Math.max(0, fiTarget - currentLiquidNW))} more to reach your Freedom Target.
+                          </div>
+                      )}
                   </div>
               </div>
           </div>
