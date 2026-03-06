@@ -290,9 +290,9 @@ function DashboardLayout() {
     { id: 'strategy', label: 'Strategy', icon: 'bi-sliders' },
     { id: 'dashboard', label: 'Summary', icon: 'bi-clipboard2-data' },
     { id: 'projection', label: 'Projection', icon: 'bi-table' },
-    { id: 'risk', label: 'Risk (Monte Carlo)', icon: 'bi-activity' },
+    { id: 'risk', label: 'Risk', icon: 'bi-activity' },
     { id: 'cashflow', label: 'Cash Flow', icon: 'bi-diagram-3' },
-    { id: 'optimizers', label: 'Optimizers', icon: 'bi-magic' },
+    { id: 'optimizers', label: 'Tools & Calculators', icon: 'bi-magic' },
     { id: 'compare', label: 'Compare', icon: 'bi-bar-chart-line' }
   ];
 

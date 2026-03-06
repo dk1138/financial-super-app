@@ -85,6 +85,26 @@ const getYAMPE = (year: number) => {
     return getYMPE(year); 
 };
 
+// Canadian Semi-Annual Compounding Mortgage Payment Calc
+const calcCanadianMortgagePmt = (balance: number, annualRate: number, yearsAmort: number) => {
+    if(annualRate === 0 || yearsAmort === 0) return 0;
+    const r = Math.pow(1 + (annualRate/100)/2, 2/12) - 1;
+    const n = yearsAmort * 12;
+    return (balance * r) / (1 - Math.pow(1+r, -n));
+}
+
+// Ontario Land Transfer Tax Calc
+const calcOntarioLTT = (val: number, isToronto: boolean) => {
+    let tax = 0;
+    if (val <= 55000) tax += val * 0.005;
+    else tax += 55000 * 0.005;
+    if (val > 55000 && val <= 250000) tax += (Math.min(val, 250000) - 55000) * 0.01;
+    if (val > 250000 && val <= 400000) tax += (Math.min(val, 400000) - 250000) * 0.015;
+    if (val > 400000 && val <= 2000000) tax += (Math.min(val, 2000000) - 400000) * 0.02;
+    if (val > 2000000) tax += (val - 2000000) * 0.025;
+    return isToronto ? tax * 2 : tax;
+};
+
 export default function OptimizersTab() {
   const { data, updateInput, results } = useFinance();
   const [activeCategory, setActiveCategory] = useState('Master Simulations'); 
@@ -321,6 +341,7 @@ export default function OptimizersTab() {
   const p1Marginal = results?.timeline?.[0]?.taxDetailsP1?.margRate * 100 || 30;
   const kidsCount = data.dependents?.length || 0;
   const firstMortgage = data.properties?.find((p: any) => p.mortgage > 0);
+  const primaryProperty = data.properties?.find((p: any) => p.includeInNW);
 
   // ==========================================
   // MICRO TOOL STATES & MATH
@@ -376,6 +397,68 @@ export default function OptimizersTab() {
   const fhsaTaxRefund = fhsaAmount * (fhsaTaxRate / 100);
   const hbpRepaymentCost = (fhsaAmount / 15) * (1 / (1 - (fhsaTaxRate/100))) * 15; 
 
+  // RESP Grant Maximizer
+  const estChildBirthYear = data.dependents?.[0] ? parseInt(data.dependents[0].dob.split('-')[0]) : (new Date().getFullYear() - 5);
+  const estChildAge = Math.max(0, new Date().getFullYear() - estChildBirthYear);
+  const [respAge, setRespAge] = useState(estChildAge);
+  const [respAnnualCont, setRespAnnualCont] = useState(2500);
+  const [respPriorGrants, setRespPriorGrants] = useState(estChildAge > 0 ? estChildAge * 500 : 0);
+
+  const respRemainingYears = Math.max(0, 17 - respAge);
+  const respRoomLeft = Math.max(0, 7200 - respPriorGrants);
+  const standardGrantPerYear = Math.min(500, respAnnualCont * 0.20);
+  const canCatchUp = respAnnualCont > 2500;
+  const catchUpGrantPerYear = canCatchUp ? Math.min(500, (respAnnualCont - 2500) * 0.20) : 0;
+  const totalGrantPerYear = standardGrantPerYear + catchUpGrantPerYear;
+  const projectedFutureGrants = Math.min(respRoomLeft, totalGrantPerYear * respRemainingYears);
+
+  // Home Move-Up Analyzer
+  const [muCurrentValue, setMuCurrentValue] = useState(primaryProperty?.value || 1000000);
+  const [muMortgage, setMuMortgage] = useState(primaryProperty?.mortgage || 400000);
+  const [muNewValue, setMuNewValue] = useState(1400000);
+  const [muToronto, setMuToronto] = useState(false);
+
+  const muRealtorFee = muCurrentValue * 0.05;
+  const muCurrentLegal = 1500;
+  const muNetEquity = Math.max(0, muCurrentValue - muMortgage - muRealtorFee - muCurrentLegal);
+  const muLtt = calcOntarioLTT(muNewValue, muToronto);
+  const muNewLegal = 2000;
+  const muRequiredMortgage = muNewValue + muLtt + muNewLegal - muNetEquity;
+
+  // Mortgage Renewal Shock
+  const [rnwBalance, setRnwBalance] = useState(430000);
+  const [rnwAmort, setRnwAmort] = useState(20);
+  const [rnwOldRate, setRnwOldRate] = useState(3.29);
+  const [rnwNewRate, setRnwNewRate] = useState(4.85);
+  const [rnwLumpSum, setRnwLumpSum] = useState(0);
+
+  const rnwOldPmt = calcCanadianMortgagePmt(rnwBalance, rnwOldRate, rnwAmort);
+  const rnwNewBalance = Math.max(0, rnwBalance - rnwLumpSum);
+  const rnwNewPmt = calcCanadianMortgagePmt(rnwNewBalance, rnwNewRate, rnwAmort);
+  const rnwDiff = rnwNewPmt - rnwOldPmt;
+  
+  const rnwTotalInterestNoLump = (calcCanadianMortgagePmt(rnwBalance, rnwNewRate, rnwAmort) * rnwAmort * 12) - rnwBalance;
+  const rnwTotalInterestWithLump = (rnwNewPmt * rnwAmort * 12) - rnwNewBalance;
+  const rnwInterestSaved = rnwTotalInterestNoLump - rnwTotalInterestWithLump;
+
+  // DB Pension Commuted Value Analyzer
+  const [cvAge, setCvAge] = useState(55);
+  const [cvMonthly, setCvMonthly] = useState(3000);
+  const [cvLumpSum, setCvLumpSum] = useState(600000);
+  const [cvReturn, setCvReturn] = useState(6.0);
+
+  const cvAnnualPension = cvMonthly * 12;
+  const cvWithdrawalRate = cvLumpSum > 0 ? (cvAnnualPension / cvLumpSum) * 100 : 0;
+  
+  let cvYearsLeft = 0;
+  let tempBal = cvLumpSum;
+  const rCv = cvReturn / 100;
+  while(tempBal > 0 && cvYearsLeft < 50) {
+      tempBal = tempBal * (1 + rCv) - cvAnnualPension;
+      if (tempBal > 0) cvYearsLeft++;
+  }
+  const cvDepletionAge = cvAge + cvYearsLeft;
+
   // Smith Maneuver
   const [smLoan, setSmLoan] = useState(100000);
   const [smHelocRate, setSmHelocRate] = useState(7.2);
@@ -411,6 +494,32 @@ export default function OptimizersTab() {
   const totalFinance = carFinanceDown + (carFinanceMo * carTerm);
   const carDiff = totalLeaseToOwn - totalFinance;
 
+  // Mortgage Affordability Calculator
+  const [affordIncome, setAffordIncome] = useState(householdIncome || 120000);
+  const [affordDebt, setAffordDebt] = useState(500); 
+  const [affordRate, setAffordRate] = useState(6.50); 
+  const [affordPropTax, setAffordPropTax] = useState(4000);
+
+  const affordMonthlyIncome = affordIncome / 12;
+  const affordMonthlyTax = affordPropTax / 12;
+  const affordHeatMonthly = 150; 
+  
+  const maxGdsPayment = (affordMonthlyIncome * 0.39) - affordMonthlyTax - affordHeatMonthly;
+  const maxTdsPayment = (affordMonthlyIncome * 0.44) - affordMonthlyTax - affordHeatMonthly - affordDebt;
+
+  const allowedMortgagePmt = Math.max(0, Math.min(maxGdsPayment, maxTdsPayment));
+  const limitingRatio = maxGdsPayment < maxTdsPayment ? 'GDS' : 'TDS';
+
+  const affordAnnualRate = affordRate / 100;
+  const affordMonthlyRate = Math.pow(1 + affordAnnualRate / 2, 2 / 12) - 1;
+  const affordMonths = 25 * 12; 
+
+  let maxMortgageAmount = 0;
+  if (affordMonthlyRate > 0 && allowedMortgagePmt > 0) {
+      maxMortgageAmount = allowedMortgagePmt * ((1 - Math.pow(1 + affordMonthlyRate, -affordMonths)) / affordMonthlyRate);
+  }
+  const estMaxHomeValue = maxMortgageAmount / 0.8;
+
   // RRSP Gross Up Math
   const activeSweetSpot = rrspSweetSpot?.[grossUpTab];
   const activeMargRate = activeSweetSpot ? activeSweetSpot.marginalRate : (p1Marginal / 100);
@@ -419,9 +528,8 @@ export default function OptimizersTab() {
   const expectedRefund = grossedUpAmount * activeMargRate;
   const currentSweetSpot = rrspSweetSpot?.[sweetSpotTab];
 
-
   // ==========================================
-  // CPP Smart Importer Logic (Enhanced with textContent fix)
+  // CPP Smart Importer Logic
   // ==========================================
   const handleHTMLUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -611,9 +719,9 @@ export default function OptimizersTab() {
 
   // --- Category Grouping ---
   const toolCategories = [
-    { title: "Master Simulations", keys: ['dwz', 'cpp'] },
-    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa'] },
-    { title: "Debt, Cash & Life", keys: ['mvi', 'smith', 'emerg', 'car'] },
+    { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv'] },
+    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa', 'resp'] },
+    { title: "Debt, Real Estate & Cash", keys: ['mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal'] },
     { title: "Data Importers", keys: ['cppimport'] }
   ];
 
@@ -894,6 +1002,50 @@ export default function OptimizersTab() {
               </div>
           );
 
+          case 'resp': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-mortarboard-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">RESP Grant Maximizer</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculate how to efficiently hit the lifetime $7,200 CESG maximum, including CRA's special "catch-up" rules.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Child's Age</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={respAge} onChange={e => setRespAge(parseInt(e.target.value)||0)} max={17} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Annual Contrib.</label>
+                              <CurrencyInput className="form-control form-control-sm border-info" value={respAnnualCont} onChange={setRespAnnualCont} />
+                          </div>
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Lifetime Grants Received to Date <InfoBtn title="Prior Grants" text="Total CESG already paid into your RESP. The maximum lifetime limit is $7,200." /></label>
+                              <CurrencyInput className="form-control form-control-sm" value={respPriorGrants} onChange={setRespPriorGrants} />
+                          </div>
+                      </div>
+
+                      <div className="bg-info bg-opacity-10 border border-info border-opacity-50 rounded-4 p-3 mt-auto shadow-inner text-center">
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                              <span className="text-muted fw-bold small">Expected Annual Grant</span>
+                              <span className="fw-bold text-main">+{formatCurrency(totalGrantPerYear)} <span className="small text-muted fw-normal">/yr</span></span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-info border-opacity-25">
+                              <span className="text-muted fw-bold small">Years Left to Contribute</span>
+                              <span className="fw-bold text-info">{respRemainingYears} yrs</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mt-2">
+                              <span className="text-info fw-bolder text-uppercase ls-1 small">Projected Final Grant</span>
+                              <span className={`fw-bolder fs-5 ${(respPriorGrants + projectedFutureGrants) >= 7200 ? 'text-success' : 'text-warning'}`}>{formatCurrency(respPriorGrants + projectedFutureGrants)} <span className="small fw-normal text-muted">/ $7,200</span></span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
           case 'fhsa': return (
               <div key={id} className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
@@ -984,6 +1136,152 @@ export default function OptimizersTab() {
                       <div className="text-center mt-3 pt-2 border-top border-secondary">
                           <h6 className="fw-bold mb-1 small">Winner: <span className={mviDiff > 0 ? 'text-success' : 'text-primary'}>{mviDiff > 0 ? 'INVESTING' : 'PAYING MORTGAGE'}</span></h6>
                           <span className="text-muted" style={{fontSize: '0.7rem'}}>Diff: <b>{formatCurrency(Math.abs(mviDiff))}</b></span>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'moveup': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-houses-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">Home Move-Up Analyzer</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculate the friction costs of selling your current home and what your new mortgage will look like.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Curr. Home Value</label>
+                              <CurrencyInput className="form-control form-control-sm" value={muCurrentValue} onChange={setMuCurrentValue} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Curr. Mortgage</label>
+                              <CurrencyInput className="form-control form-control-sm border-danger" value={muMortgage} onChange={setMuMortgage} />
+                          </div>
+                          <div className="col-12 mt-3 pt-3 border-top border-secondary">
+                              <label className="form-label small fw-bold text-info mb-1">Target New Home Value</label>
+                              <CurrencyInput className="form-control form-control-sm border-info text-info" value={muNewValue} onChange={setMuNewValue} />
+                          </div>
+                          <div className="col-12">
+                              <div className="form-check form-switch d-flex align-items-center ps-0">
+                                  <input className="form-check-input cursor-pointer ms-0 me-2" type="checkbox" checked={muToronto} onChange={e => setMuToronto(e.target.checked)} />
+                                  <label className="form-check-label small fw-bold text-muted mt-1">Property is in City of Toronto (Double LTT)</label>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="bg-input border border-secondary border-opacity-50 rounded-4 p-3 mt-auto shadow-inner">
+                          <div className="d-flex justify-content-between align-items-center mb-1 text-muted small">
+                              <span>Net Equity Available:</span>
+                              <span className="fw-bold text-main">{formatCurrency(muNetEquity)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-25 text-danger small">
+                              <span>Lost to Friction Costs (Fees/LTT):</span>
+                              <span className="fw-bold">-{formatCurrency(muRealtorFee + muCurrentLegal + muLtt + muNewLegal)}</span>
+                          </div>
+                          
+                          <div className="d-flex justify-content-between align-items-center mt-2">
+                              <span className="text-info fw-bolder text-uppercase ls-1 small">Required Mortgage</span>
+                              <span className="fw-bolder fs-4 text-info">{formatCurrency(muRequiredMortgage)}</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'renewal': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-lightning-charge-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-danger mb-0 text-uppercase ls-1">Mortgage Renewal Shock</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculate the exact monthly payment change upon renewal, and the lifetime interest saved by dropping a lump sum.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Bal at Renewal</label>
+                              <CurrencyInput className="form-control form-control-sm" value={rnwBalance} onChange={setRnwBalance} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Amort. Remaining</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={rnwAmort} onChange={e => setRnwAmort(parseInt(e.target.value)||0)} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Old Rate</label>
+                              <PercentInput className="form-control form-control-sm" value={rnwOldRate} onChange={setRnwOldRate} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">New Target Rate</label>
+                              <PercentInput className="form-control form-control-sm border-danger text-danger" value={rnwNewRate} onChange={setRnwNewRate} />
+                          </div>
+                          <div className="col-12 mt-2 pt-2 border-top border-secondary">
+                              <label className="form-label small fw-bold text-success mb-1">Planned Lump Sum Deposit</label>
+                              <CurrencyInput className="form-control form-control-sm border-success text-success" value={rnwLumpSum} onChange={setRnwLumpSum} />
+                          </div>
+                      </div>
+
+                      <div className="bg-danger bg-opacity-10 border border-danger border-opacity-50 rounded-4 p-3 mt-auto shadow-inner text-center">
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-danger border-opacity-25">
+                              <span className="text-muted fw-bold small">Payment Shock</span>
+                              <span className={`fw-bold fs-5 ${rnwDiff > 0 ? 'text-danger' : 'text-success'}`}>{rnwDiff > 0 ? '+' : ''}{formatCurrency(rnwDiff)} <span className="small text-muted fw-normal fs-6">/mo</span></span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                              <span className="text-success fw-bolder text-uppercase ls-1 small">Lump Sum Interest Saved</span>
+                              <span className="fw-bolder fs-5 text-success">{formatCurrency(rnwInterestSaved)}</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'pensioncv': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-briefcase-fill fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-warning mb-0 text-uppercase ls-1">Pension Commuted Value</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Compare the guaranteed monthly payout of your DB pension against taking the Commuted Value (Lump Sum) to a LIRA.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Your Age</label>
+                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={cvAge} onChange={e => setCvAge(parseInt(e.target.value)||0)} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Est. Mkt Return</label>
+                              <PercentInput className="form-control form-control-sm border-warning" value={cvReturn} onChange={setCvReturn} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Guaranteed /mo</label>
+                              <CurrencyInput className="form-control form-control-sm" value={cvMonthly} onChange={setCvMonthly} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Commuted Value</label>
+                              <CurrencyInput className="form-control form-control-sm" value={cvLumpSum} onChange={setCvLumpSum} />
+                          </div>
+                      </div>
+
+                      <div className="bg-warning bg-opacity-10 border border-warning border-opacity-50 rounded-4 p-3 mt-auto shadow-inner">
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                              <span className="text-muted fw-bold small">Required Yield to Match</span>
+                              <span className="fw-bold text-main fs-5">{cvWithdrawalRate.toFixed(2)}%</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-1 pb-1 border-top border-warning border-opacity-25 pt-2">
+                              <span className="text-muted fw-bold small text-uppercase ls-1">CV Depletion Age</span>
+                              <span className={`fw-bolder fs-4 ${cvDepletionAge >= 95 ? 'text-success' : 'text-danger'}`}>{cvDepletionAge >= 95 ? '95+' : cvDepletionAge}</span>
+                          </div>
+                          <span className="small text-muted d-block text-center mt-2 fst-italic" style={{fontSize: '0.7rem'}}>
+                              {cvDepletionAge >= 95 ? "Lump sum outlasts life expectancy." : `Lump sum runs out at age ${cvDepletionAge}.`}
+                          </span>
                       </div>
                   </div>
               </div>
@@ -1141,6 +1439,53 @@ export default function OptimizersTab() {
                                   <div className="fs-5 fw-bold text-main">{formatCurrency(totalFinance)}</div>
                               </div>
                           </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'afford': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-house-heart fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-success mb-0 text-uppercase ls-1">Mortgage Affordability</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Calculate your maximum borrowing power using standard Canadian GDS (39%) and TDS (44%) stress test limits.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Annual Gross Income</label>
+                              <CurrencyInput className="form-control form-control-sm border-success text-success" value={affordIncome} onChange={setAffordIncome} />
+                          </div>
+                          <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-1">Monthly Debt <InfoBtn title="Monthly Debt" text="Car loans, minimum credit card payments, student loans, etc." /></label>
+                              <CurrencyInput className="form-control form-control-sm border-danger text-danger" value={affordDebt} onChange={setAffordDebt} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Qualifying Rate <InfoBtn title="Qualifying Rate" text="In Canada, you must qualify at the contract rate + 2%, or 5.25%, whichever is higher." /></label>
+                              <PercentInput className="form-control form-control-sm" value={affordRate} onChange={setAffordRate} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Est. Prop Tax/yr</label>
+                              <CurrencyInput className="form-control form-control-sm" value={affordPropTax} onChange={setAffordPropTax} />
+                          </div>
+                      </div>
+
+                      <div className="bg-success bg-opacity-10 border border-success border-opacity-50 rounded-4 p-3 mt-auto shadow-inner text-center">
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-success border-opacity-25">
+                              <span className="text-muted fw-bold small">Max Mortgage</span>
+                              <span className="fw-bold text-main">{formatCurrency(maxMortgageAmount)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-1">
+                              <span className="text-success fw-bolder text-uppercase ls-1 small">Est. Home Price</span>
+                              <span className="fw-bolder fs-4 text-success">{formatCurrency(estMaxHomeValue)}</span>
+                          </div>
+                          <span className="text-muted fst-italic mt-2 d-block" style={{fontSize: '0.65rem'}}>
+                              Assuming 20% down payment. Limited by the {limitingRatio} ratio.
+                          </span>
                       </div>
                   </div>
               </div>

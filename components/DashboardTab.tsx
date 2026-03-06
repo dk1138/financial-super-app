@@ -25,11 +25,33 @@ const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: strin
     );
 };
 
-function ScoreCard({ title, score, max }: { title: string, score: number, max: number }) {
+function ScoreCard({ title, score, max, tooltip }: { title: string, score: number, max: number, tooltip?: string }) {
+  const pct = Math.min(100, Math.max(0, (score / max) * 100));
+  
+  let colorClass = 'text-danger';
+  let bgClass = 'bg-danger';
+  if (pct >= 80) { colorClass = 'text-success'; bgClass = 'bg-success'; }
+  else if (pct >= 60) { colorClass = 'text-warning'; bgClass = 'bg-warning'; }
+
   return (
-    <div className="p-3 border border-secondary rounded-3 bg-black bg-opacity-10 text-center h-100 shadow-sm d-flex flex-column justify-content-center">
-      <div className="text-muted fw-bold text-uppercase ls-1 small mb-1" style={{fontSize: '0.7rem'}}>{title}</div>
-      <div className="fs-5 fw-bolder text-main">{Math.round(score)} <span className="text-muted fw-normal" style={{fontSize: '0.8rem'}}>/ {max}</span></div>
+    <div className="p-3 border border-secondary rounded-4 bg-input shadow-sm h-100 d-flex flex-column justify-content-between transition-all">
+      <div className="d-flex justify-content-between align-items-start mb-2">
+        <div className="text-muted fw-bold text-uppercase ls-1 d-flex align-items-center" style={{fontSize: '0.65rem'}}>
+          {title}
+          {tooltip && <InfoBtn align="left" title={title} text={tooltip} />}
+        </div>
+      </div>
+      
+      <div>
+          <div className="d-flex align-items-end mb-2">
+              <span className={`fw-bolder ${colorClass} lh-1`} style={{fontSize: '1.5rem'}}>{Math.round(score)}</span>
+              <span className="text-muted fw-bold ms-1 mb-1" style={{fontSize: '0.75rem'}}>/ {max}</span>
+          </div>
+          
+          <div className="progress bg-black bg-opacity-25 w-100 rounded-pill overflow-hidden" style={{ height: '6px' }}>
+            <div className={`progress-bar rounded-pill ${bgClass}`} style={{ width: `${pct}%`, opacity: 0.85, transition: 'width 1s ease-in-out' }}></div>
+          </div>
+      </div>
     </div>
   );
 }
@@ -432,16 +454,16 @@ export default function DashboardTab() {
               {/* 4 Health Breakdown Cards */}
               <div className="row g-3 pt-4 mt-1 border-top border-secondary border-opacity-50">
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Retirement Funding" score={planScore.retirementReadiness} max={50} />
+                      <ScoreCard title="Retirement Funding" score={planScore.retirementReadiness} max={50} tooltip="Measures your projected trajectory towards FI and funding a safe retirement without cash shortfalls." />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Debt Health" score={planScore.debtHealth} max={20} />
+                      <ScoreCard title="Debt Health" score={planScore.debtHealth} max={20} tooltip="Evaluates your Debt-to-Income (DTI) ratio to ensure sustainable cash flow." />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Savings Rate" score={planScore.savingsRate} max={20} />
+                      <ScoreCard title="Savings Rate" score={planScore.savingsRate} max={20} tooltip="Measures what percentage of your gross household income is being automatically saved and invested." />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Emergency Reserves" score={planScore.emergencyFund} max={10} />
+                      <ScoreCard title="Emergency Fund" score={planScore.emergencyFund} max={10} tooltip="Checks if your current liquid cash reserves cover at least 6 months of baseline living expenses." />
                   </div>
               </div>
             </div>

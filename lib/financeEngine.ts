@@ -279,7 +279,6 @@ export class FinanceEngine {
         let provMarginalRate = provCalc.marginalRate;
 
         // --- BASIC PERSONAL AMOUNT (BPA) CREDITS ---
-        // Federal BPA (phases down for high earners)
         let bpaMax = 15705 * baseInflation;
         let bpaMin = 14156 * baseInflation;
         let bpaPhaseStart = 173205 * baseInflation;
@@ -291,7 +290,6 @@ export class FinanceEngine {
             fedBpa = Math.max(bpaMin, bpaMax - reduction);
         }
         
-        // Provincial BPA approximations
         let provBpaAmounts: Record<string, number> = {
             'ON': 12399, 'BC': 12580, 'AB': 21885, 'QC': 18056, 'MB': 15780,
             'SK': 18491, 'NS': 11481, 'NB': 13044, 'NL': 10818, 'PE': 13500
@@ -317,7 +315,6 @@ export class FinanceEngine {
         fedTax = Math.max(0, fedTax - fedBpaCredit - fedSpousalCredit);
         provTax = Math.max(0, provTax - provBpaCredit - provSpousalCredit);
 
-        // Adjust Marginal Rate correctly for 0% bracket below BPA + Spousal
         let effectiveFedZeroBracket = fedBpa + (spouseIncome >= 0 && spouseIncome < fedBpa ? (fedBpa - spouseIncome) : 0);
         let effectiveProvZeroBracket = provBpa + (spouseIncome >= 0 && spouseIncome < provBpa ? (provBpa - spouseIncome) : 0);
         if (taxIncomeForFedProv <= effectiveFedZeroBracket) fedMarginalRate = 0;
@@ -326,7 +323,6 @@ export class FinanceEngine {
         // --- CANADA EMPLOYMENT AMOUNT ---
         let fedEmploymentCredit = 0;
         if (earnedIncome > 0) {
-            // Apply credit on earned income up to the CEA maximum limit
             fedEmploymentCredit = Math.min(earnedIncome, 1433 * baseInflation) * 0.15;
         }
 
@@ -777,8 +773,9 @@ export class FinanceEngine {
         
         const calculateMinimumForPerson = (person: any, age: number, preRrsp: number, preRrif: number, preLirf: number, preLif: number) => {
             let factor = this.getRrifFactor(age - 1);
-            let baseRrifBalance = age >= this.CONSTANTS.RRIF_START_AGE ? (preRrsp + preRrif) : preRrif;
-            let baseLifBalance = age >= this.CONSTANTS.RRIF_START_AGE ? (preLirf + preLif) : preLif;
+            let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
+            let baseRrifBalance = age >= rrifStartAge ? (preRrsp + preRrif) : preRrif;
+            let baseLifBalance = age >= rrifStartAge ? (preLirf + preLif) : preLif;
             
             let requiredRrifMin = baseRrifBalance * factor;
             let requiredLifMin = age >= 55 ? (baseLifBalance * factor) : 0;
@@ -793,7 +790,7 @@ export class FinanceEngine {
                 actualRrifTaken += takeFromRrif;
                 minNeeded -= takeFromRrif;
                 
-                if (minNeeded > 0 && age >= this.CONSTANTS.RRIF_START_AGE) {
+                if (minNeeded > 0 && age >= rrifStartAge) {
                     let takeFromRrsp = Math.min(person.rrsp, minNeeded);
                     person.rrsp -= takeFromRrsp;
                     actualRrifTaken += takeFromRrsp;
@@ -807,7 +804,7 @@ export class FinanceEngine {
                 actualLifTaken += takeFromLif;
                 minNeeded -= takeFromLif;
 
-                if (minNeeded > 0 && age >= this.CONSTANTS.RRIF_START_AGE) {
+                if (minNeeded > 0 && age >= rrifStartAge) {
                     let takeFromLirf = Math.min(person.lirf, minNeeded);
                     person.lirf -= takeFromLirf;
                     actualLifTaken += takeFromLirf;
@@ -1161,7 +1158,7 @@ export class FinanceEngine {
                 }
                 
                 let logKey = account;
-                if (account === 'rrsp' && currentAge >= this.CONSTANTS.RRIF_START_AGE) logKey = 'RRIF';
+                if (account === 'rrsp' && currentAge >= (this.CONSTANTS?.RRIF_START_AGE || 72)) logKey = 'RRIF';
                 else if (account === 'rrsp') logKey = 'RRSP';
                 else if (account === 'rrif_acct') logKey = 'RRIF';
                 else if (account === 'lif') logKey = 'LIF';
@@ -1684,27 +1681,6 @@ export class FinanceEngine {
                 }
             }
 
-            if (this.inputs['rrsp_meltdown_enabled']) {
-                const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: string) => {
-                    if (isAlive && currentAge >= 55 && currentAge < this.CONSTANTS.RRIF_START_AGE && person.rrsp > 0) {
-                        let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield);
-                        
-                        let bpa = 15705 * baseInflation; 
-                        let targetBracketCap = bpa; 
-                        
-                        let room = Math.max(0, targetBracketCap - currentTaxable);
-                        if (room > 0) {
-                            let pullAmt = Math.min(room, person.rrsp);
-                            person.rrsp -= pullAmt;
-                            incs.rrspMeltdown += pullAmt; 
-                            if (detailed && flowLog) flowLog.withdrawals[`${prefix.toUpperCase()} RRSP Meltdown`] = pullAmt;
-                        }
-                    }
-                };
-                if (isRet1) executeMeltdown(person1, age1, inflows.p1, alive1, 'p1');
-                if (this.mode === 'Couple' && isRet2) executeMeltdown(person2, age2, inflows.p2, alive2, 'p2');
-            }
-
             let appliedRefundP1 = 0;
             let appliedRefundP2 = 0;
             if (pendingRefund.p1 > 0 && alive1) {
@@ -1756,17 +1732,46 @@ export class FinanceEngine {
                 if (detailed) flowLog.contributions.p2.rrsp += totalMatch2; 
             }
 
-            if (inflows.p1.rrspMeltdown > 0) rrspRoom1 = 0; 
-            if (inflows.p2.rrspMeltdown > 0) rrspRoom2 = 0; 
-
             const regMins = this.calcRegMinimums(person1, person2, age1, age2, alive1, alive2, preGrowthRrsp1, preGrowthRrif1, preGrowthRrsp2, preGrowthRrif2, preGrowthLirf1, preGrowthLif1, preGrowthLirf2, preGrowthLif2);
             
             let wdBreakdown = detailed ? { p1: {} as any, p2: {} as any } : null;
 
-            if (detailed && wdBreakdown) {
-                if (inflows.p1.rrspMeltdown > 0) wdBreakdown.p1.RRSP = (wdBreakdown.p1.RRSP || 0) + inflows.p1.rrspMeltdown;
-                if (inflows.p2.rrspMeltdown > 0) wdBreakdown.p2.RRSP = (wdBreakdown.p2.RRSP || 0) + inflows.p2.rrspMeltdown;
+            // SMART RRSP MELTDOWN (Executed after mandatory Reg minimums to prevent overshooting 0% tax)
+            let meltdownActive = this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true;
+            if (meltdownActive || this.inputs['rrsp_meltdown_enabled'] !== undefined) {
+                const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: 'p1' | 'p2', rrifMin: number, lifMin: number) => {
+                    // Safely check age limit. Removed the 'isFullyRetired' constraint so transitions work.
+                    let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
+                    if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
+                        let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
+                        
+                        let bpa = 15705 * baseInflation; 
+                        let targetBracketCap = bpa; 
+                        
+                        let room = Math.max(0, targetBracketCap - currentTaxable);
+                        if (room > 0) {
+                            let pullAmt = Math.min(room, person.rrsp);
+                            person.rrsp -= pullAmt;
+                            incs.rrspMeltdown += pullAmt; 
+                            
+                            if (detailed && flowLog) {
+                                let key = `${prefix.toUpperCase()} RRSP`;
+                                flowLog.withdrawals[key] = (flowLog.withdrawals[key] || 0) + pullAmt;
+                            }
+                            if (detailed && wdBreakdown) {
+                                wdBreakdown[prefix].RRSP = (wdBreakdown[prefix].RRSP || 0) + pullAmt;
+                            }
+                        }
+                    }
+                };
+                if (alive1) executeMeltdown(person1, age1, inflows.p1, alive1, 'p1', regMins.p1, regMins.lifTaken1);
+                if (this.mode === 'Couple' && alive2) executeMeltdown(person2, age2, inflows.p2, alive2, 'p2', regMins.p2, regMins.lifTaken2);
+            }
 
+            if (inflows.p1.rrspMeltdown > 0) rrspRoom1 = 0; 
+            if (inflows.p2.rrspMeltdown > 0) rrspRoom2 = 0; 
+
+            if (detailed && wdBreakdown) {
                 if (regMins.p1 > 0) { flowLog.withdrawals['P1 RRIF'] = (flowLog.withdrawals['P1 RRIF'] || 0) + regMins.p1; wdBreakdown.p1.RRIF = regMins.p1; wdBreakdown.p1.RRIF_math = regMins.details.p1; }
                 if (regMins.lifTaken1 > 0) { flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; wdBreakdown.p1.LIF = regMins.lifTaken1; wdBreakdown.p1.LIF_math = regMins.details.p1; }
                 if (regMins.p2 > 0) { flowLog.withdrawals['P2 RRIF'] = (flowLog.withdrawals['P2 RRIF'] || 0) + regMins.p2; wdBreakdown.p2.RRIF = regMins.p2; wdBreakdown.p2.RRIF_math = regMins.details.p2; }
