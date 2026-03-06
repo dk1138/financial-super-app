@@ -275,16 +275,94 @@ export default function ProjectionTab() {
   };
 
   // --- Dynamic Math Tooltips ---
-  const buildTaxTooltip = (taxData: any, taxIncAfter: number, taxIncBefore: number, refund: number, year: number) => {
+  const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxIncAfter: number, taxIncBefore: number, refund: number, year: number) => {
       if (!taxData) return "No tax generated.";
       
-      let incStr = `<b>Total Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
-      // If there's a difference of more than $1 between before/after, show the split impact
-      if (Math.abs(taxIncAfter - taxIncBefore) > 1) {
-          incStr = `<b>Taxable Inc (Before Split):</b> $${formatStr(taxIncBefore, year)}<br><b>Taxable Inc (After Split):</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
+      const isP1 = player === 'p1';
+      const pUpper = player.toUpperCase();
+
+      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
+      const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
+      const cpp = isP1 ? y.cppP1 : y.cppP2;
+      const oas = isP1 ? y.oasP1 : y.oasP2;
+      const db = isP1 ? y.dbP1 : y.dbP2;
+      const invInc = isP1 ? y.invIncP1 : y.invIncP2;
+      
+      let breakdownStr = '';
+      let sum = 0;
+      
+      if (salary > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Salary:</span> <span>$${formatStr(salary, year)}</span></div>`; sum += salary; }
+      if (match > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Employer Match:</span> <span>$${formatStr(match, year)}</span></div>`; sum += match; }
+      if (cpp > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>CPP:</span> <span>$${formatStr(cpp, year)}</span></div>`; sum += cpp; }
+      if (oas > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>OAS:</span> <span>$${formatStr(oas, year)}</span></div>`; sum += oas; }
+      if (db > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Pension:</span> <span>$${formatStr(db, year)}</span></div>`; sum += db; }
+      if (invInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Inv. Yield:</span> <span>$${formatStr(invInc, year)}</span></div>`; sum += invInc; }
+
+      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash'));
+
+      taxableWds.forEach(k => {
+          const cleanName = k.replace(`${pUpper} `, '');
+          if (k.includes('RRIF') || k.includes('LIF') || k.includes('RRSP') || k.includes('LIRF')) {
+              const amt = y.flows.withdrawals[k];
+              breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} W/D:</span> <span>$${formatStr(amt, year)}</span></div>`;
+              sum += amt;
+          } else if (k.includes('Non-Reg') || k.includes('Crypto')) {
+              const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
+              if (mathObj && mathObj.tax > 0) {
+                  breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} Taxable:</span> <span>$${formatStr(mathObj.tax, year)}</span></div>`;
+                  sum += mathObj.tax;
+              }
+          }
+      });
+
+      // The true gross is the sum of all taxable inflows
+      let actualGross = sum; 
+      
+      let incStr = `<b>Gross Taxable Income:</b> $${formatStr(actualGross, year)}<br>`;
+      if (breakdownStr) {
+           incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
 
-      return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}<hr class="my-1 border-secondary"><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
+      // Deductions Breakdown
+      const rrspCont = y.flows?.contributions?.[player]?.rrsp || 0;
+      const fhsaCont = y.flows?.contributions?.[player]?.fhsa || 0;
+      const totalDeductions = rrspCont + fhsaCont;
+
+      if (totalDeductions > 0) {
+          incStr += `<b>Total Deductions:</b> -$${formatStr(totalDeductions, year)}<br>`;
+          let dedStr = '';
+          
+          if (rrspCont > 0) {
+              const empMatch = match; 
+              const ownCont = rrspCont - empMatch;
+              
+              if (empMatch > 0) {
+                  dedStr += `<div class="d-flex justify-content-between"><span>RRSP (Employer Match):</span> <span>-$${formatStr(empMatch, year)}</span></div>`;
+                  if (ownCont > 0) {
+                      dedStr += `<div class="d-flex justify-content-between"><span>RRSP (Own Contrib):</span> <span>-$${formatStr(ownCont, year)}</span></div>`;
+                  }
+              } else {
+                  dedStr += `<div class="d-flex justify-content-between"><span>RRSP Contributions:</span> <span>-$${formatStr(rrspCont, year)}</span></div>`;
+              }
+          }
+
+          if (fhsaCont > 0) {
+              dedStr += `<div class="d-flex justify-content-between"><span>FHSA Contributions:</span> <span>-$${formatStr(fhsaCont, year)}</span></div>`;
+          }
+
+          incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${dedStr}</div>`;
+      }
+
+      if (Math.abs(taxIncAfter - taxIncBefore) > 1) {
+          let splitAmt = taxIncAfter - taxIncBefore;
+          incStr += `<b>Pension Split:</b> ${splitAmt > 0 ? '+' : '-'}$${formatStr(Math.abs(splitAmt), year)}<br>`;
+      }
+      incStr += `<b>Net Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
+
+      let clawbackStr = taxData.oas_clawback > 0 ? `<br><b>OAS Clawback:</b> $${formatStr(taxData.oas_clawback, year)}` : '';
+
+      return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
   };
 
   const buildYieldTooltip = (math: any, year: number) => {
@@ -658,12 +736,12 @@ export default function ProjectionTab() {
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, (y.discTaxSavingsP1||0) + (y.matchTaxSavingsP1||0), y.year)} /></span>
+                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, (y.discTaxSavingsP1||0) + (y.matchTaxSavingsP1||0), y.year)} /></span>
                                                 <span className="text-danger fw-medium">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
                                             </div>
                                             {isCouple && (
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, (y.discTaxSavingsP2||0) + (y.matchTaxSavingsP2||0), y.year)} /></span>
+                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, (y.discTaxSavingsP2||0) + (y.matchTaxSavingsP2||0), y.year)} /></span>
                                                     <span className="text-danger fw-medium">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
                                                 </div>
                                             )}

@@ -242,9 +242,28 @@ export class FinanceEngine {
             }
         }
 
+        let cppBasePremium = 0;
+        let cppEnhancedPremium = 0;
+        let yearlyMaxPensionableEarnings = 74600 * baseInflation;
+        let yearlyAdditionalMaxPensionableEarnings = 85000 * baseInflation;
+        let eiMaxInsurableEarnings = 68900 * baseInflation;
+        let cppExemption = 3500 * baseInflation;
+
+        if (earnedIncome > cppExemption) {
+            cppBasePremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * 0.0495; 
+            cppEnhancedPremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * 0.01;
+        }
+        if (earnedIncome > yearlyMaxPensionableEarnings) {
+            cppEnhancedPremium += (Math.min(earnedIncome, yearlyAdditionalMaxPensionableEarnings) - yearlyMaxPensionableEarnings) * 0.04;
+        }
+        
+        const eiPremium = Math.min(earnedIncome, eiMaxInsurableEarnings) * 0.0164;
+
         let actualDividendIncome = Math.min(income, dividendIncome); 
         let grossedUpDividend = actualDividendIncome * 1.38;
-        let ordinaryIncome = Math.max(0, income - actualDividendIncome);
+        
+        // Apply enhanced CPP as a direct deduction from taxable income
+        let ordinaryIncome = Math.max(0, income - actualDividendIncome - cppEnhancedPremium);
         let taxIncomeForFedProv = Math.max(0, ordinaryIncome + grossedUpDividend - oasClawback);
         
         const fedCalc = this.calculateProgressiveTax(taxIncomeForFedProv, taxData.FED.brackets, taxData.FED.rates);
@@ -259,7 +278,7 @@ export class FinanceEngine {
         let fedMarginalRate = fedCalc.marginalRate;
         let provMarginalRate = provCalc.marginalRate;
 
-        // --- NEW: SENIOR TAX CREDITS ---
+        // --- SENIOR TAX CREDITS ---
         let fedAgeCredit = 0;
         let provAgeCredit = 0;
         if (age >= 65) {
@@ -276,9 +295,13 @@ export class FinanceEngine {
             fedPensionCredit = Math.min(eligiblePension, 2000) * 0.15;
             provPensionCredit = Math.min(eligiblePension, 1600) * 0.0505; 
         }
+
+        // --- CPP/EI PREMIUM NON-REFUNDABLE TAX CREDITS ---
+        let fedCppEiCredit = (cppBasePremium + eiPremium) * 0.15;
+        let provCppEiCredit = (cppBasePremium + eiPremium) * 0.0505; // Base estimate for province
         
-        fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit);
-        provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit);
+        fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit);
+        provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit);
         
         let fedDividendCredit = grossedUpDividend * 0.150198;
         let provDivCreditRates: any = { 'ON': 0.1005, 'AB': 0.0812, 'BC': 0.12, 'MB': 0.08, 'NB': 0.14, 'NL': 0.054, 'NS': 0.0885, 'PE': 0.105, 'QC': 0.119, 'SK': 0.11 };
@@ -318,21 +341,6 @@ export class FinanceEngine {
         if (province === 'QC' && taxData.QC.abatement) {
             fedTax = Math.max(0, fedTax - (fedTax * taxData.QC.abatement));
         }
-        
-        let cppPremium = 0; 
-        let yearlyMaxPensionableEarnings = 74600 * baseInflation;
-        let yearlyAdditionalMaxPensionableEarnings = 85000 * baseInflation;
-        let eiMaxInsurableEarnings = 68900 * baseInflation;
-        let cppExemption = 3500 * baseInflation;
-
-        if (earnedIncome > cppExemption) {
-            cppPremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * 0.0595; 
-        }
-        if (earnedIncome > yearlyMaxPensionableEarnings) {
-            cppPremium += (Math.min(earnedIncome, yearlyAdditionalMaxPensionableEarnings) - yearlyMaxPensionableEarnings) * 0.04;
-        }
-        
-        const eiPremium = Math.min(earnedIncome, eiMaxInsurableEarnings) * 0.0164;
 
         let actualMargRate = fedMarginalRate + provMarginalRate;
         if (oasMarginalRate > 0) {
@@ -342,9 +350,9 @@ export class FinanceEngine {
         return { 
             fed: fedTax, 
             prov: provTax, 
-            cpp_ei: cppPremium + eiPremium, 
+            cpp_ei: cppBasePremium + cppEnhancedPremium + eiPremium, 
             oas_clawback: oasClawback, 
-            totalTax: fedTax + provTax + cppPremium + eiPremium + oasClawback, 
+            totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + eiPremium + oasClawback, 
             margRate: actualMargRate 
         };
     }
@@ -1936,7 +1944,9 @@ export class FinanceEngine {
                     year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
                     incomeP1: inflows.p1.gross, incomeP2: inflows.p2.gross, eiMatP1: inflows.p1.eiMat, eiMatP2: inflows.p2.eiMat, topUpP1: inflows.p1.topUp, topUpP2: inflows.p2.topUp,
                     cppP1: inflows.p1.cpp, cppP2: inflows.p2.cpp, oasP1: inflows.p1.oas, oasP2: inflows.p2.oas, ccbP1: inflows.p1.ccb || 0,
-                    oasClawbackP1: (tax1 as any).oas_clawback || 0, oasClawbackP2: (tax2 as any).oas_clawback || 0, taxIncP1: taxableIncome1, taxIncP2: taxableIncome2, oasThreshold: oasThresholdInf,                    
+                    oasClawbackP1: (tax1 as any).oas_clawback || 0, oasClawbackP2: (tax2 as any).oas_clawback || 0, 
+                    taxIncP1: Math.max(0, taxableIncome1 - actualDeductions.p1), taxIncP2: Math.max(0, taxableIncome2 - actualDeductions.p2), oasThreshold: oasThresholdInf,                    
+                    actualDeductionsP1: actualDeductions.p1, actualDeductionsP2: actualDeductions.p2,
                     benefitsP1: inflows.p1.cpp + inflows.p1.oas, benefitsP2: inflows.p2.cpp + inflows.p2.oas, dbP1: inflows.p1.pension, dbP2: inflows.p2.pension,
                     taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: netIncome1, p2Net: netIncome2, pensionSplit: pensionSplitTransfer,
                     expenses: expenses, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
