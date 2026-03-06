@@ -4,13 +4,15 @@ import { useFinance } from '../lib/FinanceContext';
 // --- Smart Tooltip Component ---
 const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
     const [open, setOpen] = useState(false);
-    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '320px' };
+    // Elevated z-index on the popout itself
+    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '320px', zIndex: 99999 };
     if (align === 'right') { posStyles.right = '0'; }
     else if (align === 'left') { posStyles.left = '0'; }
     else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
 
     return (
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
+        // Elevated z-index on the container when open
+        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 99999 : 1}}>
             <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
                 <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
             </button>
@@ -283,6 +285,8 @@ export default function ProjectionTab() {
 
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
+      const totalProgramMatch = isP1 ? (y.rrspTotalMatch1 || 0) : (y.rrspTotalMatch2 || 0);
+      
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
       const db = isP1 ? y.dbP1 : y.dbP2;
@@ -316,7 +320,6 @@ export default function ProjectionTab() {
           }
       });
 
-      // The true gross is the sum of all taxable inflows
       let actualGross = sum; 
       
       let incStr = `<b>Gross Taxable Income:</b> $${formatStr(actualGross, year)}<br>`;
@@ -324,7 +327,6 @@ export default function ProjectionTab() {
            incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
 
-      // Deductions Breakdown
       const rrspCont = y.flows?.contributions?.[player]?.rrsp || 0;
       const fhsaCont = y.flows?.contributions?.[player]?.fhsa || 0;
       const totalDeductions = rrspCont + fhsaCont;
@@ -677,9 +679,9 @@ export default function ProjectionTab() {
 
                     {/* EXPANDED DETAILS ROW */}
                     {isExpanded && (
-                      <tr>
-                        <td colSpan={8} className="p-0 border-bottom border-secondary border-opacity-50">
-                          <div className="m-0 m-md-2 rounded-4 surface-card border border-primary border-opacity-25 shadow-inner slide-down overflow-hidden">
+                      <tr style={{ position: 'relative', zIndex: 999 }}>
+                        <td colSpan={8} className="p-0 border-bottom border-secondary border-opacity-50 position-relative" style={{ zIndex: 999 }}>
+                          <div className="m-0 m-md-2 rounded-4 surface-card border border-primary border-opacity-25 shadow-inner slide-down position-relative" style={{ zIndex: 999 }}>
                             
                             {/* TOP SECTION: Details */}
                             <div className="row g-0 align-items-stretch">
@@ -986,7 +988,7 @@ export default function ProjectionTab() {
                             </div>
                             
                             {/* ABSOLUTE BOTTOM ROW - HORIZONTALLY LOCKED ALIGNMENT */}
-                            <div className="row g-0 bg-black bg-opacity-25 border-top border-secondary mt-auto">
+                            <div className="row g-0 bg-black bg-opacity-25 border-top border-secondary mt-auto" style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Sourced</span>
                                     <span className="text-main fw-bold">{formatCurrency(finalBalancedTotal, y.year)}</span>
