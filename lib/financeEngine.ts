@@ -225,7 +225,7 @@ export class FinanceEngine {
         };
     }
 
-    calculateTaxDetailed(income: number, province: string, taxData: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, dividendIncome = 0, age = 0, eligiblePension = 0) {
+    calculateTaxDetailed(income: number, province: string, taxData: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, dividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1) {
         if (income <= 0) {
             return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0 };
         }
@@ -278,6 +278,58 @@ export class FinanceEngine {
         let fedMarginalRate = fedCalc.marginalRate;
         let provMarginalRate = provCalc.marginalRate;
 
+        // --- BASIC PERSONAL AMOUNT (BPA) CREDITS ---
+        // Federal BPA (phases down for high earners)
+        let bpaMax = 15705 * baseInflation;
+        let bpaMin = 14156 * baseInflation;
+        let bpaPhaseStart = 173205 * baseInflation;
+        let bpaPhaseEnd = 246752 * baseInflation;
+        
+        let fedBpa = bpaMax;
+        if (taxIncomeForFedProv > bpaPhaseStart) {
+            let reduction = (taxIncomeForFedProv - bpaPhaseStart) * ((bpaMax - bpaMin) / (bpaPhaseEnd - bpaPhaseStart));
+            fedBpa = Math.max(bpaMin, bpaMax - reduction);
+        }
+        
+        // Provincial BPA approximations
+        let provBpaAmounts: Record<string, number> = {
+            'ON': 12399, 'BC': 12580, 'AB': 21885, 'QC': 18056, 'MB': 15780,
+            'SK': 18491, 'NS': 11481, 'NB': 13044, 'NL': 10818, 'PE': 13500
+        };
+        let provBpa = (provBpaAmounts[province] || 15000) * baseInflation;
+
+        let fedBpaCredit = fedBpa * 0.15;
+        let provRateLowest = taxData[province]?.rates?.[0] || 0.0505;
+        let provBpaCredit = provBpa * provRateLowest;
+
+        // --- SPOUSAL AMOUNT ---
+        let fedSpousalCredit = 0;
+        let provSpousalCredit = 0;
+        if (spouseIncome >= 0 && spouseIncome < fedBpa) {
+            let fedSpousalAmt = Math.max(0, fedBpa - spouseIncome);
+            fedSpousalCredit = fedSpousalAmt * 0.15;
+        }
+        if (spouseIncome >= 0 && spouseIncome < provBpa) {
+            let provSpousalAmt = Math.max(0, provBpa - spouseIncome);
+            provSpousalCredit = provSpousalAmt * provRateLowest;
+        }
+
+        fedTax = Math.max(0, fedTax - fedBpaCredit - fedSpousalCredit);
+        provTax = Math.max(0, provTax - provBpaCredit - provSpousalCredit);
+
+        // Adjust Marginal Rate correctly for 0% bracket below BPA + Spousal
+        let effectiveFedZeroBracket = fedBpa + (spouseIncome >= 0 && spouseIncome < fedBpa ? (fedBpa - spouseIncome) : 0);
+        let effectiveProvZeroBracket = provBpa + (spouseIncome >= 0 && spouseIncome < provBpa ? (provBpa - spouseIncome) : 0);
+        if (taxIncomeForFedProv <= effectiveFedZeroBracket) fedMarginalRate = 0;
+        if (taxIncomeForFedProv <= effectiveProvZeroBracket) provMarginalRate = 0;
+
+        // --- CANADA EMPLOYMENT AMOUNT ---
+        let fedEmploymentCredit = 0;
+        if (earnedIncome > 0) {
+            // Apply credit on earned income up to the CEA maximum limit
+            fedEmploymentCredit = Math.min(earnedIncome, 1433 * baseInflation) * 0.15;
+        }
+
         // --- SENIOR TAX CREDITS ---
         let fedAgeCredit = 0;
         let provAgeCredit = 0;
@@ -286,21 +338,21 @@ export class FinanceEngine {
             fedAgeCredit = ageAmt * 0.15; 
             
             let provAgeAmt = Math.max(0, 5740 * baseInflation - Math.max(0, income - 45000 * baseInflation) * 0.15);
-            provAgeCredit = provAgeAmt * 0.0505; 
+            provAgeCredit = provAgeAmt * provRateLowest; 
         }
         
         let fedPensionCredit = 0;
         let provPensionCredit = 0;
         if (eligiblePension > 0) {
             fedPensionCredit = Math.min(eligiblePension, 2000) * 0.15;
-            provPensionCredit = Math.min(eligiblePension, 1600) * 0.0505; 
+            provPensionCredit = Math.min(eligiblePension, 1600) * provRateLowest; 
         }
 
         // --- CPP/EI PREMIUM NON-REFUNDABLE TAX CREDITS ---
         let fedCppEiCredit = (cppBasePremium + eiPremium) * 0.15;
-        let provCppEiCredit = (cppBasePremium + eiPremium) * 0.0505; // Base estimate for province
+        let provCppEiCredit = (cppBasePremium + eiPremium) * provRateLowest; 
         
-        fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit);
+        fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit - fedEmploymentCredit);
         provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit);
         
         let fedDividendCredit = grossedUpDividend * 0.150198;
@@ -309,8 +361,15 @@ export class FinanceEngine {
 
         if (province === 'ON') { 
             provTax = Math.max(0, provTax - provDividendCredit);
-            let surtax = 0; 
             
+            // --- ONTARIO LIFT CREDIT ---
+            let liftMax = 875 * baseInflation;
+            let liftAmt = Math.min(liftMax, earnedIncome * 0.0505);
+            let liftPhaseOut = Math.max(0, (taxIncomeForFedProv - 32500 * baseInflation) * 0.10);
+            let liftCredit = Math.max(0, liftAmt - liftPhaseOut);
+            provTax = Math.max(0, provTax - liftCredit);
+
+            let surtax = 0; 
             if (taxData.ON.surtax) { 
                 if (provTax > taxData.ON.surtax.t1) {
                     surtax += (provTax - taxData.ON.surtax.t1) * taxData.ON.surtax.r1; 
@@ -325,10 +384,33 @@ export class FinanceEngine {
             }
             
             provTax += surtax;
-            
-            if (taxIncomeForFedProv > 20000) {
-                provTax += Math.min(900, (taxIncomeForFedProv - 20000) * 0.06);
+
+            // --- ONTARIO TAX REDUCTION (OTR) ---
+            let otrBase = 284 * baseInflation;
+            if (spouseIncome >= 0 && spouseIncome < provBpa) {
+                otrBase += (284 * baseInflation); 
             }
+            let otrAmount = (otrBase * 2) - provTax;
+            if (otrAmount > 0) {
+                provTax = Math.max(0, provTax - otrAmount);
+            }
+            
+            // --- EXACT ONTARIO HEALTH PREMIUM MATHEMATICS ---
+            let ohp = 0;
+            let ti = taxIncomeForFedProv;
+            if (ti > 20000 && ti <= 36000) {
+                ohp = Math.min(300, (ti - 20000) * 0.06);
+            } else if (ti > 36000 && ti <= 48000) {
+                ohp = 300 + Math.min(150, (ti - 36000) * 0.06);
+            } else if (ti > 48000 && ti <= 72000) {
+                ohp = 450 + Math.min(150, (ti - 48000) * 0.25);
+            } else if (ti > 72000 && ti <= 200000) {
+                ohp = 600 + Math.min(150, (ti - 72000) * 0.25);
+            } else if (ti > 200000) {
+                ohp = 750 + Math.min(150, (ti - 200000) * 0.25);
+            }
+            provTax += ohp;
+
         } else {
             provTax = Math.max(0, provTax - provDividendCredit);
             if (province === 'PE' && taxData.PE.surtax && provTax > taxData.PE.surtax.t1) {
@@ -1197,8 +1279,8 @@ export class FinanceEngine {
 
                 if (!typeP1 && !typeP2) break;
 
-                const marginalRate1 = this.calculateTaxDetailed(runningIncome1, province, taxBrackets, oasReceived1, oasThresholdInflation, earnedIncome1, baseInflation, dividendIncome1, age1, eligPension1).margRate;
-                const marginalRate2 = this.calculateTaxDetailed(runningIncome2, province, taxBrackets, oasReceived2, oasThresholdInflation, earnedIncome2, baseInflation, dividendIncome2, age2, eligPension2).margRate;
+                const marginalRate1 = this.calculateTaxDetailed(runningIncome1, province, taxBrackets, oasReceived1, oasThresholdInflation, earnedIncome1, baseInflation, dividendIncome1, age1, eligPension1, alive2 ? runningIncome2 : -1).margRate;
+                const marginalRate2 = this.calculateTaxDetailed(runningIncome2, province, taxBrackets, oasReceived2, oasThresholdInflation, earnedIncome2, baseInflation, dividendIncome2, age2, eligPension2, alive1 ? runningIncome1 : -1).margRate;
 
                 let withdrawTarget: any = null;
                 
@@ -1603,19 +1685,13 @@ export class FinanceEngine {
             }
 
             if (this.inputs['rrsp_meltdown_enabled']) {
-                const taxBrackets = this.getInflatedTaxData(baseInflation);
                 const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: string) => {
                     if (isAlive && currentAge >= 55 && currentAge < this.CONSTANTS.RRIF_START_AGE && person.rrsp > 0) {
                         let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield);
                         
                         let bpa = 15705 * baseInflation; 
-                        let tfsaRoom = consts.tfsaLimit * baseInflation;
                         let targetBracketCap = bpa; 
                         
-                        if (currentTaxable < bpa) {
-                            targetBracketCap = bpa + tfsaRoom; 
-                        }
-
                         let room = Math.max(0, targetBracketCap - currentTaxable);
                         if (room > 0) {
                             let pullAmt = Math.min(room, person.rrsp);
@@ -1708,14 +1784,14 @@ export class FinanceEngine {
             let getEligPension1 = () => inflows.p1.pension + (age1 >= 65 ? (regMins.p1 + regMins.lifTaken1 + (wdBreakdown?.p1?.RRIF || 0) + (wdBreakdown?.p1?.LIF || 0)) : 0);
             let getEligPension2 = () => inflows.p2.pension + (age2 >= 65 ? (regMins.p2 + regMins.lifTaken2 + (wdBreakdown?.p2?.RRIF || 0) + (wdBreakdown?.p2?.LIF || 0)) : 0);
 
-            let taxWithoutMatch1 = alive1 ? this.calculateTaxDetailed(grossTaxable1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1()) : {totalTax: 0, margRate: 0};
-            let taxWithoutMatch2 = alive2 ? this.calculateTaxDetailed(grossTaxable2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2()) : {totalTax: 0, margRate: 0};
+            let taxWithoutMatch1 = alive1 ? this.calculateTaxDetailed(grossTaxable1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? grossTaxable2 : -1) : {totalTax: 0, margRate: 0};
+            let taxWithoutMatch2 = alive2 ? this.calculateTaxDetailed(grossTaxable2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? grossTaxable1 : -1) : {totalTax: 0, margRate: 0};
 
             let taxableIncome1 = Math.max(0, grossTaxable1 - totalMatch1);
             let taxableIncome2 = Math.max(0, grossTaxable2 - totalMatch2);
 
-            let taxWithMatchOnly1 = alive1 ? this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1()) : {totalTax: 0, margRate: 0};
-            let taxWithMatchOnly2 = alive2 ? this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2()) : {totalTax: 0, margRate: 0};
+            let taxWithMatchOnly1 = alive1 ? this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1) : {totalTax: 0, margRate: 0};
+            let taxWithMatchOnly2 = alive2 ? this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1) : {totalTax: 0, margRate: 0};
 
             let matchTaxSavings1 = taxWithoutMatch1.totalTax - taxWithMatchOnly1.totalTax;
             let matchTaxSavings2 = taxWithoutMatch2.totalTax - taxWithMatchOnly2.totalTax;
@@ -1848,8 +1924,8 @@ export class FinanceEngine {
                 });
             }
             
-            let tax1 = alive1 ? this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1()) : {totalTax: 0, margRate: 0};
-            let tax2 = alive2 ? this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2()) : {totalTax: 0, margRate: 0};
+            let tax1 = alive1 ? this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1) : {totalTax: 0, margRate: 0};
+            let tax2 = alive2 ? this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1) : {totalTax: 0, margRate: 0};
 
             let netIncome1 = taxableIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
             let netIncome2 = alive2 ? taxableIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0;
@@ -1866,18 +1942,18 @@ export class FinanceEngine {
                 this.handleSurplus(netSurplus, person1, person2, alive1, alive2, flowLog, i, consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms);
                 
                 if (actualDeductions.p1 > 0) {
-                    let recalculatedTax1 = this.calculateTaxDetailed(taxableIncome1 - actualDeductions.p1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1());
+                    let recalculatedTax1 = this.calculateTaxDetailed(taxableIncome1 - actualDeductions.p1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (taxableIncome2 - actualDeductions.p2) : -1);
                     pendingRefund.p1 = tax1.totalTax - recalculatedTax1.totalTax;
                 }
                 if (actualDeductions.p2 > 0) {
-                    let recalculatedTax2 = this.calculateTaxDetailed(taxableIncome2 - actualDeductions.p2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2());
+                    let recalculatedTax2 = this.calculateTaxDetailed(taxableIncome2 - actualDeductions.p2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (taxableIncome1 - actualDeductions.p1) : -1);
                     pendingRefund.p2 = tax2.totalTax - recalculatedTax2.totalTax;
                 }
             } else {
                 let cashFromNonTaxableWithdrawals = 0; 
                 for (let pass = 0; pass < 10; pass++) {
-                    let dynTax1 = this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1());
-                    let dynTax2 = this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2());
+                    let dynTax1 = this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1);
+                    let dynTax2 = this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1);
                     tax1 = dynTax1; tax2 = dynTax2;
 
                     let dynNet1 = taxableIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
@@ -1896,8 +1972,8 @@ export class FinanceEngine {
                     }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, overrideDecum, getEligPension1(), getEligPension2());
                 }
                 
-                tax1 = this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1());
-                tax2 = this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2());
+                tax1 = this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1);
+                tax2 = this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1);
             }
 
             previousAFNI = Math.max(0, (taxableIncome1 - actualDeductions.p1) + (taxableIncome2 - actualDeductions.p2));
@@ -1926,8 +2002,8 @@ export class FinanceEngine {
             termInc1 += cg1 * 0.5;
             termInc2 += cg2 * 0.5;
             
-            let termTax1 = this.calculateTaxDetailed(termInc1, this.getRaw('tax_province'), taxBrackets, 0, 0, 0, baseInflation, 0, age1, 0).totalTax;
-            let termTax2 = (this.mode === 'Couple') ? this.calculateTaxDetailed(termInc2, this.getRaw('tax_province'), taxBrackets, 0, 0, 0, baseInflation, 0, age2, 0).totalTax : 0;
+            let termTax1 = this.calculateTaxDetailed(termInc1, this.getRaw('tax_province'), taxBrackets, 0, 0, 0, baseInflation, 0, age1, 0, alive2 ? termInc2 : -1).totalTax;
+            let termTax2 = (this.mode === 'Couple') ? this.calculateTaxDetailed(termInc2, this.getRaw('tax_province'), taxBrackets, 0, 0, 0, baseInflation, 0, age2, 0, alive1 ? termInc1 : -1).totalTax : 0;
             
             let afterTaxEstateValue = finalNetWorth - termTax1 - termTax2;
 
