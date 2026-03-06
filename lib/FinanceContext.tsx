@@ -3,7 +3,7 @@
 import React, { useEffect, ReactNode, useRef } from 'react';
 import { create } from 'zustand';
 import { FINANCIAL_CONSTANTS } from './config';
-import { calculatePlanScore } from './financeEngine'; // NEW IMPORT
+import { calculatePlanScore } from './financeEngine';
 
 // --- STRICT SANITIZATION ENGINE ---
 const sanitizeValue = (val: any): any => {
@@ -88,7 +88,7 @@ export const defaultData = {
         sellEnabled: false
     }
   ], 
-  windfalls: [], additionalIncome: [], leaves: [], dependents: [], debt: [],
+  windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
@@ -138,7 +138,7 @@ export const emptyData = {
     skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
     exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false
   },
-  properties: [], windfalls: [], additionalIncome: [], leaves: [], dependents: [], debt: [],
+  properties: [], windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
@@ -158,7 +158,7 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
     merged.useRealDollars = parsedData.useRealDollars ?? parsedData.inputs?.useRealDollars ?? false;
     merged.expenseMode = parsedData.expenseMode || (parsedData.inputs?.expense_mode_advanced ? 'Advanced' : 'Simple');
 
-    ['properties', 'windfalls', 'additionalIncome', 'leaves', 'dependents', 'debt'].forEach(arr => {
+    ['properties', 'windfalls', 'additionalIncome', 'customAssets', 'leaves', 'dependents', 'debt'].forEach(arr => {
         if (parsedData[arr]) merged[arr] = parsedData[arr];
     });
 
@@ -218,7 +218,6 @@ export const useFinanceStore = create<any>((set) => ({
   planScore: null,
   isCalculating: true,
   setData: (updater: any) => set((state: any) => ({ data: typeof updater === 'function' ? updater(state.data) : updater })),
-  // Calculate score whenever new results come back from the worker
   setResults: (results: any) => set((state: any) => ({ 
       results, 
       planScore: calculatePlanScore(state.data, results?.timeline), 
@@ -286,7 +285,7 @@ export function useFinance() {
   return {
     data: store.data,
     results: store.results,
-    planScore: store.planScore, // NEW EXPORT
+    planScore: store.planScore,
     isCalculating: store.isCalculating,
     updateInput: (key: string, value: any) => store.setData((prev: any) => ({ ...prev, inputs: { ...prev.inputs, [key]: sanitizeValue(value) } })),
     updateMultipleInputs: (updates: Record<string, any>) => {

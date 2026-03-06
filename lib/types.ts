@@ -21,18 +21,26 @@ export interface Property {
     payment: number;
     growth: number;
     includeInNW: boolean;
+    sellEnabled?: boolean;
+    sellAge?: number;
+    replacementValue?: number;
 }
 
 export interface Debt {
     name: string;
     amount: number;
     start: string;
+    type?: 'one' | 'monthly' | 'yearly';
+    duration?: number;
+    rate?: number;
 }
 
 export interface Windfall {
     name: string;
     amount: number;
     start: string;
+    freq?: 'one' | 'month' | 'year';
+    end?: string;
     taxable?: boolean;
 }
 
@@ -56,14 +64,25 @@ export interface AdditionalIncome {
     taxable: boolean;
 }
 
+export interface CustomAsset {
+    owner: 'p1' | 'p2';
+    name: string;
+    type: 'tfsa' | 'rrsp' | 'fhsa' | 'nonreg' | 'cash' | 'crypto' | 'lirf' | 'lif' | 'rrif_acct' | 'resp';
+    balance: number;
+    acb?: number; // Only relevant for nonreg and crypto
+    rate: number;
+    retireRate: number;
+}
+
 export interface PlanData {
     mode: 'Single' | 'Couple';
     useRealDollars: boolean;
     expenseMode: 'Simple' | 'Advanced';
-    inputs: Record<string, any>; // Flexible map for simple inputs
+    inputs: Record<string, any>; 
     properties: Property[];
     windfalls: Windfall[];
     additionalIncome: AdditionalIncome[];
+    customAssets: CustomAsset[];
     leaves: any[];
     dependents: Dependent[];
     debt: Debt[];

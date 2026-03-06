@@ -10,6 +10,7 @@ export class FinanceEngine {
     properties: any[];
     windfalls: any[];
     additionalIncome: any[];
+    customAssets: any[];
     leaves: any[];
     strategies: { accum: string[], decum: string[] };
     dependents: any[];
@@ -22,10 +23,12 @@ export class FinanceEngine {
     strategyLabels: any;
 
     constructor(data: any) {
-        this.inputs = data.inputs || {};
+        // Deep clone inputs so we can safely mutate them for custom asset aggregation
+        this.inputs = JSON.parse(JSON.stringify(data.inputs || {}));
         this.properties = data.properties || [];
         this.windfalls = data.windfalls || [];
         this.additionalIncome = data.additionalIncome || [];
+        this.customAssets = data.customAssets || [];
         this.leaves = data.leaves || []; 
         this.strategies = data.strategies || { accum: [], decum: [] };
         this.dependents = data.dependents || []; 
@@ -36,6 +39,45 @@ export class FinanceEngine {
         this.expensePhases = data.expensePhases || [];
         this.CONSTANTS = data.constants || {};
         this.strategyLabels = data.strategyLabels || {};
+
+        // --- AGGREGATE CUSTOM ASSETS ---
+        // Dynamically merge custom accounts into the primary tax buckets 
+        // using mathematically perfect weighted average return rates.
+        if (this.customAssets.length > 0) {
+            this.customAssets.forEach(ca => {
+                let p = ca.owner; // 'p1' or 'p2'
+                let t = ca.type; // 'tfsa', 'rrsp', etc.
+                let bal = Number(ca.balance) || 0;
+                
+                if (bal > 0) {
+                    let rate = Number(ca.rate) || 0;
+                    let retRate = ca.retireRate !== undefined ? Number(ca.retireRate) : rate;
+                    let acb = Number(ca.acb) || 0;
+
+                    let baseBalKey = `${p}_${t}`;
+                    let baseRateKey = `${p}_${t}_ret`;
+                    let baseRetRateKey = `${p}_${t}_retire_ret`;
+
+                    let currentBaseBal = this.getVal(baseBalKey);
+                    let currentBaseRate = this.inputs[baseRateKey] !== undefined ? Number(this.inputs[baseRateKey]) : 6.0;
+                    let currentBaseRetRate = this.inputs[baseRetRateKey] !== undefined ? Number(this.inputs[baseRetRateKey]) : currentBaseRate;
+
+                    let totalBal = currentBaseBal + bal;
+                    let blendedRate = ((currentBaseBal * currentBaseRate) + (bal * rate)) / totalBal;
+                    let blendedRetRate = ((currentBaseBal * currentBaseRetRate) + (bal * retRate)) / totalBal;
+
+                    this.inputs[baseRateKey] = blendedRate;
+                    this.inputs[baseRetRateKey] = blendedRetRate;
+                    this.inputs[baseBalKey] = totalBal;
+
+                    if (t === 'nonreg' || t === 'crypto') {
+                        let baseAcbKey = `${p}_${t}_acb`;
+                        let currentAcb = this.inputs[baseAcbKey] !== undefined ? this.getVal(baseAcbKey) : currentBaseBal;
+                        this.inputs[baseAcbKey] = currentAcb + acb;
+                    }
+                }
+            });
+        }
     }
 
     getVal(id: string) {
@@ -1451,6 +1493,7 @@ export class FinanceEngine {
                     properties: this.properties,
                     windfalls: this.windfalls,
                     additionalIncome: this.additionalIncome,
+                    customAssets: this.customAssets, // Ensure custom assets pass through
                     leaves: this.leaves,
                     strategies: { accum: this.strategies.accum, decum: decumOrder },
                     dependents: this.dependents,
@@ -1740,7 +1783,6 @@ export class FinanceEngine {
             let meltdownActive = this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true;
             if (meltdownActive || this.inputs['rrsp_meltdown_enabled'] !== undefined) {
                 const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: 'p1' | 'p2', rrifMin: number, lifMin: number) => {
-                    // Safely check age limit. Removed the 'isFullyRetired' constraint so transitions work.
                     let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
                     if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
                         let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;

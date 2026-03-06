@@ -404,8 +404,11 @@ export default function PlanTab() {
     updateExpenseCategory(cat, newItems);
   };
 
-  const p1Total = ACCOUNT_TYPES.reduce((sum, acct) => sum + (Number(data.inputs[`p1_${acct.id}`]) || 0), 0) + (Number(data.inputs['p1_nonreg']) || 0) + (Number(data.inputs['p1_crypto']) || 0);
-  const p2Total = ACCOUNT_TYPES.reduce((sum, acct) => sum + (Number(data.inputs[`p2_${acct.id}`]) || 0), 0) + (Number(data.inputs['p2_nonreg']) || 0) + (Number(data.inputs['p2_crypto']) || 0);
+  const customP1Total = data.customAssets?.filter((a: any) => a.owner === 'p1').reduce((sum: number, a: any) => sum + (Number(a.balance) || 0), 0) || 0;
+  const customP2Total = data.customAssets?.filter((a: any) => a.owner === 'p2').reduce((sum: number, a: any) => sum + (Number(a.balance) || 0), 0) || 0;
+
+  const p1Total = ACCOUNT_TYPES.reduce((sum, acct) => sum + (Number(data.inputs[`p1_${acct.id}`]) || 0), 0) + (Number(data.inputs['p1_nonreg']) || 0) + (Number(data.inputs['p1_crypto']) || 0) + customP1Total;
+  const p2Total = ACCOUNT_TYPES.reduce((sum, acct) => sum + (Number(data.inputs[`p2_${acct.id}`]) || 0), 0) + (Number(data.inputs['p2_nonreg']) || 0) + (Number(data.inputs['p2_crypto']) || 0) + customP2Total;
   const hhTotal = p1Total + (isCouple ? p2Total : 0);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
@@ -720,6 +723,72 @@ export default function PlanTab() {
                                       </div>
                                   </div>
                               ))}
+
+                              {/* Additional Custom Assets */}
+                              <div className="mt-4 pt-3 border-top border-secondary">
+                                  <div className="d-flex justify-content-between align-items-center mb-3">
+                                      <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0">Additional Accounts</h6>
+                                      <button type="button" className={`btn btn-sm rounded-pill px-3 py-1 fw-bold btn-outline-${isP1 ? 'info' : 'primary'}`} style={!isP1 ? {color:'var(--bs-purple)', borderColor:'var(--bs-purple)'} : {}} onClick={() => addArrayItem('customAssets', { owner: p, name: 'New Account', type: 'tfsa', balance: 0, rate: 6.0, retireRate: 6.0, acb: 0 })}>
+                                          <i className="bi bi-plus-lg me-1"></i> Add Account
+                                      </button>
+                                  </div>
+                                  {(!data.customAssets || data.customAssets.filter((ca: any) => ca.owner === p).length === 0) && (
+                                      <div className="text-center small text-muted fst-italic py-2">No additional accounts added.</div>
+                                  )}
+                                  {data.customAssets?.filter((ca: any) => ca.owner === p).map((ca: any) => {
+                                      const globalIdx = data.customAssets.indexOf(ca);
+                                      const updateCa = (field: string, val: any) => updateArrayItem('customAssets', globalIdx, field, val);
+                                      return (
+                                          <div className="p-3 bg-input border border-secondary rounded-3 shadow-sm d-flex flex-column gap-3 mb-3" key={`ca_${globalIdx}`}>
+                                              <div className="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2">
+                                                  <div className="d-flex align-items-center gap-2 w-100 me-3">
+                                                      <i className="bi bi-piggy-bank-fill text-primary fs-5"></i>
+                                                      <input type="text" maxLength={30} className="form-control bg-transparent border-0 text-main fw-bold p-0 shadow-none" value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Account Name" />
+                                                  </div>
+                                                  <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('customAssets', globalIdx)}><i className="bi bi-x-lg fs-5"></i></button>
+                                              </div>
+                                              <div className="row g-3">
+                                                  <div className="col-12 col-md-6">
+                                                      <label className="small text-muted mb-1 fw-bold">Account Type</label>
+                                                      <select className="form-select form-select-sm bg-black bg-opacity-25 border-secondary text-main fw-bold shadow-sm" value={ca.type || 'tfsa'} onChange={e => updateCa('type', e.target.value)}>
+                                                          <option value="tfsa">TFSA</option>
+                                                          <option value="rrsp">RRSP</option>
+                                                          <option value="fhsa">FHSA</option>
+                                                          <option value="nonreg">Non-Registered</option>
+                                                          <option value="crypto">Crypto</option>
+                                                          <option value="cash">Cash</option>
+                                                          <option value="lirf">LIRA</option>
+                                                          <option value="lif">LIF</option>
+                                                          <option value="rrif_acct">RRIF</option>
+                                                          <option value="resp">RESP</option>
+                                                      </select>
+                                                  </div>
+                                                  <div className="col-12 col-md-6">
+                                                      <label className="small text-muted mb-1 fw-bold">Balance ($)</label>
+                                                      <CurrencyInput className="form-control form-control-sm" value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} />
+                                                  </div>
+                                                  {(ca.type === 'nonreg' || ca.type === 'crypto') && (
+                                                      <div className="col-12 col-md-6">
+                                                          <label className="small text-muted mb-1 fw-bold">Book Value / ACB ($)</label>
+                                                          <CurrencyInput className="form-control form-control-sm" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} />
+                                                      </div>
+                                                  )}
+                                                  <div className={showAssetMixUI ? "col-6" : "col-12 col-md-6"}>
+                                                      <label className="small text-muted mb-1 fw-bold">Pre-Ret. Return (%)</label>
+                                                      <PercentInput className="form-control form-control-sm" value={ca.rate} onChange={(val: any) => updateCa('rate', val)} disabled={hasAutoAllocation && ca.type !== 'cash'} />
+                                                  </div>
+                                                  {showAssetMixUI && (
+                                                      <div className="col-6">
+                                                          <label className="small text-primary mb-1 fw-bold">Post-Ret. Return (%)</label>
+                                                          <PercentInput className="form-control form-control-sm border-primary text-primary" value={ca.retireRate ?? ca.rate} onChange={(val: any) => updateCa('retireRate', val)} disabled={hasAutoAllocation && ca.type !== 'cash'} />
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      );
+                                  })}
+                              </div>
+
                           </div>
                       )}
 
