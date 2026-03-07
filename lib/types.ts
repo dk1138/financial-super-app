@@ -70,6 +70,7 @@ export interface CustomAsset {
     type: 'tfsa' | 'rrsp' | 'fhsa' | 'nonreg' | 'cash' | 'crypto' | 'lirf' | 'lif' | 'rrif_acct' | 'resp';
     balance: number;
     acb?: number; // Only relevant for nonreg and crypto
+    yield?: number; // Only relevant for nonreg and crypto
     rate: number;
     retireRate: number;
 }

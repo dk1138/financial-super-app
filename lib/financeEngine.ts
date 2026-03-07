@@ -23,7 +23,6 @@ export class FinanceEngine {
     strategyLabels: any;
 
     constructor(data: any) {
-        // Deep clone inputs so we can safely mutate them for custom asset aggregation
         this.inputs = JSON.parse(JSON.stringify(data.inputs || {}));
         this.properties = data.properties || [];
         this.windfalls = data.windfalls || [];
@@ -40,27 +39,27 @@ export class FinanceEngine {
         this.CONSTANTS = data.constants || {};
         this.strategyLabels = data.strategyLabels || {};
 
-        // --- AGGREGATE CUSTOM ASSETS ---
-        // Dynamically merge custom accounts into the primary tax buckets 
-        // using mathematically perfect weighted average return rates.
         if (this.customAssets.length > 0) {
             this.customAssets.forEach(ca => {
-                let p = ca.owner; // 'p1' or 'p2'
-                let t = ca.type; // 'tfsa', 'rrsp', etc.
+                let p = ca.owner; 
+                let t = ca.type; 
                 let bal = Number(ca.balance) || 0;
                 
                 if (bal > 0) {
                     let rate = Number(ca.rate) || 0;
                     let retRate = ca.retireRate !== undefined ? Number(ca.retireRate) : rate;
                     let acb = Number(ca.acb) || 0;
+                    let acctYield = Number(ca.yield) || 0;
 
                     let baseBalKey = `${p}_${t}`;
                     let baseRateKey = `${p}_${t}_ret`;
                     let baseRetRateKey = `${p}_${t}_retire_ret`;
+                    let baseYieldKey = `${p}_${t}_yield`;
 
                     let currentBaseBal = this.getVal(baseBalKey);
                     let currentBaseRate = this.inputs[baseRateKey] !== undefined ? Number(this.inputs[baseRateKey]) : 6.0;
                     let currentBaseRetRate = this.inputs[baseRetRateKey] !== undefined ? Number(this.inputs[baseRetRateKey]) : currentBaseRate;
+                    let currentBaseYield = this.inputs[baseYieldKey] !== undefined ? Number(this.inputs[baseYieldKey]) : 0;
 
                     let totalBal = currentBaseBal + bal;
                     let blendedRate = ((currentBaseBal * currentBaseRate) + (bal * rate)) / totalBal;
@@ -68,13 +67,17 @@ export class FinanceEngine {
 
                     this.inputs[baseRateKey] = blendedRate;
                     this.inputs[baseRetRateKey] = blendedRetRate;
-                    this.inputs[baseBalKey] = totalBal;
 
                     if (t === 'nonreg' || t === 'crypto') {
+                        let blendedYield = ((currentBaseBal * currentBaseYield) + (bal * acctYield)) / totalBal;
+                        this.inputs[baseYieldKey] = blendedYield;
+
                         let baseAcbKey = `${p}_${t}_acb`;
                         let currentAcb = this.inputs[baseAcbKey] !== undefined ? this.getVal(baseAcbKey) : currentBaseBal;
                         this.inputs[baseAcbKey] = currentAcb + acb;
                     }
+                    
+                    this.inputs[baseBalKey] = totalBal;
                 }
             });
         }
@@ -232,7 +235,8 @@ export class FinanceEngine {
     }
 
     getInflatedTaxData(baseInflation: number) {
-        let taxData = JSON.parse(JSON.stringify(this.CONSTANTS.TAX_DATA));
+        let taxData = JSON.parse(JSON.stringify(this.CONSTANTS.TAX_DATA || {}));
+        
         Object.values(taxData).forEach((data: any) => { 
             if (data.brackets) {
                 data.brackets = data.brackets.map((bracket: number) => bracket * baseInflation); 
@@ -267,16 +271,16 @@ export class FinanceEngine {
         };
     }
 
-    calculateTaxDetailed(income: number, province: string, taxData: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, dividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1) {
-        if (income <= 0) {
+    calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1) {
+        if (craTaxableIncome <= 0) {
             return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0 };
         }
         
         let oasClawback = 0;
         let oasMarginalRate = 0;
         
-        if (oasReceived > 0 && oasThreshold > 0 && income > oasThreshold) {
-            oasClawback = (income - oasThreshold) * 0.15;
+        if (oasReceived > 0 && oasThreshold > 0 && craTaxableIncome > oasThreshold) {
+            oasClawback = (craTaxableIncome - oasThreshold) * 0.15;
             if (oasClawback < oasReceived) {
                 oasMarginalRate = 0.15; 
             } else {
@@ -286,27 +290,28 @@ export class FinanceEngine {
 
         let cppBasePremium = 0;
         let cppEnhancedPremium = 0;
-        let yearlyMaxPensionableEarnings = 74600 * baseInflation;
-        let yearlyAdditionalMaxPensionableEarnings = 85000 * baseInflation;
-        let eiMaxInsurableEarnings = 68900 * baseInflation;
-        let cppExemption = 3500 * baseInflation;
+        
+        let yearlyMaxPensionableEarnings = (this.CONSTANTS.YMPE || 74600) * baseInflation; 
+        let yearlyAdditionalMaxPensionableEarnings = (this.CONSTANTS.YAMPE || 85000) * baseInflation; 
+        let eiMaxInsurableEarnings = (this.CONSTANTS.EI_MAX_INSURABLE || 68900) * baseInflation; 
+        let cppExemption = (this.CONSTANTS.CPP_EXEMPTION || 3500) * baseInflation;
+
+        let cppRate = this.CONSTANTS.CPP_RATE || 0.0495;
+        let cppEnhancedRate = this.CONSTANTS.CPP_ENHANCED_RATE || 0.01;
+        let cppEnhancedTier2Rate = this.CONSTANTS.CPP_ENHANCED_TIER2_RATE || 0.04;
+        let eiRate = this.CONSTANTS.EI_RATE || 0.0163;
 
         if (earnedIncome > cppExemption) {
-            cppBasePremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * 0.0495; 
-            cppEnhancedPremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * 0.01;
+            cppBasePremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * cppRate; 
+            cppEnhancedPremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * cppEnhancedRate;
         }
         if (earnedIncome > yearlyMaxPensionableEarnings) {
-            cppEnhancedPremium += (Math.min(earnedIncome, yearlyAdditionalMaxPensionableEarnings) - yearlyMaxPensionableEarnings) * 0.04;
+            cppEnhancedPremium += (Math.min(earnedIncome, yearlyAdditionalMaxPensionableEarnings) - yearlyMaxPensionableEarnings) * cppEnhancedTier2Rate;
         }
         
-        const eiPremium = Math.min(earnedIncome, eiMaxInsurableEarnings) * 0.0164;
+        const eiPremium = Math.min(earnedIncome, eiMaxInsurableEarnings) * eiRate; 
 
-        let actualDividendIncome = Math.min(income, dividendIncome); 
-        let grossedUpDividend = actualDividendIncome * 1.38;
-        
-        // Apply enhanced CPP as a direct deduction from taxable income
-        let ordinaryIncome = Math.max(0, income - actualDividendIncome - cppEnhancedPremium);
-        let taxIncomeForFedProv = Math.max(0, ordinaryIncome + grossedUpDividend - oasClawback);
+        let taxIncomeForFedProv = Math.max(0, craTaxableIncome - cppEnhancedPremium - oasClawback);
         
         const fedCalc = this.calculateProgressiveTax(taxIncomeForFedProv, taxData.FED.brackets, taxData.FED.rates);
         const provCalc = this.calculateProgressiveTax(
@@ -320,34 +325,32 @@ export class FinanceEngine {
         let fedMarginalRate = fedCalc.marginalRate;
         let provMarginalRate = provCalc.marginalRate;
 
-        // --- BASIC PERSONAL AMOUNT (BPA) CREDITS ---
-        let bpaMax = 15705 * baseInflation;
-        let bpaMin = 14156 * baseInflation;
-        let bpaPhaseStart = 173205 * baseInflation;
-        let bpaPhaseEnd = 246752 * baseInflation;
+        // --- FED/PROV BPA CREDITS ---
+        let bpaMax = (this.CONSTANTS.BPA_MAX_FED || 16452) * baseInflation;
+        let bpaMin = (this.CONSTANTS.BPA_MIN_FED || 14829) * baseInflation;
+        let bpaPhaseStart = (this.CONSTANTS.BPA_PHASE_START_FED || 181440) * baseInflation;
+        let bpaPhaseEnd = (this.CONSTANTS.BPA_PHASE_END_FED || 258482) * baseInflation;
         
         let fedBpa = bpaMax;
-        if (taxIncomeForFedProv > bpaPhaseStart) {
-            let reduction = (taxIncomeForFedProv - bpaPhaseStart) * ((bpaMax - bpaMin) / (bpaPhaseEnd - bpaPhaseStart));
+        if (craTaxableIncome > bpaPhaseStart) {
+            let reduction = (craTaxableIncome - bpaPhaseStart) * ((bpaMax - bpaMin) / (bpaPhaseEnd - bpaPhaseStart));
             fedBpa = Math.max(bpaMin, bpaMax - reduction);
         }
         
-        let provBpaAmounts: Record<string, number> = {
-            'ON': 12399, 'BC': 12580, 'AB': 21885, 'QC': 18056, 'MB': 15780,
-            'SK': 18491, 'NS': 11481, 'NB': 13044, 'NL': 10818, 'PE': 13500
-        };
+        let provBpaAmounts = this.CONSTANTS.PROV_BPA || { 'ON': 12989 };
         let provBpa = (provBpaAmounts[province] || 15000) * baseInflation;
 
-        let fedBpaCredit = fedBpa * 0.15;
+        let lowestFedRate = taxData.FED?.rates?.[0] || 0.14; 
+        let fedBpaCredit = fedBpa * lowestFedRate; 
+        
         let provRateLowest = taxData[province]?.rates?.[0] || 0.0505;
         let provBpaCredit = provBpa * provRateLowest;
 
-        // --- SPOUSAL AMOUNT ---
         let fedSpousalCredit = 0;
         let provSpousalCredit = 0;
         if (spouseIncome >= 0 && spouseIncome < fedBpa) {
             let fedSpousalAmt = Math.max(0, fedBpa - spouseIncome);
-            fedSpousalCredit = fedSpousalAmt * 0.15;
+            fedSpousalCredit = fedSpousalAmt * lowestFedRate;
         }
         if (spouseIncome >= 0 && spouseIncome < provBpa) {
             let provSpousalAmt = Math.max(0, provBpa - spouseIncome);
@@ -362,37 +365,39 @@ export class FinanceEngine {
         if (taxIncomeForFedProv <= effectiveFedZeroBracket) fedMarginalRate = 0;
         if (taxIncomeForFedProv <= effectiveProvZeroBracket) provMarginalRate = 0;
 
-        // --- CANADA EMPLOYMENT AMOUNT ---
         let fedEmploymentCredit = 0;
         if (earnedIncome > 0) {
-            fedEmploymentCredit = Math.min(earnedIncome, 1433 * baseInflation) * 0.15;
+            fedEmploymentCredit = Math.min(earnedIncome, (this.CONSTANTS.FED_EMPLOYMENT_AMOUNT || 1501) * baseInflation) * lowestFedRate;
         }
 
-        // --- SENIOR TAX CREDITS ---
         let fedAgeCredit = 0;
         let provAgeCredit = 0;
         if (age >= 65) {
-            let ageAmt = Math.max(0, 8790 * baseInflation - Math.max(0, income - 42335 * baseInflation) * 0.15);
-            fedAgeCredit = ageAmt * 0.15; 
+            let fedAgeBase = this.CONSTANTS.FED_AGE_AMOUNT || 9212;
+            let fedAgePhase = this.CONSTANTS.FED_AGE_PHASE_START || 46432;
+            let ageAmt = Math.max(0, fedAgeBase * baseInflation - Math.max(0, craTaxableIncome - fedAgePhase * baseInflation) * 0.15);
+            fedAgeCredit = ageAmt * lowestFedRate; 
             
-            let provAgeAmt = Math.max(0, 5740 * baseInflation - Math.max(0, income - 45000 * baseInflation) * 0.15);
+            let provAgeBase = this.CONSTANTS.PROV_AGE_AMOUNT?.[province] || 6342;
+            let provAgePhase = this.CONSTANTS.PROV_AGE_PHASE_START?.[province] || 47210;
+            let provAgeAmt = Math.max(0, provAgeBase * baseInflation - Math.max(0, craTaxableIncome - provAgePhase * baseInflation) * 0.15);
             provAgeCredit = provAgeAmt * provRateLowest; 
         }
         
         let fedPensionCredit = 0;
         let provPensionCredit = 0;
         if (eligiblePension > 0) {
-            fedPensionCredit = Math.min(eligiblePension, 2000) * 0.15;
-            provPensionCredit = Math.min(eligiblePension, 1600) * provRateLowest; 
+            fedPensionCredit = Math.min(eligiblePension, 2000) * lowestFedRate;
+            provPensionCredit = Math.min(eligiblePension, 1796) * provRateLowest; 
         }
 
-        // --- CPP/EI PREMIUM NON-REFUNDABLE TAX CREDITS ---
-        let fedCppEiCredit = (cppBasePremium + eiPremium) * 0.15;
+        let fedCppEiCredit = (cppBasePremium + eiPremium) * lowestFedRate;
         let provCppEiCredit = (cppBasePremium + eiPremium) * provRateLowest; 
         
         fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit - fedEmploymentCredit);
         provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit);
         
+        let grossedUpDividend = actualDividendIncome * 1.38;
         let fedDividendCredit = grossedUpDividend * 0.150198;
         let provDivCreditRates: any = { 'ON': 0.1005, 'AB': 0.0812, 'BC': 0.12, 'MB': 0.08, 'NB': 0.14, 'NL': 0.054, 'NS': 0.0885, 'PE': 0.105, 'QC': 0.119, 'SK': 0.11 };
         let provDividendCredit = grossedUpDividend * (provDivCreditRates[province] || 0.10);
@@ -400,10 +405,9 @@ export class FinanceEngine {
         if (province === 'ON') { 
             provTax = Math.max(0, provTax - provDividendCredit);
             
-            // --- ONTARIO LIFT CREDIT ---
             let liftMax = 875 * baseInflation;
             let liftAmt = Math.min(liftMax, earnedIncome * 0.0505);
-            let liftPhaseOut = Math.max(0, (taxIncomeForFedProv - 32500 * baseInflation) * 0.10);
+            let liftPhaseOut = Math.max(0, (craTaxableIncome - 32500 * baseInflation) * 0.10);
             let liftCredit = Math.max(0, liftAmt - liftPhaseOut);
             provTax = Math.max(0, provTax - liftCredit);
 
@@ -423,7 +427,6 @@ export class FinanceEngine {
             
             provTax += surtax;
 
-            // --- ONTARIO TAX REDUCTION (OTR) ---
             let otrBase = 284 * baseInflation;
             if (spouseIncome >= 0 && spouseIncome < provBpa) {
                 otrBase += (284 * baseInflation); 
@@ -433,9 +436,8 @@ export class FinanceEngine {
                 provTax = Math.max(0, provTax - otrAmount);
             }
             
-            // --- EXACT ONTARIO HEALTH PREMIUM MATHEMATICS ---
             let ohp = 0;
-            let ti = taxIncomeForFedProv;
+            let ti = craTaxableIncome;
             if (ti > 20000 && ti <= 36000) {
                 ohp = Math.min(300, (ti - 20000) * 0.06);
             } else if (ti > 36000 && ti <= 48000) {
@@ -812,10 +814,12 @@ export class FinanceEngine {
 
     calcRegMinimums(person1: any, person2: any, age1: number, age2: number, alive1: boolean, alive2: boolean, preRrsp1: number, preRrif1: number, preRrsp2: number, preRrif2: number, preLirf1: number, preLif1: number, preLirf2: number, preLif2: number) {
         let result = { p1: 0, p2: 0, lifTaken1: 0, lifTaken2: 0, details: { p1: null as any, p2: null as any } };
+        const formatter = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 });
         
         const calculateMinimumForPerson = (person: any, age: number, preRrsp: number, preRrif: number, preLirf: number, preLif: number) => {
             let factor = this.getRrifFactor(age - 1);
             let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
+            
             let baseRrifBalance = age >= rrifStartAge ? (preRrsp + preRrif) : preRrif;
             let baseLifBalance = age >= rrifStartAge ? (preLirf + preLif) : preLif;
             
@@ -824,6 +828,20 @@ export class FinanceEngine {
             
             let actualRrifTaken = 0;
             let actualLifTaken = 0;
+
+            let rrifArith = '';
+            if (baseRrifBalance > 0) {
+                rrifArith = `<div class="d-flex justify-content-between text-muted mb-1"><span>Prior Year Balance:</span> <span>${formatter.format(baseRrifBalance)}</span></div>
+<div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Min Factor:</span> <span>${(factor * 100).toFixed(2)}%</span></div>
+<div class="d-flex justify-content-between fw-bold text-main"><span>Required Min:</span> <span>${formatter.format(requiredRrifMin)}</span></div>`;
+            }
+
+            let lifArith = '';
+            if (baseLifBalance > 0 && age >= 55) {
+                lifArith = `<div class="d-flex justify-content-between text-muted mb-1"><span>Prior Year Balance:</span> <span>${formatter.format(baseLifBalance)}</span></div>
+<div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Min Factor:</span> <span>${(factor * 100).toFixed(2)}%</span></div>
+<div class="d-flex justify-content-between fw-bold text-main"><span>Required Min:</span> <span>${formatter.format(requiredLifMin)}</span></div>`;
+            }
             
             if (baseRrifBalance > 0) {
                 let minNeeded = requiredRrifMin;
@@ -861,7 +879,9 @@ export class FinanceEngine {
                     bal: baseRrifBalance, 
                     min: requiredRrifMin, 
                     lifBal: baseLifBalance, 
-                    lifMin: requiredLifMin 
+                    lifMin: requiredLifMin,
+                    rrifArith: rrifArith,
+                    lifArith: lifArith
                 } 
             };
         };
@@ -946,7 +966,7 @@ export class FinanceEngine {
         };
     }
 
-    applyPensionSplitting(taxableIncome1: number, taxableIncome2: number, inflows: any, regMinimums: any, person1: any, person2: any, age1: number, age2: number, setTaxesCallback: any) {
+    applyPensionSplitting(craTaxableIncome1: number, craTaxableIncome2: number, inflows: any, regMinimums: any, person1: any, person2: any, age1: number, age2: number, setTaxesCallback: any) {
         let eligiblePensionP1 = inflows.p1.pension;
         let eligiblePensionP2 = inflows.p2.pension;
         
@@ -957,21 +977,21 @@ export class FinanceEngine {
             eligiblePensionP2 += regMinimums.p2 + regMinimums.lifTaken2; 
         }
 
-        if (taxableIncome1 > taxableIncome2 && eligiblePensionP1 > 0) {
+        if (craTaxableIncome1 > craTaxableIncome2 && eligiblePensionP1 > 0) {
             let maxTransfer = eligiblePensionP1 * 0.5;
-            let incomeDifference = taxableIncome1 - taxableIncome2;
+            let incomeDifference = craTaxableIncome1 - craTaxableIncome2;
             let transferAmount = Math.min(maxTransfer, incomeDifference / 2);
             
             if (transferAmount > 0) {
-                setTaxesCallback(taxableIncome1 - transferAmount, taxableIncome2 + transferAmount, transferAmount, 'p1_to_p2');
+                setTaxesCallback(craTaxableIncome1 - transferAmount, craTaxableIncome2 + transferAmount, transferAmount, 'p1_to_p2');
             }
-        } else if (taxableIncome2 > taxableIncome1 && eligiblePensionP2 > 0) {
+        } else if (craTaxableIncome2 > craTaxableIncome1 && eligiblePensionP2 > 0) {
             let maxTransfer = eligiblePensionP2 * 0.5;
-            let incomeDifference = taxableIncome2 - taxableIncome1;
+            let incomeDifference = craTaxableIncome2 - craTaxableIncome1;
             let transferAmount = Math.min(maxTransfer, incomeDifference / 2);
             
             if (transferAmount > 0) {
-                setTaxesCallback(taxableIncome1 + transferAmount, taxableIncome2 - transferAmount, transferAmount, 'p2_to_p1');
+                setTaxesCallback(craTaxableIncome1 + transferAmount, craTaxableIncome2 - transferAmount, transferAmount, 'p2_to_p1');
             }
         }
     }
@@ -1126,14 +1146,15 @@ export class FinanceEngine {
         });
     }
 
-    handleDeficit(deficitAmount: number, person1: any, person2: any, currentIncome1: number, currentIncome2: number, alive1: boolean, alive2: boolean, flowLog: any, withdrawalBreakdown: any, taxBrackets: any, onWithdrawalCallback: any, age1: number, age2: number, oasReceived1 = 0, oasReceived2 = 0, oasThresholdInflation = 0, lifLimits = {lifMax1: Infinity, lifMax2: Infinity}, earnedIncome1 = 0, earnedIncome2 = 0, baseInflation = 1, dividendIncome1 = 0, dividendIncome2 = 0, overrideStrategies: string[] | null = null, eligPension1 = 0, eligPension2 = 0) {
+    handleDeficit(deficitAmount: number, person1: any, person2: any, craTaxableIncome1: number, craTaxableIncome2: number, alive1: boolean, alive2: boolean, flowLog: any, withdrawalBreakdown: any, taxBrackets: any, onWithdrawalCallback: any, age1: number, age2: number, oasReceived1 = 0, oasReceived2 = 0, oasThresholdInflation = 0, lifLimits = {lifMax1: Infinity, lifMax2: Infinity}, earnedIncome1 = 0, earnedIncome2 = 0, baseInflation = 1, dividendIncome1 = 0, dividendIncome2 = 0, overrideStrategies: string[] | null = null, eligPension1 = 0, eligPension2 = 0) {
         let remainingDeficit = deficitAmount;
-        let runningIncome1 = currentIncome1;
-        let runningIncome2 = currentIncome2;
+        let runningTaxInc1 = craTaxableIncome1;
+        let runningTaxInc2 = craTaxableIncome2;
         
         const province = this.getRaw('tax_province');
         const MARGINAL_TOLERANCE = 50; 
         const withdrawalStrategies = overrideStrategies || this.strategies.decum;
+        const formatter = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 });
 
         let hasBalance = (person: any, accountType: string, prefix: string) => {
             if (accountType === 'tfsa') {
@@ -1235,26 +1256,22 @@ export class FinanceEngine {
                     if (withdrawalBreakdown) {
                         withdrawalBreakdown[prefix][logKey] = (withdrawalBreakdown[prefix][logKey] || 0) + takenAmount;
                         
+                        if (!withdrawalBreakdown[prefix][logKey + '_math']) {
+                            withdrawalBreakdown[prefix][logKey + '_math'] = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
+                        }
+                        let mathObj = withdrawalBreakdown[prefix][logKey + '_math'];
+                        mathObj.wd += takenAmount;
+                        mathObj.tax += taxableAmountForCallback;
+
                         if (isCapitalGain) {
-                            if (!withdrawalBreakdown[prefix][logKey + '_math']) {
-                                withdrawalBreakdown[prefix][logKey + '_math'] = { wd: 0, acb: 0, gain: 0, tax: 0 };
-                            }
-                            withdrawalBreakdown[prefix][logKey + '_math'].wd += takenAmount;
-                            withdrawalBreakdown[prefix][logKey + '_math'].acb += acbSold;
-                            withdrawalBreakdown[prefix][logKey + '_math'].gain += capitalGain;
-                            withdrawalBreakdown[prefix][logKey + '_math'].tax += taxableAmountForCallback;
+                            mathObj.acb += acbSold;
+                            mathObj.gain += capitalGain;
                         }
                     }
                 }
                 
                 if (onWithdrawalCallback) {
-                     if (isFullyTaxable) {
-                         onWithdrawalCallback(prefix, takenAmount, 0); 
-                     } else if (isCapitalGain) {
-                         onWithdrawalCallback(prefix, taxableAmountForCallback, takenAmount - taxableAmountForCallback);
-                     } else {
-                         onWithdrawalCallback(prefix, 0, takenAmount); 
-                     }
+                     onWithdrawalCallback(prefix, taxableAmountForCallback, takenAmount); 
                 }
 
                 let netReceived = takenAmount * (1 - effectiveTaxRate);
@@ -1285,7 +1302,7 @@ export class FinanceEngine {
                         continue; 
                     }
                     if (ceiling1 !== Infinity && isTaxableAtAll) {
-                        if (ceiling1 - runningIncome1 <= 1) { 
+                        if (ceiling1 - runningTaxInc1 <= 1) { 
                             indexP1++; 
                             continue; 
                         }
@@ -1305,7 +1322,7 @@ export class FinanceEngine {
                         continue; 
                     }
                     if (ceiling2 !== Infinity && isTaxableAtAll) {
-                        if (ceiling2 - runningIncome2 <= 1) { 
+                        if (ceiling2 - runningTaxInc2 <= 1) { 
                             indexP2++; 
                             continue; 
                         }
@@ -1318,8 +1335,8 @@ export class FinanceEngine {
 
                 if (!typeP1 && !typeP2) break;
 
-                const marginalRate1 = this.calculateTaxDetailed(runningIncome1, province, taxBrackets, oasReceived1, oasThresholdInflation, earnedIncome1, baseInflation, dividendIncome1, age1, eligPension1, alive2 ? runningIncome2 : -1).margRate;
-                const marginalRate2 = this.calculateTaxDetailed(runningIncome2, province, taxBrackets, oasReceived2, oasThresholdInflation, earnedIncome2, baseInflation, dividendIncome2, age2, eligPension2, alive1 ? runningIncome1 : -1).margRate;
+                const marginalRate1 = this.calculateTaxDetailed(runningTaxInc1, province, taxBrackets, oasReceived1, oasThresholdInflation, earnedIncome1, baseInflation, dividendIncome1, age1, eligPension1, alive2 ? runningTaxInc2 : -1).margRate;
+                const marginalRate2 = this.calculateTaxDetailed(runningTaxInc2, province, taxBrackets, oasReceived2, oasThresholdInflation, earnedIncome2, baseInflation, dividendIncome2, age2, eligPension2, alive1 ? runningTaxInc1 : -1).margRate;
 
                 let withdrawTarget: any = null;
                 
@@ -1335,9 +1352,9 @@ export class FinanceEngine {
                     let isTaxFree = !['rrsp', 'rrif_acct', 'lif', 'lirf', 'nonreg', 'crypto'].includes(typeP1);
                     if (isTaxFree) {
                         withdrawTarget = 'split'; 
-                    } else if (Math.abs(runningIncome1 - runningIncome2) < MARGINAL_TOLERANCE) {
+                    } else if (Math.abs(runningTaxInc1 - runningTaxInc2) < MARGINAL_TOLERANCE) {
                         withdrawTarget = 'split';
-                    } else if (runningIncome1 < runningIncome2) {
+                    } else if (runningTaxInc1 < runningTaxInc2) {
                         withdrawTarget = 'p1';
                     } else {
                         withdrawTarget = 'p2';
@@ -1369,8 +1386,8 @@ export class FinanceEngine {
                 };
 
                 if (withdrawTarget === 'split') {
-                    let netRoom1 = getNetRoomAvailable(typeP1 as string, runningIncome1, marginalRate1, person1, ceiling1);
-                    let netRoom2 = getNetRoomAvailable(typeP2 as string, runningIncome2, marginalRate2, person2, ceiling2);
+                    let netRoom1 = getNetRoomAvailable(typeP1 as string, runningTaxInc1, marginalRate1, person1, ceiling1);
+                    let netRoom2 = getNetRoomAvailable(typeP2 as string, runningTaxInc2, marginalRate2, person2, ceiling2);
                     
                     let halfDeficit = remainingDeficit / 2;
                     let require1 = Math.min(halfDeficit, netRoom1);
@@ -1393,20 +1410,20 @@ export class FinanceEngine {
                     }
 
                     remainingDeficit -= (gotP1.net + gotP2.net);
-                    runningIncome1 += gotP1.tax;
-                    runningIncome2 += gotP2.tax;
+                    runningTaxInc1 += gotP1.tax;
+                    runningTaxInc2 += gotP2.tax;
                 } else {
                     let amountToTake = remainingDeficit;
                     let targetPersonObj = withdrawTarget === 'p1' ? person1 : person2;
                     let targetAccountType = withdrawTarget === 'p1' ? typeP1 : typeP2;
                     let targetMarginalRate = withdrawTarget === 'p1' ? marginalRate1 : marginalRate2;
-                    let targetIncome = withdrawTarget === 'p1' ? runningIncome1 : runningIncome2;
+                    let targetIncome = withdrawTarget === 'p1' ? runningTaxInc1 : runningTaxInc2;
                     let targetCeiling = withdrawTarget === 'p1' ? ceiling1 : ceiling2;
                     
                     let netRoom = getNetRoomAvailable(targetAccountType as string, targetIncome, targetMarginalRate, targetPersonObj, targetCeiling);
 
                     if (typeP1 && typeP2 && indexP1 === indexP2 && !['tfsa','cash','fhsa'].includes(targetAccountType as string)) {
-                        let incomeGap = Math.abs(runningIncome1 - runningIncome2);
+                        let incomeGap = Math.abs(runningTaxInc1 - runningTaxInc2);
                         let effectiveRate = Math.min(targetMarginalRate || 0, 0.54);
                         
                         if (['nonreg', 'crypto'].includes(targetAccountType as string)) {
@@ -1423,8 +1440,8 @@ export class FinanceEngine {
                     amountToTake = Math.min(amountToTake, netRoom);
                     
                     if (amountToTake <= 0.01) {
-                        if (withdrawTarget === 'p1') runningIncome1 = ceiling1;
-                        if (withdrawTarget === 'p2') runningIncome2 = ceiling2;
+                        if (withdrawTarget === 'p1') runningTaxInc1 = ceiling1;
+                        if (withdrawTarget === 'p2') runningTaxInc2 = ceiling2;
                         continue;
                     }
 
@@ -1439,9 +1456,9 @@ export class FinanceEngine {
                     remainingDeficit -= gotCash.net;
                     
                     if (withdrawTarget === 'p1') {
-                        runningIncome1 += gotCash.tax;
+                        runningTaxInc1 += gotCash.tax;
                     } else {
-                        runningIncome2 += gotCash.tax;
+                        runningTaxInc2 += gotCash.tax;
                     }
                 }
             }
@@ -1493,7 +1510,7 @@ export class FinanceEngine {
                     properties: this.properties,
                     windfalls: this.windfalls,
                     additionalIncome: this.additionalIncome,
-                    customAssets: this.customAssets, // Ensure custom assets pass through
+                    customAssets: this.customAssets,
                     leaves: this.leaves,
                     strategies: { accum: this.strategies.accum, decum: decumOrder },
                     dependents: this.dependents,
@@ -1533,7 +1550,8 @@ export class FinanceEngine {
             crypto: this.getVal('p1_crypto'), lirf: this.getVal('p1_lirf'), lif: this.getVal('p1_lif'), 
             rrif_acct: this.getVal('p1_rrif_acct'), inc: this.getVal('p1_income'), 
             dob: new Date(this.getRaw('p1_dob') || "1990-01"), retAge: this.getVal('p1_retireAge'), 
-            lifeExp: this.getVal('p1_lifeExp'), nonreg_yield: this.getVal('p1_nonreg_yield')/100, 
+            lifeExp: this.getVal('p1_lifeExp'), nonreg_yield: this.getVal('p1_nonreg_yield')/100,
+            crypto_yield: this.inputs['p1_crypto_yield'] !== undefined ? this.getVal('p1_crypto_yield')/100 : 0, 
             acb: this.inputs['p1_nonreg_acb'] !== undefined ? this.getVal('p1_nonreg_acb') : this.getVal('p1_nonreg'), 
             crypto_acb: this.inputs['p1_crypto_acb'] !== undefined ? this.getVal('p1_crypto_acb') : this.getVal('p1_crypto') 
         };
@@ -1545,6 +1563,7 @@ export class FinanceEngine {
             rrif_acct: this.getVal('p2_rrif_acct'), inc: this.getVal('p2_income'), 
             dob: new Date(this.getRaw('p2_dob') || "1990-01"), retAge: this.getVal('p2_retireAge'), 
             lifeExp: this.getVal('p2_lifeExp'), nonreg_yield: this.getVal('p2_nonreg_yield')/100, 
+            crypto_yield: this.inputs['p2_crypto_yield'] !== undefined ? this.getVal('p2_crypto_yield')/100 : 0, 
             acb: this.inputs['p2_nonreg_acb'] !== undefined ? this.getVal('p2_nonreg_acb') : this.getVal('p2_nonreg'), 
             crypto_acb: this.inputs['p2_crypto_acb'] !== undefined ? this.getVal('p2_crypto_acb') : this.getVal('p2_crypto') 
         };
@@ -1670,7 +1689,7 @@ export class FinanceEngine {
             }
 
             const baseInflation = Math.pow(1 + consts.inflation, i);
-            const oasThresholdInf = this.CONSTANTS.OAS_CLAWBACK_THRESHOLD * baseInflation;
+            const oasThresholdInf = (this.CONSTANTS.OAS_CLAWBACK_THRESHOLD || 95323) * baseInflation; 
             
             const isRet1 = age1 >= person1.retAge;
             const isRet2 = this.mode === 'Couple' ? age2 >= person2.retAge : true;
@@ -1687,6 +1706,9 @@ export class FinanceEngine {
 
             const preGrowthNonreg1 = person1.nonreg;
             const preGrowthNonreg2 = person2.nonreg;
+            
+            const preGrowthCrypto1 = person1.crypto;
+            const preGrowthCrypto2 = person2.crypto;
 
             this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
 
@@ -1779,7 +1801,7 @@ export class FinanceEngine {
             
             let wdBreakdown = detailed ? { p1: {} as any, p2: {} as any } : null;
 
-            // SMART RRSP MELTDOWN (Executed after mandatory Reg minimums to prevent overshooting 0% tax)
+            // SMART RRSP MELTDOWN
             let meltdownActive = this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true;
             if (meltdownActive || this.inputs['rrsp_meltdown_enabled'] !== undefined) {
                 const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: 'p1' | 'p2', rrifMin: number, lifMin: number) => {
@@ -1787,7 +1809,7 @@ export class FinanceEngine {
                     if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
                         let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
                         
-                        let bpa = 15705 * baseInflation; 
+                        let bpa = (this.CONSTANTS.BPA_MAX_FED || 16452) * baseInflation; 
                         let targetBracketCap = bpa; 
                         
                         let room = Math.max(0, targetBracketCap - currentTaxable);
@@ -1801,7 +1823,10 @@ export class FinanceEngine {
                                 flowLog.withdrawals[key] = (flowLog.withdrawals[key] || 0) + pullAmt;
                             }
                             if (detailed && wdBreakdown) {
+                                if (!wdBreakdown[prefix].RRSP_math) wdBreakdown[prefix].RRSP_math = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
                                 wdBreakdown[prefix].RRSP = (wdBreakdown[prefix].RRSP || 0) + pullAmt;
+                                wdBreakdown[prefix].RRSP_math.wd += pullAmt;
+                                wdBreakdown[prefix].RRSP_math.tax += pullAmt;
                             }
                         }
                     }
@@ -1814,31 +1839,63 @@ export class FinanceEngine {
             if (inflows.p2.rrspMeltdown > 0) rrspRoom2 = 0; 
 
             if (detailed && wdBreakdown) {
-                if (regMins.p1 > 0) { flowLog.withdrawals['P1 RRIF'] = (flowLog.withdrawals['P1 RRIF'] || 0) + regMins.p1; wdBreakdown.p1.RRIF = regMins.p1; wdBreakdown.p1.RRIF_math = regMins.details.p1; }
-                if (regMins.lifTaken1 > 0) { flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; wdBreakdown.p1.LIF = regMins.lifTaken1; wdBreakdown.p1.LIF_math = regMins.details.p1; }
-                if (regMins.p2 > 0) { flowLog.withdrawals['P2 RRIF'] = (flowLog.withdrawals['P2 RRIF'] || 0) + regMins.p2; wdBreakdown.p2.RRIF = regMins.p2; wdBreakdown.p2.RRIF_math = regMins.details.p2; }
-                if (regMins.lifTaken2 > 0) { flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; wdBreakdown.p2.LIF = regMins.lifTaken2; wdBreakdown.p2.LIF_math = regMins.details.p2; }
+                if (regMins.p1 > 0) { 
+                    flowLog.withdrawals['P1 RRIF'] = (flowLog.withdrawals['P1 RRIF'] || 0) + regMins.p1; 
+                    wdBreakdown.p1.RRIF = regMins.p1; 
+                    wdBreakdown.p1.RRIF_math = { wd: regMins.p1, tax: regMins.p1, min: regMins.details.p1.min, priorBal: regMins.details.p1.bal, factor: regMins.details.p1.factor }; 
+                }
+                if (regMins.lifTaken1 > 0) { 
+                    flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; 
+                    wdBreakdown.p1.LIF = regMins.lifTaken1; 
+                    wdBreakdown.p1.LIF_math = { wd: regMins.lifTaken1, tax: regMins.lifTaken1, min: regMins.details.p1.lifMin, priorBal: regMins.details.p1.lifBal, factor: regMins.details.p1.factor }; 
+                }
+                if (regMins.p2 > 0) { 
+                    flowLog.withdrawals['P2 RRIF'] = (flowLog.withdrawals['P2 RRIF'] || 0) + regMins.p2; 
+                    wdBreakdown.p2.RRIF = regMins.p2; 
+                    wdBreakdown.p2.RRIF_math = { wd: regMins.p2, tax: regMins.p2, min: regMins.details.p2.min, priorBal: regMins.details.p2.bal, factor: regMins.details.p2.factor }; 
+                }
+                if (regMins.lifTaken2 > 0) { 
+                    flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; 
+                    wdBreakdown.p2.LIF = regMins.lifTaken2; 
+                    wdBreakdown.p2.LIF_math = { wd: regMins.lifTaken2, tax: regMins.lifTaken2, min: regMins.details.p2.lifMin, priorBal: regMins.details.p2.lifBal, factor: regMins.details.p2.factor }; 
+                }
             }
 
             const taxBrackets = this.getInflatedTaxData(baseInflation);
 
+            // --- STRICT CRA TAXABLE INCOME CALCULATION SEPARATION ---
+            
+            // 1. Calculate Actual Cash Flow from investments
             let divInc1 = preGrowthNonreg1 * person1.nonreg_yield;
             let divInc2 = alive2 ? (preGrowthNonreg2 * person2.nonreg_yield) : 0;
+            
+            let cryptoYield1 = preGrowthCrypto1 * person1.crypto_yield;
+            let cryptoYield2 = alive2 ? (preGrowthCrypto2 * person2.crypto_yield) : 0;
 
-            let grossTaxable1 = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.rrspMeltdown + regMins.p1 + regMins.lifTaken1 + inflows.p1.windfallTaxable + divInc1;
-            let grossTaxable2 = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.rrspMeltdown + regMins.p2 + regMins.lifTaken2 + inflows.p2.windfallTaxable + divInc2;
+            // 2. Gross up eligible dividends for CRA calculations
+            let grossedDiv1 = divInc1 * 1.38;
+            let grossedDiv2 = divInc2 * 1.38;
+
+            // 3. Assemble components
+            let baseGross1 = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.rrspMeltdown + regMins.p1 + regMins.lifTaken1 + inflows.p1.windfallTaxable + cryptoYield1;
+            let baseGross2 = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.rrspMeltdown + regMins.p2 + regMins.lifTaken2 + inflows.p2.windfallTaxable + cryptoYield2;
+
+            // 4. Define True CRA Taxable Income vs Actual Pocket Cash Income
+            let craTaxableIncome1 = Math.max(0, baseGross1 + grossedDiv1 - totalMatch1);
+            let craTaxableIncome2 = Math.max(0, baseGross2 + grossedDiv2 - totalMatch2);
+
+            let cashIncome1 = Math.max(0, baseGross1 + divInc1 - totalMatch1);
+            let cashIncome2 = Math.max(0, baseGross2 + divInc2 - totalMatch2);
 
             let getEligPension1 = () => inflows.p1.pension + (age1 >= 65 ? (regMins.p1 + regMins.lifTaken1 + (wdBreakdown?.p1?.RRIF || 0) + (wdBreakdown?.p1?.LIF || 0)) : 0);
             let getEligPension2 = () => inflows.p2.pension + (age2 >= 65 ? (regMins.p2 + regMins.lifTaken2 + (wdBreakdown?.p2?.RRIF || 0) + (wdBreakdown?.p2?.LIF || 0)) : 0);
 
-            let taxWithoutMatch1 = alive1 ? this.calculateTaxDetailed(grossTaxable1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? grossTaxable2 : -1) : {totalTax: 0, margRate: 0};
-            let taxWithoutMatch2 = alive2 ? this.calculateTaxDetailed(grossTaxable2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? grossTaxable1 : -1) : {totalTax: 0, margRate: 0};
+            // Compute Base Taxes
+            let taxWithoutMatch1 = alive1 ? this.calculateTaxDetailed(baseGross1 + grossedDiv1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1) : {totalTax: 0, margRate: 0};
+            let taxWithoutMatch2 = alive2 ? this.calculateTaxDetailed(baseGross2 + grossedDiv2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1) : {totalTax: 0, margRate: 0};
 
-            let taxableIncome1 = Math.max(0, grossTaxable1 - totalMatch1);
-            let taxableIncome2 = Math.max(0, grossTaxable2 - totalMatch2);
-
-            let taxWithMatchOnly1 = alive1 ? this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1) : {totalTax: 0, margRate: 0};
-            let taxWithMatchOnly2 = alive2 ? this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1) : {totalTax: 0, margRate: 0};
+            let taxWithMatchOnly1 = alive1 ? this.calculateTaxDetailed(craTaxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1) : {totalTax: 0, margRate: 0};
+            let taxWithMatchOnly2 = alive2 ? this.calculateTaxDetailed(craTaxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1) : {totalTax: 0, margRate: 0};
 
             let matchTaxSavings1 = taxWithoutMatch1.totalTax - taxWithMatchOnly1.totalTax;
             let matchTaxSavings2 = taxWithoutMatch2.totalTax - taxWithMatchOnly2.totalTax;
@@ -1964,22 +2021,23 @@ export class FinanceEngine {
 
             let pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
             if (this.mode === 'Couple' && this.inputs['pension_split_enabled']) {
-                this.applyPensionSplitting(taxableIncome1, taxableIncome2, inflows, regMins, person1, person2, age1, age2, (newInc1: number, newInc2: number, transferAmount: number, direction: string) => { 
-                    taxableIncome1 = newInc1; taxableIncome2 = newInc2; 
+                this.applyPensionSplitting(craTaxableIncome1, craTaxableIncome2, inflows, regMins, person1, person2, age1, age2, (newInc1: number, newInc2: number, transferAmount: number, direction: string) => { 
+                    craTaxableIncome1 = newInc1; 
+                    craTaxableIncome2 = newInc2; 
                     if (direction === 'p1_to_p2') pensionSplitTransfer.p1ToP2 = transferAmount;
                     if (direction === 'p2_to_p1') pensionSplitTransfer.p2ToP1 = transferAmount;
                 });
             }
             
-            let tax1 = alive1 ? this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1) : {totalTax: 0, margRate: 0};
-            let tax2 = alive2 ? this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1) : {totalTax: 0, margRate: 0};
+            let tax1 = alive1 ? this.calculateTaxDetailed(craTaxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1) : {totalTax: 0, margRate: 0};
+            let tax2 = alive2 ? this.calculateTaxDetailed(craTaxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1) : {totalTax: 0, margRate: 0};
 
-            let netIncome1 = taxableIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
-            let netIncome2 = alive2 ? taxableIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0;
+            let netCashIncome1 = cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
+            let netCashIncome2 = alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0;
             
-            let totalNetIncome = netIncome1 + netIncome2;
+            let totalNetCash = netCashIncome1 + netCashIncome2;
             const totalOutflows = expenses + mortgagePayment + debtRepayment;
-            let netSurplus = totalNetIncome - totalOutflows;
+            let netSurplus = totalNetCash - totalOutflows;
 
             let actualDeductions = { p1: 0, p2: 0 };
             let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation;
@@ -1989,41 +2047,46 @@ export class FinanceEngine {
                 this.handleSurplus(netSurplus, person1, person2, alive1, alive2, flowLog, i, consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms);
                 
                 if (actualDeductions.p1 > 0) {
-                    let recalculatedTax1 = this.calculateTaxDetailed(taxableIncome1 - actualDeductions.p1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (taxableIncome2 - actualDeductions.p2) : -1);
+                    let recalculatedTax1 = this.calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1);
                     pendingRefund.p1 = tax1.totalTax - recalculatedTax1.totalTax;
                 }
                 if (actualDeductions.p2 > 0) {
-                    let recalculatedTax2 = this.calculateTaxDetailed(taxableIncome2 - actualDeductions.p2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (taxableIncome1 - actualDeductions.p1) : -1);
+                    let recalculatedTax2 = this.calculateTaxDetailed(craTaxableIncome2 - actualDeductions.p2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (craTaxableIncome1 - actualDeductions.p1) : -1);
                     pendingRefund.p2 = tax2.totalTax - recalculatedTax2.totalTax;
                 }
             } else {
-                let cashFromNonTaxableWithdrawals = 0; 
                 for (let pass = 0; pass < 10; pass++) {
-                    let dynTax1 = this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1);
-                    let dynTax2 = this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1);
+                    let dynTax1 = this.calculateTaxDetailed(craTaxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1);
+                    let dynTax2 = this.calculateTaxDetailed(craTaxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1);
                     tax1 = dynTax1; tax2 = dynTax2;
 
-                    let dynNet1 = taxableIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
-                    let dynNet2 = alive2 ? taxableIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0;
-                    let dynTotalNet = dynNet1 + dynNet2;
-                    let currentDeficit = totalOutflows - (dynTotalNet + cashFromNonTaxableWithdrawals);
+                    let dynNetCash1 = cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
+                    let dynNetCash2 = alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0;
+                    
+                    let dynTotalNetCash = dynNetCash1 + dynNetCash2;
+                    let currentDeficit = totalOutflows - dynTotalNetCash;
                     
                     if (currentDeficit < 1) break; 
                     
                     let overrideDecum = simContext?.forceOrder || null;
 
-                    this.handleDeficit(currentDeficit, person1, person2, taxableIncome1, taxableIncome2, alive1, alive2, flowLog, wdBreakdown, taxBrackets, (prefix: string, taxAmt: number, nonTaxAmt: number) => {
-                        if (prefix === 'p1') taxableIncome1 += taxAmt;
-                        if (prefix === 'p2') taxableIncome2 += taxAmt;
-                        cashFromNonTaxableWithdrawals += nonTaxAmt;
+                    this.handleDeficit(currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
+                        if (prefix === 'p1') {
+                            craTaxableIncome1 += taxableAmt;
+                            cashIncome1 += cashAmt;
+                        }
+                        if (prefix === 'p2') {
+                            craTaxableIncome2 += taxableAmt;
+                            cashIncome2 += cashAmt;
+                        }
                     }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, overrideDecum, getEligPension1(), getEligPension2());
                 }
                 
-                tax1 = this.calculateTaxDetailed(taxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? taxableIncome2 : -1);
-                tax2 = this.calculateTaxDetailed(taxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? taxableIncome1 : -1);
+                tax1 = this.calculateTaxDetailed(craTaxableIncome1, this.getRaw('tax_province'), taxBrackets, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1);
+                tax2 = this.calculateTaxDetailed(craTaxableIncome2, this.getRaw('tax_province'), taxBrackets, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1);
             }
 
-            previousAFNI = Math.max(0, (taxableIncome1 - actualDeductions.p1) + (taxableIncome2 - actualDeductions.p2));
+            previousAFNI = Math.max(0, (craTaxableIncome1 - actualDeductions.p1) + (craTaxableIncome2 - actualDeductions.p2));
 
             person1.tfsa = Math.max(0, person1.tfsa); person1.rrsp = Math.max(0, person1.rrsp); person1.cash = Math.max(0, person1.cash); person1.nonreg = Math.max(0, person1.nonreg); person1.crypto = Math.max(0, person1.crypto);
             person2.tfsa = Math.max(0, person2.tfsa); person2.rrsp = Math.max(0, person2.rrsp); person2.cash = Math.max(0, person2.cash); person2.nonreg = Math.max(0, person2.nonreg); person2.crypto = Math.max(0, person2.crypto);
@@ -2057,10 +2120,75 @@ export class FinanceEngine {
             if (!detailed) {
                 netWorthArray.push(finalNetWorth);
             } else {
+                const formatter = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 });
+
+                // --- BUILD FORMATTED MATH FOR EVERY SINGLE WITHDRAWAL ---
+                if (wdBreakdown) {
+                    (['p1', 'p2'] as const).forEach(prefix => {
+                        Object.keys(wdBreakdown[prefix]).forEach(accountKey => {
+                            if (!accountKey.includes('_math') && wdBreakdown[prefix][accountKey + '_math']) {
+                                let mathObj = wdBreakdown[prefix][accountKey + '_math'];
+                                let finalArith = '';
+
+                                if (accountKey === 'Non-Reg' || accountKey === 'Crypto') {
+                                    finalArith = `
+                                        <div class="d-flex justify-content-between text-muted mb-1"><span>Gross Withdrawal:</span> <span>${formatter.format(mathObj.wd)}</span></div>
+                                        <div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>ACB Disposed:</span> <span class="text-danger">-${formatter.format(mathObj.acb)}</span></div>
+                                        <div class="d-flex justify-content-between text-muted mb-1"><span>Capital Gain:</span> <span>${formatter.format(mathObj.gain)}</span></div>
+                                        <div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Inclusion Rate:</span> <span>50%</span></div>
+                                        <div class="d-flex justify-content-between fw-bold text-main"><span>Taxable Income:</span> <span>${formatter.format(mathObj.tax)}</span></div>
+                                    `;
+                                } else if (accountKey === 'RRIF' || accountKey === 'LIF') {
+                                    let priorBal = mathObj.priorBal || 0;
+                                    let factor = mathObj.factor || 0;
+                                    let reqMin = mathObj.min || 0;
+                                    let extra = Math.max(0, mathObj.wd - reqMin);
+                                    
+                                    let breakdown = '';
+                                    if (priorBal > 0) {
+                                        breakdown += `<div class="d-flex justify-content-between text-muted mb-1"><span>Prior Year Balance:</span> <span>${formatter.format(priorBal)}</span></div>`;
+                                        breakdown += `<div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Min Factor:</span> <span>${(factor * 100).toFixed(2)}%</span></div>`;
+                                        breakdown += `<div class="d-flex justify-content-between text-muted mb-1"><span>Required Min:</span> <span>${formatter.format(reqMin)}</span></div>`;
+                                        if (extra > 0) {
+                                            breakdown += `<div class="d-flex justify-content-between text-muted mb-1"><span>Extra Discretionary:</span> <span>${formatter.format(extra)}</span></div>`;
+                                        }
+                                        breakdown += `<div class="border-bottom border-secondary pb-1 mb-1"></div>`;
+                                    }
+                                    
+                                    breakdown += `
+                                        <div class="d-flex justify-content-between text-muted mb-1"><span>Total Withdrawal:</span> <span>${formatter.format(mathObj.wd)}</span></div>
+                                        <div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Inclusion Rate:</span> <span>100%</span></div>
+                                        <div class="d-flex justify-content-between fw-bold text-main"><span>Taxable Income:</span> <span>${formatter.format(mathObj.tax)}</span></div>
+                                    `;
+                                    finalArith = breakdown;
+                                } else if (accountKey === 'RRSP' || accountKey === 'LIRF') {
+                                    finalArith = `
+                                        <div class="d-flex justify-content-between text-muted mb-1"><span>Gross Withdrawal:</span> <span>${formatter.format(mathObj.wd)}</span></div>
+                                        <div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Inclusion Rate:</span> <span>100%</span></div>
+                                        <div class="d-flex justify-content-between fw-bold text-main"><span>Taxable Income:</span> <span>${formatter.format(mathObj.tax)}</span></div>
+                                    `;
+                                } else {
+                                    // TFSA, Cash, FHSA, RESP
+                                    finalArith = `
+                                        <div class="d-flex justify-content-between text-muted mb-1"><span>Gross Withdrawal:</span> <span>${formatter.format(mathObj.wd)}</span></div>
+                                        <div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Inclusion Rate:</span> <span>0% (Tax-Free)</span></div>
+                                        <div class="d-flex justify-content-between fw-bold text-main"><span>Taxable Income:</span> <span>$0</span></div>
+                                    `;
+                                }
+                                
+                                mathObj.arith = finalArith;
+                            }
+                        });
+                    });
+                }
+
                 const totalWithdrawals = Object.values(flowLog.withdrawals).reduce((sum: any, val: any) => sum + val, 0);
                 const p1GrossTotal = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
                 const p2GrossTotal = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax;
-                const totalYield = divInc1 + divInc2;
+                
+                // Track total raw yield for dashboard displays, isolating crypto yield from true dividends
+                const totalYield = divInc1 + divInc2 + cryptoYield1 + cryptoYield2;
+                
                 const grossInflow = p1GrossTotal + p2GrossTotal + totalYield + (totalWithdrawals as number);
                 
                 projectionData.push({
@@ -2068,16 +2196,16 @@ export class FinanceEngine {
                     incomeP1: inflows.p1.gross, incomeP2: inflows.p2.gross, eiMatP1: inflows.p1.eiMat, eiMatP2: inflows.p2.eiMat, topUpP1: inflows.p1.topUp, topUpP2: inflows.p2.topUp,
                     cppP1: inflows.p1.cpp, cppP2: inflows.p2.cpp, oasP1: inflows.p1.oas, oasP2: inflows.p2.oas, ccbP1: inflows.p1.ccb || 0,
                     oasClawbackP1: (tax1 as any).oas_clawback || 0, oasClawbackP2: (tax2 as any).oas_clawback || 0, 
-                    taxIncP1: Math.max(0, taxableIncome1 - actualDeductions.p1), taxIncP2: Math.max(0, taxableIncome2 - actualDeductions.p2), oasThreshold: oasThresholdInf,                    
+                    taxIncP1: Math.max(0, craTaxableIncome1 - actualDeductions.p1), taxIncP2: Math.max(0, craTaxableIncome2 - actualDeductions.p2), oasThreshold: oasThresholdInf,                    
                     actualDeductionsP1: actualDeductions.p1, actualDeductionsP2: actualDeductions.p2,
                     benefitsP1: inflows.p1.cpp + inflows.p1.oas, benefitsP2: inflows.p2.cpp + inflows.p2.oas, dbP1: inflows.p1.pension, dbP2: inflows.p2.pension,
-                    taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: netIncome1, p2Net: netIncome2, pensionSplit: pensionSplitTransfer,
+                    taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0), p2Net: alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0, pensionSplit: pensionSplitTransfer,
                     expenses: expenses, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
                     wdBreakdown: wdBreakdown, flows: flowLog, events: inflows.events, householdNet: grossInflow, grossInflow: grossInflow, 
                     visualExpenses: expenses + mortgagePayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
                     reIncludedEq: realEstateValue - realEstateDebt, reExcludedEq: reExcludedValue - reExcludedDebt, reIncludedValue: realEstateValue,
                     windfall: inflows.p1.windfallTaxable + (inflows.p1.windfallNonTax - appliedRefundP1) + inflows.p2.windfallTaxable + (inflows.p2.windfallNonTax - appliedRefundP2),
-                    postRetP1: inflows.p1.postRet, postRetP2: inflows.p2.postRet, invIncP1: divInc1, invIncP2: divInc2, invYieldMathP1: { bal: preGrowthNonreg1, rate: person1.nonreg_yield, amt: divInc1 },
+                    postRetP1: inflows.p1.postRet, postRetP2: inflows.p2.postRet, invIncP1: divInc1 + cryptoYield1, invIncP2: divInc2 + cryptoYield2, invYieldMathP1: { bal: preGrowthNonreg1, rate: person1.nonreg_yield, amt: divInc1 },
                     invYieldMathP2: { bal: preGrowthNonreg2, rate: person2.nonreg_yield, amt: divInc2 }, debugTotalInflow: grossInflow, rrspRoomP1: rrspRoom1, rrspRoomP2: rrspRoom2,
                     rrspMatchP1: actEmpPortionP1, rrspTotalMatch1: totalMatch1, rrspMatchP2: actEmpPortionP2, rrspTotalMatch2: totalMatch2, rrspRefundP1: appliedRefundP1, rrspRefundP2: appliedRefundP2,
                     matchTaxSavingsP1: matchTaxSavings1, matchTaxSavingsP2: matchTaxSavings2, discTaxSavingsP1: pendingRefund.p1, discTaxSavingsP2: pendingRefund.p2,
