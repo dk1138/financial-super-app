@@ -192,150 +192,34 @@ const PercentInput = ({ value, onChange, className, placeholder, noBg, disabled 
     );
 };
 
-// Flawless Fixed Tooltip Overlay (Prevents clipping & Auto-detects optimal open direction)
-const InfoBtn = ({ title, text, align, direction = 'down' }: { title: string, text: string, align?: 'center'|'right'|'left', direction?: 'up'|'down' }) => {
+// Flawless Fixed Tooltip Overlay (Matched from DashboardTab)
+const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title: string, text: string, align?: 'center'|'right'|'left', direction?: 'up'|'down' }) => {
     const [open, setOpen] = useState(false);
-    const [posStyles, setPosStyles] = useState<React.CSSProperties>({});
-    const btnRef = useRef<HTMLButtonElement>(null);
-    const dialogRef = useRef<HTMLDialogElement>(null);
+    let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px' };
+    
+    // Support direction up/down 
+    if (direction === 'up') {
+        posStyles.bottom = '140%';
+    } else {
+        posStyles.top = '140%';
+    }
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                dialogRef.current && !dialogRef.current.contains(event.target as Node) &&
-                btnRef.current && !btnRef.current.contains(event.target as Node)
-            ) {
-                setOpen(false);
-            }
-        };
-        const handleScroll = () => setOpen(false);
-
-        if (open) {
-            document.addEventListener('mousedown', handleClickOutside);
-            window.addEventListener('scroll', handleScroll, true);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            window.removeEventListener('scroll', handleScroll, true);
-        };
-    }, [open]);
-
-    const toggleOpen = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (!open && btnRef.current) {
-            const rect = btnRef.current.getBoundingClientRect();
-            
-            // Explicitly override ALL native dialog inset positions to 'auto' to prevent browser stretching
-            let styles: React.CSSProperties = { 
-                margin: 0,
-                position: 'fixed', 
-                minWidth: '260px',
-                maxWidth: '320px',
-                zIndex: 9999,
-                top: 'auto',
-                bottom: 'auto',
-                left: 'auto',
-                right: 'auto',
-                transform: 'none',
-                textTransform: 'none', // Ensure it overrides parent uppercase styles
-                letterSpacing: 'normal' // Ensure it overrides parent spacing styles
-            };
-
-            // Smart Vertical Positioning
-            const spaceAbove = rect.top;
-            const spaceBelow = window.innerHeight - rect.bottom;
-            
-            let actualDir = direction;
-            if (direction === 'up' && spaceAbove < 250) {
-                actualDir = 'down'; // Force down if too close to top
-            } else if (direction === 'down' && spaceBelow < 250) {
-                actualDir = 'up'; // Force up if too close to bottom
-            }
-
-            if (actualDir === 'up') {
-                styles.bottom = `${window.innerHeight - rect.top + 8}px`;
-            } else {
-                styles.top = `${rect.bottom + 8}px`;
-            }
-
-            // Smart Horizontal Positioning Auto-Detection
-            const isRightHalf = rect.left > window.innerWidth / 2;
-            const activeAlign = align || (isRightHalf ? 'right' : 'left');
-
-            if (activeAlign === 'right') {
-                styles.right = `${window.innerWidth - rect.right}px`;
-            } else if (activeAlign === 'left') {
-                styles.left = `${rect.left}px`;
-            } else if (activeAlign === 'center') {
-                styles.left = `${rect.left + (rect.width / 2)}px`;
-                styles.transform = 'translateX(-50%)';
-            }
-            
-            setPosStyles(styles);
-            dialogRef.current?.showModal();
-        }
-        setOpen(!open);
-    };
-
-    const closeDialog = (e?: React.MouseEvent | Event) => {
-        if (e) e.stopPropagation();
-        dialogRef.current?.close();
-        setOpen(false);
-    };
+    // Support alignment
+    if (align === 'right') { posStyles.right = '0'; }
+    else if (align === 'left') { posStyles.left = '0'; }
+    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
 
     return (
-        <div className="d-inline-flex align-items-center ms-2" style={{textTransform: 'none', letterSpacing: 'normal'}}>
-            <style>{`
-                .custom-info-dialog[open] {
-                    animation: dialogFadeIn 0.15s ease-out forwards;
-                }
-                .custom-info-dialog::backdrop {
-                    background: transparent; /* Invisible backdrop, doesn't darken screen */
-                }
-                @keyframes dialogFadeIn {
-                    from { opacity: 0; transform: translateY(4px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
-            
-            <button 
-                ref={btnRef}
-                type="button" 
-                className="btn btn-link p-0 text-muted info-btn text-decoration-none transition-all" 
-                onClick={toggleOpen}
-                title="More info"
-            >
+        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
+            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
                 <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
             </button>
-            
-            <dialog 
-                ref={dialogRef} 
-                className="custom-info-dialog p-0 border border-secondary shadow-lg rounded-4 overflow-hidden"
-                style={{ 
-                    ...posStyles,
-                    backgroundColor: 'var(--bg-card)', 
-                    color: 'var(--text-main)',
-                    outline: 'none'
-                }}
-                onClick={(e) => {
-                    // Closes the modal if you click the invisible backdrop outside the dialog
-                    if (e.target === dialogRef.current) closeDialog(e);
-                }}
-            >
-                <div className="p-2 px-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-black bg-opacity-10">
-                    <div className="d-flex align-items-center gap-2">
-                        <i className="bi bi-info-circle-fill text-primary"></i>
-                        <h6 className="fw-bold mb-0 text-main" style={{fontSize: '0.8rem', textTransform: 'none', letterSpacing: 'normal'}}>{title}</h6>
-                    </div>
-                    <button type="button" className="btn btn-sm btn-link text-muted p-0 opacity-75 hover-opacity-100 flex-shrink-0" onClick={closeDialog}>
-                        <i className="bi bi-x-lg" style={{fontSize: '0.8rem'}}></i>
-                    </button>
+            {open && (
+                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
+                    <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
                 </div>
-                
-                <div className="p-3 text-muted fw-normal text-start" style={{fontSize: '0.75rem', lineHeight: '1.5', textTransform: 'none', letterSpacing: 'normal'}} dangerouslySetInnerHTML={{__html: text}}></div>
-            </dialog>
+            )}
         </div>
     );
 };
