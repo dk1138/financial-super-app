@@ -150,8 +150,7 @@ const FrequencyToggle = ({ value, onChange, mode = 'number' }: { value: any, onC
     );
 };
 
-// --- DATA INPUTS WITH HARD SANITIZATION ---
-
+// --- DATA INPUTS ---
 const CurrencyInput = ({ value, onChange, className, placeholder, style, disabled, suffix, noBg }: any) => {
     const [localValue, setLocalValue] = useState('');
     useEffect(() => {
@@ -191,7 +190,7 @@ const PercentInput = ({ value, onChange, className, placeholder, noBg, disabled 
     );
 };
 
-// Flawless Fixed Tooltip Overlay (Unclipped)
+// Flawless Fixed Tooltip Overlay
 const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title: string, text: string, align?: 'center'|'right'|'left', direction?: 'up'|'down' }) => {
     const [open, setOpen] = useState(false);
     let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px' };
@@ -221,7 +220,6 @@ const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title:
     );
 };
 
-// --- TYPABLE STEPPERS ---
 const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
     const numVal = Number(value) || 0; 
     const [textVal, setTextVal] = useState(numVal.toString());
@@ -467,12 +465,12 @@ export default function PlanTab() {
   const renderTaxBox = (taxDetails: any, gross: number) => {
       if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
       return (
-          <div className="border border-secondary rounded-4 overflow-hidden mt-4 shadow-sm">
-            <div className="bg-danger bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+          <div className="border border-secondary rounded-4 mt-4 shadow-sm">
+            <div className="bg-danger bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                 <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-receipt"></i></div>
                 <span className="fw-bold text-danger small text-uppercase ls-1">Estimated Tax Breakdown</span>
             </div>
-            <div className="p-3 bg-input d-flex flex-column gap-2">
+            <div className="p-3 bg-input d-flex flex-column gap-2 rounded-bottom-4">
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Federal Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span></div>
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Provincial Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.prov/gross)*100).toFixed(1)}%</span></span></div>
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">CPP / EI Premiums</span> <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
@@ -541,14 +539,14 @@ export default function PlanTab() {
             <div className="row g-4">
               
               <div className="col-12 col-xl-6">
-                <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
-                    <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
+                <div className="p-0 border border-secondary rounded-4 h-100 shadow-sm surface-card">
+                    <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4">
                         <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px'}}>
                             <i className="bi bi-person-fill fs-5"></i>
                         </div>
                         <h6 className="fw-bold mb-0 text-uppercase ls-1 text-info">Player 1 (P1)</h6>
                     </div>
-                    <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100">
+                    <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100 rounded-bottom-4">
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
                             <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p1_dob} onChange={(val: string) => handleDobChange('p1', val)} /></div>
@@ -571,14 +569,14 @@ export default function PlanTab() {
               
               {isCouple && (
                 <div className="col-12 col-xl-6">
-                    <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
-                        <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-3" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
+                    <div className="p-0 border border-secondary rounded-4 h-100 shadow-sm surface-card">
+                        <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
                             <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px', backgroundColor: 'rgba(111, 66, 193, 0.25)', color: 'var(--bs-purple)'}}>
                                 <i className="bi bi-person-fill fs-5"></i>
                             </div>
                             <h6 className="fw-bold mb-0 text-uppercase ls-1" style={{color: 'var(--bs-purple)'}}>Player 2 (P2)</h6>
                         </div>
-                        <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100">
+                        <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100 rounded-bottom-4">
                             <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                                 <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
                                 <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p2_dob} onChange={(val: string) => handleDobChange('p2', val)} /></div>
@@ -643,7 +641,7 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 3. Portfolio Assets & Asset Allocation (COMPACT 1-LINE ROWS, NO OVERFLOW) */}
+        {/* 3. Portfolio Assets & Asset Allocation (COMPACT 1-LINE ROWS, NO OVERFLOW, ALIGNED INFOS) */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
@@ -713,7 +711,7 @@ export default function PlanTab() {
                               
                               {/* Headers (Standard & Adv) */}
                               <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100" style={{fontSize: '0.65rem'}}>
-                                  <div style={{flex: '0 0 95px'}} className="text-start">Account</div>
+                                  <div style={{flex: '0 0 125px'}} className="text-start">Account</div>
                                   <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
                                   <div style={{flex: '0 0 70px'}} className="text-start ps-1">Pre %</div>
                                   {showAssetMixUI && <div style={{flex: '0 0 70px'}} className="text-start ps-1 text-primary">Post %</div>}
@@ -722,9 +720,11 @@ export default function PlanTab() {
                               {/* --- COMPACT STANDARD ACCOUNTS (1 Line) --- */}
                               {ACCOUNT_TYPES.map(acct => (
                                   <div className="d-flex align-items-center gap-2 p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 w-100" key={`${p}_${acct.id}`}>
-                                      <div className="d-flex align-items-center gap-1" style={{flex: '0 0 95px'}}>
-                                          <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
-                                          <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                                      <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
+                                          <div className="d-flex align-items-center gap-1">
+                                              <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
+                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                                          </div>
                                           <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
                                       </div>
                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
@@ -746,9 +746,11 @@ export default function PlanTab() {
                                   <div className="d-flex flex-column p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 mt-2 w-100" key={`${p}_adv_${acct}`}>
                                       {/* Row 1 */}
                                       <div className="d-flex align-items-center gap-2 w-100">
-                                          <div className="d-flex align-items-center gap-1" style={{flex: '0 0 95px'}}>
-                                              <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-6`}></i>
-                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct === 'crypto' ? 'Crypto' : 'Non-Reg'}</span>
+                                          <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
+                                              <div className="d-flex align-items-center gap-1">
+                                                  <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-6`}></i>
+                                                  <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct === 'crypto' ? 'Crypto' : 'Non-Reg'}</span>
+                                              </div>
                                               <InfoBtn direction="up" title={acct === 'crypto' ? 'Crypto' : 'Non-Reg'} text={acct === 'nonreg' ? 'Taxable Account. Capital gains taxed at 50% inclusion.' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.'} />
                                           </div>
                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}>
@@ -766,8 +768,8 @@ export default function PlanTab() {
 
                                       {/* Row 2 (ACB & Yield) */}
                                       <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
-                                          <div style={{flex: '0 0 95px'}} className="text-end pe-2 d-flex justify-content-end align-items-center">
-                                              <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
+                                          <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
+                                              <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>ACB</span>
                                               <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                           </div>
                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}>
@@ -776,10 +778,9 @@ export default function PlanTab() {
                                           <div style={{flex: '0 0 45px'}} className="text-end pe-1">
                                               <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yld</span>
                                           </div>
-                                          <div style={{flex: '0 0 70px', marginLeft: showAssetMixUI ? '-45px' : '0'}}>
+                                          <div style={{flex: '0 0 70px'}}>
                                               <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} placeholder="Yield" />
                                           </div>
-                                          {/* Spacers to keep strict column alignment if Adv Mode is on */}
                                           {showAssetMixUI && <div style={{flex: '0 0 70px'}}></div>}
                                       </div>
                                   </div>
@@ -802,7 +803,7 @@ export default function PlanTab() {
                                       <>
                                           <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100 mt-2" style={{fontSize: '0.65rem'}}>
                                               <div style={{flex: '0 0 20px'}}></div>
-                                              <div style={{flex: '0 0 95px'}} className="text-start">Type</div>
+                                              <div style={{flex: '0 0 125px'}} className="text-start">Type</div>
                                               <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1 d-none d-sm-block">Name</div>
                                               <div style={{flex: '1 1 0%', minWidth: '70px'}} className="text-start ps-1">Balance</div>
                                               <div style={{flex: '0 0 70px'}} className="text-start ps-1">Pre %</div>
@@ -823,7 +824,7 @@ export default function PlanTab() {
                                                                   <i className="bi bi-x-lg" style={{fontSize: '0.9rem'}}></i>
                                                               </button>
                                                           </div>
-                                                          <div style={{flex: '0 0 95px'}}>
+                                                          <div style={{flex: '0 0 125px'}}>
                                                               <CustomAccountDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} />
                                                           </div>
                                                           <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-none d-sm-block">
@@ -842,22 +843,22 @@ export default function PlanTab() {
                                                           )}
                                                       </div>
 
-                                                      {/* Row 2: Tax Data */}
+                                                      {/* Row 2: Tax Data (ACB lines up with default Non Reg) */}
                                                       {isNonReg && (
                                                           <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
-                                                              <div style={{flex: '0 0 20px'}}></div>
-                                                              <div style={{flex: '0 0 95px'}} className="text-end pe-2 d-flex justify-content-end align-items-center">
-                                                                  <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
+                                                              <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
+                                                                  <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>ACB</span>
                                                                   <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                                               </div>
-                                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-none d-sm-block"></div> {/* Spacer for Name */}
+                                                              <div style={{flex: '0 0 20px'}}></div>
+                                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-none d-sm-block"></div> {/* Spacer to align with Balance */}
                                                               <div style={{flex: '1 1 0%', minWidth: '70px'}}>
                                                                   <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
                                                               </div>
                                                               <div style={{flex: '0 0 45px'}} className="text-end pe-1">
                                                                   <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yld</span>
                                                               </div>
-                                                              <div style={{flex: '0 0 70px', marginLeft: showAssetMixUI ? '-45px' : '0'}}>
+                                                              <div style={{flex: '0 0 70px'}}>
                                                                   <PercentInput disabled={hasAutoAllocation && ca.type !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={ca.yield ?? ''} onChange={(val: any) => updateCa('yield', val)} placeholder="Yield" />
                                                               </div>
                                                               {showAssetMixUI && <div style={{flex: '0 0 70px'}}></div>}
@@ -922,9 +923,9 @@ export default function PlanTab() {
             {data.properties.length === 0 && <div className="text-center text-muted small fst-italic">No properties added.</div>}
             
             {data.properties.map((prop: any, idx: number) => (
-                <div className="p-0 border border-secondary rounded-4 overflow-hidden mb-4 shadow-sm" key={`prop_${idx}`}>
+                <div className="p-0 border border-secondary rounded-4 mb-4 shadow-sm" key={`prop_${idx}`}>
                     
-                    <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
+                    <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center rounded-top-4">
                         <div className="d-flex align-items-center gap-3 w-75">
                             <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '40px', height: '40px'}}>
                                 <i className="bi bi-house-door-fill fs-5"></i>
@@ -940,7 +941,7 @@ export default function PlanTab() {
                         </div>
                     </div>
 
-                    <div className="p-4 bg-input">
+                    <div className="p-4 bg-input rounded-bottom-4">
                         <div className="row g-4">
                             
                             <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4">
@@ -1054,12 +1055,12 @@ export default function PlanTab() {
                         </div>
                       </div>
 
-                      <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
-                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+                      <div className="border border-secondary rounded-4 mb-3 shadow-sm">
+                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                               <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-cash-stack"></i></div>
                               <span className="fw-bold text-main small text-uppercase ls-1">Base Salary</span>
                           </div>
-                          <div className="p-3 bg-input">
+                          <div className="p-3 bg-input rounded-bottom-4">
                               <div className="row g-3">
                                   <div className="col-12 col-md-7">
                                       <label className="form-label small text-muted mb-1">Gross Annual Income</label>
@@ -1073,12 +1074,12 @@ export default function PlanTab() {
                           </div>
                       </div>
 
-                      <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
-                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+                      <div className="border border-secondary rounded-4 mb-3 shadow-sm">
+                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                               <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-building"></i></div>
                               <span className="fw-bold text-main small text-uppercase ls-1">Employer RRSP Match</span>
                           </div>
-                          <div className="p-3 bg-input">
+                          <div className="p-3 bg-input rounded-bottom-4">
                               <div className="row g-3">
                                   <div className="col-12 col-md-6">
                                       <label className="form-label small text-muted mb-1">Max Match (%)</label>
@@ -1096,15 +1097,15 @@ export default function PlanTab() {
                           const realIdx = data.additionalIncome.indexOf(inc);
                           const updateInc = (field: string, val: any) => updateArrayItem('additionalIncome', realIdx, field, val);
                           return (
-                            <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm" key={`inc_${realIdx}`}>
-                              <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
+                            <div className="border border-secondary rounded-4 mb-3 shadow-sm" key={`inc_${realIdx}`}>
+                              <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                   <div className="d-flex align-items-center gap-3 w-100">
                                       <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
                                       <input type="text" maxLength={50} className="form-control bg-transparent border-0 text-main fw-bold p-0 shadow-none" value={inc.name || ''} onChange={(e) => updateInc('name', e.target.value)} placeholder="Stream Name" />
                                   </div>
-                                  <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('additionalIncome', realIdx)}><i className="bi bi-x-lg fs-5"></i></button>
+                                  <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('additionalIncome', realIdx)}><i className="bi bi-x-lg fs-5"></i></button>
                               </div>
-                              <div className="p-3 bg-input">
+                              <div className="p-3 bg-input rounded-bottom-4">
                                   <div className="row g-3 mb-3">
                                       <div className="col-12 col-md-5">
                                           <label className="small text-muted mb-1 fw-medium">Amount ($)</label>
@@ -1504,8 +1505,8 @@ export default function PlanTab() {
                             <h6 className={`fw-bold text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{p.toUpperCase()} Benefits</h6>
                             
                             {/* CPP Box */}
-                            <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
-                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
+                            <div className="border border-secondary rounded-4 mb-3 shadow-sm">
+                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                     <div className="d-flex align-items-center gap-3">
                                         <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-map-fill"></i></div>
                                         <span className="fw-bold text-main small text-uppercase ls-1">CPP</span>
@@ -1513,7 +1514,7 @@ export default function PlanTab() {
                                     <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_cpp_enabled`] ?? true} onChange={(e) => updateInput(`${p}_cpp_enabled`, e.target.checked)} /></div>
                                 </div>
                                 {(data.inputs[`${p}_cpp_enabled`] ?? true) && (
-                                    <div className="p-3 bg-input d-flex flex-column gap-3">
+                                    <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                         <div className="d-flex justify-content-between align-items-center">
                                             <label className="form-label small text-muted mb-0">Est. Base Payout (Age 65)</label>
                                             <div style={{width: '170px'}}><CurrencyInput suffix="/yr" className="form-control form-control-sm" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} /></div>
@@ -1534,8 +1535,8 @@ export default function PlanTab() {
                             </div>
 
                             {/* OAS Box */}
-                            <div className="border border-secondary rounded-4 overflow-hidden mb-3 shadow-sm">
-                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
+                            <div className="border border-secondary rounded-4 mb-3 shadow-sm">
+                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                     <div className="d-flex align-items-center gap-3">
                                         <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-shield-fill-check"></i></div>
                                         <span className="fw-bold text-main small text-uppercase ls-1">OAS</span>
@@ -1543,7 +1544,7 @@ export default function PlanTab() {
                                     <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_oas_enabled`] ?? true} onChange={(e) => updateInput(`${p}_oas_enabled`, e.target.checked)} /></div>
                                 </div>
                                 {(data.inputs[`${p}_oas_enabled`] ?? true) && (
-                                    <div className="p-3 bg-input d-flex flex-column gap-3">
+                                    <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                         <div className="d-flex justify-content-between align-items-center">
                                             <label className="form-label small text-muted mb-0">Years in Canada <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65."/></label>
                                             <div style={{width: '170px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
@@ -1564,8 +1565,8 @@ export default function PlanTab() {
                             </div>
 
                             {/* DB Pension Box */}
-                            <div className="border border-secondary rounded-4 overflow-hidden shadow-sm">
-                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center">
+                            <div className="border border-secondary rounded-4 shadow-sm">
+                                <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                     <div className="d-flex align-items-center gap-3">
                                         <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
                                         <span className="fw-bold text-main small text-uppercase ls-1">DB Pension</span>
@@ -1579,7 +1580,7 @@ export default function PlanTab() {
                                     </div>
                                 </div>
                                 {(p === 'p1' ? p1DbEnabled : p2DbEnabled) && (
-                                    <div className="p-3 bg-input d-flex flex-column gap-3">
+                                    <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                         <div className="d-flex justify-content-between align-items-center">
                                             <div className="d-flex align-items-center">
                                                 <label className="form-label small fw-bold text-muted mb-0">Index to Inflation</label>
@@ -1632,14 +1633,14 @@ export default function PlanTab() {
           <div className="card-body p-4">
               <div className="row">
                   <div className="col-12 col-md-6 col-xl-4">
-                      <div className="border border-secondary rounded-4 overflow-hidden shadow-sm">
-                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3">
+                      <div className="border border-secondary rounded-4 shadow-sm">
+                          <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                               <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
                                   <i className="bi bi-percent"></i>
                               </div>
                               <span className="fw-bold text-main small text-uppercase ls-1">Inflation Rate</span>
                           </div>
-                          <div className="p-3 bg-input">
+                          <div className="p-3 bg-input rounded-bottom-4">
                               <label className="form-label small text-muted mb-2 d-flex align-items-center">Long-term Target <InfoBtn align="right" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%."/></label>
                               <PercentInput className="form-control" value={data.inputs.inflation_rate} onChange={(val: any) => updateInput('inflation_rate', val)} />
                           </div>
