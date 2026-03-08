@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 
 export default function CashFlowTab() {
@@ -6,7 +6,10 @@ export default function CashFlowTab() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [isPlaying, setIsPlaying] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null); 
+  
+  // Modern Hover Tooltip State
+  const [tooltip, setTooltip] = useState<{ id: string, x: number, y: number } | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
       let interval: any;
@@ -182,7 +185,6 @@ export default function CashFlowTab() {
       ]
   };
 
-  // Convert to display nodes
   const rawLeftNodes = [
       { id: 'salary', label: 'Employment', value: getRealValue(salaryRaw), color: '#3b82f6' },
       { id: 'match', label: 'Employer Match', value: getRealValue(matchRaw), color: '#0ea5e9' },
@@ -203,11 +205,10 @@ export default function CashFlowTab() {
   const leftData = rawLeftNodes.filter(d => d.value >= 1);
   const rightData = rawRightNodes.filter(d => d.value >= 1);
 
-  // --- Sankey SVG Math Engine (WIDENED) ---
+  // --- Sankey SVG Math Engine ---
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
   const PADDING = 20; 
-  // Pushed Left X further left, Right X further right to use up space
   const LEFT_X = 140; 
   const RIGHT_X = 1060; 
   const CENTER_LEFT = 570;
@@ -229,7 +230,7 @@ export default function CashFlowTab() {
   let lastTextY = -999;
   
   leftData.forEach(d => {
-      const h = d.value * pxPerDollar;
+      const h = Math.max(2, d.value * pxPerDollar); // Ensure visible height
       let ty = curY + h / 2;
       if (ty - lastTextY < 28) ty = lastTextY + 28;
       leftNodes.push({ ...d, y: curY, h, ty });
@@ -242,7 +243,7 @@ export default function CashFlowTab() {
   lastTextY = -999;
 
   rightData.forEach(d => {
-      const h = d.value * pxPerDollar;
+      const h = Math.max(2, d.value * pxPerDollar);
       let ty = curY + h / 2;
       if (ty - lastTextY < 28) ty = lastTextY + 28;
       rightNodes.push({ ...d, y: curY, h, ty });
@@ -277,7 +278,79 @@ export default function CashFlowTab() {
       return link;
   });
 
+  // --- Interaction Handlers ---
+  const handleMouseMove = (e: React.MouseEvent, id: string) => {
+      if (!chartRef.current) return;
+      const rect = chartRef.current.getBoundingClientRect();
+      setHovered(id);
+      setTooltip({
+          id,
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+      });
+  };
+
+  const handleMouseLeave = () => {
+      setHovered(null);
+      setTooltip(null);
+  };
+
   const getOpacity = (id: string) => (!hovered || hovered === id) ? 1 : 0.15;
+  const getLinkOpacity = (id: string) => hovered === id ? 0.7 : (hovered ? 0.05 : 0.25);
+
+  // Compile full node dictionary for tooltip reference
+  const allNodesMeta = [...leftData, ...rightData, { id: 'center', label: 'Total Balanced Flow', value: getRealValue(Math.max(totalSourcedRaw, totalSpentRaw)), color: '#10b981' }];
+
+  // Render Tooltip
+  const renderTooltip = () => {
+      if (!tooltip) return null;
+      const meta = allNodesMeta.find(n => n.id === tooltip.id);
+      if (!meta) return null;
+
+      const chartWidth = chartRef.current?.clientWidth || 800;
+      const isRightHalf = tooltip.x > chartWidth / 2;
+
+      // Smart positioning to prevent screen clipping
+      const style: React.CSSProperties = {
+          position: 'absolute',
+          top: Math.max(20, tooltip.y - 40),
+          left: isRightHalf ? 'auto' : tooltip.x + 20,
+          right: isRightHalf ? chartWidth - tooltip.x + 20 : 'auto',
+          minWidth: '240px',
+          backgroundColor: 'rgba(20, 20, 25, 0.90)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          zIndex: 1050,
+          pointerEvents: 'none',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          border: '1px solid rgba(255,255,255,0.1)'
+      };
+
+      const items = nodeBreakdowns[tooltip.id]?.filter((b: any) => Math.abs(b.val) > 1) || [];
+
+      return (
+          <div className="rounded-4 p-3 transition-none" style={style}>
+              <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-50">
+                  <div className="d-flex align-items-center gap-2">
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: meta.color, boxShadow: `0 0 8px ${meta.color}` }}></div>
+                      <span className="fw-bold text-white small text-uppercase ls-1">{meta.label}</span>
+                  </div>
+                  <span className="fw-bolder text-white ms-3">{formatCurrency(meta.value)}</span>
+              </div>
+              <div className="d-flex flex-column gap-1">
+                  {items.map((b: any, i: number) => (
+                      <div className="d-flex justify-content-between align-items-center small" key={i}>
+                          <span className="text-muted fw-medium">{b.label}</span>
+                          <span className="fw-bold text-light ms-3">{formatCurrency(getRealValue(b.val))}</span>
+                      </div>
+                  ))}
+                  {items.length === 0 && (
+                      <span className="text-muted small fst-italic">No sub-items this year.</span>
+                  )}
+              </div>
+          </div>
+      );
+  };
 
   // --- Insights Math ---
   const topInflowNode = [...leftData].sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
@@ -324,48 +397,48 @@ export default function CashFlowTab() {
       </div>
 
       {/* Sankey Chart Container */}
-      <div className="rp-card border border-secondary rounded-4 shadow-sm p-3 p-md-4 overflow-hidden position-relative mb-4">
+      <div className="rp-card border border-secondary rounded-4 shadow-sm p-3 p-md-4 position-relative mb-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="fw-bold text-uppercase ls-1 text-info mb-0">Cash Flow Diagram</h5>
-              <span className="small text-muted fst-italic d-none d-sm-inline"><i className="bi bi-hand-index-thumb me-1"></i> Click any stream for details</span>
+              <span className="small text-muted fst-italic d-none d-sm-inline"><i className="bi bi-cursor-fill me-1"></i> Hover over any stream for details</span>
           </div>
           
-          <div className="w-100 position-relative d-flex justify-content-center align-items-center" style={{ minHeight: '550px', height: '65vh' }}>
+          <div className="w-100 position-relative d-flex justify-content-center align-items-center" ref={chartRef} style={{ minHeight: '550px', height: '65vh' }}>
               <svg viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
                   
+                  {/* Left Links */}
+                  {leftLinks.map((l, i) => (
+                      <path key={`LL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(2, l.h)} strokeLinecap="round" className="transition-all cursor-crosshair" 
+                            style={{ opacity: getLinkOpacity(l.id) }} 
+                            onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
+                  ))}
+
+                  {/* Right Links */}
+                  {rightLinks.map((l, i) => (
+                      <path key={`RL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(2, l.h)} strokeLinecap="round" className="transition-all cursor-crosshair" 
+                            style={{ opacity: getLinkOpacity(l.id) }} 
+                            onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
+                  ))}
+
                   {/* Left Nodes & Text */}
                   {leftNodes.map((n, i) => (
-                      <g key={`L-${i}`} className="transition-all cursor-pointer" style={{ opacity: getOpacity(n.id) }} 
-                         onMouseEnter={() => setHovered(n.id)} onMouseLeave={() => setHovered(null)} onClick={() => setSelectedNode(n.id)}>
-                          <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} rx="2" />
-                          <text x={LEFT_X - NODE_W - 10} y={n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                          <text x={LEFT_X - NODE_W - 10} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                      <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
+                         onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
+                          <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} rx="4" />
+                          <text x={LEFT_X - NODE_W - 12} y={n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
+                          <text x={LEFT_X - NODE_W - 12} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
                               {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
                           </text>
                       </g>
                   ))}
 
-                  {/* Left Links */}
-                  {leftLinks.map((l, i) => (
-                      <path key={`LL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(1, l.h)} className="transition-all cursor-pointer" 
-                            style={{ opacity: hovered === l.id ? 0.7 : (hovered ? 0.05 : 0.3) }} 
-                            onMouseEnter={() => setHovered(l.id)} onMouseLeave={() => setHovered(null)} onClick={() => setSelectedNode(l.id)} />
-                  ))}
-
-                  {/* Right Links */}
-                  {rightLinks.map((l, i) => (
-                      <path key={`RL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(1, l.h)} className="transition-all cursor-pointer" 
-                            style={{ opacity: hovered === l.id ? 0.7 : (hovered ? 0.05 : 0.3) }} 
-                            onMouseEnter={() => setHovered(l.id)} onMouseLeave={() => setHovered(null)} onClick={() => setSelectedNode(l.id)} />
-                  ))}
-
                   {/* Right Nodes & Text */}
                   {rightNodes.map((n, i) => (
-                      <g key={`R-${i}`} className="transition-all cursor-pointer" style={{ opacity: getOpacity(n.id) }} 
-                         onMouseEnter={() => setHovered(n.id)} onMouseLeave={() => setHovered(null)} onClick={() => setSelectedNode(n.id)}>
-                          <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} rx="2" />
-                          <text x={RIGHT_X + NODE_W + 10} y={n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                          <text x={RIGHT_X + NODE_W + 10} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                      <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
+                         onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
+                          <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} rx="4" />
+                          <text x={RIGHT_X + NODE_W + 12} y={n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
+                          <text x={RIGHT_X + NODE_W + 12} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
                               {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
                           </text>
                       </g>
@@ -373,9 +446,9 @@ export default function CashFlowTab() {
 
                   {/* Center Node Block */}
                   {MAX > 1 && (
-                      <g className="transition-all cursor-pointer" style={{ opacity: getOpacity('center') }} 
-                         onMouseEnter={() => setHovered('center')} onMouseLeave={() => setHovered(null)} onClick={() => setSelectedNode('center')}>
-                          <rect x={CENTER_LEFT} y={centerY} width={CENTER_RIGHT - CENTER_LEFT} height={centerH} fill="url(#centerGrad)" rx="4" />
+                      <g className="transition-all cursor-crosshair" style={{ opacity: getOpacity('center') }} 
+                         onMouseMove={(e) => handleMouseMove(e, 'center')} onMouseLeave={handleMouseLeave}>
+                          <rect x={CENTER_LEFT} y={centerY} width={CENTER_RIGHT - CENTER_LEFT} height={centerH} fill="url(#centerGrad)" rx="6" />
                           <text x={VIEWBOX_W / 2} y={centerY - 25} textAnchor="middle" fill="currentColor" className="fw-bold text-uppercase ls-1" style={{ fontSize: '12px', opacity: 0.6 }}>Total Cash Sourced</text>
                           <text x={VIEWBOX_W / 2} y={centerY - 8} textAnchor="middle" fill="#10b981" className="fw-bold" style={{ fontSize: '16px' }}>{formatCurrency(MAX)}</text>
                       </g>
@@ -383,39 +456,18 @@ export default function CashFlowTab() {
 
                   <defs>
                       <linearGradient id="centerGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
-                          <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.85" />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity="0.85" />
                       </linearGradient>
                   </defs>
               </svg>
 
-              {/* FLOATING DETAIL OVERLAY */}
-              {selectedNode && (
-                  <div className="position-absolute top-50 start-50 translate-middle border border-secondary rounded-4 p-4 slide-down" 
-                       style={{ minWidth: '320px', zIndex: 10, backgroundColor: '#1e1e24', boxShadow: '0 10px 60px rgba(0,0,0,0.85)' }}>
-                      <div className="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
-                          <h6 className="fw-bold text-uppercase ls-1 text-info mb-0">Detailed Breakdown</h6>
-                          <button type="button" className="btn-close btn-close-white" onClick={() => setSelectedNode(null)}></button>
-                      </div>
-                      <div className="d-flex flex-column gap-2 mb-2">
-                          {nodeBreakdowns[selectedNode]
-                              ?.filter((b: any) => Math.abs(b.val) > 1)
-                              .map((b: any, i: number) => (
-                                  <div className="d-flex justify-content-between align-items-center small" key={i}>
-                                      <span className="text-muted fw-bold">{b.label}</span>
-                                      <span className="fw-bolder text-white">{formatCurrency(getRealValue(b.val))}</span>
-                                  </div>
-                              ))}
-                          {nodeBreakdowns[selectedNode]?.filter((b: any) => Math.abs(b.val) > 1).length === 0 && (
-                              <span className="text-muted small fst-italic">No sub-categories generated value this year.</span>
-                          )}
-                      </div>
-                  </div>
-              )}
+              {/* Render Modern Tooltip Overlay */}
+              {renderTooltip()}
           </div>
       </div>
 
-      {/* Added Quick Insights Cards */}
+      {/* Quick Insights Cards */}
       <div className="row g-3">
           <div className="col-12 col-md-3">
               <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
