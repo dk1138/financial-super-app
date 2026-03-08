@@ -66,10 +66,10 @@ const CustomAccountDropdown = ({ value, onChange }: { value: string, onChange: (
     const selected = EXTENDED_ACCOUNT_TYPES.find(a => a.id === value) || EXTENDED_ACCOUNT_TYPES[0];
 
     return (
-        <div className="position-relative w-100 d-flex align-items-center bg-black bg-opacity-25 border border-secondary rounded-3 shadow-sm px-2 overflow-hidden" style={{ height: '31px' }}>
-            <i className={`bi ${selected.icon} ${selected.color} flex-shrink-0`} style={{fontSize: '0.85rem'}}></i>
+        <div className="position-relative w-100 d-flex align-items-center bg-input border border-secondary rounded-3 shadow-sm px-1 overflow-hidden" style={{ height: '31px' }}>
+            <i className={`bi ${selected.icon} ${selected.color} flex-shrink-0 ms-1`} style={{fontSize: '0.85rem'}}></i>
             <select
-                className="form-select form-select-sm bg-transparent border-0 text-main fw-bold shadow-none p-0 ps-2"
+                className="form-select form-select-sm bg-transparent border-0 text-main fw-bold shadow-none p-0 ps-1"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 style={{ outline: 'none', cursor: 'pointer', fontSize: '0.75rem' }}
@@ -150,7 +150,8 @@ const FrequencyToggle = ({ value, onChange, mode = 'number' }: { value: any, onC
     );
 };
 
-// --- DATA INPUTS ---
+// --- DATA INPUTS WITH HARD SANITIZATION ---
+
 const CurrencyInput = ({ value, onChange, className, placeholder, style, disabled, suffix, noBg }: any) => {
     const [localValue, setLocalValue] = useState('');
     useEffect(() => {
@@ -164,8 +165,8 @@ const CurrencyInput = ({ value, onChange, className, placeholder, style, disable
     };
     return (
         <div className="position-relative w-100 d-flex align-items-center" style={{ minWidth: 0 }}>
-            <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '10px', fontSize: '0.9em', pointerEvents: 'none', zIndex: 5 }}>$</span>
-            <input type="text" maxLength={15} className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50' : ''}`} style={{ ...style, minWidth: 0, paddingLeft: noBg ? '16px' : '22px', paddingRight: suffix ? '45px' : '8px', fontWeight: '600', outline: 'none' }} value={localValue} onChange={handleChange} placeholder={placeholder} disabled={disabled} />
+            <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '8px', fontSize: '0.85em', pointerEvents: 'none', zIndex: 5 }}>$</span>
+            <input type="text" maxLength={15} className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50' : ''}`} style={{ ...style, minWidth: 0, paddingLeft: noBg ? '16px' : '18px', paddingRight: suffix ? '45px' : '6px', fontWeight: '600', outline: 'none' }} value={localValue} onChange={handleChange} placeholder={placeholder} disabled={disabled} />
             {suffix && <span className="position-absolute text-muted small fw-bold" style={{ right: '10px', pointerEvents: 'none', zIndex: 5 }}>{suffix}</span>}
         </div>
     );
@@ -184,26 +185,29 @@ const PercentInput = ({ value, onChange, className, placeholder, noBg, disabled 
 
     return (
         <div className="position-relative w-100 d-flex align-items-center" style={{ minWidth: 0 }}>
-            <input type="number" step="0.01" max={1000} min={-100} className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50 bg-secondary bg-opacity-25' : ''}`} style={{ minWidth: 0, paddingLeft: '8px', paddingRight: '22px', fontWeight: '600', outline: 'none' }} value={focused ? (value ?? '') : displayValue} onChange={handleChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder={placeholder} disabled={disabled} />
-            <span className="position-absolute text-muted fw-bold" style={{ right: '8px', fontSize: '0.9em', pointerEvents: 'none', zIndex: 5 }}>%</span>
+            <input type="number" step="0.01" max={1000} min={-100} className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50 bg-secondary bg-opacity-25' : ''}`} style={{ minWidth: 0, paddingLeft: '6px', paddingRight: '20px', fontWeight: '600', outline: 'none' }} value={focused ? (value ?? '') : displayValue} onChange={handleChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder={placeholder} disabled={disabled} />
+            <span className="position-absolute text-muted fw-bold" style={{ right: '6px', fontSize: '0.85em', pointerEvents: 'none', zIndex: 5 }}>%</span>
         </div>
     );
 };
 
-// Pure React State InfoBtn (Identical to DashboardTab) - Safe from clipping!
+// Flawless Fixed Tooltip Overlay (Unclipped)
 const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title: string, text: string, align?: 'center'|'right'|'left', direction?: 'up'|'down' }) => {
     const [open, setOpen] = useState(false);
     let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px' };
     
-    if (direction === 'up') { posStyles.bottom = '140%'; } 
-    else { posStyles.top = '140%'; }
+    if (direction === 'up') {
+        posStyles.bottom = '140%';
+    } else {
+        posStyles.top = '140%';
+    }
 
     if (align === 'right') { posStyles.right = '0'; }
     else if (align === 'left') { posStyles.left = '0'; }
     else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
 
     return (
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
+        <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}}>
             <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
                 <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
             </button>
@@ -217,6 +221,7 @@ const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title:
     );
 };
 
+// --- TYPABLE STEPPERS ---
 const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
     const numVal = Number(value) || 0; 
     const [textVal, setTextVal] = useState(numVal.toString());
@@ -638,7 +643,7 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 3. Portfolio Assets & Asset Allocation (MODERN CARD GRID) */}
+        {/* 3. Portfolio Assets & Asset Allocation (COMPACT 1-LINE ROWS, NO OVERFLOW) */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
@@ -694,7 +699,7 @@ export default function PlanTab() {
                 const playerCustomAssets = data.customAssets?.filter((ca: any) => ca.owner === p) || [];
 
                 return (
-                <div className="col-12" key={p}>
+                <div className="col-12 col-xl-6" key={p}>
                   <div className="card border-secondary surface-card shadow-none h-100">
                     <div className="card-body p-3 p-md-4">
                       
@@ -704,103 +709,85 @@ export default function PlanTab() {
                       </div>
 
                       {assetsOpen && (
-                          <div className="d-flex flex-column gap-4 mb-2 transition-all">
+                          <div className="d-flex flex-column gap-2 mb-2 transition-all">
                               
-                              {/* --- BENTO BOX GRID LAYOUT (No Overflow Wrappers!) --- */}
-                              <div className="row g-3">
-                                  
-                                  {/* Standard Accounts */}
-                                  {ACCOUNT_TYPES.map(acct => (
-                                      <div className="col-12 col-md-6 col-xxl-4" key={`${p}_${acct.id}`}>
-                                          <div className="bg-input border border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-between">
-                                              
-                                              <div className="d-flex justify-content-between align-items-center mb-3">
-                                                  <div className="d-flex align-items-center gap-2">
-                                                      <i className={`bi ${acct.icon} fs-5 ${acct.color}`}></i>
-                                                      <span className="fw-bold text-main small">{acct.label}</span>
-                                                  </div>
-                                                  <InfoBtn align="right" title={acct.label} text={acct.tooltip} />
-                                              </div>
-
-                                              <div className="d-flex flex-column gap-3">
-                                                  <div>
-                                                      <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Balance</label>
-                                                      <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
-                                                  </div>
-                                                  <div className="row g-2">
-                                                      <div className={showAssetMixUI ? "col-6" : "col-12"}>
-                                                          <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Pre %</label>
-                                                          <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
-                                                      </div>
-                                                      {showAssetMixUI && (
-                                                          <div className="col-6">
-                                                              <label className="small text-primary mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Post %</label>
-                                                              <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
-                                                          </div>
-                                                      )}
-                                                  </div>
-                                              </div>
-
-                                          </div>
-                                      </div>
-                                  ))}
-
-                                  {/* Non-Reg & Crypto Accounts */}
-                                  {['nonreg', 'crypto'].map(acct => (
-                                      <div className="col-12 col-md-6 col-xxl-4" key={`${p}_adv_${acct}`}>
-                                          <div className="bg-input border border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-between">
-                                              
-                                              <div className="d-flex justify-content-between align-items-center mb-3">
-                                                  <div className="d-flex align-items-center gap-2">
-                                                      <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-5`}></i>
-                                                      <span className="fw-bold text-main small">{acct === 'crypto' ? 'Crypto' : 'Non-Reg'}</span>
-                                                  </div>
-                                                  <InfoBtn align="right" title={acct === 'crypto' ? 'Crypto' : 'Non-Reg'} text={acct === 'nonreg' ? 'Taxable Investment Account. Yields taxed annually. Capital gains taxed at 50% inclusion.' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.'} />
-                                              </div>
-
-                                              <div className="d-flex flex-column gap-3">
-                                                  <div>
-                                                      <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Market Value</label>
-                                                      <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}`, val)} placeholder="$0" />
-                                                  </div>
-                                                  
-                                                  <div className="row g-2">
-                                                      <div className={showAssetMixUI ? "col-6" : "col-12"}>
-                                                          <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Pre %</label>
-                                                          <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_ret`, val)} />
-                                                      </div>
-                                                      {showAssetMixUI && (
-                                                          <div className="col-6">
-                                                              <label className="small text-primary mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Post %</label>
-                                                              <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm border-primary text-primary" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_retire_ret`, val)} />
-                                                          </div>
-                                                      )}
-                                                  </div>
-
-                                                  <div className="mt-1 pt-3 border-top border-secondary border-opacity-25 row g-2">
-                                                      <div className="col-6">
-                                                          <label className="small text-muted mb-1 fw-bold text-uppercase ls-1 d-flex align-items-center" style={{fontSize: '0.65rem'}}>
-                                                              ACB
-                                                              <InfoBtn align="left" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account. Used to calculate capital gains tax. Only the growth above this number is taxed." />
-                                                          </label>
-                                                          <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} placeholder="$0" />
-                                                      </div>
-                                                      <div className="col-6">
-                                                          <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yield %</label>
-                                                          <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} placeholder="Yield" />
-                                                      </div>
-                                                  </div>
-                                              </div>
-
-                                          </div>
-                                      </div>
-                                  ))}
-
+                              {/* Headers (Standard & Adv) */}
+                              <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100" style={{fontSize: '0.65rem'}}>
+                                  <div style={{flex: '0 0 95px'}} className="text-start">Account</div>
+                                  <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
+                                  <div style={{flex: '0 0 70px'}} className="text-start ps-1">Pre %</div>
+                                  {showAssetMixUI && <div style={{flex: '0 0 70px'}} className="text-start ps-1 text-primary">Post %</div>}
                               </div>
 
-                              {/* --- CUSTOM ACCOUNTS (CARD GRID) --- */}
-                              <div className="mt-3 pt-4 border-top border-secondary">
-                                  <div className="d-flex justify-content-between align-items-center mb-3">
+                              {/* --- COMPACT STANDARD ACCOUNTS (1 Line) --- */}
+                              {ACCOUNT_TYPES.map(acct => (
+                                  <div className="d-flex align-items-center gap-2 p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 w-100" key={`${p}_${acct.id}`}>
+                                      <div className="d-flex align-items-center gap-1" style={{flex: '0 0 95px'}}>
+                                          <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
+                                          <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                                          <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
+                                      </div>
+                                      <div style={{flex: '1 1 0%', minWidth: '80px'}}>
+                                          <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
+                                      </div>
+                                      <div style={{flex: '0 0 70px'}}>
+                                          <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
+                                      </div>
+                                      {showAssetMixUI && (
+                                          <div style={{flex: '0 0 70px'}}>
+                                              <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
+                                          </div>
+                                      )}
+                                  </div>
+                              ))}
+                              
+                              {/* --- NON-REG & CRYPTO (2 Lines) --- */}
+                              {['nonreg', 'crypto'].map(acct => (
+                                  <div className="d-flex flex-column p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 mt-2 w-100" key={`${p}_adv_${acct}`}>
+                                      {/* Row 1 */}
+                                      <div className="d-flex align-items-center gap-2 w-100">
+                                          <div className="d-flex align-items-center gap-1" style={{flex: '0 0 95px'}}>
+                                              <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-6`}></i>
+                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct === 'crypto' ? 'Crypto' : 'Non-Reg'}</span>
+                                              <InfoBtn direction="up" title={acct === 'crypto' ? 'Crypto' : 'Non-Reg'} text={acct === 'nonreg' ? 'Taxable Account. Capital gains taxed at 50% inclusion.' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.'} />
+                                          </div>
+                                          <div style={{flex: '1 1 0%', minWidth: '80px'}}>
+                                              <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}`, val)} placeholder="$0" />
+                                          </div>
+                                          <div style={{flex: '0 0 70px'}}>
+                                              <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_ret`, val)} />
+                                          </div>
+                                          {showAssetMixUI && (
+                                              <div style={{flex: '0 0 70px'}}>
+                                                  <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_retire_ret`, val)} />
+                                              </div>
+                                          )}
+                                      </div>
+
+                                      {/* Row 2 (ACB & Yield) */}
+                                      <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
+                                          <div style={{flex: '0 0 95px'}} className="text-end pe-2 d-flex justify-content-end align-items-center">
+                                              <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
+                                              <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
+                                          </div>
+                                          <div style={{flex: '1 1 0%', minWidth: '80px'}}>
+                                              <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} placeholder="$0" />
+                                          </div>
+                                          <div style={{flex: '0 0 45px'}} className="text-end pe-1">
+                                              <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yld</span>
+                                          </div>
+                                          <div style={{flex: '0 0 70px', marginLeft: showAssetMixUI ? '-45px' : '0'}}>
+                                              <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} placeholder="Yield" />
+                                          </div>
+                                          {/* Spacers to keep strict column alignment if Adv Mode is on */}
+                                          {showAssetMixUI && <div style={{flex: '0 0 70px'}}></div>}
+                                      </div>
+                                  </div>
+                              ))}
+
+                              {/* --- CUSTOM ACCOUNTS --- */}
+                              <div className="mt-3 pt-3 border-top border-secondary">
+                                  <div className="d-flex justify-content-between align-items-center mb-2">
                                       <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0">Additional Accounts</h6>
                                       <button type="button" className={`btn btn-sm rounded-pill px-3 py-1 fw-bold btn-outline-${isP1 ? 'info' : 'primary'}`} style={!isP1 ? {color:'var(--bs-purple)', borderColor:'var(--bs-purple)'} : {}} onClick={() => addArrayItem('customAssets', { owner: p, name: '', type: 'tfsa', balance: 0, rate: 6.0, retireRate: 6.0, acb: 0 })}>
                                           <i className="bi bi-plus-lg me-1"></i> Add Account
@@ -808,74 +795,79 @@ export default function PlanTab() {
                                   </div>
                                   
                                   {playerCustomAssets.length === 0 && (
-                                      <div className="text-center small text-muted fst-italic py-3 border border-secondary border-opacity-50 rounded-4">No additional accounts added.</div>
+                                      <div className="text-center small text-muted fst-italic py-2">No additional accounts added.</div>
                                   )}
                                   
-                                  <div className="row g-3">
-                                      {playerCustomAssets.map((ca: any) => {
-                                          const globalIdx = data.customAssets.indexOf(ca);
-                                          const updateCa = (field: string, val: any) => updateArrayItem('customAssets', globalIdx, field, val);
-                                          const isNonReg = ca.type === 'nonreg' || ca.type === 'crypto';
+                                  {playerCustomAssets.length > 0 && (
+                                      <>
+                                          <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100 mt-2" style={{fontSize: '0.65rem'}}>
+                                              <div style={{flex: '0 0 20px'}}></div>
+                                              <div style={{flex: '0 0 95px'}} className="text-start">Type</div>
+                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1 d-none d-sm-block">Name</div>
+                                              <div style={{flex: '1 1 0%', minWidth: '70px'}} className="text-start ps-1">Balance</div>
+                                              <div style={{flex: '0 0 70px'}} className="text-start ps-1">Pre %</div>
+                                              {showAssetMixUI && <div style={{flex: '0 0 70px'}} className="text-start ps-1 text-primary">Post %</div>}
+                                          </div>
 
-                                          return (
-                                              <div className="col-12 col-md-6 col-xxl-4" key={`ca_${globalIdx}`}>
-                                                  <div className="bg-input border border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-between">
-                                                      
-                                                      <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
-                                                          <div className="flex-grow-1" style={{maxWidth: '180px'}}>
+                                          {playerCustomAssets.map((ca: any) => {
+                                              const globalIdx = data.customAssets.indexOf(ca);
+                                              const updateCa = (field: string, val: any) => updateArrayItem('customAssets', globalIdx, field, val);
+                                              const isNonReg = ca.type === 'nonreg' || ca.type === 'crypto';
+
+                                              return (
+                                                  <div className="d-flex flex-column p-2 bg-input border border-secondary rounded-3 shadow-sm mb-2 w-100" key={`ca_${globalIdx}`}>
+                                                      {/* Row 1 */}
+                                                      <div className="d-flex align-items-center gap-2 w-100">
+                                                          <div style={{flex: '0 0 20px'}} className="text-center">
+                                                              <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('customAssets', globalIdx)}>
+                                                                  <i className="bi bi-x-lg" style={{fontSize: '0.9rem'}}></i>
+                                                              </button>
+                                                          </div>
+                                                          <div style={{flex: '0 0 95px'}}>
                                                               <CustomAccountDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} />
                                                           </div>
-                                                          <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('customAssets', globalIdx)} title="Remove Account">
-                                                              <i className="bi bi-x-lg" style={{fontSize: '1rem'}}></i>
-                                                          </button>
-                                                      </div>
-
-                                                      <div className="d-flex flex-column gap-3">
-                                                          <div>
-                                                              <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Account Name</label>
-                                                              <input type="text" maxLength={30} className="form-control form-control-sm shadow-sm border border-secondary bg-black bg-opacity-25 text-main" style={{fontWeight: '600'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="e.g. Wealthsimple TFSA" />
+                                                          <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-none d-sm-block">
+                                                              <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-black bg-opacity-25 text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
                                                           </div>
-
-                                                          <div>
-                                                              <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Balance</label>
+                                                          <div style={{flex: '1 1 0%', minWidth: '70px'}}>
                                                               <CurrencyInput className="form-control form-control-sm" value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />
                                                           </div>
-                                                          
-                                                          <div className="row g-2">
-                                                              <div className={showAssetMixUI ? "col-6" : "col-12"}>
-                                                                  <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Pre %</label>
-                                                                  <PercentInput disabled={hasAutoAllocation && ca.type !== 'cash'} className="form-control form-control-sm" value={ca.rate} onChange={(val: any) => updateCa('rate', val)} />
-                                                              </div>
-                                                              {showAssetMixUI && (
-                                                                  <div className="col-6">
-                                                                      <label className="small text-primary mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Post %</label>
-                                                                      <PercentInput disabled={hasAutoAllocation && ca.type !== 'cash'} className="form-control form-control-sm border-primary text-primary" value={ca.retireRate ?? ca.rate} onChange={(val: any) => updateCa('retireRate', val)} />
-                                                                  </div>
-                                                              )}
+                                                          <div style={{flex: '0 0 70px'}}>
+                                                              <PercentInput disabled={hasAutoAllocation && ca.type !== 'cash'} className="form-control form-control-sm px-1" value={ca.rate} onChange={(val: any) => updateCa('rate', val)} />
                                                           </div>
-
-                                                          {isNonReg && (
-                                                              <div className="mt-1 pt-3 border-top border-secondary border-opacity-25 row g-2">
-                                                                  <div className="col-6">
-                                                                      <label className="small text-muted mb-1 fw-bold text-uppercase ls-1 d-flex align-items-center" style={{fontSize: '0.65rem'}}>
-                                                                          ACB
-                                                                          <InfoBtn align="left" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
-                                                                      </label>
-                                                                      <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
-                                                                  </div>
-                                                                  <div className="col-6">
-                                                                      <label className="small text-muted mb-1 fw-bold text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yield %</label>
-                                                                      <PercentInput disabled={hasAutoAllocation && ca.type !== 'crypto'} className="form-control form-control-sm border-warning text-warning" value={ca.yield ?? ''} onChange={(val: any) => updateCa('yield', val)} placeholder="Yield" />
-                                                                  </div>
+                                                          {showAssetMixUI && (
+                                                              <div style={{flex: '0 0 70px'}}>
+                                                                  <PercentInput disabled={hasAutoAllocation && ca.type !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={ca.retireRate ?? ca.rate} onChange={(val: any) => updateCa('retireRate', val)} />
                                                               </div>
                                                           )}
                                                       </div>
 
+                                                      {/* Row 2: Tax Data */}
+                                                      {isNonReg && (
+                                                          <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
+                                                              <div style={{flex: '0 0 20px'}}></div>
+                                                              <div style={{flex: '0 0 95px'}} className="text-end pe-2 d-flex justify-content-end align-items-center">
+                                                                  <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
+                                                                  <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
+                                                              </div>
+                                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-none d-sm-block"></div> {/* Spacer for Name */}
+                                                              <div style={{flex: '1 1 0%', minWidth: '70px'}}>
+                                                                  <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
+                                                              </div>
+                                                              <div style={{flex: '0 0 45px'}} className="text-end pe-1">
+                                                                  <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yld</span>
+                                                              </div>
+                                                              <div style={{flex: '0 0 70px', marginLeft: showAssetMixUI ? '-45px' : '0'}}>
+                                                                  <PercentInput disabled={hasAutoAllocation && ca.type !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={ca.yield ?? ''} onChange={(val: any) => updateCa('yield', val)} placeholder="Yield" />
+                                                              </div>
+                                                              {showAssetMixUI && <div style={{flex: '0 0 70px'}}></div>}
+                                                          </div>
+                                                      )}
                                                   </div>
-                                              </div>
-                                          );
-                                      })}
-                                  </div>
+                                              );
+                                          })}
+                                      </>
+                                  )}
                               </div>
 
                           </div>
@@ -1308,7 +1300,7 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 7. Future Expenses - LOAN ENGINE ADDED */}
+        {/* 7. Future Expenses */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
@@ -1382,7 +1374,7 @@ export default function PlanTab() {
           </div>
         </div>
 
-        {/* 8. Windfalls - MODERNIZED */}
+        {/* 8. Windfalls */}
         <div className="rp-card border border-secondary rounded-4 mb-4">
           <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
             <div className="d-flex align-items-center">
