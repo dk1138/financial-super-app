@@ -5,78 +5,9 @@ import { FINANCIAL_CONSTANTS } from '../lib/config';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line as ChartJSLine } from 'react-chartjs-2';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { InfoBtn, SegmentedControl, CurrencyInput, PercentInput } from './SharedUI';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, ChartTooltip, Legend, Filler);
-
-// --- MODERN SEGMENTED CONTROL ---
-const SegmentedControl = ({ options, value, onChange }: any) => (
-    <div className="d-flex flex-wrap bg-input border border-secondary rounded-pill p-1 gap-1 w-100 shadow-sm mb-3">
-        {options.map((opt: any) => {
-            const isActive = value === opt.value;
-            return (
-                <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => onChange(opt.value)}
-                    className={`btn btn-sm rounded-pill fw-bold flex-grow-1 border-0 transition-all text-nowrap px-3 py-2 ${isActive ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
-                    style={{ fontSize: '0.85rem' }}
-                >
-                    {opt.label}
-                </button>
-            );
-        })}
-    </div>
-);
-
-const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
-    const [open, setOpen] = useState(false);
-    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '300px' };
-    if (align === 'right') { posStyles.right = '0'; }
-    else if (align === 'left') { posStyles.left = '0'; }
-    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
-
-    return (
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
-            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
-                <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
-            </button>
-            {open && (
-                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
-                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
-                    <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-const CurrencyInput = ({ value, onChange, className }: any) => {
-    const [localValue, setLocalValue] = useState('');
-    useEffect(() => { if (value !== undefined) setLocalValue(Number(Math.round(value)).toLocaleString('en-US')); }, [value]);
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let rawValue = e.target.value.replace(/[^0-9]/g, ''); 
-        onChange(rawValue === '' ? 0 : parseInt(rawValue, 10));
-    };
-    return (
-        <div className="position-relative w-100 d-flex align-items-center">
-            <span className="position-absolute text-muted fw-bold" style={{ left: '12px', fontSize: '0.9em', pointerEvents: 'none' }}>$</span>
-            <input type="text" className={`${className} text-end shadow-sm border border-secondary bg-input text-main`} style={{ paddingLeft: '28px', paddingRight: '12px', fontWeight: '600', outline: 'none' }} value={localValue} onChange={handleChange} />
-        </div>
-    );
-};
-
-const PercentInput = ({ value, onChange, className }: any) => {
-    const [focused, setFocused] = useState(false);
-    let displayValue = value ?? '';
-    if (!focused && displayValue !== '') displayValue = Number(displayValue).toFixed(2);
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value === '' ? 0 : parseFloat(e.target.value));
-    return (
-        <div className="position-relative w-100 d-flex align-items-center">
-            <input type="number" step="0.01" className={`${className} text-end shadow-sm border border-secondary bg-input text-main`} style={{ paddingRight: '28px', fontWeight: '600', outline: 'none' }} value={focused ? (value ?? '') : displayValue} onChange={handleChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
-            <span className="position-absolute text-muted fw-bold" style={{ right: '12px', fontSize: '0.9em', pointerEvents: 'none' }}>%</span>
-        </div>
-    );
-};
 
 export default function RiskTab() {
   const { data, results } = useFinance();
@@ -175,7 +106,7 @@ export default function RiskTab() {
           setIsSorrSuccess(ok);
           setShortfallYear(failedYear);
 
-          // 2. WIDOW'S PENALTY MATH (Analytical Proxy)
+          // 2. WIDOW'S PENALTY MATH
           if (isCouple) {
               const widowYr = results.timeline.find((y: any) => y.p1Age === widowAge);
               if (widowYr) {
@@ -183,7 +114,6 @@ export default function RiskTab() {
                   const jointPen = (widowYr.dbP1||0) + (widowYr.dbP2||0);
                   const jointInc = jointGovt + jointPen;
                   
-                  // Survivor gets max of 1 CPP (capped at standard max approx $16k), 1 OAS, and usually 60% of spouse pension
                   const survivorCpp = Math.min(16000, (widowYr.cppP1||0) + (widowYr.cppP2||0));
                   const survivorOas = widowYr.oasP1||0;
                   const survivorPen = (widowYr.dbP1||0) + ((widowYr.dbP2||0) * 0.6); 

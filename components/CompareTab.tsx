@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance, migrateLegacyData, emptyData } from '../lib/FinanceContext';
 import { FinanceEngine } from '../lib/financeEngine';
-import { FINANCIAL_CONSTANTS } from '../lib/config'; // Import the constants
+import { FINANCIAL_CONSTANTS } from '../lib/config';
+import { InfoBtn } from './SharedUI';
 
-// Utility to make raw input keys readable - FIXED Spelling Logic
 const formatInputKey = (key: string) => {
     return key
         .replace(/_/g, ' ')
         .replace(/p1/gi, 'P1')
         .replace(/p2/gi, 'P2')
         .replace(/retireAge/gi, 'Retirement Age')
-        // Use word boundaries (\b) so "Return" only replaces standalone "ret" 
-        // and doesn't break the word "Retirement"
         .replace(/\bret\b/gi, 'Return') 
         .toUpperCase();
 };
@@ -24,18 +22,15 @@ export default function CompareTab() {
     const [compareData, setCompareData] = useState<any>(null);
     const [isCalculating, setIsCalculating] = useState<boolean>(false);
     
-    // UI States
     const [hoverIndex, setHoverIndex] = useState<number | null>(null);
     const [chartMode, setChartMode] = useState<'NW' | 'TAX' | 'SPEND'>('NW');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // Load available saved plans on mount
     useEffect(() => {
         const plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
         setSavedPlans(plans);
     }, []);
 
-    // Run the secondary background engine when a comparison plan is selected
     useEffect(() => {
         if (comparePlanName) {
             setIsCalculating(true);
@@ -43,13 +38,11 @@ export default function CompareTab() {
                 const planStr = localStorage.getItem(`rp_saved_plan_${comparePlanName}`);
                 if (planStr) {
                     const parsed = JSON.parse(planStr);
-                    // Migrate data and explicitly attach constants to avoid the "undefined" JSON error
                     const migrated = migrateLegacyData(parsed, emptyData);
                     migrated.constants = FINANCIAL_CONSTANTS; 
                     
                     setCompareData(migrated);
                     
-                    // Instantiate engine with the migrated data containing constants
                     const engine = new FinanceEngine(JSON.parse(JSON.stringify(migrated)));
                     const sim = engine.runSimulation(true, null);
                     setCompareResults(sim);
@@ -72,7 +65,6 @@ export default function CompareTab() {
         return `$${val}`;
     };
 
-    // Metric Extractor for Comparison
     const getMetrics = (planData: any, planTimeline: any) => {
         if (!planData || !planTimeline || planTimeline.length === 0) return null;
         
@@ -128,7 +120,6 @@ export default function CompareTab() {
         );
     };
 
-    // UX Actions
     const handleMakeActive = () => {
         if (window.confirm("This will overwrite your current live inputs with the saved scenario. Are you sure?")) {
             loadData(compareData);
@@ -145,7 +136,6 @@ export default function CompareTab() {
         }
     };
 
-    // Input Diffing
     const getChangedInputs = () => {
         if (!data || !compareData) return [];
         const diffs: { key: string, oldVal: any, newVal: any }[] = [];
@@ -162,7 +152,6 @@ export default function CompareTab() {
     };
     const inputDiffs = getChangedInputs();
 
-    // Chart Setup
     const getRealValue = (nominal: number, yOut: number, planData: any, baseYear: number) => {
         if (!planData || !planData.useRealDollars) return nominal;
         const inf = (planData.inputs.inflation_rate || 2.1) / 100;

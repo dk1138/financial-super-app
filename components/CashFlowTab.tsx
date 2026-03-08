@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { InfoBtn } from './SharedUI';
 
 export default function CashFlowTab() {
   const { data, results } = useFinance();
@@ -8,7 +9,6 @@ export default function CashFlowTab() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'sankey' | 'ledger'>('sankey');
   
-  // Modern Hover Tooltip State
   const [tooltip, setTooltip] = useState<{ id: string, x: number, y: number } | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +44,6 @@ export default function CashFlowTab() {
   const currentVal = Math.max(startYear, Math.min(endYear, selectedYear));
   const yData = results.timeline.find((y: any) => y.year === currentVal) || results.timeline[0];
 
-  // --- Real Dollars Discounting Math ---
   const baseYear = startYear;
   const inflation = (data.inputs.inflation_rate || 2.1) / 100;
   const getRealValue = (nominalValue: number) => {
@@ -57,7 +56,6 @@ export default function CashFlowTab() {
       return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
   };
 
-  // --- Phase Logic ---
   const getPhaseBadge = () => {
       const p1Ret = Number(data.inputs.p1_retireAge) || 65;
       const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
@@ -87,7 +85,6 @@ export default function CashFlowTab() {
       return <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-cup-hot-fill me-2"></i> Retirement</span>;
   };
 
-  // --- Data Extraction & Balancing ---
   const p1BaseSalary = (yData.incomeP1 || 0) - (yData.rrspMatchP1 || 0);
   const p2BaseSalary = (yData.incomeP2 || 0) - (yData.rrspMatchP2 || 0);
   const salaryRaw = p1BaseSalary + p2BaseSalary;
@@ -131,7 +128,6 @@ export default function CashFlowTab() {
   if (totalSourcedRaw < totalSpentRaw) shortfallRaw = totalSpentRaw - totalSourcedRaw;
   else if (totalSourcedRaw > totalSpentRaw) unallocatedRaw = totalSourcedRaw - totalSpentRaw;
 
-  // --- Node Detail Breakdowns ---
   const nodeBreakdowns: any = {
       'salary': [
           { label: 'P1 Employment', val: p1BaseSalary },
@@ -206,7 +202,6 @@ export default function CashFlowTab() {
   const leftData = rawLeftNodes.filter(d => d.value >= 1);
   const rightData = rawRightNodes.filter(d => d.value >= 1);
 
-  // --- Sankey SVG Math Engine ---
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
   const PADDING = 20; 
@@ -231,7 +226,7 @@ export default function CashFlowTab() {
   let lastTextY = -999;
   
   leftData.forEach(d => {
-      const h = Math.max(2, d.value * pxPerDollar); 
+      const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
       if (ty - lastTextY < 28) ty = lastTextY + 28;
       leftNodes.push({ ...d, y: curY, h, ty });
@@ -244,7 +239,7 @@ export default function CashFlowTab() {
   lastTextY = -999;
 
   rightData.forEach(d => {
-      const h = Math.max(2, d.value * pxPerDollar);
+      const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
       if (ty - lastTextY < 28) ty = lastTextY + 28;
       rightNodes.push({ ...d, y: curY, h, ty });
@@ -279,7 +274,6 @@ export default function CashFlowTab() {
       return link;
   });
 
-  // --- Interaction Handlers ---
   const handleMouseMove = (e: React.MouseEvent, id: string) => {
       if (!chartContainerRef.current) return;
       const rect = chartContainerRef.current.getBoundingClientRect();
@@ -301,7 +295,6 @@ export default function CashFlowTab() {
 
   const allNodesMeta = [...leftData, ...rightData, { id: 'center', label: 'Total Balanced Flow', value: getRealValue(Math.max(totalSourcedRaw, totalSpentRaw)), color: '#10b981' }];
 
-  // Render Modern Tooltip
   const renderTooltip = () => {
       if (!tooltip) return null;
       const meta = allNodesMeta.find(n => n.id === tooltip.id);
@@ -349,7 +342,6 @@ export default function CashFlowTab() {
       );
   };
 
-  // --- Insights Math ---
   const topInflowNode = [...leftData].sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
   const topOutflowNode = [...rightData].filter(d => d.id !== 'sav').sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
   const savingsRate = totalSourcedRaw > 0 ? ((contsRaw + unallocatedRaw) / totalSourcedRaw) * 100 : 0;
@@ -358,7 +350,6 @@ export default function CashFlowTab() {
   return (
     <div className="p-3 p-md-4">
       
-      {/* Top Controller */}
       <div className="d-flex flex-column flex-md-row align-items-center mb-4 p-3 surface-card rounded-4 border border-secondary shadow-sm">
           <button 
               className={`btn ${isPlaying ? 'btn-danger' : 'btn-primary'} rounded-circle shadow-sm mb-3 mb-md-0 d-flex align-items-center justify-content-center transition-all`} 
@@ -393,7 +384,6 @@ export default function CashFlowTab() {
           </div>
       </div>
 
-      {/* Core Visualization Container */}
       <div className="rp-card border border-secondary rounded-4 shadow-sm p-3 p-md-4 mb-4">
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-2 border-bottom border-secondary gap-3">
               <h5 className="fw-bold text-uppercase ls-1 text-info mb-0">
@@ -417,26 +407,22 @@ export default function CashFlowTab() {
           
           <div className="w-100 position-relative" ref={chartContainerRef}>
               
-              {/* SANKEY VIEW */}
               {viewMode === 'sankey' && (
                   <div className="d-flex justify-content-center align-items-center fade-in" style={{ minHeight: '550px', height: '65vh' }}>
                       <svg viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
                           
-                          {/* Left Links */}
                           {leftLinks.map((l, i) => (
                               <path key={`LL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(2, l.h)} className="transition-all cursor-crosshair" 
                                     style={{ opacity: getLinkOpacity(l.id) }} 
                                     onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
                           ))}
 
-                          {/* Right Links */}
                           {rightLinks.map((l, i) => (
                               <path key={`RL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(2, l.h)} className="transition-all cursor-crosshair" 
                                     style={{ opacity: getLinkOpacity(l.id) }} 
                                     onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
                           ))}
 
-                          {/* Left Nodes & Text (Sharp Corners) */}
                           {leftNodes.map((n, i) => (
                               <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
@@ -448,7 +434,6 @@ export default function CashFlowTab() {
                               </g>
                           ))}
 
-                          {/* Right Nodes & Text (Sharp Corners) */}
                           {rightNodes.map((n, i) => (
                               <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
@@ -460,7 +445,6 @@ export default function CashFlowTab() {
                               </g>
                           ))}
 
-                          {/* Center Node Block (Sharp Corners) */}
                           {MAX > 1 && (
                               <g className="transition-all cursor-crosshair" style={{ opacity: getOpacity('center') }} 
                                  onMouseMove={(e) => handleMouseMove(e, 'center')} onMouseLeave={handleMouseLeave}>
@@ -480,10 +464,8 @@ export default function CashFlowTab() {
                   </div>
               )}
 
-              {/* STACKED LEDGER VIEW */}
               {viewMode === 'ledger' && (
                   <div className="row g-4 w-100 fade-in py-2 m-0">
-                      {/* Left: Inflows */}
                       <div className="col-12 col-lg-6 ps-0">
                           <div className="d-flex justify-content-between align-items-end mb-2">
                               <h6 className="fw-bold text-info text-uppercase ls-1 mb-0">Total Inflows</h6>
@@ -516,7 +498,6 @@ export default function CashFlowTab() {
                           </div>
                       </div>
 
-                      {/* Right: Outflows */}
                       <div className="col-12 col-lg-6 pe-0">
                           <div className="d-flex justify-content-between align-items-end mb-2">
                               <h6 className="fw-bold text-warning text-uppercase ls-1 mb-0">Total Outflows</h6>
@@ -551,12 +532,10 @@ export default function CashFlowTab() {
                   </div>
               )}
 
-              {/* Render Modern Tooltip Overlay (Shared across both views) */}
               {renderTooltip()}
           </div>
       </div>
 
-      {/* Quick Insights Cards */}
       <div className="row g-3">
           <div className="col-12 col-md-3">
               <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">

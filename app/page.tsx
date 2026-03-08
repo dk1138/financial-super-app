@@ -11,74 +11,7 @@ import OptimizersTab from '../components/OptimizersTab';
 import CompareTab from '../components/CompareTab';
 import { FinanceProvider, useFinance } from '../lib/FinanceContext';
 import { signIn, signOut, useSession } from 'next-auth/react';
-
-// --- TYPABLE STEPPER ---
-const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) => {
-    const numVal = Number(value) || 0; 
-    const [textVal, setTextVal] = useState(numVal.toString());
-
-    useEffect(() => {
-        setTextVal(numVal.toString());
-    }, [numVal]);
-
-    const handleDec = () => { if (numVal > min) onChange(numVal - 1); };
-    const handleInc = () => { if (numVal < max) onChange(numVal + 1); };
-
-    const handleBlur = () => {
-        let parsed = parseInt(textVal);
-        if (isNaN(parsed)) parsed = numVal;
-        parsed = Math.max(min, Math.min(max, parsed)); 
-        setTextVal(parsed.toString());
-        onChange(parsed);
-    };
-
-    const handleKeyDown = (e: any) => {
-        if (e.key === 'Enter') {
-            e.target.blur(); 
-        }
-    };
-
-    return (
-        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm">
-            <button type="button" className="btn btn-sm btn-link text-muted p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
-            <div className="d-flex align-items-center justify-content-center">
-                <input 
-                    type="text" 
-                    className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" 
-                    style={{ width: '30px', outline: 'none', boxShadow: 'none', fontSize: '0.95rem' }}
-                    value={textVal}
-                    onChange={(e) => setTextVal(e.target.value)}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
-                />
-                {suffix && <span className="text-muted fw-bold pe-1" style={{fontSize: '0.95rem'}}>{suffix}</span>}
-            </div>
-            <button type="button" className="btn btn-sm btn-link text-primary p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
-        </div>
-    );
-};
-
-// --- SMART TOOLTIP ---
-const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
-    const [open, setOpen] = useState(false);
-    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '280px' };
-    if (align === 'right') { posStyles.right = '0'; }
-    else if (align === 'left') { posStyles.left = '0'; }
-    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
-    return (
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
-            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
-                <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
-            </button>
-            {open && (
-                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
-                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
-                    <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
-                </div>
-            )}
-        </div>
-    );
-};
+import { StepperInput } from '../components/SharedUI'; // Import from SharedUI!
 
 function DashboardLayout() {
   const { data: session } = useSession();
@@ -488,7 +421,6 @@ function DashboardLayout() {
       </footer>
 
       {/* --- MODALS --- */}
-      {/* ... (Modals remain unchanged) ... */}
       {showSaveModal && (
           <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
               <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>

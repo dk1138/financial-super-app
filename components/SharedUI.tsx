@@ -13,7 +13,7 @@ export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: {
     else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
 
     return (
-        <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}}>
+        <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
             <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
                 <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
             </button>

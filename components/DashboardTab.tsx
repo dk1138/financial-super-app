@@ -2,28 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-
-const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
-    const [open, setOpen] = useState(false);
-    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '260px' };
-    if (align === 'right') { posStyles.right = '0'; }
-    else if (align === 'left') { posStyles.left = '0'; }
-    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
-
-    return (
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore>
-            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
-                <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
-            </button>
-            {open && (
-                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
-                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
-                    <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
-                </div>
-            )}
-        </div>
-    );
-};
+import { InfoBtn } from './SharedUI';
 
 function ScoreCard({ title, score, max, tooltip }: { title: string, score: number, max: number, tooltip?: string }) {
   const pct = Math.min(100, Math.max(0, (score / max) * 100));

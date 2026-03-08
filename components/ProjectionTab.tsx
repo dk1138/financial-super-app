@@ -1,32 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { InfoBtn } from './SharedUI';
 
-// --- Smart Tooltip Component ---
-const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
-    const [open, setOpen] = useState(false);
-    // Elevated z-index on the popout itself
-    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '320px', zIndex: 99999 };
-    if (align === 'right') { posStyles.right = '0'; }
-    else if (align === 'left') { posStyles.left = '0'; }
-    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
-
-    return (
-        // Elevated z-index on the container when open
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 99999 : 1}}>
-            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
-                <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
-            </button>
-            {open && (
-                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase" style={posStyles}>
-                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
-                    <div className="small text-muted text-start fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// RRIF Minimum Withdrawal Factor Calculator
 const getRrifFactor = (age: number) => {
     if (age < 71) return 1 / (90 - age);
     const f: Record<number, number> = {
@@ -55,7 +30,6 @@ export default function ProjectionTab() {
     );
   }
 
-  // --- Real Dollars Discounting ---
   const baseYear = results.timeline[0]?.year || new Date().getFullYear();
   const inflation = (data.inputs.inflation_rate || 2.1) / 100;
 
@@ -74,7 +48,6 @@ export default function ProjectionTab() {
       return Math.round(getRealValue(val, year) || 0).toLocaleString('en-US');
   };
 
-  // --- CSV Export Engine ---
   const exportToCSV = () => {
       if (!results || !results.timeline) return;
 
@@ -141,7 +114,6 @@ export default function ProjectionTab() {
       document.body.removeChild(link);
   };
 
-  // --- Quick Insights Aggregation ---
   let totalTaxPaid = 0;
   let peakNW = 0;
   let peakAge = 0;
@@ -162,7 +134,6 @@ export default function ProjectionTab() {
           peakAge = y.p1Age;
       }
       
-      // STRICT CASH-FLOW SHORTFALL CHECK
       let contsRaw = 0;
       if (y.flows && y.flows.contributions) {
           contsRaw += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
@@ -276,7 +247,6 @@ export default function ProjectionTab() {
       );
   };
 
-  // --- Dynamic Math Tooltips ---
   const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxIncAfter: number, taxIncBefore: number, refund: number, year: number) => {
       if (!taxData) return "No tax generated.";
       
@@ -391,7 +361,6 @@ export default function ProjectionTab() {
       return lines.length > 0 ? lines.join('<br>') : "No contributions.";
   };
 
-  // Helper for P1/P2 Inflow Columns
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
       const isP1 = player === 'p1';
       const pUpper = player.toUpperCase();
@@ -430,7 +399,6 @@ export default function ProjectionTab() {
           <div className="mb-3 pb-2 border-bottom border-secondary border-opacity-25">
               <div className="fw-bold text-uppercase ls-1 mb-2" style={{fontSize: '0.75rem', color: isP1 ? 'var(--bs-info)' : 'var(--bs-purple)'}}>{pUpper} Inflows</div>
               
-              {/* TAXABLE INFLOWS */}
               {salary > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment/other income." align="left" /></span>
@@ -474,7 +442,6 @@ export default function ProjectionTab() {
                   </div>
               )}
 
-              {/* TAXABLE WITHDRAWALS WITH EXPLICIT MATH */}
               {taxableWds.map(k => {
                   const val = y.flows.withdrawals[k];
                   const cleanName = k.replace(`${pUpper} `, '');
@@ -508,7 +475,6 @@ export default function ProjectionTab() {
                   );
               })}
 
-              {/* NON-TAXABLE WITHDRAWALS / INFLOWS */}
               {(nonTaxWds.length > 0 || refund > 0) && (
                   <div className="mt-2 pt-2 border-top border-secondary border-opacity-25">
                       <div className="text-muted fw-bold small mb-1 ls-1" style={{fontSize: '0.65rem'}}>NON-TAXABLE INFLOWS</div>
@@ -540,7 +506,6 @@ export default function ProjectionTab() {
   return (
     <div className="p-3 p-md-4">
       
-      {/* QUICK INSIGHTS PILLS - GRID LAYOUT */}
       <div className="row g-2 g-md-3 mb-4">
           <div className="col-12 col-md-4 col-xl">
               <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
@@ -581,7 +546,6 @@ export default function ProjectionTab() {
               </div>
           </div>
 
-          {/* Export to CSV Button positioned identically to the pills */}
           <div className="col-12 col-md-4 col-xl cursor-pointer" onClick={exportToCSV}>
               <div className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75">
                   <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap">
@@ -619,7 +583,6 @@ export default function ProjectionTab() {
 
                 const totalWithdrawals = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
                 
-                // Adjusted Math for UI Display: Exclude clawbacks from both Income and Taxes to show pure Net Cash Flow
                 const totalIncome = (y.grossInflow || 0) - (totalWithdrawals as number) - totalClawback;
                 const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
                 
@@ -633,7 +596,6 @@ export default function ProjectionTab() {
                     if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
                 }
 
-                // Dynamic Balancing Logic 
                 const totalSourcedRaw = totalIncome + (totalWithdrawals as number);
                 const totalSpentRaw = totalExpenses + totalTaxes + engineContributions;
                 
@@ -651,11 +613,7 @@ export default function ProjectionTab() {
                 return (
                   <React.Fragment key={y.year}>
                     
-                    {/* MAIN VISIBLE ROW */}
-                    <tr 
-                      className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : ''}`} 
-                      onClick={() => toggleRow(y.year)}
-                    >
+                    <tr className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : ''}`} onClick={() => toggleRow(y.year)}>
                       <td className="py-3 ps-3 text-center text-primary border-bottom border-secondary border-opacity-25">
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} transition-all`}></i>
                       </td>
@@ -677,16 +635,13 @@ export default function ProjectionTab() {
                       <td className="py-3 pe-4 text-center text-success fw-bold fs-6 border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
                     </tr>
 
-                    {/* EXPANDED DETAILS ROW */}
                     {isExpanded && (
                       <tr style={{ position: 'relative', zIndex: 999 }}>
                         <td colSpan={8} className="p-0 border-bottom border-secondary border-opacity-50 position-relative" style={{ zIndex: 999 }}>
                           <div className="m-0 m-md-2 rounded-4 surface-card border border-primary border-opacity-25 shadow-inner slide-down position-relative" style={{ zIndex: 999 }}>
                             
-                            {/* TOP SECTION: Details */}
                             <div className="row g-0 align-items-stretch">
                                 
-                                {/* Column 1: Cash Inflows */}
                                 <div className="col-12 col-lg-4 border-end border-secondary border-opacity-50 p-3 p-md-4 d-flex flex-column">
                                     <h6 className="text-success fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center">
                                         <i className="bi bi-box-arrow-in-right me-2"></i>
@@ -705,7 +660,6 @@ export default function ProjectionTab() {
                                             </div>
                                         )}
                                         
-                                        {/* Balancer: Shortfall */}
                                         {shortfall > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
                                                 <span className="text-danger fw-bold d-flex align-items-center">Shortfall (Cash Deficit) <InfoBtn align="left" title="Shortfall" text="Expenses exceeded total available cash flow and withdrawals. The simulation mathematically borrows this to keep running." /></span>
@@ -714,11 +668,9 @@ export default function ProjectionTab() {
                                         )}
                                     </div>
                                     
-                                    {/* Bottom Spacer to ensure equal height behavior before absolute bottom row */}
                                     <div className="mt-3"></div>
                                 </div>
 
-                                {/* Column 2: Cash Outflows */}
                                 <div className="col-12 col-lg-4 border-end border-secondary border-opacity-50 p-3 p-md-4 d-flex flex-column">
                                     <h6 className="fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center" style={{ color: '#d97706' }}>
                                         <i className="bi bi-box-arrow-right me-2"></i>
@@ -756,7 +708,6 @@ export default function ProjectionTab() {
                                             </div>
                                         )}
                                         
-                                        {/* Balancer: Unallocated Surplus */}
                                         {unallocated > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
                                                 <span className="text-success fw-bold d-flex align-items-center">Unallocated Surplus <InfoBtn align="right" title="Surplus" text="Cash generated that wasn't spent or automatically routed into a tracked investment account." /></span>
@@ -767,7 +718,6 @@ export default function ProjectionTab() {
                                     <div className="mt-3"></div>
                                 </div>
 
-                                {/* Column 3: Account Balances */}
                                 <div className="col-12 col-lg-4 p-3 p-md-4 d-flex flex-column">
                                     <h6 className="text-primary fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center">
                                         <i className="bi bi-piggy-bank me-2"></i>
@@ -798,7 +748,6 @@ export default function ProjectionTab() {
                                                     </div>
                                                 )}
 
-                                                {/* STRICT HIDE: RRSP vanishes at age 72 */}
                                                 {((y.p1Age || y.ageP1) < 72 && (y.assetsP1?.rrsp > 0 || y.flows?.contributions?.p1?.rrsp > 0)) && (
                                                     <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
@@ -889,7 +838,6 @@ export default function ProjectionTab() {
                                                     </div>
                                                 )}
 
-                                                {/* STRICT HIDE: RRSP vanishes at age 72 */}
                                                 {((y.p2Age || y.ageP2) < 72 && (y.assetsP2?.rrsp > 0 || y.flows?.contributions?.p2?.rrsp > 0)) && (
                                                     <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
@@ -987,7 +935,6 @@ export default function ProjectionTab() {
                                 </div>
                             </div>
                             
-                            {/* ABSOLUTE BOTTOM ROW - HORIZONTALLY LOCKED ALIGNMENT */}
                             <div className="row g-0 bg-black bg-opacity-25 border-top border-secondary mt-auto" style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Sourced</span>
