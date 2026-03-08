@@ -63,15 +63,25 @@ const getAdjustedOAS = (yearsInCanada: number, startAge: number) => {
 // --- ZERO-LAG UI COMPONENTS ---
 
 const CustomAccountDropdown = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
-    const selected = EXTENDED_ACCOUNT_TYPES.find(a => a.id === value) || EXTENDED_ACCOUNT_TYPES[0];
+    // Buffering state to make UI instantly responsive without waiting for global engine render
+    const [localVal, setLocalVal] = useState(value);
+    useEffect(() => setLocalVal(value), [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newVal = e.target.value;
+        setLocalVal(newVal);
+        setTimeout(() => onChange(newVal), 10); 
+    };
+
+    const selected = EXTENDED_ACCOUNT_TYPES.find(a => a.id === localVal) || EXTENDED_ACCOUNT_TYPES[0];
 
     return (
         <div className="position-relative w-100 d-flex align-items-center bg-input border border-secondary rounded-3 shadow-sm px-1 overflow-hidden" style={{ height: '31px' }}>
             <i className={`bi ${selected.icon} ${selected.color} flex-shrink-0 ms-1`} style={{fontSize: '0.85rem'}}></i>
             <select
                 className="form-select form-select-sm bg-transparent border-0 text-main fw-bold shadow-none p-0 ps-1"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
+                value={localVal}
+                onChange={handleChange}
                 style={{ outline: 'none', cursor: 'pointer', fontSize: '0.75rem' }}
             >
                 {EXTENDED_ACCOUNT_TYPES.map(opt => (
@@ -803,8 +813,8 @@ export default function PlanTab() {
                                       <>
                                           <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100 mt-2" style={{fontSize: '0.65rem'}}>
                                               <div style={{flex: '0 0 20px'}}></div>
-                                              <div style={{flex: '0 0 125px'}} className="text-start">Type</div>
-                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1 d-none d-sm-block">Name</div>
+                                              <div style={{flex: '0 0 97px'}} className="text-start">Type</div>
+                                              <div style={{flex: '0 0 90px'}} className="text-start ps-1 d-none d-md-block">Name</div>
                                               <div style={{flex: '1 1 0%', minWidth: '70px'}} className="text-start ps-1">Balance</div>
                                               <div style={{flex: '0 0 70px'}} className="text-start ps-1">Pre %</div>
                                               {showAssetMixUI && <div style={{flex: '0 0 70px'}} className="text-start ps-1 text-primary">Post %</div>}
@@ -824,10 +834,10 @@ export default function PlanTab() {
                                                                   <i className="bi bi-x-lg" style={{fontSize: '0.9rem'}}></i>
                                                               </button>
                                                           </div>
-                                                          <div style={{flex: '0 0 125px'}}>
+                                                          <div style={{flex: '0 0 97px'}}>
                                                               <CustomAccountDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} />
                                                           </div>
-                                                          <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-none d-sm-block">
+                                                          <div style={{flex: '0 0 90px'}} className="d-none d-md-block">
                                                               <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-black bg-opacity-25 text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
                                                           </div>
                                                           <div style={{flex: '1 1 0%', minWidth: '70px'}}>
@@ -843,15 +853,14 @@ export default function PlanTab() {
                                                           )}
                                                       </div>
 
-                                                      {/* Row 2: Tax Data (ACB lines up with default Non Reg) */}
+                                                      {/* Row 2: Tax Data (ACB structurally guarantees left-alignment with Balance) */}
                                                       {isNonReg && (
                                                           <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
                                                               <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
                                                                   <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>ACB</span>
                                                                   <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                                               </div>
-                                                              <div style={{flex: '0 0 20px'}}></div>
-                                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-none d-sm-block"></div> {/* Spacer to align with Balance */}
+                                                              <div style={{flex: '0 0 90px'}} className="d-none d-md-block"></div> {/* Spacer matching Name field exactly */}
                                                               <div style={{flex: '1 1 0%', minWidth: '70px'}}>
                                                                   <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
                                                               </div>
