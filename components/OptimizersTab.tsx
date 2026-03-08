@@ -868,9 +868,9 @@ export default function OptimizersTab() {
                           <CurrencyInput className="form-control form-control-sm" value={medIncome} onChange={setMedIncome} />
                       </div>
 
-                      <div className="d-flex justify-content-between px-2 mb-1">
-                          <span className="small fw-bold text-muted" style={{width: '155px'}}>Month</span>
-                          <span className="small fw-bold text-muted flex-grow-1 ps-1">Bill Amount ($)</span>
+                      <div className="d-flex align-items-center gap-2 px-1 mb-1">
+                          <span className="small fw-bold text-muted" style={{width: '155px', flexShrink: 0}}>Month</span>
+                          <span className="small fw-bold text-muted w-50">Bill Amount ($)</span>
                       </div>
                       
                       <div className="flex-grow-1 overflow-auto pe-1 mb-3 custom-scrollbar" style={{minHeight: '120px', maxHeight: '180px'}}>
@@ -879,10 +879,10 @@ export default function OptimizersTab() {
                                   <div style={{width: '155px', flexShrink: 0}}>
                                       <MonthYearStepper value={bill.date} onChange={(val: string) => updateMedBill(bill.id, 'date', val)} />
                                   </div>
-                                  <div className="flex-grow-1">
+                                  <div className="w-50">
                                       <CurrencyInput className="form-control form-control-sm border-secondary text-main fw-bold w-100" value={bill.amount} onChange={(val: any) => updateMedBill(bill.id, 'amount', val)} />
                                   </div>
-                                  <button className="btn btn-sm btn-link text-danger px-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeMedBill(bill.id)}><i className="bi bi-x-lg"></i></button>
+                                  <button className="btn btn-sm btn-link text-danger px-2 opacity-75 hover-opacity-100 flex-shrink-0 ms-auto" onClick={() => removeMedBill(bill.id)}><i className="bi bi-x-lg"></i></button>
                               </div>
                           ))}
                       </div>
