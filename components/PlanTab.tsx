@@ -578,14 +578,14 @@ export default function PlanTab() {
             <div className="row g-4">
               
               <div className="col-12 col-xl-6">
-                <div className="p-0 border border-secondary rounded-4 h-100 shadow-sm surface-card">
-                    <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4">
+                <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
+                    <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0">
                         <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px'}}>
                             <i className="bi bi-person-fill fs-5"></i>
                         </div>
                         <h6 className="fw-bold mb-0 text-uppercase ls-1 text-info">Player 1 (P1)</h6>
                     </div>
-                    <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100 rounded-bottom-4">
+                    <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
                             <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p1_dob} onChange={(val: string) => handleDobChange('p1', val)} /></div>
@@ -608,14 +608,14 @@ export default function PlanTab() {
               
               {isCouple && (
                 <div className="col-12 col-xl-6">
-                    <div className="p-0 border border-secondary rounded-4 h-100 shadow-sm surface-card">
-                        <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
+                    <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
+                        <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
                             <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px', backgroundColor: 'rgba(111, 66, 193, 0.25)', color: 'var(--bs-purple)'}}>
                                 <i className="bi bi-person-fill fs-5"></i>
                             </div>
                             <h6 className="fw-bold mb-0 text-uppercase ls-1" style={{color: 'var(--bs-purple)'}}>Player 2 (P2)</h6>
                         </div>
-                        <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 h-100 rounded-bottom-4">
+                        <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                             <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                                 <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
                                 <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p2_dob} onChange={(val: string) => handleDobChange('p2', val)} /></div>
@@ -838,12 +838,12 @@ export default function PlanTab() {
                                   
                                   {playerCustomAssets.length > 0 && (
                                       <>
-                                          {/* Headers dynamically split: Name gets flex:1 (33%), Balance gets flex:2 (66%) */}
+                                          {/* Headers dynamically split: Name gets flex:1 (50%), Balance gets flex:1 (50%) */}
                                           <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100 mt-2" style={{fontSize: '0.65rem'}}>
                                               <div style={{flex: '0 0 24px'}}></div>
                                               <div style={{flex: '0 0 130px'}} className="text-start">Type</div>
-                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1">Name</div>
-                                              <div style={{flex: '2 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
+                                              <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Name</div>
+                                              <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
                                               <div style={{flex: '0 0 75px'}} className="text-start ps-1">Pre %</div>
                                               {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post %</div>}
                                           </div>
@@ -865,10 +865,10 @@ export default function PlanTab() {
                                                           <div style={{flex: '0 0 130px'}}>
                                                               <ModernDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} />
                                                           </div>
-                                                          <div style={{flex: '1 1 0%', minWidth: '60px'}}>
+                                                          <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                                               <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-black bg-opacity-25 text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
                                                           </div>
-                                                          <div style={{flex: '2 1 0%', minWidth: '80px'}}>
+                                                          <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                                               <CurrencyInput className="form-control form-control-sm" value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />
                                                           </div>
                                                           <div style={{flex: '0 0 75px'}}>
@@ -886,11 +886,11 @@ export default function PlanTab() {
                                                           <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
                                                               <div style={{flex: '0 0 24px'}}></div>
                                                               <div style={{flex: '0 0 130px'}}></div>
-                                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-flex justify-content-end align-items-center pe-1">
+                                                              <div style={{flex: '1 1 0%', minWidth: '80px'}} className="d-flex justify-content-end align-items-center pe-1">
                                                                   <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
                                                                   <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                                               </div>
-                                                              <div style={{flex: '2 1 0%', minWidth: '80px'}}>
+                                                              <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                                                   <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
                                                               </div>
                                                               <div style={{flex: '0 0 75px'}} className="position-relative">
