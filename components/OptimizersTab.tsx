@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { FinanceEngine } from '../lib/financeEngine';
 
@@ -65,7 +65,60 @@ const PercentInput = ({ value, onChange, className, disabled }: any) => {
     );
 };
 
-// Historical YMPE Data for the Max Button and ratio calculations
+const MonthYearStepper = ({ value, onChange, minYear = 1900, maxYear = 2100 }: any) => {
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const [yearStr, monthStr] = (value || "2024-01").split('-');
+    const y = parseInt(yearStr, 10) || 2024;
+    const m = parseInt(monthStr, 10) || 1;
+
+    const [localY, setLocalY] = useState(y.toString());
+    const [localM, setLocalM] = useState(MONTHS[m - 1]);
+
+    useEffect(() => { 
+        setLocalY(y.toString()); 
+        setLocalM(MONTHS[m - 1]);
+    }, [y, m]);
+
+    const commitDate = (newY: number, newM: number) => {
+        const safeY = Math.max(minYear, Math.min(maxYear, newY));
+        const safeM = Math.max(1, Math.min(12, newM));
+        onChange(`${safeY}-${safeM.toString().padStart(2, '0')}`);
+    };
+
+    const handleYDec = () => commitDate(y - 1, m);
+    const handleYInc = () => commitDate(y + 1, m);
+    const handleMDec = () => { let newM = m - 1; let newY = y; if (newM < 1) { newM = 12; newY--; } commitDate(newY, newM); };
+    const handleMInc = () => { let newM = m + 1; let newY = y; if (newM > 12) { newM = 1; newY++; } commitDate(newY, newM); };
+
+    const commitY = () => { let parsed = parseInt(localY, 10); if(isNaN(parsed)) parsed = y; commitDate(parsed, m); };
+    const commitM = () => {
+        let parsed = parseInt(localM, 10);
+        if (!isNaN(parsed)) commitDate(y, parsed);
+        else {
+            const idx = MONTHS.findIndex(mo => mo.toLowerCase() === localM.toLowerCase().trim());
+            if (idx !== -1) commitDate(y, idx + 1);
+            else commitDate(y, m); 
+        }
+    };
+
+    return (
+        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm gap-1 w-100 justify-content-between">
+            <div className="d-flex align-items-center flex-grow-1 justify-content-center">
+                <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMDec}><i className="bi bi-dash-circle-fill" style={{fontSize: '0.75rem'}}></i></button>
+                <input type="text" maxLength={3} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" style={{ width: '32px', outline: 'none', fontSize: '0.75rem' }} value={localM} onChange={e => setLocalM(e.target.value)} onBlur={commitM} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+                <button type="button" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMInc}><i className="bi bi-plus-circle-fill" style={{fontSize: '0.75rem'}}></i></button>
+            </div>
+            <div className="border-start border-secondary opacity-50 flex-shrink-0" style={{height: '14px'}}></div>
+            <div className="d-flex align-items-center flex-grow-1 justify-content-center">
+                <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYDec}><i className="bi bi-dash-circle-fill" style={{fontSize: '0.75rem'}}></i></button>
+                <input type="text" maxLength={4} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" style={{ width: '38px', outline: 'none', fontSize: '0.75rem' }} value={localY} onChange={e => setLocalY(e.target.value)} onBlur={commitY} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+                <button type="button" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYInc}><i className="bi bi-plus-circle-fill" style={{fontSize: '0.75rem'}}></i></button>
+            </div>
+        </div>
+    );
+};
+
+// Historical YMPE Data
 const getYMPE = (year: number) => {
     const ympeMap: Record<number, number> = {
         2026: 73200, 2025: 71300, 2024: 68500, 2023: 66600, 2022: 64900, 2021: 61600,
@@ -85,7 +138,7 @@ const getYAMPE = (year: number) => {
     return getYMPE(year); 
 };
 
-// Canadian Semi-Annual Compounding Mortgage Payment Calc
+// Canadian Mortgage Payment Calc
 const calcCanadianMortgagePmt = (balance: number, annualRate: number, yearsAmort: number) => {
     if(annualRate === 0 || yearsAmort === 0) return 0;
     const r = Math.pow(1 + (annualRate/100)/2, 2/12) - 1;
@@ -320,7 +373,6 @@ export default function OptimizersTab() {
       return () => clearTimeout(timer);
   }, [stringifiedInputs]);
 
-  // Apply Action Handlers
   const applyCppStrategy = () => {
       if (cppResult && cppResult.winner) {
           const optCpp = cppResult.winner.cppAge;
@@ -339,6 +391,7 @@ export default function OptimizersTab() {
   // Auto-extracted Context Variables for Micro Tools
   const householdIncome = (Number(data.inputs.p1_income) || 0) + (data.mode === 'Couple' ? (Number(data.inputs.p2_income) || 0) : 0);
   const p1Marginal = results?.timeline?.[0]?.taxDetailsP1?.margRate * 100 || 30;
+  const p2Marginal = results?.timeline?.[0]?.taxDetailsP2?.margRate * 100 || 30;
   const kidsCount = data.dependents?.length || 0;
   const firstMortgage = data.properties?.find((p: any) => p.mortgage > 0);
   const primaryProperty = data.properties?.find((p: any) => p.includeInNW);
@@ -384,6 +437,73 @@ export default function OptimizersTab() {
   const ccbBoost = newCCB - currentCCB;
   const ccbTaxRefund = ccbRrspContrib * (p1Marginal / 100);
   const ccbTotalROI = ((ccbBoost + ccbTaxRefund) / (ccbRrspContrib || 1)) * 100;
+
+  // Medical Expense Window Optimizer
+  const initialMedIncome = isCouple ? Math.min(Number(data.inputs.p1_income)||0, Number(data.inputs.p2_income)||0) || 50000 : Number(data.inputs.p1_income) || 50000;
+  const [medIncome, setMedIncome] = useState(initialMedIncome);
+  const [medBills, setMedBills] = useState<{id: string, date: string, amount: number}[]>([
+      { id: '1', date: '2024-03', amount: 1500 },
+      { id: '2', date: '2024-08', amount: 800 },
+      { id: '3', date: '2025-01', amount: 2200 }
+  ]);
+  
+  const medHurdle = Math.min(2759, medIncome * 0.03); // CRA limit approx 2759 or 3% of net income
+  let bestMedWindow = { start: '', end: '', total: 0, eligible: 0 };
+  
+  if (medBills.length > 0) {
+      const sortedBills = [...medBills].sort((a,b) => a.date.localeCompare(b.date));
+      sortedBills.forEach(bill => {
+          const endD = new Date(bill.date + '-01');
+          const startD = new Date(endD);
+          startD.setMonth(startD.getMonth() - 11); 
+          
+          const startStr = startD.toISOString().substring(0,7);
+          const endStr = bill.date;
+          
+          let windowTotal = 0;
+          sortedBills.forEach(b => {
+              if (b.date >= startStr && b.date <= endStr) {
+                  windowTotal += b.amount;
+              }
+          });
+          
+          const eligible = Math.max(0, windowTotal - medHurdle);
+          if (eligible >= bestMedWindow.eligible && windowTotal > bestMedWindow.total) {
+              bestMedWindow = { start: startStr, end: endStr, total: windowTotal, eligible };
+          }
+      });
+  }
+
+  const addMedBill = () => {
+      const lastDate = medBills.length > 0 ? medBills[medBills.length - 1].date : `${new Date().getFullYear()}-01`;
+      setMedBills([...medBills, { id: Math.random().toString(), date: lastDate, amount: 0 }]);
+  };
+  const updateMedBill = (id: string, field: string, val: any) => {
+      setMedBills(medBills.map(b => b.id === id ? { ...b, [field]: val } : b));
+  };
+  const removeMedBill = (id: string) => {
+      setMedBills(medBills.filter(b => b.id !== id));
+  };
+  const formatMonthYear = (yyyymm: string) => {
+      if (!yyyymm) return '';
+      const [y, m] = yyyymm.split('-');
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${months[parseInt(m, 10)-1]} ${y}`;
+  };
+
+  // Side-Hustle ROI
+  const [shGross, setShGross] = useState(25000);
+  const [shDirectExp, setShDirectExp] = useState(4000);
+  const [shHomeExp, setShHomeExp] = useState(3000);
+  const [shMarginal, setShMarginal] = useState(p1Marginal);
+
+  const totalShDeductions = shDirectExp + shHomeExp;
+  const shNetIncome = Math.max(0, shGross - totalShDeductions);
+  const taxSavedByDeductions = totalShDeductions * (shMarginal / 100);
+  const extraCppPremium = shNetIncome * 0.0595; 
+  const extraCppTaxShield = extraCppPremium * (shMarginal / 100);
+  const netExtraCppCost = extraCppPremium - extraCppTaxShield;
+  const shNetAdvantage = taxSavedByDeductions - netExtraCppCost;
 
   // Pay Down Mortgage vs Invest
   const [mviLumpSum, setMviLumpSum] = useState(10000);
@@ -562,7 +682,7 @@ export default function OptimizersTab() {
               
               let earnings = 0;
               if(baseTd) earnings += parseFloat((baseTd.textContent || '').replace(/[^\d.]/g, '')) || 0;
-              if(secEnhTd) earnings += parseFloat((secEnhTd.textContent || '').replace(/[^\d.]/g, '')) || 0; // Combine Base + Second Additional
+              if(secEnhTd) earnings += parseFloat((secEnhTd.textContent || '').replace(/[^\d.]/g, '')) || 0; 
 
               if(yearMatch) {
                   if(yearMatch[1] && yearMatch[2]) {
@@ -578,7 +698,6 @@ export default function OptimizersTab() {
           });
           
           if (newRecords.length > 0) {
-              // Deduplicate overlapping years by keeping the maximum earning found for that year
               const map = new Map();
               newRecords.forEach(r => {
                   if (!map.has(r.year) || map.get(r.year).earnings < r.earnings) {
@@ -659,7 +778,6 @@ export default function OptimizersTab() {
       let projectedCount = 0;
       let zeroCount = 0;
 
-      // Span the entire Contributory Period (Age 18 to CPP Start Age)
       for (let y = age18Year; y < cppStartYear; y++) {
           if (recordMap.has(y)) {
               augmentedRecords.push({ year: y, earnings: recordMap.get(y) || 0, isProjected: false });
@@ -679,14 +797,12 @@ export default function OptimizersTab() {
           }
       }
       
-      // Calculate true ratio against YMPE for base portion
       const ratios = augmentedRecords.map(r => {
           const ympe = getYMPE(r.year);
           const cappedBaseEarnings = Math.min(r.earnings, ympe);
           return cappedBaseEarnings / ympe;
       });
       
-      // Sort ratios descending to apply drop out correctly
       const sortedRatios = [...ratios].sort((a,b) => b - a);
       
       const totalYears = cppStartYear - age18Year;
@@ -698,7 +814,6 @@ export default function OptimizersTab() {
       
       const projectedBase = 16375 * avgRatio;
       
-      // Enhancements (First & Second) Post 2019
       const recent = augmentedRecords.filter(r => r.year >= 2019);
       let avgRecentRatio = 0;
       if (recent.length > 0) {
@@ -708,7 +823,6 @@ export default function OptimizersTab() {
       const projectedEnhanced = 2500 * avgRecentRatio;
       const totalProjected = projectedBase + projectedEnhanced;
 
-      // Avg nominal earnings for display
       const sortedByEarnings = [...augmentedRecords].sort((a,b) => b.earnings - a.earnings);
       const keptEarnings = sortedByEarnings.slice(0, keepYears);
       const avgEarnings = keptEarnings.reduce((s, r) => s + r.earnings, 0) / keepYears;
@@ -729,7 +843,8 @@ export default function OptimizersTab() {
   // --- Category Grouping ---
   const toolCategories = [
     { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv', 'pensionbb'] },
-    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa', 'resp'] },
+    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa', 'resp', 'medical'] },
+    { title: "Business & Income", keys: ['sidehustle'] },
     { title: "Debt, Real Estate & Cash", keys: ['mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal'] },
     { title: "Data Importers", keys: ['cppimport'] }
   ];
@@ -737,6 +852,112 @@ export default function OptimizersTab() {
   // --- Component Renderer for Grid Layout ---
   const renderToolCard = (id: string) => {
       switch (id) {
+          case 'medical': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-hospital fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-danger mb-0 text-uppercase ls-1">Medical Exp. Window</h5>
+                      </div>
+                      <p className="text-muted small mb-3">The CRA allows you to claim medical expenses for <i>any</i> 12-month period. Find the exact rolling window that maximizes your tax credit over the 3% net income hurdle.</p>
+                      
+                      <div className="mb-3">
+                          <label className="form-label small fw-bold text-muted mb-1">Net Income (Lower Earning Spouse)</label>
+                          <CurrencyInput className="form-control form-control-sm" value={medIncome} onChange={setMedIncome} />
+                      </div>
+
+                      <div className="d-flex justify-content-between px-2 mb-1">
+                          <span className="small fw-bold text-muted" style={{width: '90px'}}>Month</span>
+                          <span className="small fw-bold text-muted flex-grow-1 ps-1">Bill Amount ($)</span>
+                      </div>
+                      
+                      <div className="flex-grow-1 overflow-auto pe-1 mb-3 custom-scrollbar" style={{minHeight: '120px', maxHeight: '180px'}}>
+                          {medBills.map(bill => (
+                              <div key={bill.id} className="d-flex gap-2 mb-2 align-items-center">
+                                  <div style={{width: '120px'}}>
+                                      <MonthYearStepper value={bill.date} onChange={(val: string) => updateMedBill(bill.id, 'date', val)} />
+                                  </div>
+                                  <input type="number" className="form-control form-control-sm bg-input border-secondary text-main flex-grow-1 fw-bold" value={bill.amount} onChange={e => updateMedBill(bill.id, 'amount', parseInt(e.target.value)||0)} />
+                                  <button className="btn btn-sm btn-link text-danger px-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeMedBill(bill.id)}><i className="bi bi-x-lg"></i></button>
+                              </div>
+                          ))}
+                      </div>
+                      <button className="btn btn-sm btn-outline-secondary w-100 fw-bold mb-3" onClick={addMedBill}>+ Add Expense Event</button>
+
+                      <div className="bg-danger bg-opacity-10 border border-danger border-opacity-50 rounded-4 p-3 mt-auto shadow-inner text-center">
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-danger border-opacity-25">
+                              <span className="text-muted fw-bold small">CRA Hurdle (3%)</span>
+                              <span className="fw-bold text-main">{formatCurrency(medHurdle)}</span>
+                          </div>
+                          
+                          {bestMedWindow.eligible > 0 ? (
+                              <>
+                                  <div className="small text-danger fw-bold text-uppercase ls-1 mb-1">Optimal 12-Month Window</div>
+                                  <div className="fw-bold text-main mb-2">{formatMonthYear(bestMedWindow.start)} to {formatMonthYear(bestMedWindow.end)}</div>
+                                  <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-danger border-opacity-25">
+                                      <span className="text-danger fw-bolder small">Eligible to Claim</span>
+                                      <span className="fw-bolder fs-4 text-danger">{formatCurrency(bestMedWindow.eligible)}</span>
+                                  </div>
+                              </>
+                          ) : (
+                              <span className="small text-muted fst-italic py-2 d-block">No window exceeds the 3% income hurdle.</span>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          );
+
+          case 'sidehustle': return (
+              <div key={id} className="col-12 col-md-6 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+                      <div className="d-flex align-items-center mb-3">
+                          <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                              <i className="bi bi-shop fs-4"></i>
+                          </div>
+                          <h5 className="fw-bold text-success mb-0 text-uppercase ls-1">Side-Hustle ROI</h5>
+                      </div>
+                      <p className="text-muted small mb-4">Determine if the tax savings from writing off home office and business expenses outpace the extra "double" CPP premium (11.9%) you pay as self-employed.</p>
+                      
+                      <div className="row g-3 mb-4">
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Gross Revenue</label>
+                              <CurrencyInput className="form-control form-control-sm border-success text-success" value={shGross} onChange={setShGross} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Marginal Tax</label>
+                              <PercentInput className="form-control form-control-sm" value={shMarginal} onChange={setShMarginal} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Direct Expenses</label>
+                              <CurrencyInput className="form-control form-control-sm" value={shDirectExp} onChange={setShDirectExp} />
+                          </div>
+                          <div className="col-6">
+                              <label className="form-label small fw-bold text-muted mb-1">Home Office Exp. <InfoBtn title="Home Office" text="Your prorated portion of rent, mortgage interest, utilities, and internet." /></label>
+                              <CurrencyInput className="form-control form-control-sm" value={shHomeExp} onChange={setShHomeExp} />
+                          </div>
+                      </div>
+
+                      <div className="bg-input border border-secondary border-opacity-50 rounded-4 p-3 mt-auto shadow-inner">
+                          <div className="d-flex justify-content-between align-items-center mb-1 text-success small">
+                              <span>Tax Saved (Write-offs):</span>
+                              <span className="fw-bold">+{formatCurrency(taxSavedByDeductions)}</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-25 text-danger small">
+                              <span>Extra CPP Premium (Net): <InfoBtn title="CPP Premium" text="Self-employed individuals pay both the employee and employer portions of CPP (approx 11.9% total), but get a tax deduction for the employer half." /></span>
+                              <span className="fw-bold">-{formatCurrency(netExtraCppCost)}</span>
+                          </div>
+                          
+                          <div className="d-flex justify-content-between align-items-center mt-2">
+                              <span className={`fw-bolder text-uppercase ls-1 small ${shNetAdvantage >= 0 ? 'text-success' : 'text-danger'}`}>Net Advantage</span>
+                              <span className={`fw-bolder fs-4 ${shNetAdvantage >= 0 ? 'text-success' : 'text-danger'}`}>{shNetAdvantage >= 0 ? '+' : ''}{formatCurrency(shNetAdvantage)}</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+
           case 'dwz': return (
               <div key={id} className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
@@ -866,11 +1087,11 @@ export default function OptimizersTab() {
                               <span className="fw-bold text-main fs-5">{formatCurrency(bbFutureValue)}</span>
                           </div>
                           <div className="d-flex justify-content-between align-items-center mb-1 pb-1 border-top border-primary border-opacity-25 pt-2">
-                              <span className="text-muted fw-bold small text-uppercase ls-1">Required Yield to Match</span>
+                              <span className="text-muted fw-bold small text-uppercase ls-1">Required Yield</span>
                               <span className={`fw-bolder fs-4 ${bbMatchRate >= 4.0 ? 'text-success' : 'text-danger'}`}>{bbMatchRate.toFixed(2)}%</span>
                           </div>
                           <span className="small text-muted d-block text-center mt-2 fst-italic" style={{fontSize: '0.7rem'}}>
-                              {bbMatchRate >= 4.0 ? "Guaranteed yield easily beats the 4% rule. Buyback recommended." : "You may be better off investing the money yourself."}
+                              {bbMatchRate >= 4.0 ? "Guaranteed yield beats the 4% rule. Buyback recommended." : "You may be better off investing the money yourself."}
                           </span>
                       </div>
                   </div>
@@ -1651,53 +1872,6 @@ export default function OptimizersTab() {
                                   </div>
                               </div>
                           )}
-                      </div>
-                  </div>
-              </div>
-          );
-
-          case 'pensionbb': return (
-              <div key={id} className="col-12 col-md-6 col-xl-4">
-                  <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-                      <div className="d-flex align-items-center mb-3">
-                          <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                              <i className="bi bi-clock-history fs-4"></i>
-                          </div>
-                          <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Pension Buyback</h5>
-                      </div>
-                      <p className="text-muted small mb-4">Calculate if paying a lump sum today to buy back past service is better than investing the cash yourself.</p>
-                      
-                      <div className="row g-3 mb-4">
-                          <div className="col-6">
-                              <label className="form-label small fw-bold text-muted mb-1">Buyback Cost</label>
-                              <CurrencyInput className="form-control form-control-sm" value={bbCost} onChange={setBbCost} />
-                          </div>
-                          <div className="col-6">
-                              <label className="form-label small fw-bold text-muted mb-1">Added Pension /yr</label>
-                              <CurrencyInput className="form-control form-control-sm border-primary text-primary" value={bbAddedPension} onChange={setBbAddedPension} />
-                          </div>
-                          <div className="col-6">
-                              <label className="form-label small fw-bold text-muted mb-1">Yrs to Retire</label>
-                              <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={bbYears} onChange={e => setBbYears(parseInt(e.target.value)||0)} />
-                          </div>
-                          <div className="col-6">
-                              <label className="form-label small fw-bold text-muted mb-1">Est. Mkt Return</label>
-                              <PercentInput className="form-control form-control-sm border-warning" value={bbReturn} onChange={setBbReturn} />
-                          </div>
-                      </div>
-
-                      <div className="bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-4 p-3 mt-auto shadow-inner">
-                          <div className="d-flex justify-content-between align-items-center mb-2">
-                              <span className="text-muted fw-bold small">Future Val. of Cost <InfoBtn direction="up" title="Future Value" text="If you invested the Buyback Cost yourself until retirement at the estimated market return, this is what your lump sum would grow to." /></span>
-                              <span className="fw-bold text-main fs-5">{formatCurrency(bbFutureValue)}</span>
-                          </div>
-                          <div className="d-flex justify-content-between align-items-center mb-1 pb-1 border-top border-primary border-opacity-25 pt-2">
-                              <span className="text-muted fw-bold small text-uppercase ls-1">Required Yield</span>
-                              <span className={`fw-bolder fs-4 ${bbMatchRate >= 4.0 ? 'text-success' : 'text-danger'}`}>{bbMatchRate.toFixed(2)}%</span>
-                          </div>
-                          <span className="small text-muted d-block text-center mt-2 fst-italic" style={{fontSize: '0.7rem'}}>
-                              {bbMatchRate >= 4.0 ? "Guaranteed yield beats the 4% rule. Buyback recommended." : "You may be better off investing the money yourself."}
-                          </span>
                       </div>
                   </div>
               </div>
