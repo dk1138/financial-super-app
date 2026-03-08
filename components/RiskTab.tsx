@@ -2,11 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { FinanceEngine } from '../lib/financeEngine';
 import { FINANCIAL_CONSTANTS } from '../lib/config';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Legend, Filler } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
 import { Line as ChartJSLine } from 'react-chartjs-2';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Legend, Filler);
+// Register the Chart.js Tooltip (ChartTooltip) so hover information works!
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, ChartTooltip, Legend, Filler);
 
 // --- MODERN SEGMENTED CONTROL (Zero-Lag UI) ---
 const SegmentedControl = ({ options, value, onChange }: any) => (
@@ -234,9 +235,12 @@ export default function RiskTab() {
                                      label += ': ';
                                  }
                                  if (context.parsed.y !== null) {
-                                     label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(context.parsed.y);
+                                     label += new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(context.parsed.y);
                                  }
                                  return label;
+                             },
+                             title: function(context) {
+                                 return `Age ${context[0].label}`;
                              }
                          }
                      }
