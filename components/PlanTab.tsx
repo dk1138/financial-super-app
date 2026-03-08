@@ -77,7 +77,17 @@ const ModernDropdown = ({ value, onChange }: { value: string, onChange: (val: st
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const selected = EXTENDED_ACCOUNT_TYPES.find(a => a.id === value) || EXTENDED_ACCOUNT_TYPES[0];
+    // Buffer state to instantly react on UI
+    const [localVal, setLocalVal] = useState(value);
+    useEffect(() => setLocalVal(value), [value]);
+
+    const handleSelect = (id: string) => {
+        setLocalVal(id);
+        setIsOpen(false);
+        setTimeout(() => onChange(id), 10);
+    };
+
+    const selected = EXTENDED_ACCOUNT_TYPES.find(a => a.id === localVal) || EXTENDED_ACCOUNT_TYPES[0];
 
     return (
         <div className="position-relative w-100" ref={dropdownRef}>
@@ -99,11 +109,8 @@ const ModernDropdown = ({ value, onChange }: { value: string, onChange: (val: st
                         {EXTENDED_ACCOUNT_TYPES.map(opt => (
                             <div 
                                 key={opt.id}
-                                className={`d-flex align-items-center gap-2 px-3 py-2 cursor-pointer transition-all ${value === opt.id ? 'bg-secondary bg-opacity-25' : 'hover-bg-secondary'}`}
-                                onClick={() => {
-                                    onChange(opt.id);
-                                    setIsOpen(false);
-                                }}
+                                className={`d-flex align-items-center gap-2 px-3 py-2 cursor-pointer transition-all ${localVal === opt.id ? 'bg-secondary bg-opacity-25' : 'hover-bg-secondary'}`}
+                                onClick={() => handleSelect(opt.id)}
                             >
                                 <i className={`bi ${opt.icon} ${opt.color}`} style={{fontSize: '0.85rem'}}></i>
                                 <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{opt.label}</span>
@@ -227,8 +234,11 @@ const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title:
     const [open, setOpen] = useState(false);
     let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px' };
     
-    if (direction === 'up') { posStyles.bottom = '140%'; } 
-    else { posStyles.top = '140%'; }
+    if (direction === 'up') {
+        posStyles.bottom = '140%';
+    } else {
+        posStyles.top = '140%';
+    }
 
     if (align === 'right') { posStyles.right = '0'; }
     else if (align === 'left') { posStyles.left = '0'; }
@@ -828,11 +838,12 @@ export default function PlanTab() {
                                   
                                   {playerCustomAssets.length > 0 && (
                                       <>
+                                          {/* Headers dynamically split: Name gets flex:2 (66%), Balance gets flex:1 (33%) */}
                                           <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100 mt-2" style={{fontSize: '0.65rem'}}>
                                               <div style={{flex: '0 0 24px'}}></div>
-                                              <div style={{flex: '0 0 120px'}} className="text-start">Type</div>
-                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1">Name</div>
-                                              <div style={{flex: '0 0 100px'}} className="text-start ps-1">Balance</div>
+                                              <div style={{flex: '0 0 130px'}} className="text-start">Type</div>
+                                              <div style={{flex: '2 1 0%', minWidth: '80px'}} className="text-start ps-1">Name</div>
+                                              <div style={{flex: '1 1 0%', minWidth: '70px'}} className="text-start ps-1">Balance</div>
                                               <div style={{flex: '0 0 75px'}} className="text-start ps-1">Pre %</div>
                                               {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post %</div>}
                                           </div>
@@ -851,13 +862,13 @@ export default function PlanTab() {
                                                                   <i className="bi bi-x-lg" style={{fontSize: '0.9rem'}}></i>
                                                               </button>
                                                           </div>
-                                                          <div style={{flex: '0 0 120px'}}>
+                                                          <div style={{flex: '0 0 130px'}}>
                                                               <ModernDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} />
                                                           </div>
-                                                          <div style={{flex: '1 1 0%', minWidth: '60px'}}>
+                                                          <div style={{flex: '2 1 0%', minWidth: '80px'}}>
                                                               <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-black bg-opacity-25 text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
                                                           </div>
-                                                          <div style={{flex: '0 0 100px'}}>
+                                                          <div style={{flex: '1 1 0%', minWidth: '70px'}}>
                                                               <CurrencyInput className="form-control form-control-sm" value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />
                                                           </div>
                                                           <div style={{flex: '0 0 75px'}}>
@@ -870,16 +881,16 @@ export default function PlanTab() {
                                                           )}
                                                       </div>
 
-                                                      {/* Row 2: Tax Data (ACB structurally guarantees left-alignment with Balance) */}
+                                                      {/* Row 2: Tax Data (ACB container matches Name container exactly, aligning ACB input perfectly with Balance) */}
                                                       {isNonReg && (
                                                           <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
                                                               <div style={{flex: '0 0 24px'}}></div>
-                                                              <div style={{flex: '0 0 120px'}}></div>
-                                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-flex justify-content-end align-items-center pe-1">
+                                                              <div style={{flex: '0 0 130px'}}></div>
+                                                              <div style={{flex: '2 1 0%', minWidth: '80px'}} className="d-flex justify-content-end align-items-center pe-1">
                                                                   <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
                                                                   <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                                               </div>
-                                                              <div style={{flex: '0 0 100px'}}>
+                                                              <div style={{flex: '1 1 0%', minWidth: '70px'}}>
                                                                   <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
                                                               </div>
                                                               <div style={{flex: '0 0 75px'}} className="position-relative">
