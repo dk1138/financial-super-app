@@ -62,34 +62,56 @@ const getAdjustedOAS = (yearsInCanada: number, startAge: number) => {
 
 // --- ZERO-LAG UI COMPONENTS ---
 
-const CustomAccountDropdown = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
-    // Buffering state to make UI instantly responsive without waiting for global engine render
-    const [localVal, setLocalVal] = useState(value);
-    useEffect(() => setLocalVal(value), [value]);
+// Custom, lag-free dropdown menu 
+const ModernDropdown = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newVal = e.target.value;
-        setLocalVal(newVal);
-        setTimeout(() => onChange(newVal), 10); 
-    };
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-    const selected = EXTENDED_ACCOUNT_TYPES.find(a => a.id === localVal) || EXTENDED_ACCOUNT_TYPES[0];
+    const selected = EXTENDED_ACCOUNT_TYPES.find(a => a.id === value) || EXTENDED_ACCOUNT_TYPES[0];
 
     return (
-        <div className="position-relative w-100 d-flex align-items-center bg-input border border-secondary rounded-3 shadow-sm px-1 overflow-hidden" style={{ height: '31px' }}>
-            <i className={`bi ${selected.icon} ${selected.color} flex-shrink-0 ms-1`} style={{fontSize: '0.85rem'}}></i>
-            <select
-                className="form-select form-select-sm bg-transparent border-0 text-main fw-bold shadow-none p-0 ps-1"
-                value={localVal}
-                onChange={handleChange}
-                style={{ outline: 'none', cursor: 'pointer', fontSize: '0.75rem' }}
+        <div className="position-relative w-100" ref={dropdownRef}>
+            <div 
+                className={`d-flex justify-content-between align-items-center bg-input border ${isOpen ? 'border-primary shadow' : 'border-secondary shadow-sm'} rounded-3 px-2 cursor-pointer text-main user-select-none transition-all`}
+                style={{ height: '31px' }}
+                onClick={() => setIsOpen(!isOpen)}
             >
-                {EXTENDED_ACCOUNT_TYPES.map(opt => (
-                    <option key={opt.id} value={opt.id} className="bg-dark text-light">
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
+                <div className="d-flex align-items-center gap-1 overflow-hidden me-1">
+                    <i className={`bi ${selected.icon} ${selected.color} flex-shrink-0`} style={{fontSize: '0.85rem'}}></i>
+                    <span className="fw-bold text-truncate" style={{fontSize: '0.75rem'}}>{selected.label}</span>
+                </div>
+                <i className={`bi bi-chevron-${isOpen ? 'up text-primary' : 'down text-muted'} flex-shrink-0`} style={{fontSize: '0.7rem'}}></i>
+            </div>
+            
+            {isOpen && (
+                <div className="position-absolute w-100 bg-input border border-secondary rounded-3 shadow-lg z-3 overflow-hidden" style={{ top: 'calc(100% + 4px)', left: 0, minWidth: '140px' }}>
+                    <div className="d-flex flex-column hide-scrollbar" style={{maxHeight: '250px', overflowY: 'auto'}}>
+                        {EXTENDED_ACCOUNT_TYPES.map(opt => (
+                            <div 
+                                key={opt.id}
+                                className={`d-flex align-items-center gap-2 px-3 py-2 cursor-pointer transition-all ${value === opt.id ? 'bg-secondary bg-opacity-25' : 'hover-bg-secondary'}`}
+                                onClick={() => {
+                                    onChange(opt.id);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                <i className={`bi ${opt.icon} ${opt.color}`} style={{fontSize: '0.85rem'}}></i>
+                                <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{opt.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -205,11 +227,8 @@ const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title:
     const [open, setOpen] = useState(false);
     let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px' };
     
-    if (direction === 'up') {
-        posStyles.bottom = '140%';
-    } else {
-        posStyles.top = '140%';
-    }
+    if (direction === 'up') { posStyles.bottom = '140%'; } 
+    else { posStyles.top = '140%'; }
 
     if (align === 'right') { posStyles.right = '0'; }
     else if (align === 'left') { posStyles.left = '0'; }
@@ -721,16 +740,16 @@ export default function PlanTab() {
                               
                               {/* Headers (Standard & Adv) */}
                               <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100" style={{fontSize: '0.65rem'}}>
-                                  <div style={{flex: '0 0 125px'}} className="text-start">Account</div>
+                                  <div style={{flex: '0 0 135px'}} className="text-start">Account</div>
                                   <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
-                                  <div style={{flex: '0 0 70px'}} className="text-start ps-1">Pre %</div>
-                                  {showAssetMixUI && <div style={{flex: '0 0 70px'}} className="text-start ps-1 text-primary">Post %</div>}
+                                  <div style={{flex: '0 0 75px'}} className="text-start ps-1">Pre %</div>
+                                  {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post %</div>}
                               </div>
 
                               {/* --- COMPACT STANDARD ACCOUNTS (1 Line) --- */}
                               {ACCOUNT_TYPES.map(acct => (
                                   <div className="d-flex align-items-center gap-2 p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 w-100" key={`${p}_${acct.id}`}>
-                                      <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
+                                      <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
                                           <div className="d-flex align-items-center gap-1">
                                               <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
                                               <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
@@ -740,11 +759,11 @@ export default function PlanTab() {
                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                           <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
                                       </div>
-                                      <div style={{flex: '0 0 70px'}}>
+                                      <div style={{flex: '0 0 75px'}}>
                                           <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
                                       </div>
                                       {showAssetMixUI && (
-                                          <div style={{flex: '0 0 70px'}}>
+                                          <div style={{flex: '0 0 75px'}}>
                                               <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
                                           </div>
                                       )}
@@ -756,7 +775,7 @@ export default function PlanTab() {
                                   <div className="d-flex flex-column p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 mt-2 w-100" key={`${p}_adv_${acct}`}>
                                       {/* Row 1 */}
                                       <div className="d-flex align-items-center gap-2 w-100">
-                                          <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
+                                          <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
                                               <div className="d-flex align-items-center gap-1">
                                                   <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-6`}></i>
                                                   <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct === 'crypto' ? 'Crypto' : 'Non-Reg'}</span>
@@ -766,11 +785,11 @@ export default function PlanTab() {
                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                               <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}`, val)} placeholder="$0" />
                                           </div>
-                                          <div style={{flex: '0 0 70px'}}>
+                                          <div style={{flex: '0 0 75px'}}>
                                               <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_ret`, val)} />
                                           </div>
                                           {showAssetMixUI && (
-                                              <div style={{flex: '0 0 70px'}}>
+                                              <div style={{flex: '0 0 75px'}}>
                                                   <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct}_retire_ret`] ?? data.inputs[`${p}_${acct}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct}_retire_ret`, val)} />
                                               </div>
                                           )}
@@ -778,20 +797,18 @@ export default function PlanTab() {
 
                                       {/* Row 2 (ACB & Yield) */}
                                       <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
-                                          <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
-                                              <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>ACB</span>
+                                          <div className="d-flex justify-content-end align-items-center pe-1" style={{flex: '0 0 135px'}}>
+                                              <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
                                               <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                           </div>
                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                               <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} placeholder="$0" />
                                           </div>
-                                          <div style={{flex: '0 0 45px'}} className="text-end pe-1">
-                                              <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yld</span>
-                                          </div>
-                                          <div style={{flex: '0 0 70px'}}>
+                                          <div style={{flex: '0 0 75px'}} className="position-relative">
+                                              <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>Yld</span>
                                               <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} placeholder="Yield" />
                                           </div>
-                                          {showAssetMixUI && <div style={{flex: '0 0 70px'}}></div>}
+                                          {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                       </div>
                                   </div>
                               ))}
@@ -812,12 +829,12 @@ export default function PlanTab() {
                                   {playerCustomAssets.length > 0 && (
                                       <>
                                           <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100 mt-2" style={{fontSize: '0.65rem'}}>
-                                              <div style={{flex: '0 0 20px'}}></div>
-                                              <div style={{flex: '0 0 97px'}} className="text-start">Type</div>
-                                              <div style={{flex: '0 0 90px'}} className="text-start ps-1 d-none d-md-block">Name</div>
-                                              <div style={{flex: '1 1 0%', minWidth: '70px'}} className="text-start ps-1">Balance</div>
-                                              <div style={{flex: '0 0 70px'}} className="text-start ps-1">Pre %</div>
-                                              {showAssetMixUI && <div style={{flex: '0 0 70px'}} className="text-start ps-1 text-primary">Post %</div>}
+                                              <div style={{flex: '0 0 24px'}}></div>
+                                              <div style={{flex: '0 0 120px'}} className="text-start">Type</div>
+                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1">Name</div>
+                                              <div style={{flex: '0 0 100px'}} className="text-start ps-1">Balance</div>
+                                              <div style={{flex: '0 0 75px'}} className="text-start ps-1">Pre %</div>
+                                              {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post %</div>}
                                           </div>
 
                                           {playerCustomAssets.map((ca: any) => {
@@ -829,25 +846,25 @@ export default function PlanTab() {
                                                   <div className="d-flex flex-column p-2 bg-input border border-secondary rounded-3 shadow-sm mb-2 w-100" key={`ca_${globalIdx}`}>
                                                       {/* Row 1 */}
                                                       <div className="d-flex align-items-center gap-2 w-100">
-                                                          <div style={{flex: '0 0 20px'}} className="text-center">
+                                                          <div style={{flex: '0 0 24px'}} className="text-center">
                                                               <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('customAssets', globalIdx)}>
                                                                   <i className="bi bi-x-lg" style={{fontSize: '0.9rem'}}></i>
                                                               </button>
                                                           </div>
-                                                          <div style={{flex: '0 0 97px'}}>
-                                                              <CustomAccountDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} />
+                                                          <div style={{flex: '0 0 120px'}}>
+                                                              <ModernDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} />
                                                           </div>
-                                                          <div style={{flex: '0 0 90px'}} className="d-none d-md-block">
+                                                          <div style={{flex: '1 1 0%', minWidth: '60px'}}>
                                                               <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-black bg-opacity-25 text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
                                                           </div>
-                                                          <div style={{flex: '1 1 0%', minWidth: '70px'}}>
+                                                          <div style={{flex: '0 0 100px'}}>
                                                               <CurrencyInput className="form-control form-control-sm" value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />
                                                           </div>
-                                                          <div style={{flex: '0 0 70px'}}>
+                                                          <div style={{flex: '0 0 75px'}}>
                                                               <PercentInput disabled={hasAutoAllocation && ca.type !== 'cash'} className="form-control form-control-sm px-1" value={ca.rate} onChange={(val: any) => updateCa('rate', val)} />
                                                           </div>
                                                           {showAssetMixUI && (
-                                                              <div style={{flex: '0 0 70px'}}>
+                                                              <div style={{flex: '0 0 75px'}}>
                                                                   <PercentInput disabled={hasAutoAllocation && ca.type !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={ca.retireRate ?? ca.rate} onChange={(val: any) => updateCa('retireRate', val)} />
                                                               </div>
                                                           )}
@@ -856,21 +873,20 @@ export default function PlanTab() {
                                                       {/* Row 2: Tax Data (ACB structurally guarantees left-alignment with Balance) */}
                                                       {isNonReg && (
                                                           <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
-                                                              <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
-                                                                  <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>ACB</span>
+                                                              <div style={{flex: '0 0 24px'}}></div>
+                                                              <div style={{flex: '0 0 120px'}}></div>
+                                                              <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-flex justify-content-end align-items-center pe-1">
+                                                                  <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
                                                                   <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                                               </div>
-                                                              <div style={{flex: '0 0 90px'}} className="d-none d-md-block"></div> {/* Spacer matching Name field exactly */}
-                                                              <div style={{flex: '1 1 0%', minWidth: '70px'}}>
+                                                              <div style={{flex: '0 0 100px'}}>
                                                                   <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
                                                               </div>
-                                                              <div style={{flex: '0 0 45px'}} className="text-end pe-1">
-                                                                  <span className="small fw-bold text-muted text-uppercase ls-1" style={{fontSize: '0.65rem'}}>Yld</span>
-                                                              </div>
-                                                              <div style={{flex: '0 0 70px'}}>
+                                                              <div style={{flex: '0 0 75px'}} className="position-relative">
+                                                                  <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>Yld</span>
                                                                   <PercentInput disabled={hasAutoAllocation && ca.type !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={ca.yield ?? ''} onChange={(val: any) => updateCa('yield', val)} placeholder="Yield" />
                                                               </div>
-                                                              {showAssetMixUI && <div style={{flex: '0 0 70px'}}></div>}
+                                                              {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                                           </div>
                                                       )}
                                                   </div>
