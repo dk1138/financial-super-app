@@ -12,7 +12,8 @@
   
   --primary: #3b82f6;       /* Vibrant blue */
   --success: #10b981;       /* Mint green */
-  --warning: #f59e0b;       /* Amber */
+  --warning: #f59e0b;       /* Amber (more readable than standard yellow on dark) */
+  --bs-warning: #f59e0b;    /* Bootstrap alias */
   --danger: #ef4444;        /* Rose red */
   --info: #0ea5e9;          /* Cyan */
   --purple: #8b5cf6;        /* Violet */
@@ -33,6 +34,8 @@
   --border-color: #e2e8f0;  /* Very light borders */
   
   --primary: #2563eb;       /* Darker blue for contrast */
+  --warning: #d97706;       /* Darker amber/orange for strong contrast on light backgrounds */
+  --bs-warning: #d97706;    /* Bootstrap alias */
   --text-main: #0f172a;     /* Dark slate text */
   --text-muted: #64748b;    /* Medium gray text */
   --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.025);
@@ -83,6 +86,7 @@ body {
 /* Text Overrides */
 .text-muted { color: var(--text-muted) !important; }
 .text-main { color: var(--text-main) !important; }
+.text-warning { color: var(--warning) !important; } /* Forces standard bootstrap classes to use our readable amber */
 
 /* Hide scrollbar */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -118,6 +122,7 @@ body {
 [data-bs-theme="light"] .table-dark thead tr {
   background-color: var(--bg-surface) !important;
 }
+
 /* Premium UI Transitions */
 @keyframes fadeInUp {
   0% { 

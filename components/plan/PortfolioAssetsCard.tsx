@@ -225,11 +225,11 @@ export default function PortfolioAssetsCard() {
                                           <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                       </div>
                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
-                                          <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} placeholder="$0" />
+                                          <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} placeholder="$0" />
                                       </div>
                                       <div style={{flex: '0 0 75px'}} className="position-relative">
                                           <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>Yld</span>
-                                          <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} placeholder="Yield" />
+                                          <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} placeholder="Yield" />
                                       </div>
                                       {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                   </div>
@@ -301,11 +301,11 @@ export default function PortfolioAssetsCard() {
                                                               <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
                                                           </div>
                                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}>
-                                                              <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
+                                                              <CurrencyInput className="form-control form-control-sm" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
                                                           </div>
                                                           <div style={{flex: '0 0 75px'}} className="position-relative">
                                                               <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>Yld</span>
-                                                              <PercentInput disabled={hasAutoAllocation && ca.type !== 'crypto'} className="form-control form-control-sm border-warning text-warning px-1" value={ca.yield ?? ''} onChange={(val: any) => updateCa('yield', val)} placeholder="Yield" />
+                                                              <PercentInput disabled={hasAutoAllocation && ca.type !== 'crypto'} className="form-control form-control-sm px-1" value={ca.yield ?? ''} onChange={(val: any) => updateCa('yield', val)} placeholder="Yield" />
                                                           </div>
                                                           {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                                       </div>
