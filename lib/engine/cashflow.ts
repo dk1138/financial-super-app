@@ -1,5 +1,35 @@
-// lib/engine/cashflow.ts
 import { calculateTaxDetailed } from './tax';
+
+// Helper to determine the specific growth rate of an account for the given year
+const getAccountRate = (prefix: string, accountType: string, inputs: any, age: number, retAge: number) => {
+    let baseRateKey = `${prefix}_${accountType}_ret`;
+    let retRateKey = `${prefix}_${accountType}_retire_ret`;
+    let isRet = age >= retAge;
+    
+    let rawVal = (inputs.asset_mode_advanced && isRet && inputs[retRateKey] !== undefined) 
+                 ? inputs[retRateKey] 
+                 : inputs[baseRateKey];
+                 
+    let r = rawVal !== undefined ? (Number(rawVal) || 0) / 100 : 0;
+    
+    if (inputs.use_glide_path && ['tfsa','rrsp','fhsa','nonreg','crypto','lirf','lif','rrif_acct','resp'].includes(accountType)) {
+        let ageOffset = Math.max(0, age - 50);
+        r -= (ageOffset * 0.001);
+        r = Math.max(0.04, r);
+    }
+    return r;
+};
+
+// Calculates the clawback/boost multiplier based on timing preference
+const getMultiplier = (timing: string, prefix: string, accountType: string, inputs: any, age: number, retAge: number) => {
+    if (timing === 'end') return 1.0;
+    const mappedType = accountType === 'tfsa_successor' ? 'tfsa' : accountType;
+    let r = getAccountRate(prefix, mappedType, inputs, age, retAge);
+    
+    if (timing === 'start') return 1 + r;
+    if (timing === 'mid') return 1 + (r / 2);
+    return 1.0;
+};
 
 export function applyPensionSplitting(craTaxableIncome1: number, craTaxableIncome2: number, inflows: any, regMinimums: any, age1: number, age2: number, setTaxesCallback: any) {
     let eligiblePensionP1 = inflows.p1.pension + (age1 >= 65 ? regMinimums.p1 + regMinimums.lifTaken1 : 0);
@@ -18,22 +48,26 @@ export function applyPensionSplitting(craTaxableIncome1: number, craTaxableIncom
     }
 }
 
-export function handleSurplus(surplusAmount: number, person1: any, person2: any, alive1: boolean, alive2: boolean, flowLog: any, yearIndex: number, tfsaLimit: number, rrspLimit1: number, rrspLimit2: number, cryptoLimit: number, fhsaLimit1: number, fhsaLimit2: number, respLimit: number, deductionsObj: any, fhsaLifetimeRooms: any, strategies: any, inputs: any, constants: any) {
+export function handleSurplus(surplusAmount: number, person1: any, person2: any, alive1: boolean, alive2: boolean, flowLog: any, yearIndex: number, tfsaLimit: number, rrspLimit1: number, rrspLimit2: number, cryptoLimit: number, fhsaLimit1: number, fhsaLimit2: number, respLimit: number, deductionsObj: any, fhsaLifetimeRooms: any, strategies: any, inputs: any, constants: any, age1: number, age2: number) {
     let remainingSurplus = surplusAmount;
+    const timing = inputs.cashflow_timing || 'end';
     
     strategies.accum.forEach((accountType: string) => { 
         if (remainingSurplus <= 0) return;
         
+        let m1 = getMultiplier(timing, 'p1', accountType, inputs, age1, person1.retAge);
+        let m2 = getMultiplier(timing, 'p2', accountType, inputs, age2, person2.retAge);
+        
         if (accountType === 'tfsa' && tfsaLimit > 0) { 
             if (alive1 && (!inputs['skip_first_tfsa_p1'] || yearIndex > 0)) {
                 let takeAmount = Math.min(remainingSurplus, tfsaLimit); 
-                person1.tfsa += takeAmount; 
+                person1.tfsa += (takeAmount * m1); 
                 if (flowLog) flowLog.contributions.p1.tfsa += takeAmount; 
                 remainingSurplus -= takeAmount;
             } 
             if (alive2 && remainingSurplus > 0 && (!inputs['skip_first_tfsa_p2'] || yearIndex > 0)) {
                 let takeAmount = Math.min(remainingSurplus, tfsaLimit); 
-                person2.tfsa += takeAmount; 
+                person2.tfsa += (takeAmount * m2); 
                 if (flowLog) flowLog.contributions.p2.tfsa += takeAmount; 
                 remainingSurplus -= takeAmount;
             } 
@@ -44,15 +78,15 @@ export function handleSurplus(surplusAmount: number, person1: any, person2: any,
             const p2HasRoom = (!inputs['skip_first_rrsp_p2'] || yearIndex > 0) && alive2 && rrspLimit2 > 0;
             
             if (p1HasRoom && p2HasRoom) {
-                if (person1.rrsp < person2.rrsp) priorityList = [{ person: person1, room: rrspLimit1, key: 'p1' }, { person: person2, room: rrspLimit2, key: 'p2' }];
-                else priorityList = [{ person: person2, room: rrspLimit2, key: 'p2' }, { person: person1, room: rrspLimit1, key: 'p1' }];
-            } else if (p1HasRoom) { priorityList = [{ person: person1, room: rrspLimit1, key: 'p1' }]; }
-            else if (p2HasRoom) { priorityList = [{ person: person2, room: rrspLimit2, key: 'p2' }]; }
+                if (person1.rrsp < person2.rrsp) priorityList = [{ person: person1, room: rrspLimit1, key: 'p1', m: m1 }];
+                else priorityList = [{ person: person2, room: rrspLimit2, key: 'p2', m: m2 }];
+            } else if (p1HasRoom) { priorityList = [{ person: person1, room: rrspLimit1, key: 'p1', m: m1 }]; }
+            else if (p2HasRoom) { priorityList = [{ person: person2, room: rrspLimit2, key: 'p2', m: m2 }]; }
 
             priorityList.forEach(obj => {
                 if (remainingSurplus > 0) {
                     let takeAmount = Math.min(remainingSurplus, obj.room);
-                    obj.person.rrsp += takeAmount; 
+                    obj.person.rrsp += (takeAmount * obj.m); 
                     if (flowLog) flowLog.contributions[obj.key].rrsp += takeAmount; 
                     if (deductionsObj) deductionsObj[obj.key] += takeAmount;
                     remainingSurplus -= takeAmount;
@@ -62,7 +96,7 @@ export function handleSurplus(surplusAmount: number, person1: any, person2: any,
         else if (accountType === 'fhsa') {
             if (alive1 && remainingSurplus > 0 && person1.fhsa !== undefined && fhsaLimit1 > 0 && fhsaLifetimeRooms?.p1 > 0) {
                 let takeAmount = Math.min(remainingSurplus, fhsaLimit1, fhsaLifetimeRooms.p1);
-                person1.fhsa += takeAmount;
+                person1.fhsa += (takeAmount * m1);
                 if (flowLog) flowLog.contributions.p1.fhsa += takeAmount;
                 if (deductionsObj) deductionsObj.p1 += takeAmount;
                 remainingSurplus -= takeAmount;
@@ -70,7 +104,7 @@ export function handleSurplus(surplusAmount: number, person1: any, person2: any,
             }
             if (alive2 && remainingSurplus > 0 && person2.fhsa !== undefined && fhsaLimit2 > 0 && fhsaLifetimeRooms?.p2 > 0) {
                 let takeAmount = Math.min(remainingSurplus, fhsaLimit2, fhsaLifetimeRooms.p2);
-                person2.fhsa += takeAmount;
+                person2.fhsa += (takeAmount * m2);
                 if (flowLog) flowLog.contributions.p2.fhsa += takeAmount;
                 if (deductionsObj) deductionsObj.p2 += takeAmount;
                 remainingSurplus -= takeAmount;
@@ -80,22 +114,22 @@ export function handleSurplus(surplusAmount: number, person1: any, person2: any,
         else if (accountType === 'resp' && respLimit > 0) {
             if (alive1 && remainingSurplus > 0 && person1.resp !== undefined) {
                 let takeAmount = Math.min(remainingSurplus, respLimit); 
-                person1.resp += takeAmount;
+                person1.resp += (takeAmount * m1);
                 if (flowLog) flowLog.contributions.p1.resp += takeAmount;
-                person1.resp += (takeAmount * (constants.RESP_CESG_MATCH_RATE || 0.20));
+                person1.resp += ((takeAmount * (constants.RESP_CESG_MATCH_RATE || 0.20)) * m1);
                 remainingSurplus -= takeAmount;
             }
         }
         else if (accountType === 'crypto' && cryptoLimit > 0) {
             if (alive1 && remainingSurplus > 0) {
                 let takeAmount = Math.min(remainingSurplus, cryptoLimit);
-                person1.crypto += takeAmount; person1.crypto_acb += takeAmount;
+                person1.crypto += (takeAmount * m1); person1.crypto_acb += takeAmount; // ACB is nominal cash
                 if (flowLog) flowLog.contributions.p1.crypto += takeAmount;
                 remainingSurplus -= takeAmount;
             }
             if (alive2 && remainingSurplus > 0) {
                 let takeAmount = Math.min(remainingSurplus, cryptoLimit);
-                person2.crypto += takeAmount; person2.crypto_acb += takeAmount;
+                person2.crypto += (takeAmount * m2); person2.crypto_acb += takeAmount;
                 if (flowLog) flowLog.contributions.p2.crypto += takeAmount;
                 remainingSurplus -= takeAmount;
             }
@@ -103,16 +137,16 @@ export function handleSurplus(surplusAmount: number, person1: any, person2: any,
         else if (accountType === 'nonreg' || accountType === 'cash') {
             if (alive1 && alive2) {
                 let halfAmount = remainingSurplus / 2;
-                person1[accountType] += halfAmount; 
-                person2[accountType] += halfAmount; 
+                person1[accountType] += (halfAmount * m1); 
+                person2[accountType] += (halfAmount * m2); 
                 if (accountType === 'nonreg') { person1.acb += halfAmount; person2.acb += halfAmount; }
                 if (flowLog) { flowLog.contributions.p1[accountType] += halfAmount; flowLog.contributions.p2[accountType] += halfAmount; }
             } else if (alive1) { 
-                person1[accountType] += remainingSurplus; 
+                person1[accountType] += (remainingSurplus * m1); 
                 if (accountType === 'nonreg') person1.acb += remainingSurplus;
                 if (flowLog) flowLog.contributions.p1[accountType] += remainingSurplus; 
             } else if (alive2) { 
-                person2[accountType] += remainingSurplus; 
+                person2[accountType] += (remainingSurplus * m2); 
                 if (accountType === 'nonreg') person2.acb += remainingSurplus;
                 if (flowLog) flowLog.contributions.p2[accountType] += remainingSurplus; 
             }
@@ -128,6 +162,7 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
     
     const MARGINAL_TOLERANCE = 50; 
     const withdrawalStrategies = overrideStrategies || inputs.strategies?.decum || ['nonreg', 'tfsa', 'rrsp'];
+    const timing = inputs.cashflow_timing || 'end';
 
     let hasBalance = (person: any, accountType: string, prefix: string) => {
         if (accountType === 'tfsa') return (person.tfsa + (person.tfsa_successor || 0)) > 0;
@@ -153,18 +188,23 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
             let isCapitalGain = ['nonreg', 'crypto'].includes(account);
             let grossWithdrawalNeeded = remainingNeed, effectiveTaxRate = 0;
             let acbKey = account === 'crypto' ? 'crypto_acb' : 'acb';
+            
+            let currentAge = (prefix === 'p1') ? age1 : age2;
+            let retAge = (prefix === 'p1') ? person1.retAge : person2.retAge;
+            let m = getMultiplier(timing, prefix, account, inputs, currentAge, retAge);
 
             if (isFullyTaxable) {
                 effectiveTaxRate = Math.min(marginalRate || 0, 0.54); 
                 grossWithdrawalNeeded = remainingNeed / (1 - effectiveTaxRate);
             } else if (isCapitalGain) {
-                let gainRatio = Math.max(0, 1 - (person[acbKey] / person[account]));
+                // Gain ratio is determined based on the pre-withdrawal true balance to be perfectly accurate
+                let preWithdrawalBalance = person[account] / m;
+                let gainRatio = preWithdrawalBalance > 0 ? Math.max(0, 1 - (person[acbKey] / preWithdrawalBalance)) : 0;
                 effectiveTaxRate = Math.min(marginalRate || 0, 0.54) * 0.5 * gainRatio;
                 grossWithdrawalNeeded = remainingNeed / (1 - effectiveTaxRate);
             }
             
-            let currentAge = (prefix === 'p1') ? age1 : age2;
-            let availableAccountBalance = person[account];
+            let availableAccountBalance = person[account] / m; // Converted to nominal cash terms
             
             if (account === 'lif' || account === 'lirf') {
                 let maxLimit = prefix === 'p1' ? lifLimits.lifMax1 : lifLimits.lifMax2;
@@ -173,6 +213,7 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
             }
             
             let takenAmount = Math.min(availableAccountBalance, grossWithdrawalNeeded);
+            let actualReduction = takenAmount * m; // Clawback the growth that was earned on these withdrawn funds
 
             if (account === 'lif' || account === 'lirf') {
                 if (prefix === 'p1') lifLimits.lifMax1 -= takenAmount;
@@ -186,12 +227,12 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
             else if (account === 'tfsa_successor') logKey = 'TFSA (Successor)';
             else logKey = account.toUpperCase();
 
-            person[account] -= takenAmount;
+            person[account] -= actualReduction;
             
             let taxableAmountForCallback = 0, acbSold = 0, capitalGain = 0;
             
             if (isCapitalGain) {
-                let proportionSold = takenAmount / (person[account] + takenAmount); 
+                let proportionSold = actualReduction / (person[account] + actualReduction); 
                 acbSold = person[acbKey] * proportionSold;
                 person[acbKey] = Math.max(0, person[acbKey] - acbSold);
                 capitalGain = takenAmount - acbSold;
@@ -267,12 +308,18 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
                 if (ceiling === Infinity) return Infinity;
                 let isFullyTaxable = ['rrsp', 'rrif_acct', 'lif', 'lirf'].includes(accountType); 
                 let isCapitalGain = ['nonreg', 'crypto'].includes(accountType);
+                
+                let prefix = personObj === person1 ? 'p1' : 'p2';
+                let currentAge = personObj === person1 ? age1 : age2;
+                let m = getMultiplier(timing, prefix, accountType, inputs, currentAge, personObj.retAge);
+
                 if (isFullyTaxable) return Math.max(0, ceiling - income) * (1 - Math.min(marginalRate || 0, 0.54));
                 else if (isCapitalGain) {
                     let grossRoom = Math.max(0, ceiling - income);
                     let acbKey = accountType === 'crypto' ? 'crypto_acb' : 'acb';
                     let balance = personObj[accountType];
-                    let gainRatio = balance > 0 ? Math.max(0, 1 - (personObj[acbKey] / balance)) : 0;
+                    let preGrowthBalance = balance / m;
+                    let gainRatio = preGrowthBalance > 0 ? Math.max(0, 1 - (personObj[acbKey] / preGrowthBalance)) : 0;
                     if (gainRatio > 0) return (grossRoom / (0.5 * gainRatio)) * (1 - (Math.min(marginalRate || 0, 0.54) * 0.5 * gainRatio));
                 }
                 return Infinity;
@@ -312,8 +359,9 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
                     let effectiveRate = Math.min(targetMarginalRate || 0, 0.54);
                     if (['nonreg', 'crypto'].includes(targetAccountType as string)) {
                         let acbKey = targetAccountType === 'crypto' ? 'crypto_acb' : 'acb';
-                        let balance = targetPersonObj[targetAccountType as string];
-                        effectiveRate *= 0.5 * (balance > 0 ? Math.max(0, 1 - (targetPersonObj[acbKey] / balance)) : 0);
+                        let m = getMultiplier(timing, withdrawTarget, targetAccountType as string, inputs, withdrawTarget === 'p1' ? age1 : age2, targetPersonObj.retAge);
+                        let preGrowthBalance = targetPersonObj[targetAccountType as string] / m;
+                        effectiveRate *= 0.5 * (preGrowthBalance > 0 ? Math.max(0, 1 - (targetPersonObj[acbKey] / preGrowthBalance)) : 0);
                     }
                     if (incomeGap * (1 - effectiveRate) > 0) amountToTake = Math.min(amountToTake, incomeGap * (1 - effectiveRate));
                 }
