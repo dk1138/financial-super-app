@@ -1,26 +1,29 @@
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 
-// Import all micro-calculators
-import MedicalExpenseOptimizer from './optimizers/MedicalExpenseOptimizer';
-import SideHustleROI from './optimizers/SideHustleROI';
-import DieWithZero from './optimizers/DieWithZero';
-import CPPGridSearch from './optimizers/CPPGridSearch';
-import PensionBuyback from './optimizers/PensionBuyback';
-import RRSPSweetSpot from './optimizers/RRSPSweetSpot';
-import RRSPGrossUp from './optimizers/RRSPGrossUp';
-import TFSAvsRRSP from './optimizers/TFSAvsRRSP';
-import CCBMaximizer from './optimizers/CCBMaximizer';
-import RESPMaximizer from './optimizers/RESPMaximizer';
-import FHSAvsRRSP from './optimizers/FHSAvsRRSP';
-import MortgageVsInvest from './optimizers/MortgageVsInvest';
-import HomeMoveUp from './optimizers/HomeMoveUp';
-import MortgageRenewal from './optimizers/MortgageRenewal';
-import PensionCV from './optimizers/PensionCV';
-import SmithManeuver from './optimizers/SmithManeuver';
-import EmergencyFund from './optimizers/EmergencyFund';
-import CarLease from './optimizers/CarLease';
-import MortgageAffordability from './optimizers/MortgageAffordability';
-import CPPImporter from './optimizers/CPPImporter';
+// --- DYNAMIC IMPORTS (LAZY LOADING) ---
+// These components (and their heavy math) won't be downloaded by the browser 
+// until the user actually selects their category!
+const MedicalExpenseOptimizer = dynamic(() => import('./optimizers/MedicalExpenseOptimizer'), { ssr: false });
+const SideHustleROI = dynamic(() => import('./optimizers/SideHustleROI'), { ssr: false });
+const DieWithZero = dynamic(() => import('./optimizers/DieWithZero'), { ssr: false });
+const CPPGridSearch = dynamic(() => import('./optimizers/CPPGridSearch'), { ssr: false });
+const PensionBuyback = dynamic(() => import('./optimizers/PensionBuyback'), { ssr: false });
+const RRSPSweetSpot = dynamic(() => import('./optimizers/RRSPSweetSpot'), { ssr: false });
+const RRSPGrossUp = dynamic(() => import('./optimizers/RRSPGrossUp'), { ssr: false });
+const TFSAvsRRSP = dynamic(() => import('./optimizers/TFSAvsRRSP'), { ssr: false });
+const CCBMaximizer = dynamic(() => import('./optimizers/CCBMaximizer'), { ssr: false });
+const RESPMaximizer = dynamic(() => import('./optimizers/RESPMaximizer'), { ssr: false });
+const FHSAvsRRSP = dynamic(() => import('./optimizers/FHSAvsRRSP'), { ssr: false });
+const MortgageVsInvest = dynamic(() => import('./optimizers/MortgageVsInvest'), { ssr: false });
+const HomeMoveUp = dynamic(() => import('./optimizers/HomeMoveUp'), { ssr: false });
+const MortgageRenewal = dynamic(() => import('./optimizers/MortgageRenewal'), { ssr: false });
+const PensionCV = dynamic(() => import('./optimizers/PensionCV'), { ssr: false });
+const SmithManeuver = dynamic(() => import('./optimizers/SmithManeuver'), { ssr: false });
+const EmergencyFund = dynamic(() => import('./optimizers/EmergencyFund'), { ssr: false });
+const CarLease = dynamic(() => import('./optimizers/CarLease'), { ssr: false });
+const MortgageAffordability = dynamic(() => import('./optimizers/MortgageAffordability'), { ssr: false });
+const CPPImporter = dynamic(() => import('./optimizers/CPPImporter'), { ssr: false });
 
 export default function OptimizersTab() {
   const [activeCategory, setActiveCategory] = useState('Master Simulations'); 
@@ -87,6 +90,7 @@ export default function OptimizersTab() {
           ))}
       </div>
 
+      {/* When the activeCategory changes, Next.js dynamically fetches only the rendered cards! */}
       <div className="row g-4 mb-5">
           {toolCategories.find(c => c.title === activeCategory)?.keys.map(toolId => renderToolCard(toolId))}
       </div>

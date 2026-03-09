@@ -2,11 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { FinanceEngine } from '../../lib/financeEngine';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip as ChartTooltip, Legend, Filler } from 'chart.js';
-import { Line as ChartJSLine } from 'react-chartjs-2';
 import { SegmentedControl } from '../SharedUI';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, ChartTooltip, Legend, Filler);
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function MonteCarloCard() {
     const { data } = useFinance();
@@ -14,7 +11,7 @@ export default function MonteCarloCard() {
     const [method, setMethod] = useState('random');
     const [volatility, setVolatility] = useState(0.12);
     const [isCalculating, setIsCalculating] = useState(false);
-    const [chartData, setChartData] = useState<any>(null);
+    const [chartData, setChartData] = useState<any[] | null>(null);
     const [successRate, setSuccessRate] = useState<number | null>(null);
 
     const runMonteCarlo = () => {
@@ -45,25 +42,58 @@ export default function MonteCarloCard() {
             const successCount = trajectories.filter(t => t[t.length - 1] > 0).length;
             
             setSuccessRate(Number(((successCount / runs) * 100).toFixed(1)));
-            const discount = (val: number, idx: number) => Math.round(val / Math.pow(1 + inflationRate, idx));
+            const discount = (val: number, idx: number) => Math.max(0, Math.round(val / Math.pow(1 + inflationRate, idx)));
             
-            setChartData({
-              labels: trajectories[0].map((_: any, i: number) => p1Age + i),
-              datasets: [
-                { label: 'Optimistic (Top 10%)', data: trajectories[Math.floor(runs * 0.90)].map(discount), borderColor: '#10b981', borderWidth: 2, pointRadius: 0, tension: 0.4 },
-                { label: 'Median Scenario', data: trajectories[Math.floor(runs * 0.50)].map(discount), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, borderWidth: 3, pointRadius: 0, tension: 0.4 },
-                { label: 'Pessimistic (Bottom 10%)', data: trajectories[Math.floor(runs * 0.10)].map(discount), borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, tension: 0.4 }
-              ]
-            });
+            // Format for Recharts (Array of Objects)
+            const optData = trajectories[Math.floor(runs * 0.90)];
+            const medData = trajectories[Math.floor(runs * 0.50)];
+            const pesData = trajectories[Math.floor(runs * 0.10)];
+
+            const formattedData = optData.map((_, i) => ({
+                age: p1Age + i,
+                optimistic: discount(optData[i], i),
+                median: discount(medData[i], i),
+                pessimistic: discount(pesData[i], i)
+            }));
+            
+            setChartData(formattedData);
           } catch(err) { console.error(err); alert("Simulation failed."); }
           setIsCalculating(false);
         }, 50);
+    };
+
+    const formatCurrencyAxis = (val: number) => {
+        if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+        if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
+        return `$${val}`;
     };
 
     const gaugeRadius = 100;
     const gaugeCircumference = Math.PI * gaugeRadius;
     const gaugeStrokeDashoffset = successRate !== null ? gaugeCircumference - (successRate / 100) * gaugeCircumference : gaugeCircumference;
     const gaugeColor = successRate !== null ? (successRate >= 90 ? '#10b981' : successRate >= 75 ? '#f59e0b' : '#ef4444') : '#6c757d';
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-input border border-secondary p-3 rounded-4 shadow-lg" style={{ minWidth: '220px' }}>
+                    <p className="fw-bold mb-2 border-bottom border-secondary pb-2 text-muted text-uppercase ls-1" style={{fontSize: '0.75rem'}}>Age {label}</p>
+                    <div className="d-flex flex-column gap-2">
+                        {payload.map((entry: any, index: number) => (
+                            <div key={index} className="d-flex justify-content-between align-items-center gap-4">
+                                <div className="d-flex align-items-center">
+                                    <span className="rounded-circle me-2" style={{width: '8px', height: '8px', backgroundColor: entry.color}}></span>
+                                    <span className="fw-bold small text-muted">{entry.name}</span>
+                                </div>
+                                <span className="fw-bolder text-main small">{new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(entry.value)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
 
     const chartComponent = useMemo(() => {
         if (!chartData) return (
@@ -73,22 +103,18 @@ export default function MonteCarloCard() {
         );
         return (
             <div style={{ height: '500px', position: 'relative', width: '100%', flexGrow: 1 }}>
-               <ChartJSLine data={chartData} options={{ 
-                   responsive: true, maintainAspectRatio: false, interaction: { mode: 'index' as const, intersect: false }, 
-                   plugins: { 
-                       legend: { position: 'bottom' as const, labels: { color: '#6c757d' } },
-                       tooltip: { callbacks: {
-                           label: function(context) {
-                               let label = context.dataset.label || '';
-                               if (label) label += ': ';
-                               if (context.parsed.y !== null) label += new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(context.parsed.y);
-                               return label;
-                           },
-                           title: function(context) { return `Age ${context[0].label}`; }
-                       }}
-                   }, 
-                   scales: { x: { grid: { color: 'rgba(108, 117, 125, 0.2)' }, ticks: { color: '#6c757d' } }, y: { grid: { color: 'rgba(108, 117, 125, 0.2)' }, ticks: { color: '#6c757d', callback: (val: any) => '$' + (val / 1000000).toFixed(1) + 'M' } } } 
-               }} />
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.4} />
+                        <XAxis dataKey="age" stroke="#888" tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} tickMargin={12} minTickGap={30} />
+                        <YAxis tickFormatter={(val) => formatCurrencyAxis(val)} stroke="#888" tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} width={65} axisLine={false} tickLine={false} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                        
+                        <Line type="monotone" dataKey="optimistic" name="Optimistic (Top 10%)" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 6, fill: '#10b981', stroke: '#16181d', strokeWidth: 2 }} />
+                        <Line type="monotone" dataKey="median" name="Median Scenario" stroke="#3b82f6" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#3b82f6', stroke: '#16181d', strokeWidth: 2 }} />
+                        <Line type="monotone" dataKey="pessimistic" name="Pessimistic (Bottom 10%)" stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} dot={false} activeDot={{ r: 6, fill: '#ef4444', stroke: '#16181d', strokeWidth: 2 }} />
+                    </LineChart>
+                </ResponsiveContainer>
             </div>
         );
     }, [chartData]);
