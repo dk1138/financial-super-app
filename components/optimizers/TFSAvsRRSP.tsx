@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { FinanceEngine } from '../../lib/financeEngine';
-import { InfoBtn } from '../SharedUI';
+import { getInflatedTaxData, calculateTaxDetailed } from '../../lib/engine/tax';
 
 export default function TFSAvsRRSP() {
     const { data } = useFinance();
@@ -13,10 +13,13 @@ export default function TFSAvsRRSP() {
         const timer = setTimeout(() => {
             const engine = new FinanceEngine(data);
             const prov = data.inputs.tax_province || 'ON';
-            const taxDataObj = engine.getInflatedTaxData(1);
+            
+            // Using the new standalone tax engine method
+            const taxDataObj = getInflatedTaxData(engine.CONSTANTS.TAX_DATA, 1);
             
             const p1CurrentInc = Number(data.inputs.p1_income) || 0;
-            const p1CurrentTax = engine.calculateTaxDetailed(p1CurrentInc, prov, taxDataObj, 0, 0, p1CurrentInc, 1, 0);
+            // Passed engine.CONSTANTS as the new 4th argument
+            const p1CurrentTax = calculateTaxDetailed(p1CurrentInc, prov, taxDataObj, engine.CONSTANTS, 0, 0, p1CurrentInc, 1, 0);
             const currMarginal = p1CurrentTax.margRate;
 
             const baseCheck = engine.runSimulation(true, null);

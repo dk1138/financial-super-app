@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { FinanceEngine } from '../../lib/financeEngine';
-import { InfoBtn } from '../SharedUI';
+import { getInflatedTaxData, calculateTaxDetailed } from '../../lib/engine/tax';
 
 export default function RRSPSweetSpot() {
     const { data } = useFinance();
@@ -16,18 +16,21 @@ export default function RRSPSweetSpot() {
         const timer = setTimeout(() => {
             const engine = new FinanceEngine(data);
             const prov = data.inputs.tax_province || 'ON';
-            const taxDataObj = engine.getInflatedTaxData(1);
+            
+            // Using the new standalone tax engine method
+            const taxDataObj = getInflatedTaxData(engine.CONSTANTS.TAX_DATA, 1);
             
             const getSweetSpot = (incomeStr: string) => {
                 const currentIncome = Number(incomeStr) || 0;
                 if (currentIncome <= 15000) return null;
                 
-                const baseTaxObj = engine.calculateTaxDetailed(currentIncome, prov, taxDataObj, 0, 0, currentIncome, 1, 0);
+                // Passed engine.CONSTANTS as the new 4th argument
+                const baseTaxObj = calculateTaxDetailed(currentIncome, prov, taxDataObj, engine.CONSTANTS, 0, 0, currentIncome, 1, 0);
                 const baseMargRate = baseTaxObj.margRate;
 
                 let bracketFloor = currentIncome;
                 for(let inc = currentIncome; inc >= 15000; inc -= 500) {
-                    let testRate = engine.calculateTaxDetailed(inc, prov, taxDataObj, 0, 0, inc, 1, 0).margRate;
+                    let testRate = calculateTaxDetailed(inc, prov, taxDataObj, engine.CONSTANTS, 0, 0, inc, 1, 0).margRate;
                     if (baseMargRate - testRate >= 0.015) { 
                         bracketFloor = inc + 500;
                         break;
@@ -35,8 +38,8 @@ export default function RRSPSweetSpot() {
                 }
                 
                 const optCont = currentIncome - bracketFloor;
-                const optRefund = baseTaxObj.totalTax - engine.calculateTaxDetailed(bracketFloor, prov, taxDataObj, 0, 0, bracketFloor, 1, 0).totalTax;
-                const nextRate = engine.calculateTaxDetailed(bracketFloor - 500, prov, taxDataObj, 0, 0, bracketFloor - 500, 1, 0).margRate;
+                const optRefund = baseTaxObj.totalTax - calculateTaxDetailed(bracketFloor, prov, taxDataObj, engine.CONSTANTS, 0, 0, bracketFloor, 1, 0).totalTax;
+                const nextRate = calculateTaxDetailed(bracketFloor - 500, prov, taxDataObj, engine.CONSTANTS, 0, 0, bracketFloor - 500, 1, 0).margRate;
 
                 return {
                     income: currentIncome,
