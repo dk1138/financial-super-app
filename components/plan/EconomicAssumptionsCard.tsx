@@ -13,7 +13,7 @@ export default function EconomicAssumptionsCard() {
       </div>
       <div className="card-body p-4">
           <div className="row g-4">
-              <div className="col-12 col-md-6 col-xl-4">
+              <div className="col-12 col-lg-5">
                   <div className="border border-secondary rounded-4 shadow-sm h-100">
                       <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                           <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
@@ -28,7 +28,7 @@ export default function EconomicAssumptionsCard() {
                   </div>
               </div>
               
-              <div className="col-12 col-md-6 col-xl-5">
+              <div className="col-12 col-lg-7">
                   <div className="border border-secondary rounded-4 shadow-sm h-100">
                       <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                           <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
@@ -39,15 +39,15 @@ export default function EconomicAssumptionsCard() {
                       <div className="p-3 bg-input rounded-bottom-4 h-100">
                           <label className="form-label small text-muted mb-2 d-flex align-items-center">
                               Withdrawal / Deposit Timing 
-                              <InfoBtn align="right" title="Cashflow Timing" text="<ul className='mb-0 ps-3'><li><b>Aggressive (End):</b> Full year of growth applied before withdrawals are taken.</li><li><b>Average (Mid):</b> Assumes cashflows happen mid-year (half growth).</li><li><b>Conservative (Start):</b> Withdrawals are removed on Jan 1st, missing out on that year's growth entirely.</li></ul>"/>
+                              <InfoBtn align="right" title="Cashflow Timing" text="Determines when money enters or leaves your accounts during the simulated year, which heavily impacts compounding.<br/><br/><b class='text-main'>Start of Year:</b> Conservative for retirement. Withdrawals happen Jan 1st and miss out on that year's growth. (Note: Contributions earn a full year of interest).<br/><br/><b class='text-main'>Mid-Year:</b> Average approach. Assumes cash flows happen evenly throughout the year (earning half-growth).<br/><br/><b class='text-main'>End of Year:</b> Aggressive for retirement. Assumes your full balance compounds all year before withdrawals are taken on Dec 31st."/>
                           </label>
                           <SegmentedControl 
                               value={data.inputs.cashflow_timing || 'end'} 
                               onChange={(val: string) => updateInput('cashflow_timing', val)}
                               options={[
-                                  { value: 'start', label: 'Conservative (Start)' },
-                                  { value: 'mid', label: 'Average (Mid)' },
-                                  { value: 'end', label: 'Aggressive (End)' }
+                                  { value: 'start', label: 'Start of Year' },
+                                  { value: 'mid', label: 'Mid-Year' },
+                                  { value: 'end', label: 'End of Year' }
                               ]}
                           />
                       </div>
