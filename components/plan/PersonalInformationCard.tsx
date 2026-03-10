@@ -3,34 +3,93 @@ import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, MonthYearStepper, StepperInput } from '../SharedUI';
 
 export default function PersonalInformationCard() {
-  const { data, updateInput, updateMode } = useFinance();
+  const { data, updateInput, updateMultipleInputs, updateMode } = useFinance();
   const isCouple = data.mode === 'Couple';
 
-  const handleDobChange = (player: 'p1'|'p2', dobStr: string) => {
-      updateInput(`${player}_dob`, dobStr);
-      const newAge = new Date().getFullYear() - parseInt(dobStr.split('-')[0]);
-      updateInput(`${player}_age`, newAge);
+  const handleAgeChangeBase = (player: 'p1'|'p2', newAge: number, dobStr: string) => {
+      const updates: Record<string, any> = {
+          [`${player}_dob`]: dobStr,
+          [`${player}_age`]: newAge
+      };
 
       const currentRetAge = data.inputs[`${player}_retireAge`] || 60;
       const currentLifeExp = data.inputs[`${player}_lifeExp`] || 90;
+      
+      let newRetAge = currentRetAge;
+      if (newAge > currentRetAge) {
+          newRetAge = newAge;
+          updates[`${player}_retireAge`] = newRetAge;
+      }
+      if (newAge > currentLifeExp) updates[`${player}_lifeExp`] = newAge;
 
-      if (newAge > currentRetAge) updateInput(`${player}_retireAge`, newAge);
-      if (newAge > currentLifeExp) updateInput(`${player}_lifeExp`, newAge);
+      // Sync the other player if "Retire at same time" is active
+      if (isCouple && data.inputs.retire_same_time) {
+          const yearsToRetire = newRetAge - newAge;
+          const otherPlayer = player === 'p1' ? 'p2' : 'p1';
+          const otherAge = data.inputs[`${otherPlayer}_age`] ?? (player === 'p1' ? 34 : 38);
+          const otherNewRetAge = Math.max(18, otherAge + yearsToRetire);
+          
+          updates[`${otherPlayer}_retireAge`] = otherNewRetAge;
+          if (otherNewRetAge > (data.inputs[`${otherPlayer}_lifeExp`] || 90)) {
+              updates[`${otherPlayer}_lifeExp`] = otherNewRetAge;
+          }
+      }
+      
+      updateMultipleInputs(updates);
+  };
+
+  const handleDobChange = (player: 'p1'|'p2', dobStr: string) => {
+      const newAge = new Date().getFullYear() - parseInt(dobStr.split('-')[0]);
+      handleAgeChangeBase(player, newAge, dobStr);
   };
 
   const handleAgeChange = (player: 'p1'|'p2', newAge: number) => {
       const currentYear = new Date().getFullYear();
       const currentMonth = (data.inputs[`${player}_dob`] || "1990-01").split('-')[1];
-      const newBirthYear = currentYear - newAge;
-      
-      updateInput(`${player}_dob`, `${newBirthYear}-${currentMonth}`);
-      updateInput(`${player}_age`, newAge);
+      const newDobStr = `${currentYear - newAge}-${currentMonth}`;
+      handleAgeChangeBase(player, newAge, newDobStr);
+  };
 
-      const currentRetAge = data.inputs[`${player}_retireAge`] || 60;
-      const currentLifeExp = data.inputs[`${player}_lifeExp`] || 90;
+  const handleRetireChange = (player: 'p1'|'p2', newRetAge: number) => {
+      const updates: Record<string, any> = { [`${player}_retireAge`]: newRetAge };
+      if (newRetAge > (data.inputs[`${player}_lifeExp`] || 90)) {
+          updates[`${player}_lifeExp`] = newRetAge;
+      }
 
-      if (newAge > currentRetAge) updateInput(`${player}_retireAge`, newAge);
-      if (newAge > currentLifeExp) updateInput(`${player}_lifeExp`, newAge);
+      // Sync the other player's retirement age mathematically
+      if (isCouple && data.inputs.retire_same_time) {
+          const playerAge = data.inputs[`${player}_age`] ?? (player === 'p1' ? 38 : 34);
+          const yearsToRetire = newRetAge - playerAge;
+          
+          const otherPlayer = player === 'p1' ? 'p2' : 'p1';
+          const otherAge = data.inputs[`${otherPlayer}_age`] ?? (player === 'p1' ? 34 : 38);
+          const otherNewRetAge = Math.max(18, otherAge + yearsToRetire);
+          
+          updates[`${otherPlayer}_retireAge`] = otherNewRetAge;
+          if (otherNewRetAge > (data.inputs[`${otherPlayer}_lifeExp`] || 90)) {
+              updates[`${otherPlayer}_lifeExp`] = otherNewRetAge;
+          }
+      }
+      updateMultipleInputs(updates);
+  };
+
+  const handleSyncToggle = (checked: boolean) => {
+      if (checked) {
+          const p1Age = data.inputs.p1_age ?? 38;
+          const p1Ret = data.inputs.p1_retireAge ?? 60;
+          const p2Age = data.inputs.p2_age ?? 34;
+          const yearsToRetire = p1Ret - p1Age;
+          const newP2Ret = Math.max(18, p2Age + yearsToRetire);
+          
+          const updates: Record<string, any> = { 
+              retire_same_time: true, 
+              p2_retireAge: newP2Ret 
+          };
+          if (newP2Ret > (data.inputs.p2_lifeExp || 95)) updates.p2_lifeExp = newP2Ret;
+          updateMultipleInputs(updates);
+      } else {
+          updateInput('retire_same_time', false);
+      }
   };
 
   return (
@@ -47,6 +106,25 @@ export default function PersonalInformationCard() {
         </div>
       </div>
       <div className="card-body p-4">
+
+        {isCouple && (
+            <div className="d-flex justify-content-end mb-4 align-items-center bg-secondary bg-opacity-10 p-2 rounded-3 border border-secondary shadow-sm">
+                <label className="form-check-label small fw-bold text-primary me-3 cursor-pointer d-flex align-items-center" htmlFor="syncRetireToggle">
+                    <i className="bi bi-link-45deg me-1 fs-5"></i> Retire in the same calendar year
+                    <InfoBtn align="right" title="Sync Retirement" text="Automatically calculates and adjusts your partner's target retirement age so that you both retire in the exact same chronological year." />
+                </label>
+                <div className="form-check form-switch mb-0 fs-5">
+                    <input 
+                        className="form-check-input mt-0 cursor-pointer" 
+                        type="checkbox" 
+                        id="syncRetireToggle" 
+                        checked={data.inputs.retire_same_time ?? false} 
+                        onChange={(e) => handleSyncToggle(e.target.checked)} 
+                    />
+                </div>
+            </div>
+        )}
+
         <div className="row g-4">
           <div className="col-12 col-xl-6">
             <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
@@ -67,7 +145,7 @@ export default function PersonalInformationCard() {
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                         <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
-                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={100} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => { updateInput(`p1_retireAge`, val); if (val > (data.inputs.p1_lifeExp || 90)) updateInput('p1_lifeExp', val); }} /></div>
+                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={100} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireChange('p1', val)} /></div>
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                         <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
@@ -97,7 +175,7 @@ export default function PersonalInformationCard() {
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
-                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={data.inputs.p2_age ?? 18} max={100} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => { updateInput(`p2_retireAge`, val); if (val > (data.inputs.p2_lifeExp || 90)) updateInput('p2_lifeExp', val); }} /></div>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={100} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireChange('p2', val)} /></div>
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
