@@ -63,7 +63,9 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let yearlyMaxPensionableEarnings = (constants.YMPE || 74600) * baseInflation; 
     let yearlyAdditionalMaxPensionableEarnings = (constants.YAMPE || 85000) * baseInflation; 
     let eiMaxInsurableEarnings = (constants.EI_MAX_INSURABLE || 68900) * baseInflation; 
-    let cppExemption = (constants.CPP_EXEMPTION || 3500) * baseInflation;
+    
+    // BUG FIX: The $3500 CPP exemption is statutory and NEVER indexes with inflation
+    let cppExemption = constants.CPP_EXEMPTION || 3500;
 
     let cppRate = constants.CPP_RATE || 0.0495;
     let cppEnhancedRate = constants.CPP_ENHANCED_RATE || 0.01;
@@ -109,7 +111,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let provBpaAmounts = constants.PROV_BPA || { 'ON': 12989 };
     let provBpa = (provBpaAmounts[province] || 15000) * baseInflation;
 
-    let lowestFedRate = taxData.FED?.rates?.[0] || 0.15; 
+    let lowestFedRate = taxData.FED?.rates?.[0] || 0.14; 
     let fedBpaCredit = fedBpa * lowestFedRate; 
     
     let provRateLowest = taxData[province]?.rates?.[0] || 0.0505;
@@ -229,17 +231,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     if (province === 'ON') { 
         provTax = Math.max(0, provTax - provDividendCredit);
         
-        let liftMax = (constants.ON_LIFT_MAX || 875) * baseInflation;
-        let liftRate = constants.ON_LIFT_RATE || 0.0505;
-        let liftPhaseStart = (constants.ON_LIFT_PHASE_OUT_START || 32500) * baseInflation;
-        let liftPhaseRate = constants.ON_LIFT_PHASE_OUT_RATE || 0.05;
-
-        let liftAmt = Math.min(liftMax, earnedIncome * liftRate);
-        let liftPhaseOut = Math.max(0, (craTaxableIncome - liftPhaseStart) * liftPhaseRate);
-        let liftCredit = Math.max(0, liftAmt - liftPhaseOut);
-        provTax = Math.max(0, provTax - liftCredit);
-
         let surtax = 0; 
+        // BUG FIX: Surtax is calculated BEFORE LIFT and OTR are applied. 
         if (taxData.ON.surtax) { 
             if (provTax > taxData.ON.surtax.t1) {
                 surtax += (provTax - taxData.ON.surtax.t1) * taxData.ON.surtax.r1; 
@@ -250,24 +243,40 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         } 
         
         if (surtax > 0) {
-            if (provTax > (taxData.ON.surtax.t2 || 7490)) {
+            if (provTax > (taxData.ON.surtax.t2 || 7446)) {
                 provMarginalRate *= 1.56; 
             } else {
                 provMarginalRate *= 1.20;
             }
         }
         
+        // Add surtax to basic Ontario tax first
         provTax += surtax;
 
+        // Apply LIFT (Low-Income Individuals and Families Tax Credit)
+        let liftMax = (constants.ON_LIFT_MAX || 875) * baseInflation;
+        let liftRate = constants.ON_LIFT_RATE || 0.0505;
+        let liftPhaseStart = (constants.ON_LIFT_PHASE_OUT_START || 32500) * baseInflation;
+        let liftPhaseRate = constants.ON_LIFT_PHASE_OUT_RATE || 0.05;
+
+        let liftAmt = Math.min(liftMax, earnedIncome * liftRate);
+        let liftPhaseOut = Math.max(0, (craTaxableIncome - liftPhaseStart) * liftPhaseRate);
+        let liftCredit = Math.max(0, liftAmt - liftPhaseOut);
+        
+        provTax = Math.max(0, provTax - liftCredit);
+
+        // Apply OTR (Ontario Tax Reduction)
         let otrBase = (constants.ON_OTR_BASE || 284) * baseInflation;
         if (spouseIncome >= 0 && spouseIncome < provBpa) {
             otrBase += ((constants.ON_OTR_BASE || 284) * baseInflation); 
         }
+        
         let otrAmount = (otrBase * 2) - provTax;
         if (otrAmount > 0) {
             provTax = Math.max(0, provTax - otrAmount);
         }
         
+        // Calculate Ontario Health Premium
         let ohp = 0;
         let ti = craTaxableIncome;
         let ohpTiers = constants.ON_OHP_TIERS || [
@@ -289,9 +298,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
 
     } else {
         provTax = Math.max(0, provTax - provDividendCredit);
-        if (province === 'PE' && taxData.PE.surtax && provTax > taxData.PE.surtax.t1) {
-            provTax += (provTax - taxData.PE.surtax.t1) * taxData.PE.surtax.r1;
-        }
+        
+        // Note: PEI dropped its surtax. Code to handle PEI surtax has been safely removed. 
     }
 
     fedTax = Math.max(0, fedTax - fedDividendCredit);
