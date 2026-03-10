@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { InfoBtn, CurrencyInput } from './SharedUI';
 
 const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, desc: string }> = {
   tfsa: { label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', desc: 'Tax-Free Savings' },
@@ -12,47 +13,6 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
   rrif_acct: { label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', desc: 'Converted RRSP' },
   lif: { label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', desc: 'Life Income Fund' },
   lirf: { label: 'LIRA / LIRF', icon: 'bi-lock-fill', color: 'text-muted', desc: 'Locked-In Retirement' },
-};
-
-// --- REUSABLE MICRO-COMPONENTS ---
-
-const CurrencyInput = ({ value, onChange, className, placeholder, disabled, noBg, suffix }: any) => {
-    const [localValue, setLocalValue] = useState('');
-    useEffect(() => {
-        if (value !== undefined && value !== '' && value !== null) { setLocalValue(Number(Math.round(value)).toLocaleString('en-US')); } else { setLocalValue(''); }
-    }, [value]);
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const rawValue = e.target.value.replace(/[^0-9]/g, ''); 
-        if (rawValue === '') onChange(''); else onChange(parseInt(rawValue, 10));
-    };
-    return (
-        <div className="position-relative w-100 d-flex align-items-center">
-            <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '12px', fontSize: '0.9em', pointerEvents: 'none', zIndex: 5 }}>$</span>
-            <input type="text" className={`${className} text-end ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50' : ''}`} style={{ paddingLeft: noBg ? '18px' : '28px', paddingRight: suffix ? '45px' : (noBg ? '4px' : '12px'), fontWeight: '600', outline: 'none' }} value={localValue} onChange={handleChange} placeholder={placeholder} disabled={disabled} />
-            {suffix && <span className="position-absolute text-muted small fw-bold" style={{ right: '12px', pointerEvents: 'none', zIndex: 5 }}>{suffix}</span>}
-        </div>
-    );
-};
-
-const InfoBtn = ({ title, text, align = 'center' }: { title: string, text: string, align?: 'center'|'right'|'left' }) => {
-    const [open, setOpen] = useState(false);
-    let posStyles: React.CSSProperties = { top: '140%', backgroundColor: 'var(--bg-card)', minWidth: '260px' };
-    if (align === 'right') { posStyles.right = '0'; }
-    else if (align === 'left') { posStyles.left = '0'; }
-    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
-    return (
-        <div className="position-relative d-inline-flex align-items-center ms-2" style={{zIndex: open ? 1050 : 1}}>
-            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
-                <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
-            </button>
-            {open && (
-                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
-                    <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
-                    <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: text}}></div>
-                </div>
-            )}
-        </div>
-    );
 };
 
 export default function StrategyTab() {
@@ -241,19 +201,31 @@ export default function StrategyTab() {
                         <div className="col-6">
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <span className="small fw-bold text-purple text-uppercase ls-1">RESP</span>
-                                    <InfoBtn align="right" title="RESP Target" text="The optimal annual contribution to maximize the 20% CESG government match ($2,500).<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/registered-education-savings-plans-resps.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
-                                </div>
-                                <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_resp_limit} onChange={(val: any) => updateInput('cfg_resp_limit', val)} />
-                            </div>
-                        </div>
-                        <div className="col-12">
-                            <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                                <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-muted text-uppercase ls-1">Crypto Limit</span>
                                     <InfoBtn align="right" title="Crypto Constraint" text="A self-imposed maximum amount of cash you are willing to invest into Crypto per year to control risk exposure." />
                                 </div>
                                 <CurrencyInput suffix="/ yr" className="form-control form-control-sm" value={data.inputs.cfg_crypto_limit} onChange={(val: any) => updateInput('cfg_crypto_limit', val)} />
+                            </div>
+                        </div>
+                        <div className="col-12">
+                            <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                    <span className="small fw-bold text-purple text-uppercase ls-1">RESP Strategy</span>
+                                    <InfoBtn align="right" title="RESP Guidelines" text="The optimal annual contribution to maximize the 20% CESG match is $2,500. CESG grants are only paid on contributions made up to the end of the year the child turns 17.<br/><br/><a href='https://www.canada.ca/en/services/benefits/education/education-savings.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>Govt of Canada Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
+                                </div>
+                                <div className="row g-2">
+                                    <div className="col-6">
+                                        <label className="small text-muted fw-bold mb-1" style={{fontSize:'0.7rem'}}>Annual Target</label>
+                                        <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_resp_limit} onChange={(val: any) => updateInput('cfg_resp_limit', val)} />
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="small text-muted fw-bold mb-1" style={{fontSize:'0.7rem'}}>Stop Age</label>
+                                        <div className="d-flex align-items-center position-relative w-100">
+                                           <input type="number" className="form-control form-control-sm bg-transparent border border-secondary text-main shadow-sm text-end w-100" style={{paddingRight: '35px', fontWeight: '600'}} value={data.inputs.cfg_resp_stop_age !== undefined ? data.inputs.cfg_resp_stop_age : 17} onChange={(e) => updateInput('cfg_resp_stop_age', parseInt(e.target.value) || 0)} max={31} />
+                                           <span className="position-absolute text-muted small fw-bold" style={{right: '10px', pointerEvents: 'none', fontSize: '0.8em'}}>Yrs</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -278,8 +250,6 @@ export default function StrategyTab() {
                             </h6>
                             <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
                                 Overrides your manual withdrawal order to mathematically minimize lifetime taxes. It proactively draws down your RRSP early (a "Meltdown") to completely fill your lowest tax brackets, while aggressively sheltering your TFSA for as long as possible. 
-                                <br/><br/>
-                                <span className="fw-bold text-main">Example:</span> If you have $20,000 of 0% tax room left in a year, the engine will automatically withdraw exactly $20,000 from your RRSP before touching any other account.
                             </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
@@ -301,7 +271,6 @@ export default function StrategyTab() {
                         </div>
                     </div>
 
-                    {/* RESTORED GUARDRAILS TOGGLE */}
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4">
                         <div className="flex-grow-1 pe-md-3">
                             <h6 className="fw-bold mb-2 text-warning text-uppercase ls-1 d-flex align-items-center">
