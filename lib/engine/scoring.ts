@@ -23,6 +23,9 @@ export function calculatePlanScore(data: any, timeline: any[]): ScoreBreakdown {
     const monthsCovered = monthlyExpenses > 0 ? liquidCash / monthlyExpenses : 12;
     score.emergencyFund = Math.min(10, Math.max(0, (monthsCovered / 6) * 10));
 
+    // Define grossInflow here so both Savings Rate and Debt Health can use it
+    const grossInflow = year0.grossInflow || 1;
+
     // 2. Savings Rate (Max 20 points) - Targets 20%+ savings rate of gross flow
     // FIX: If the user is already retired in Year 0, automatically award full points 
     // since asset drawdown is expected and captured by the Retirement Readiness score.
@@ -33,7 +36,6 @@ export function calculatePlanScore(data: any, timeline: any[]): ScoreBreakdown {
     } else {
         let contsRaw = Object.values(year0.flows?.contributions?.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
         if (data.mode === 'Couple') contsRaw += Object.values(year0.flows?.contributions?.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-        const grossInflow = year0.grossInflow || 1;
         const savingsRateVal = contsRaw / grossInflow;
         score.savingsRate = Math.min(20, Math.max(0, (savingsRateVal / 0.20) * 20));
     }
