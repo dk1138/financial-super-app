@@ -14,14 +14,16 @@ export default function EconomicAssumptionsCard() {
       <div className="card-body p-4">
           <div className="row g-4">
               <div className="col-12 col-lg-5">
-                  <div className="border border-secondary rounded-4 shadow-sm h-100">
-                      <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
+                  {/* Changed to flex-column */}
+                  <div className="border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column">
+                      <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0">
                           <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
                               <i className="bi bi-percent"></i>
                           </div>
                           <span className="fw-bold text-main small text-uppercase ls-1">Inflation Rate</span>
                       </div>
-                      <div className="p-3 bg-input rounded-bottom-4 h-100">
+                      {/* Replaced h-100 with flex-grow-1 */}
+                      <div className="p-3 bg-input rounded-bottom-4 flex-grow-1">
                           <label className="form-label small text-muted mb-2 d-flex align-items-center">Long-term Target <InfoBtn align="right" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%."/></label>
                           <PercentInput className="form-control" value={data.inputs.inflation_rate} onChange={(val: any) => updateInput('inflation_rate', val)} />
                       </div>
@@ -29,14 +31,16 @@ export default function EconomicAssumptionsCard() {
               </div>
               
               <div className="col-12 col-lg-7">
-                  <div className="border border-secondary rounded-4 shadow-sm h-100">
-                      <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
+                  {/* Changed to flex-column */}
+                  <div className="border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column">
+                      <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0">
                           <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
                               <i className="bi bi-clock-history"></i>
                           </div>
                           <span className="fw-bold text-main small text-uppercase ls-1">Cashflow Timing</span>
                       </div>
-                      <div className="p-3 bg-input rounded-bottom-4 h-100">
+                      {/* Replaced h-100 with flex-grow-1 */}
+                      <div className="p-3 bg-input rounded-bottom-4 flex-grow-1">
                           <label className="form-label small text-muted mb-2 d-flex align-items-center">
                               Withdrawal / Deposit Timing 
                               <InfoBtn align="right" title="Cashflow Timing" text="Determines when money enters or leaves your accounts during the simulated year, which heavily impacts compounding.<br/><br/><b class='text-main'>Start of Year:</b> Conservative for retirement. Withdrawals happen Jan 1st and miss out on that year's growth. (Note: Contributions earn a full year of interest).<br/><br/><b class='text-main'>Mid-Year:</b> Average approach. Assumes cash flows happen evenly throughout the year (earning half-growth).<br/><br/><b class='text-main'>End of Year:</b> Aggressive for retirement. Assumes your full balance compounds all year before withdrawals are taken on Dec 31st."/>
