@@ -201,19 +201,31 @@ export default function StrategyTab() {
                         <div className="col-6">
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <span className="small fw-bold text-purple text-uppercase ls-1">RESP</span>
-                                    <InfoBtn align="right" title="RESP Target" text="The optimal annual contribution to maximize the 20% CESG government match ($2,500).<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/registered-education-savings-plans-resps.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
-                                </div>
-                                <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_resp_limit} onChange={(val: any) => updateInput('cfg_resp_limit', val)} />
-                            </div>
-                        </div>
-                        <div className="col-12">
-                            <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                                <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-muted text-uppercase ls-1">Crypto Limit</span>
                                     <InfoBtn align="right" title="Crypto Constraint" text="A self-imposed maximum amount of cash you are willing to invest into Crypto per year to control risk exposure." />
                                 </div>
                                 <CurrencyInput suffix="/ yr" className="form-control form-control-sm" value={data.inputs.cfg_crypto_limit} onChange={(val: any) => updateInput('cfg_crypto_limit', val)} />
+                            </div>
+                        </div>
+                        <div className="col-12">
+                            <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                    <span className="small fw-bold text-purple text-uppercase ls-1">RESP Strategy</span>
+                                    <InfoBtn align="right" title="RESP Guidelines" text="The optimal annual contribution to maximize the 20% CESG match is $2,500. CESG grants are only paid on contributions made up to the end of the year the child turns 17.<br/><br/><a href='https://www.canada.ca/en/services/benefits/education/education-savings/saving-child.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>Govt of Canada Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
+                                </div>
+                                <div className="row g-2">
+                                    <div className="col-6">
+                                        <label className="small text-muted fw-bold mb-1" style={{fontSize:'0.7rem'}}>Annual Target</label>
+                                        <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_resp_limit} onChange={(val: any) => updateInput('cfg_resp_limit', val)} />
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="small text-muted fw-bold mb-1" style={{fontSize:'0.7rem'}}>Stop Age</label>
+                                        <div className="d-flex align-items-center position-relative w-100">
+                                           <input type="number" className="form-control form-control-sm bg-transparent border border-secondary text-main shadow-sm text-end w-100" style={{paddingRight: '35px', fontWeight: '600'}} value={data.inputs.cfg_resp_stop_age !== undefined ? data.inputs.cfg_resp_stop_age : 17} onChange={(e) => updateInput('cfg_resp_stop_age', parseInt(e.target.value) || 0)} max={31} />
+                                           <span className="position-absolute text-muted small fw-bold" style={{right: '10px', pointerEvents: 'none', fontSize: '0.8em'}}>Yrs</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
