@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper } from '../SharedUI';
 
 export default function IncomeTaxCard() {
   const { data, results, updateInput, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   const isCouple = data.mode === 'Couple';
+  
+  // State for collapsible tax credits sections
+  const [showCredits, setShowCredits] = useState<Record<string, boolean>>({ p1: false, p2: false });
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -20,6 +23,8 @@ export default function IncomeTaxCard() {
   const totalTax = (results?.timeline?.[0]?.taxP1 || 0) + (isCouple ? (results?.timeline?.[0]?.taxP2 || 0) : 0);
   
   const hhNet = hhGross > 0 ? Math.max(0, hhGross - totalTax) : 0;
+
+  const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
 
   const renderTaxBox = (taxDetails: any, gross: number) => {
       if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
@@ -110,6 +115,63 @@ export default function IncomeTaxCard() {
                               </div>
                           </div>
                       </div>
+                  </div>
+
+                  {/* TAX CREDITS COLLAPSIBLE PANEL */}
+                  <div className="border border-secondary rounded-4 mb-3 shadow-sm overflow-hidden">
+                      <div 
+                          className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center justify-content-between cursor-pointer hover-bg-input transition-all" 
+                          onClick={() => toggleCredits(p)}
+                      >
+                          <div className="d-flex align-items-center gap-3">
+                              <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
+                                  <i className="bi bi-shield-check"></i>
+                              </div>
+                              <span className="fw-bold text-main small text-uppercase ls-1">Tax Credits & Deductions</span>
+                          </div>
+                          <i className={`bi bi-chevron-${showCredits[p] ? 'up' : 'down'} text-muted`}></i>
+                      </div>
+                      
+                      {showCredits[p] && (
+                          <div className="p-3 bg-input border-top border-secondary border-opacity-25">
+                              <div className="row g-3">
+                                  <div className="col-12 col-md-6 d-flex flex-column gap-3 justify-content-center pt-2">
+                                      <div className="form-check form-switch mb-0 d-flex align-items-center">
+                                          <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_disability`} checked={data.inputs[`${p}_disability`] || false} onChange={(e) => updateInput(`${p}_disability`, e.target.checked)} />
+                                          <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer" htmlFor={`${p}_disability`}>Disability Tax Credit</label>
+                                      </div>
+                                      <div className="form-check form-switch mb-0 d-flex align-items-center">
+                                          <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_caregiver`} checked={data.inputs[`${p}_caregiver`] || false} onChange={(e) => updateInput(`${p}_caregiver`, e.target.checked)} />
+                                          <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer" htmlFor={`${p}_caregiver`}>Caregiver Amount</label>
+                                      </div>
+                                  </div>
+                                  
+                                  <div className="col-12 col-md-6">
+                                      <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
+                                        Home Buyer (Year) <InfoBtn title="First-Time Home Buyer" text="Enter the year you plan to buy your first home to apply the $10,000 credit for that specific year."/>
+                                      </label>
+                                      <input type="number" className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main shadow-none rounded-3" placeholder="e.g. 2026" value={data.inputs[`${p}_first_time_home_buyer_year`] || ''} onChange={(e) => updateInput(`${p}_first_time_home_buyer_year`, e.target.value)} />
+                                  </div>
+
+                                  <div className="col-12 col-md-6">
+                                      <label className="form-label small text-muted mb-1">Medical Expenses ($/yr)</label>
+                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
+                                  </div>
+                                  <div className="col-12 col-md-6">
+                                      <label className="form-label small text-muted mb-1">Charitable Donations ($/yr)</label>
+                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
+                                  </div>
+                                  <div className="col-12 col-md-6">
+                                      <label className="form-label small text-muted mb-1">Tuition Paid ($/yr)</label>
+                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_tuition`] ?? ''} onChange={(val: any) => updateInput(`${p}_tuition`, val)} />
+                                  </div>
+                                  <div className="col-12 col-md-6">
+                                      <label className="form-label small text-muted mb-1">Student Loan Interest ($)</label>
+                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_student_loan_interest`] ?? ''} onChange={(val: any) => updateInput(`${p}_student_loan_interest`, val)} />
+                                  </div>
+                              </div>
+                          </div>
+                      )}
                   </div>
 
                   {data.additionalIncome.filter((inc: any) => inc.owner === p).map((inc: any) => {

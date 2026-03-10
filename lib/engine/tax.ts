@@ -40,7 +40,7 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
     };
 }
 
-export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true) {
+export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
         return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0 };
     }
@@ -162,9 +162,60 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
 
     let fedCppEiCredit = (cppBasePremium + eiPremium) * lowestFedRate;
     let provCppEiCredit = (cppBasePremium + eiPremium) * provRateLowest; 
+
+    // --- ADDITIONAL NON-REFUNDABLE TAX CREDITS ---
+    let fedDisabilityCredit = 0;
+    let provDisabilityCredit = 0;
+    if (credits.disability) {
+        fedDisabilityCredit = (constants.FED_DISABILITY_AMOUNT || 10138) * baseInflation * lowestFedRate;
+        provDisabilityCredit = (constants.PROV_DISABILITY_AMOUNT?.[province] || 9000) * baseInflation * provRateLowest;
+    }
+
+    let fedCaregiverCredit = 0;
+    if (credits.caregiver) {
+        fedCaregiverCredit = (constants.FED_CAREGIVER_AMOUNT || 8500) * baseInflation * lowestFedRate;
+    }
+
+    let fedMedicalCredit = 0;
+    if (credits.medicalExpenses > 0) {
+        let medThreshold = Math.min((constants.FED_MEDICAL_EXPENSE_THRESHOLD_MAX || 2900) * baseInflation, craTaxableIncome * (constants.FED_MEDICAL_EXPENSE_THRESHOLD_RATE || 0.03));
+        let eligibleMed = Math.max(0, credits.medicalExpenses * baseInflation - medThreshold);
+        fedMedicalCredit = eligibleMed * lowestFedRate;
+    }
+
+    let fedDonationCredit = 0;
+    if (credits.donations > 0) {
+        let don = credits.donations * baseInflation;
+        let thresh = constants.FED_CHARITABLE_DONATION_THRESHOLD || 200;
+        if (don <= thresh) {
+            fedDonationCredit = don * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15);
+        } else {
+            let topRateInc = Math.max(0, craTaxableIncome - ((constants.BPA_PHASE_END_FED || 258482) * baseInflation)); // Income subject to 33% bracket
+            let eligibleFor33 = Math.min(don - thresh, topRateInc);
+            let eligibleFor29 = Math.max(0, don - thresh - eligibleFor33);
+            fedDonationCredit = (thresh * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15)) + 
+                                (eligibleFor33 * (constants.FED_CHARITABLE_DONATION_RATE_3 || 0.33)) +
+                                (eligibleFor29 * (constants.FED_CHARITABLE_DONATION_RATE_2 || 0.29));
+        }
+    }
+
+    let fedHomeBuyerCredit = 0;
+    if (credits.firstTimeHomeBuyer) {
+        fedHomeBuyerCredit = (constants.FED_HOME_BUYERS_AMOUNT || 10000) * lowestFedRate; 
+    }
     
-    fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit - fedEmploymentCredit);
-    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit);
+    let fedTuitionCredit = 0;
+    if (credits.tuition > 0) {
+        fedTuitionCredit = credits.tuition * baseInflation * (constants.FED_TUITION_RATE || 0.15);
+    }
+    
+    let fedStudentLoanCredit = 0;
+    if (credits.studentLoanInterest > 0) {
+        fedStudentLoanCredit = credits.studentLoanInterest * baseInflation * (constants.FED_STUDENT_LOAN_INTEREST_RATE || 0.15);
+    }
+    
+    fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit - fedEmploymentCredit - fedDisabilityCredit - fedCaregiverCredit - fedMedicalCredit - fedDonationCredit - fedHomeBuyerCredit - fedTuitionCredit - fedStudentLoanCredit);
+    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit - provDisabilityCredit);
     
     let grossUp = isEligibleDividend ? (constants.DIVIDEND_GROSS_UP_ELIGIBLE || 1.38) : (constants.DIVIDEND_GROSS_UP_NON_ELIGIBLE || 1.15);
     let grossedUpDividend = actualDividendIncome * grossUp;

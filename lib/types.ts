@@ -93,6 +93,7 @@ export interface PlanData {
     };
     expensesByCategory: Record<string, ExpenseCategory>;
     constants?: any;
+    taxCredits?: any; // Used to provide explicit inputs for specific tax credits dynamically applied
 }
 
 export interface SimulationDashboard {
