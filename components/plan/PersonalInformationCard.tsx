@@ -94,36 +94,30 @@ export default function PersonalInformationCard() {
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
-      <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
+      <div className="card-header d-flex flex-wrap align-items-center justify-content-between border-bottom border-secondary p-3 surface-card gap-3">
         <div className="d-flex align-items-center">
           <i className="bi bi-person-vcard text-primary fs-4 me-3"></i>
           <h5 className="mb-0 fw-bold text-uppercase ls-1">1. Personal Information</h5>
           <InfoBtn title="Personal Details" text="Set your Age (or Date of Birth) and targeted Retirement Age. <br><br><b>Life Expectancy</b> defines how long the simulation runs (ensuring you don't run out of money too early)." />
         </div>
-        <div className="d-inline-flex bg-input rounded-pill p-1 border border-secondary shadow-sm">
-            <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${!isCouple ? 'bg-primary shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} onClick={() => updateMode('Single')}>Single</button>
-            <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${isCouple ? 'shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} style={isCouple ? {backgroundColor: 'var(--bs-purple)'} : {}} onClick={() => updateMode('Couple')}>Couple</button>
+        
+        <div className="d-flex align-items-center ms-auto gap-3">
+            {isCouple && (
+                <div className="form-check form-switch mb-0 d-flex align-items-center pe-3 border-end border-secondary">
+                    <input className="form-check-input m-0 cursor-pointer" type="checkbox" id="syncRetireToggle" checked={data.inputs.retire_same_time ?? false} onChange={(e) => handleSyncToggle(e.target.checked)} />
+                    <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-2 cursor-pointer text-nowrap d-flex align-items-center" htmlFor="syncRetireToggle">
+                        Sync Ret.
+                        <InfoBtn align="right" title="Sync Retirement" text="Automatically calculates and adjusts your partner's target retirement age so that you both retire in the exact same chronological year." />
+                    </label>
+                </div>
+            )}
+            <div className="d-inline-flex bg-input rounded-pill p-1 border border-secondary shadow-sm">
+                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${!isCouple ? 'bg-primary shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} onClick={() => updateMode('Single')}>Single</button>
+                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${isCouple ? 'shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} style={isCouple ? {backgroundColor: 'var(--bs-purple)'} : {}} onClick={() => updateMode('Couple')}>Couple</button>
+            </div>
         </div>
       </div>
       <div className="card-body p-4">
-
-        {isCouple && (
-            <div className="d-flex justify-content-end mb-4 align-items-center bg-secondary bg-opacity-10 p-2 rounded-3 border border-secondary shadow-sm">
-                <label className="form-check-label small fw-bold text-primary me-3 cursor-pointer d-flex align-items-center" htmlFor="syncRetireToggle">
-                    <i className="bi bi-link-45deg me-1 fs-5"></i> Retire in the same calendar year
-                    <InfoBtn align="right" title="Sync Retirement" text="Automatically calculates and adjusts your partner's target retirement age so that you both retire in the exact same chronological year." />
-                </label>
-                <div className="form-check form-switch mb-0 fs-5">
-                    <input 
-                        className="form-check-input mt-0 cursor-pointer" 
-                        type="checkbox" 
-                        id="syncRetireToggle" 
-                        checked={data.inputs.retire_same_time ?? false} 
-                        onChange={(e) => handleSyncToggle(e.target.checked)} 
-                    />
-                </div>
-            </div>
-        )}
 
         <div className="row g-4">
           <div className="col-12 col-xl-6">
