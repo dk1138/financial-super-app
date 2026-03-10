@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput } from '../SharedUI';
+import { FINANCIAL_CONSTANTS } from '../../lib/config';
 
 export default function RESPMaximizer() {
     const { data } = useFinance();
@@ -11,11 +12,18 @@ export default function RESPMaximizer() {
     const [respAnnualCont, setRespAnnualCont] = useState(2500);
     const [respPriorGrants, setRespPriorGrants] = useState(estChildAge > 0 ? estChildAge * 500 : 0);
 
+    const MAX_LIFETIME = FINANCIAL_CONSTANTS.RESP_CESG_LIFETIME_MAX; 
+    const MATCH_RATE = FINANCIAL_CONSTANTS.RESP_CESG_MATCH_RATE; 
+    const MAX_ANNUAL_MATCH = FINANCIAL_CONSTANTS.RESP_CESG_ANNUAL_MAX; 
+    const OPTIMAL_ANNUAL = MAX_ANNUAL_MATCH / MATCH_RATE; 
+
     const respRemainingYears = Math.max(0, 17 - respAge);
-    const respRoomLeft = Math.max(0, 7200 - respPriorGrants);
-    const standardGrantPerYear = Math.min(500, respAnnualCont * 0.20);
-    const canCatchUp = respAnnualCont > 2500;
-    const catchUpGrantPerYear = canCatchUp ? Math.min(500, (respAnnualCont - 2500) * 0.20) : 0;
+    const respRoomLeft = Math.max(0, MAX_LIFETIME - respPriorGrants);
+    
+    const standardGrantPerYear = Math.min(MAX_ANNUAL_MATCH, respAnnualCont * MATCH_RATE);
+    const canCatchUp = respAnnualCont > OPTIMAL_ANNUAL;
+    const catchUpGrantPerYear = canCatchUp ? Math.min(MAX_ANNUAL_MATCH, (respAnnualCont - OPTIMAL_ANNUAL) * MATCH_RATE) : 0;
+    
     const totalGrantPerYear = standardGrantPerYear + catchUpGrantPerYear;
     const projectedFutureGrants = Math.min(respRoomLeft, totalGrantPerYear * respRemainingYears);
 
@@ -41,7 +49,7 @@ export default function RESPMaximizer() {
                     <CurrencyInput className="form-control form-control-sm border-info" value={respAnnualCont} onChange={setRespAnnualCont} />
                 </div>
                 <div className="col-12">
-                    <label className="form-label small fw-bold text-muted mb-1">Lifetime Grants Received to Date <InfoBtn title="Prior Grants" text="Total CESG already paid into your RESP. The maximum lifetime limit is $7,200." /></label>
+                    <label className="form-label small fw-bold text-muted mb-1">Lifetime Grants Received to Date <InfoBtn title="Prior Grants" text={`Total CESG already paid into your RESP. The maximum lifetime limit is $${MAX_LIFETIME.toLocaleString()}.`} /></label>
                     <CurrencyInput className="form-control form-control-sm" value={respPriorGrants} onChange={setRespPriorGrants} />
                 </div>
             </div>
@@ -57,7 +65,9 @@ export default function RESPMaximizer() {
                 </div>
                 <div className="d-flex justify-content-between align-items-center mt-2">
                     <span className="text-info fw-bolder text-uppercase ls-1 small">Projected Final Grant</span>
-                    <span className={`fw-bolder fs-5 ${(respPriorGrants + projectedFutureGrants) >= 7200 ? 'text-success' : 'text-warning'}`}>{formatCurrency(respPriorGrants + projectedFutureGrants)} <span className="small fw-normal text-muted">/ $7,200</span></span>
+                    <span className={`fw-bolder fs-5 ${(respPriorGrants + projectedFutureGrants) >= MAX_LIFETIME ? 'text-success' : 'text-warning'}`}>
+                        {formatCurrency(respPriorGrants + projectedFutureGrants)} <span className="small fw-normal text-muted">/ ${MAX_LIFETIME.toLocaleString()}</span>
+                    </span>
                 </div>
             </div>
         </div>

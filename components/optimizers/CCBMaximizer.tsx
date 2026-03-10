@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { CurrencyInput } from '../SharedUI';
+import { FINANCIAL_CONSTANTS } from '../../lib/config';
 
 export default function CCBMaximizer() {
     const { data, results } = useFinance();
@@ -14,19 +15,18 @@ export default function CCBMaximizer() {
     const [ccbRrspContrib, setCcbRrspContrib] = useState(5000);
 
     const calcCCB = (netIncome: number, u6: number, o6: number) => {
-        const maxU6 = 7437; const maxO6 = 6275;
-        const t1 = 34863; const t2 = 75537;
+        const rules = FINANCIAL_CONSTANTS.CCB_RULES;
         const totalKids = u6 + o6;
         if (totalKids === 0) return 0;
-        let maxBenefit = (u6 * maxU6) + (o6 * maxO6);
+        
+        let maxBenefit = (u6 * rules.MAX_UNDER_6) + (o6 * rules.MAX_6_TO_17);
         let rateIndex = Math.min(totalKids - 1, 3);
-        const rate1 = [0.07, 0.135, 0.19, 0.23];
-        const rate2 = [0.032, 0.057, 0.08, 0.095];
         let reduction = 0;
-        if (netIncome > t2) {
-            reduction = ((t2 - t1) * rate1[rateIndex]) + ((netIncome - t2) * rate2[rateIndex]);
-        } else if (netIncome > t1) {
-            reduction = (netIncome - t1) * rate1[rateIndex];
+        
+        if (netIncome > rules.THRESHOLD_2) {
+            reduction = ((rules.THRESHOLD_2 - rules.THRESHOLD_1) * rules.RATE_1[rateIndex]) + ((netIncome - rules.THRESHOLD_2) * rules.RATE_2[rateIndex]);
+        } else if (netIncome > rules.THRESHOLD_1) {
+            reduction = (netIncome - rules.THRESHOLD_1) * rules.RATE_1[rateIndex];
         }
         return Math.max(0, maxBenefit - reduction);
     };

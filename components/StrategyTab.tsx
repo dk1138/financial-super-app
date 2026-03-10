@@ -211,7 +211,7 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <span className="small fw-bold text-purple text-uppercase ls-1">RESP Strategy</span>
-                                    <InfoBtn align="right" title="RESP Guidelines" text="The optimal annual contribution to maximize the 20% CESG match is $2,500. CESG grants are only paid on contributions made up to the end of the year the child turns 17.<br/><br/><a href='https://www.canada.ca/en/services/benefits/education/education-savings/saving-child.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>Govt of Canada Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
+                                    <InfoBtn align="right" title="RESP Guidelines" text="The optimal annual contribution to maximize the 20% CESG match is $2,500. CESG grants are only paid on contributions made up to the end of the year the child turns 17.<br/><br/><a href='https://www.canada.ca/en/services/benefits/education/education-savings.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>Govt of Canada Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
                                 <div className="row g-2">
                                     <div className="col-6">

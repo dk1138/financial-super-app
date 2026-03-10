@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { FINANCIAL_CONSTANTS } from '../../lib/config';
 
 const getYMPE = (year: number) => {
-    const ympeMap: Record<number, number> = {
-        2026: 73200, 2025: 71300, 2024: 68500, 2023: 66600, 2022: 64900, 2021: 61600,
-        2020: 58700, 2019: 57400, 2018: 55900, 2017: 55300, 2016: 54900, 2015: 53600, 
-        2014: 52500, 2013: 51100, 2012: 50100, 2011: 48300, 2010: 47200, 2009: 46300, 
-        2008: 44900, 2007: 43700, 2006: 42100
-    };
-    if (year > 2026) return 73200 + ((year - 2026) * 1500); 
+    const ympeMap: Record<number, number> = FINANCIAL_CONSTANTS.HISTORICAL_YMPE;
+    const currentYearYMPE = FINANCIAL_CONSTANTS.YMPE;
+    
+    if (year > 2026) return currentYearYMPE + ((year - 2026) * 1500); 
     if (year < 2006) return 40000;
-    return ympeMap[year];
+    return ympeMap[year] || currentYearYMPE;
 };
 
 const getYAMPE = (year: number) => {
-    if (year === 2024) return 73200;
-    if (year === 2025) return 80500;
+    const yampeMap: Record<number, number> = FINANCIAL_CONSTANTS.HISTORICAL_YAMPE;
+    if (yampeMap[year]) return yampeMap[year];
     if (year >= 2026) return getYMPE(year) * 1.14; 
     return getYMPE(year); 
 };
@@ -191,7 +189,7 @@ export default function CPPImporter() {
         const keptRatios = sortedRatios.slice(0, keepYears);
         const avgRatio = keptRatios.reduce((a,b) => a+b, 0) / keepYears;
         
-        const projectedBase = 16375 * avgRatio;
+        const projectedBase = FINANCIAL_CONSTANTS.CPP_PROJECTED_MAX_BASE * avgRatio;
         
         const recent = augmentedRecords.filter(r => r.year >= 2019);
         let avgRecentRatio = 0;
@@ -199,7 +197,7 @@ export default function CPPImporter() {
             const recentRatios = recent.map(r => Math.min(1, r.earnings / getYAMPE(r.year)));
             avgRecentRatio = recentRatios.reduce((a,b)=>a+b,0) / recent.length;
         }
-        const projectedEnhanced = 2500 * avgRecentRatio;
+        const projectedEnhanced = FINANCIAL_CONSTANTS.CPP_PROJECTED_MAX_ENHANCED * avgRecentRatio;
         const totalProjected = projectedBase + projectedEnhanced;
 
         const sortedByEarnings = [...augmentedRecords].sort((a,b) => b.earnings - a.earnings);
