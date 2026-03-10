@@ -206,7 +206,6 @@ function DashboardLayout() {
       showToast("Current plan has been reset.");
   };
 
-  // --- Centralized Quick Adjust Handlers ---
   const handleRetireAgeChange = (player: 'p1'|'p2', newRetAge: number) => {
       const updates: Record<string, any> = { [`${player}_retireAge`]: newRetAge };
       if (newRetAge > (data.inputs[`${player}_lifeExp`] || 90)) {
@@ -260,7 +259,7 @@ function DashboardLayout() {
   ];
 
   return (
-    <div className="container-fluid py-4 min-vh-100 transition-all position-relative d-flex flex-column" style={{ maxWidth: '1700px' }}>
+    <div className="container-fluid pb-4 min-vh-100 transition-all position-relative d-flex flex-column" style={{ maxWidth: '1700px' }}>
       
       <input 
           type="file" 
@@ -279,149 +278,152 @@ function DashboardLayout() {
           </div>
       )}
 
-      {/* TOP HEADER CONTROLS */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-4 rounded-4 p-2 p-md-3 border border-secondary rp-card mb-0 gap-3">
-        
-        {/* LEFT: Branding & File Management */}
-        <div className="d-flex align-items-center gap-2 gap-md-3">
-          <h4 className="mb-0 text-nowrap fw-bold d-flex align-items-center me-1">
-            <i className="bi bi-graph-up-arrow text-primary me-2 fs-4"></i>
-            <span className="d-none d-lg-inline fs-5">Retirement Planner</span>
-          </h4>
-          
-          {/* File Menu combined with Active Plan Name */}
-          <div className="position-relative">
-            <button 
-                className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
-                type="button" 
-                onClick={() => setFileMenuOpen(!fileMenuOpen)} 
-                style={{ height: '40px' }}
-            >
-                <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
-                <span className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>{activePlanName}</span>
-                <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
-            </button>
+      {/* --- STICKY TOP WRAPPER --- */}
+      <div 
+        className="position-sticky top-0 pt-3 pb-3 mb-3" 
+        style={{ 
+            backgroundColor: 'var(--bs-body-bg)', 
+            zIndex: 1030,
+            borderBottom: '1px solid var(--bs-border-color-translucent)'
+        }}
+      >
+          {/* TOP HEADER CONTROLS */}
+          <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-3 rounded-4 p-2 p-md-3 border border-secondary rp-card gap-3">
             
-            {fileMenuOpen && (
-                <>
-                    <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
-                    <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', left: 0, minWidth: '240px'}}>
-                        <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
-                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
-                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
-                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                        <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                        <li>
-                            <button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}>
-                                <i className="bi bi-upload me-2"></i> Load from PC (.json)
-                            </button>
-                        </li>
-                        <li>
-                            <button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}>
-                                <i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan
-                            </button>
-                        </li>
-                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                        <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
-                    </ul>
-                </>
-            )}
-          </div>
-        </div>
-        
-        {/* RIGHT: Global Utilities & Display Toggles */}
-        <div className="d-flex align-items-center gap-2">
-          
-          {/* Today's Dollar Toggle (Pill) */}
-          <div 
-              className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" 
-              style={{ height: '40px' }} 
-              title="Toggle Real vs Nominal Dollars. When enabled, future values are discounted by inflation to show today's purchasing power."
-          >
-              <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
-                  <input 
-                      className="form-check-input m-0 cursor-pointer shadow-none" 
-                      type="checkbox" 
-                      id="useRealDollars" 
-                      checked={data.useRealDollars ?? false} 
-                      onChange={(e) => updateUseRealDollars(e.target.checked)} 
-                  />
-                  <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block pt-1" htmlFor="useRealDollars">
-                      Today's $
-                  </label>
-              </div>
-          </div>
-
-          {/* Theme Toggle (Circular) */}
-          <button 
-              type="button"
-              className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
-              style={{ width: '40px', height: '40px' }} 
-              onClick={toggleTheme} 
-              title="Toggle Light/Dark Mode"
-          >
-              <i className={`fs-5 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
-          </button>
-
-          {/* Ko-fi Support Button (Circular) */}
-          <a 
-              href="https://ko-fi.com/P5P11UYZUD" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
-              style={{ width: '40px', height: '40px' }}
-              title="Support me on Ko-fi"
-          >
-              <i className="bi bi-cup-hot-fill fs-5" style={{ color: '#72a4f2' }}></i>
-          </a>
-
-          {/* Google Login (Greyed out Circular) */}
-          {session ? (
-            <div className="position-relative cursor-pointer" onClick={() => signOut()} title="Sign Out">
-                {session.user?.image ? (
-                    <img src={session.user.image} alt="User" className="rounded-circle shadow-sm border border-secondary" width="40" height="40" />
-                ) : (
-                    <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm" style={{ width: '40px', height: '40px' }}>
-                        <i className="bi bi-person-fill fs-5"></i>
-                    </button>
-                )}
-            </div>
-          ) : (
-              <button 
-                  disabled 
-                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50" 
-                  style={{ width: '40px', height: '40px', cursor: 'not-allowed' }} 
-                  title="Sign in is temporarily disabled"
-              >
-                  <i className="bi bi-google fs-5"></i> 
-              </button>
-          )}
-          
-        </div>
-      </div>
-
-      <div className="row mb-4">
-        <div className="col-12">
-          <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
-            {tabs.map(tab => (
-              <li className="nav-item flex-fill" key={tab.id}>
-                <div 
-                  className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-2 px-3 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
-                  onClick={() => setActiveTab(tab.id)}
+            <div className="d-flex align-items-center gap-2 gap-md-3">
+              <h4 className="mb-0 text-nowrap fw-bold d-flex align-items-center me-1">
+                <i className="bi bi-graph-up-arrow text-primary me-2 fs-4"></i>
+                <span className="d-none d-lg-inline fs-5">Retirement Planner</span>
+              </h4>
+              
+              <div className="position-relative">
+                <button 
+                    className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
+                    type="button" 
+                    onClick={() => setFileMenuOpen(!fileMenuOpen)} 
+                    style={{ height: '40px' }}
                 >
-                  <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
-                  <span className="text-nowrap">{tab.label}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+                    <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
+                    <span className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>{activePlanName}</span>
+                    <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
+                </button>
+                
+                {fileMenuOpen && (
+                    <>
+                        <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
+                        <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', left: 0, minWidth: '240px'}}>
+                            <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
+                            <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
+                            <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
+                            <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                            <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
+                            <li>
+                                <button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}>
+                                    <i className="bi bi-upload me-2"></i> Load from PC (.json)
+                                </button>
+                            </li>
+                            <li>
+                                <button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}>
+                                    <i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan
+                                </button>
+                            </li>
+                            <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                            <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
+                        </ul>
+                    </>
+                )}
+              </div>
+            </div>
+            
+            <div className="d-flex align-items-center gap-2">
+              <div 
+                  className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" 
+                  style={{ height: '40px' }} 
+                  title="Toggle Real vs Nominal Dollars. When enabled, future values are discounted by inflation to show today's purchasing power."
+              >
+                  <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
+                      <input 
+                          className="form-check-input m-0 cursor-pointer shadow-none" 
+                          type="checkbox" 
+                          id="useRealDollars" 
+                          checked={data.useRealDollars ?? false} 
+                          onChange={(e) => updateUseRealDollars(e.target.checked)} 
+                      />
+                      <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block pt-1" htmlFor="useRealDollars">
+                          Today's $
+                      </label>
+                  </div>
+              </div>
 
+              <button 
+                  type="button"
+                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
+                  style={{ width: '40px', height: '40px' }} 
+                  onClick={toggleTheme} 
+                  title="Toggle Light/Dark Mode"
+              >
+                  <i className={`fs-5 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
+              </button>
+
+              <a 
+                  href="https://ko-fi.com/P5P11UYZUD" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
+                  style={{ width: '40px', height: '40px' }}
+                  title="Support me on Ko-fi"
+              >
+                  <i className="bi bi-cup-hot-fill fs-5" style={{ color: '#72a4f2' }}></i>
+              </a>
+
+              {session ? (
+                <div className="position-relative cursor-pointer" onClick={() => signOut()} title="Sign Out">
+                    {session.user?.image ? (
+                        <img src={session.user.image} alt="User" className="rounded-circle shadow-sm border border-secondary" width="40" height="40" />
+                    ) : (
+                        <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm" style={{ width: '40px', height: '40px' }}>
+                            <i className="bi bi-person-fill fs-5"></i>
+                        </button>
+                    )}
+                </div>
+              ) : (
+                  <button 
+                      disabled 
+                      className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50" 
+                      style={{ width: '40px', height: '40px', cursor: 'not-allowed' }} 
+                      title="Sign in is temporarily disabled"
+                  >
+                      <i className="bi bi-google fs-5"></i> 
+                  </button>
+              )}
+            </div>
+          </div>
+
+          {/* TABS ROW */}
+          <div className="row">
+            <div className="col-12">
+              <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
+                {tabs.map(tab => (
+                  <li className="nav-item flex-fill" key={tab.id}>
+                    <div 
+                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-2 px-3 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
+                      onClick={() => setActiveTab(tab.id)}
+                    >
+                      <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
+                      <span className="text-nowrap">{tab.label}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+      </div>
+      {/* --- END STICKY TOP WRAPPER --- */}
+
+      {/* MAIN CONTENT AREA */}
       <div className="row g-4 flex-grow-1">
         <div className="col-12">
           <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
-            {/* APPLY FADE-IN ANIMATION AND KEY HERE */}
             <div className="card-body p-0 fade-in-tab" key={activeTab}>
               {activeTab === 'plan' && <PlanTab />}
               {activeTab === 'strategy' && <StrategyTab />}
@@ -595,7 +597,6 @@ function DashboardLayout() {
           </div>
       )}
 
-      {/* Quick Adjust Floating Overlay */}
       {showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 transition-all" 
                style={{ 
@@ -632,7 +633,6 @@ function DashboardLayout() {
           </div>
       )}
 
-      {/* Floating Action Button (FAB) */}
       <button 
         className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
         style={{ width: '60px', height: '60px', bottom: '30px', right: '30px', zIndex: 1050 }}
