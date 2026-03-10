@@ -780,7 +780,7 @@ export class FinanceEngine {
                     }
                 }
             }
-            if (isCouple && unfundedEdu > 0 && person2.resp > 0) {
+            if (this.mode === 'Couple' && unfundedEdu > 0 && person2.resp > 0) {
                 let r = this.getVal('p2_resp_ret') / 100;
                 if (this.inputs.use_glide_path) r = Math.max(0.04, r - Math.max(0, age2-50)*0.001);
                 let m2 = timingStr === 'start' ? 1 + r : (timingStr === 'mid' ? 1 + r/2 : 1);
