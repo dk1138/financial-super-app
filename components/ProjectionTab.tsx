@@ -53,7 +53,7 @@ export default function ProjectionTab() {
 
       const headers = [
           "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
-          "Living Expenses", "Mortgage & Debt", "Contributions", "Withdrawals",
+          "Living Expenses", "Mortgage & Debt", "Education Costs", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
 
@@ -80,6 +80,10 @@ export default function ProjectionTab() {
               if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
           }
 
+          const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
+          const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
+          const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
+
           const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
           const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
           const totalClawback = p1Clawback + p2Clawback;
@@ -95,7 +99,8 @@ export default function ProjectionTab() {
               Math.round(getRealValue((y.grossInflow || 0) - totalClawback, y.year)),
               Math.round(getRealValue(totalTaxes, y.year)),
               Math.round(getRealValue(y.expenses || 0, y.year)),
-              Math.round(getRealValue((y.mortgagePay || 0) + (y.debtRepayment || 0), y.year)),
+              Math.round(getRealValue((y.mortgagePay || 0) + baseDebtRepayment, y.year)),
+              Math.round(getRealValue(y.eduExpense || 0, y.year)),
               Math.round(getRealValue(engineContributions, y.year)),
               Math.round(getRealValue(totalWithdrawals as number, y.year)),
               Math.round(getRealValue(y.liquidNW || 0, y.year)),
@@ -140,8 +145,9 @@ export default function ProjectionTab() {
           if (isCouple) contsRaw += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
       }
 
+      const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
       const totalSourced = y.grossInflow || 0;
-      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
+      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
       
       if (totalSourced < totalSpent - 1) {
           hasShortfall = true;
@@ -273,7 +279,7 @@ export default function ProjectionTab() {
       if (invInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Inv. Yield:</span> <span>$${formatStr(invInc, year)}</span></div>`; sum += invInc; }
 
       const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
-      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash'));
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
 
       taxableWds.forEach(k => {
           const cleanName = k.replace(`${pUpper} `, '');
@@ -380,8 +386,8 @@ export default function ProjectionTab() {
       const refund = isP1 ? y.rrspRefundP1 : y.rrspRefundP2;
 
       const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
-      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash'));
-      const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash'));
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
+      const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash') || k.includes('RESP'));
 
       const oasClawback = taxDetails?.oas_clawback || 0;
       const oasGross = oas;
@@ -489,7 +495,12 @@ export default function ProjectionTab() {
                       {nonTaxWds.map(k => {
                           const val = y.flows.withdrawals[k];
                           const cleanName = k.replace(`${pUpper} `, '');
-                          const info = `<span class='text-info fw-bold'>0% Taxable.</span><br>Tax-free withdrawal. Does not affect taxable income.`;
+                          let info = `<span class='text-info fw-bold'>0% Taxable.</span><br>Tax-free withdrawal. Does not affect taxable income.`;
+                          
+                          if (k.includes('RESP')) {
+                              info = `<span class='text-info fw-bold'>Effectively Tax-Free.</span><br>Withdrawn to fund post-secondary education. The EAP portion is technically taxable to the student, but usually results in $0 tax due to the student's low income and tuition credits.`;
+                          }
+
                           return (
                               <div className="d-flex justify-content-between small mb-1 align-items-center" key={k}>
                                   <span className="text-muted ms-2 d-flex align-items-center">{cleanName} W/D <InfoBtn align="left" title={`${cleanName} Withdrawal`} text={info} /></span>
@@ -586,7 +597,12 @@ export default function ProjectionTab() {
                 const totalIncome = (y.grossInflow || 0) - (totalWithdrawals as number) - totalClawback;
                 const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
                 
-                const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0);
+                // Account for RESP offsets safely
+                const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
+                const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
+                const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
+                const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + baseDebtRepayment + (y.eduExpense || 0);
+
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
                 const totalNW = y.liquidNW + (y.reIncludedEq || 0); 
                 
@@ -675,7 +691,7 @@ export default function ProjectionTab() {
                                     <h6 className="fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center" style={{ color: '#d97706' }}>
                                         <i className="bi bi-box-arrow-right me-2"></i>
                                         <span className="text-uppercase">Cash Outflows</span>
-                                        <InfoBtn align="center" title="Cash Outflows" text="All cash spent or allocated during the year, including living expenses, taxes, mortgage payments, and surplus cash saved into the portfolio." />
+                                        <InfoBtn align="center" title="Cash Outflows" text="All cash spent or allocated during the year, including living expenses, taxes, mortgage payments, education costs, and surplus cash saved into the portfolio." />
                                     </h6>
                                     
                                     <div className="flex-grow-1">
@@ -686,7 +702,18 @@ export default function ProjectionTab() {
                                                 <span>{formatCurrency(y.mortgagePay, y.year)}</span>
                                             </div>
                                         )}
-                                        {y.debtRepayment > 0 && <div className="d-flex justify-content-between small mb-1"><span className="text-muted ms-2 fw-bold" style={{ color: '#d97706' }}>Large Purchases/Debt</span><span className="fw-medium" style={{ color: '#d97706' }}>{formatCurrency(y.debtRepayment, y.year)}</span></div>}
+                                        {y.eduExpense > 0 && (
+                                            <div className="d-flex justify-content-between small mb-1">
+                                                <span className="text-muted ms-2 fw-bold text-info">Education Costs</span>
+                                                <span className="fw-medium text-info">{formatCurrency(y.eduExpense, y.year)}</span>
+                                            </div>
+                                        )}
+                                        {baseDebtRepayment > 0 && (
+                                            <div className="d-flex justify-content-between small mb-1">
+                                                <span className="text-muted ms-2 fw-bold" style={{ color: '#d97706' }}>Large Purchases/Debt</span>
+                                                <span className="fw-medium" style={{ color: '#d97706' }}>{formatCurrency(baseDebtRepayment, y.year)}</span>
+                                            </div>
+                                        )}
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">

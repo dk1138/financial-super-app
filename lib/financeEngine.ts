@@ -744,6 +744,63 @@ export class FinanceEngine {
                     if (detailed) inflows.events.push(`Purchased: ${d.name}`);
                 }
             });
+
+            // --- EDUCATION & RESP WITHDRAWALS ---
+            let eduExpense = 0;
+            this.dependents.forEach(dep => {
+                if (dep.hasEdu) {
+                    let byear = parseInt(dep.dob.split('-')[0]) || yr;
+                    let depAge = yr - byear;
+                    let eStart = parseInt(dep.eduStart) || 18;
+                    let eDur = parseInt(dep.eduDuration) || 4;
+                    if (depAge >= eStart && depAge < eStart + eDur) {
+                        eduExpense += (Number(dep.eduCost) || 15000) * baseInflation;
+                    }
+                }
+            });
+
+            let unfundedEdu = eduExpense;
+            let timingStr = this.inputs.cashflow_timing || 'end';
+
+            if (unfundedEdu > 0 && person1.resp > 0) {
+                let r = this.getVal('p1_resp_ret') / 100;
+                if (this.inputs.use_glide_path) r = Math.max(0.04, r - Math.max(0, age1-50)*0.001);
+                let m1 = timingStr === 'start' ? 1 + r : (timingStr === 'mid' ? 1 + r/2 : 1);
+                
+                let p1Take = Math.min(person1.resp / m1, unfundedEdu);
+                if (p1Take > 0) {
+                    person1.resp -= (p1Take * m1);
+                    unfundedEdu -= p1Take;
+                    if (detailed) {
+                        flowLog.withdrawals['P1 RESP'] = (flowLog.withdrawals['P1 RESP'] || 0) + p1Take;
+                        if (wdBreakdown) {
+                            wdBreakdown.p1.RESP = p1Take;
+                            wdBreakdown.p1.RESP_math = { wd: p1Take, tax: 0 };
+                        }
+                    }
+                }
+            }
+            if (isCouple && unfundedEdu > 0 && person2.resp > 0) {
+                let r = this.getVal('p2_resp_ret') / 100;
+                if (this.inputs.use_glide_path) r = Math.max(0.04, r - Math.max(0, age2-50)*0.001);
+                let m2 = timingStr === 'start' ? 1 + r : (timingStr === 'mid' ? 1 + r/2 : 1);
+                
+                let p2Take = Math.min(person2.resp / m2, unfundedEdu);
+                if (p2Take > 0) {
+                    person2.resp -= (p2Take * m2);
+                    unfundedEdu -= p2Take;
+                    if (detailed) {
+                        flowLog.withdrawals['P2 RESP'] = (flowLog.withdrawals['P2 RESP'] || 0) + p2Take;
+                        if (wdBreakdown) {
+                            wdBreakdown.p2.RESP = p2Take;
+                            wdBreakdown.p2.RESP_math = { wd: p2Take, tax: 0 };
+                        }
+                    }
+                }
+            }
+            
+            // Unfunded portion must be paid out of pocket, added to debtRepayment
+            debtRepayment += unfundedEdu; 
             
             if (detailed && simProperties.reduce((sum: number, p: any) => sum + p.mortgage, 0) <= 0 && !trackedEvents.has('Mortgage Paid') && simProperties.some((p: any) => p.mortgage === 0 && p.value > 0)) {                
                 trackedEvents.add('Mortgage Paid'); inflows.events.push('Mortgage Paid'); 
@@ -861,7 +918,7 @@ export class FinanceEngine {
                     actualDeductionsP1: actualDeductions.p1, actualDeductionsP2: actualDeductions.p2,
                     benefitsP1: inflows.p1.cpp + inflows.p1.oas, benefitsP2: inflows.p2.cpp + inflows.p2.oas, dbP1: inflows.p1.pension, dbP2: inflows.p2.pension,
                     taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0), p2Net: alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0, pensionSplit: pensionSplitTransfer,
-                    expenses: expenses, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
+                    expenses: expenses, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, eduExpense, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
                     wdBreakdown: wdBreakdown, flows: flowLog, events: inflows.events, householdNet: grossInflow, grossInflow: grossInflow, 
                     visualExpenses: expenses + mortgagePayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
                     reIncludedEq: realEstateValue - realEstateDebt, reExcludedEq: reExcludedValue - reExcludedDebt, reIncludedValue: realEstateValue,
