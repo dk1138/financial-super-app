@@ -8,7 +8,7 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
   fhsa: { label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', desc: 'First Home Savings' },
   nonreg: { label: 'Non-Reg', icon: 'bi-graph-up-arrow', color: 'text-success', desc: 'Taxable Investments' },
   cash: { label: 'Cash / HYSA', icon: 'bi-cash-stack', color: 'text-secondary', desc: 'High-Yield Savings' },
-  crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-primary', desc: 'Digital Assets' },
+  crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-warning', desc: 'Digital Assets' },
   resp: { label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', desc: 'Education Savings' },
   rrif_acct: { label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', desc: 'Converted RRSP' },
   lif: { label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', desc: 'Life Income Fund' },
@@ -87,7 +87,7 @@ export default function StrategyTab() {
           onDragEnter={() => handleDragEnter(index, type)}
           onDragEnd={(e) => handleDragEnd(e, type)}
           onDragOver={(e) => e.preventDefault()}
-          className={`d-flex align-items-center justify-content-between p-3 mb-2 rounded-4 transition-all shadow-sm ${isDragging ? 'border border-primary bg-primary bg-opacity-10 shadow' : 'border border-secondary bg-input'}`}
+          className={`d-flex align-items-center justify-content-between p-3 mb-2 rounded-4 transition-all shadow-sm ${isDragging ? 'border border-primary bg-primary bg-opacity-10 shadow' : 'border border-secondary bg-input hover-bg-secondary hover-bg-opacity-10'}`}
           style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
         >
           <div className="d-flex align-items-center gap-3">
@@ -109,10 +109,10 @@ export default function StrategyTab() {
   };
 
   return (
-    <div className="p-3 p-md-4">
+    <div className="p-3 p-md-4 d-flex flex-column gap-4">
       
       {/* --- SECTION 1: PRIORITY QUEUES --- */}
-      <div className="rp-card border border-secondary rounded-4 mb-4">
+      <div className="rp-card border border-secondary rounded-4 shadow-sm">
         <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
           <div className="d-flex align-items-center">
             <i className="bi bi-arrow-down-up text-primary fs-4 me-3"></i>
@@ -120,7 +120,7 @@ export default function StrategyTab() {
             <InfoBtn align="left" title="Priority Routing" text="The engine processes events sequentially. Drag to reorder how the algorithm handles surplus cash and retirement deficits." />
           </div>
         </div>
-        <div className="card-body p-4">
+        <div className="card-body p-4 bg-secondary bg-opacity-10">
             <div className="row g-4">
                 {/* Accumulation */}
                 <div className="col-12 col-xl-6">
@@ -134,7 +134,7 @@ export default function StrategyTab() {
                                 <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of filling accounts when surplus cash exists</span>
                             </div>
                         </div>
-                        <div className="p-3 bg-secondary bg-opacity-10 h-100">
+                        <div className="p-3 bg-transparent h-100">
                             {renderDraggableList('accum')}
                         </div>
                     </div>
@@ -152,7 +152,7 @@ export default function StrategyTab() {
                                 <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of draining accounts during retirement</span>
                             </div>
                         </div>
-                        <div className="p-3 bg-secondary bg-opacity-10 h-100">
+                        <div className="p-3 bg-transparent h-100">
                             {renderDraggableList('decum')}
                         </div>
                     </div>
@@ -164,7 +164,7 @@ export default function StrategyTab() {
       <div className="row g-4">
         {/* --- SECTION 2: ANNUAL LIMITS --- */}
         <div className="col-12 col-xl-5 d-flex flex-column">
-            <div className="rp-card border border-secondary rounded-4 mb-4 flex-grow-1">
+            <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
                     <i className="bi bi-speedometer2 text-info fs-4 me-3"></i>
                     <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Annual Limits</h5>
@@ -177,7 +177,7 @@ export default function StrategyTab() {
                                     <span className="small fw-bold text-info text-uppercase ls-1">TFSA</span>
                                     <InfoBtn align="right" title="TFSA Limit" text="The annual contribution room granted by the CRA for a Tax-Free Savings Account.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account/contributions.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
-                                <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_tfsa_limit} onChange={(val: any) => updateInput('cfg_tfsa_limit', val)} />
+                                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_tfsa_limit} onChange={(val: any) => updateInput('cfg_tfsa_limit', val)} />
                             </div>
                         </div>
                         <div className="col-6">
@@ -186,7 +186,7 @@ export default function StrategyTab() {
                                     <span className="small fw-bold text-danger text-uppercase ls-1">RRSP Max</span>
                                     <InfoBtn align="right" title="RRSP Limit" text="The absolute maximum RRSP contribution cap set by the CRA for the year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/contributing-a-rrsp-prpp/contributions-affect-your-rrsp-prpp-deduction-limit.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
-                                <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_rrsp_limit} onChange={(val: any) => updateInput('cfg_rrsp_limit', val)} />
+                                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_rrsp_limit} onChange={(val: any) => updateInput('cfg_rrsp_limit', val)} />
                             </div>
                         </div>
                         <div className="col-6">
@@ -195,7 +195,7 @@ export default function StrategyTab() {
                                     <span className="small fw-bold text-primary text-uppercase ls-1">FHSA</span>
                                     <InfoBtn align="right" title="FHSA Limit" text="The annual contribution limit for a First Home Savings Account (Max $8,000/yr).<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account/contributing-your-fhsa.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
-                                <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_fhsa_limit} onChange={(val: any) => updateInput('cfg_fhsa_limit', val)} />
+                                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_fhsa_limit} onChange={(val: any) => updateInput('cfg_fhsa_limit', val)} />
                             </div>
                         </div>
                         <div className="col-6">
@@ -204,7 +204,7 @@ export default function StrategyTab() {
                                     <span className="small fw-bold text-muted text-uppercase ls-1">Crypto Limit</span>
                                     <InfoBtn align="right" title="Crypto Constraint" text="A self-imposed maximum amount of cash you are willing to invest into Crypto per year to control risk exposure." />
                                 </div>
-                                <CurrencyInput suffix="/ yr" className="form-control form-control-sm" value={data.inputs.cfg_crypto_limit} onChange={(val: any) => updateInput('cfg_crypto_limit', val)} />
+                                <CurrencyInput suffix="/ yr" className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_crypto_limit} onChange={(val: any) => updateInput('cfg_crypto_limit', val)} />
                             </div>
                         </div>
                         <div className="col-12">
@@ -216,12 +216,12 @@ export default function StrategyTab() {
                                 <div className="row g-2">
                                     <div className="col-6">
                                         <label className="small text-muted fw-bold mb-1" style={{fontSize:'0.7rem'}}>Annual Target</label>
-                                        <CurrencyInput className="form-control form-control-sm" value={data.inputs.cfg_resp_limit} onChange={(val: any) => updateInput('cfg_resp_limit', val)} />
+                                        <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_resp_limit} onChange={(val: any) => updateInput('cfg_resp_limit', val)} />
                                     </div>
                                     <div className="col-6">
                                         <label className="small text-muted fw-bold mb-1" style={{fontSize:'0.7rem'}}>Stop Age</label>
                                         <div className="d-flex align-items-center position-relative w-100">
-                                           <input type="number" className="form-control form-control-sm bg-transparent border border-secondary text-main shadow-sm text-end w-100" style={{paddingRight: '35px', fontWeight: '600'}} value={data.inputs.cfg_resp_stop_age !== undefined ? data.inputs.cfg_resp_stop_age : 17} onChange={(e) => updateInput('cfg_resp_stop_age', parseInt(e.target.value) || 0)} max={31} />
+                                           <input type="number" className="form-control form-control-sm bg-transparent border border-secondary text-main shadow-none text-end w-100" style={{paddingRight: '35px', fontWeight: '600'}} value={data.inputs.cfg_resp_stop_age !== undefined ? data.inputs.cfg_resp_stop_age : 17} onChange={(e) => updateInput('cfg_resp_stop_age', parseInt(e.target.value) || 0)} max={31} />
                                            <span className="position-absolute text-muted small fw-bold" style={{right: '10px', pointerEvents: 'none', fontSize: '0.8em'}}>Yrs</span>
                                         </div>
                                     </div>
@@ -236,14 +236,14 @@ export default function StrategyTab() {
         {/* --- SECTION 3 & 4: OPTIMIZATIONS & EXCEPTIONS --- */}
         <div className="col-12 col-xl-7 d-flex flex-column gap-4">
             
-            <div className="rp-card border border-secondary rounded-4">
+            <div className="rp-card border border-secondary rounded-4 shadow-sm">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
                     <i className="bi bi-cpu text-primary fs-4 me-3"></i>
                     <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">3. Engine Optimizations</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
                     
-                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4">
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-primary">
                         <div className="flex-grow-1 pe-md-3">
                             <h6 className="fw-bold mb-2 text-success text-uppercase ls-1 d-flex align-items-center">
                                 <i className="bi bi-magic me-2 fs-5"></i> Smart RRSP Meltdown & Tax Optimizer
@@ -253,11 +253,11 @@ export default function StrategyTab() {
                             </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
-                            <input className="form-check-input mt-0 cursor-pointer" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.fully_optimize_tax ?? false} onChange={(e) => updateInput('fully_optimize_tax', e.target.checked)} />
+                            <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.fully_optimize_tax ?? false} onChange={(e) => updateInput('fully_optimize_tax', e.target.checked)} />
                         </div>
                     </div>
 
-                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4">
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-info">
                         <div className="flex-grow-1 pe-md-3">
                             <h6 className="fw-bold mb-2 text-info text-uppercase ls-1 d-flex align-items-center">
                                 <i className="bi bi-shield-check me-2 fs-5"></i> Avoid OAS Clawbacks
@@ -267,11 +267,11 @@ export default function StrategyTab() {
                             </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
-                            <input className="form-check-input mt-0 cursor-pointer" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.oas_clawback_optimize ?? false} onChange={(e) => updateInput('oas_clawback_optimize', e.target.checked)} />
+                            <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.oas_clawback_optimize ?? false} onChange={(e) => updateInput('oas_clawback_optimize', e.target.checked)} />
                         </div>
                     </div>
 
-                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4">
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-warning">
                         <div className="flex-grow-1 pe-md-3">
                             <h6 className="fw-bold mb-2 text-warning text-uppercase ls-1 d-flex align-items-center">
                                 <i className="bi bi-arrow-down-up me-2 fs-5"></i> Variable Spending (Guardrails)
@@ -281,33 +281,33 @@ export default function StrategyTab() {
                             </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
-                            <input className="form-check-input mt-0 cursor-pointer" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.enable_guardrails ?? false} onChange={(e) => updateInput('enable_guardrails', e.target.checked)} />
+                            <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.enable_guardrails ?? false} onChange={(e) => updateInput('enable_guardrails', e.target.checked)} />
                         </div>
                     </div>
 
                 </div>
             </div>
 
-            <div className="rp-card border border-secondary rounded-4 flex-grow-1">
-                <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
+            <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1 d-flex flex-column">
+                <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card flex-shrink-0">
                     <i className="bi bi-x-octagon text-danger fs-4 me-3"></i>
                     <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
                         4. First-Year Overrides
                         <InfoBtn align="left" title="First-Year Overrides" text="Useful for simulating real-world scenarios where you have already maxed out your registered accounts for the current year. The engine will skip contributions in Year 1 and resume normally in Year 2." />
                     </h5>
                 </div>
-                <div className="card-body p-4 bg-secondary bg-opacity-10">
+                <div className="card-body p-4 bg-secondary bg-opacity-10 flex-grow-1">
                     <div className="row g-4 h-100">
-                        <div className="col-12 col-md-6">
+                        <div className={`col-12 ${isCouple ? 'col-md-6' : ''}`}>
                             <div className="p-4 bg-input border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column justify-content-center">
                                 <h6 className="fw-bold small text-info text-uppercase ls-1 mb-3 pb-2 border-bottom border-secondary border-opacity-50">Player 1 (P1)</h6>
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <label className="form-check-label small text-muted fw-bold">Skip TFSA Contrib.</label>
-                                    <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5" type="checkbox" checked={data.inputs.skip_first_tfsa_p1 ?? false} onChange={(e) => updateInput('skip_first_tfsa_p1', e.target.checked)} /></div>
+                                    <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5 shadow-none border-secondary" type="checkbox" checked={data.inputs.skip_first_tfsa_p1 ?? false} onChange={(e) => updateInput('skip_first_tfsa_p1', e.target.checked)} /></div>
                                 </div>
                                 <div className="d-flex justify-content-between align-items-center">
                                     <label className="form-check-label small text-muted fw-bold">Skip RRSP Contrib.</label>
-                                    <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5" type="checkbox" checked={data.inputs.skip_first_rrsp_p1 ?? false} onChange={(e) => updateInput('skip_first_rrsp_p1', e.target.checked)} /></div>
+                                    <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5 shadow-none border-secondary" type="checkbox" checked={data.inputs.skip_first_rrsp_p1 ?? false} onChange={(e) => updateInput('skip_first_rrsp_p1', e.target.checked)} /></div>
                                 </div>
                             </div>
                         </div>
@@ -317,11 +317,11 @@ export default function StrategyTab() {
                                     <h6 className="fw-bold small text-uppercase ls-1 mb-3 pb-2 border-bottom border-secondary border-opacity-50" style={{color: 'var(--bs-purple)'}}>Player 2 (P2)</h6>
                                     <div className="d-flex justify-content-between align-items-center mb-3">
                                         <label className="form-check-label small text-muted fw-bold">Skip TFSA Contrib.</label>
-                                        <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5" type="checkbox" checked={data.inputs.skip_first_tfsa_p2 ?? false} onChange={(e) => updateInput('skip_first_tfsa_p2', e.target.checked)} /></div>
+                                        <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5 shadow-none border-secondary" type="checkbox" checked={data.inputs.skip_first_tfsa_p2 ?? false} onChange={(e) => updateInput('skip_first_tfsa_p2', e.target.checked)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
                                         <label className="form-check-label small text-muted fw-bold">Skip RRSP Contrib.</label>
-                                        <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5" type="checkbox" checked={data.inputs.skip_first_rrsp_p2 ?? false} onChange={(e) => updateInput('skip_first_rrsp_p2', e.target.checked)} /></div>
+                                        <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5 shadow-none border-secondary" type="checkbox" checked={data.inputs.skip_first_rrsp_p2 ?? false} onChange={(e) => updateInput('skip_first_rrsp_p2', e.target.checked)} /></div>
                                     </div>
                                 </div>
                             </div>

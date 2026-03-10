@@ -282,13 +282,13 @@ function DashboardLayout() {
       <div 
         className="position-sticky top-0 pt-3 pb-3 mb-3" 
         style={{ 
-            backgroundColor: 'var(--bs-body-bg)', 
+            backgroundColor: 'var(--bg-body)', /* CHANGED HERE */
             zIndex: 1030,
-            borderBottom: '1px solid var(--bs-border-color-translucent)'
+            borderBottom: '1px solid var(--border-color)' /* Using custom border color for better blend */
         }}
       >
           {/* TOP HEADER CONTROLS */}
-          <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-3 rounded-4 p-2 p-md-3 border border-secondary rp-card gap-3">
+          <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-3 rounded-4 p-2 p-md-3 border border-secondary rp-card gap-3 m-0">
             
             <div className="d-flex align-items-center gap-2 gap-md-3">
               <h4 className="mb-0 text-nowrap fw-bold d-flex align-items-center me-1">
