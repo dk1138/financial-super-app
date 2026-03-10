@@ -298,7 +298,7 @@ export default function ProjectionTab() {
 
       let actualGross = sum; 
       
-      let incStr = `<b>Gross Taxable Income:</b> $${formatStr(actualGross, year)}<br>`;
+      let incStr = `<b>Gross Income:</b> $${formatStr(actualGross, year)}<br>`;
       if (breakdownStr) {
            incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }

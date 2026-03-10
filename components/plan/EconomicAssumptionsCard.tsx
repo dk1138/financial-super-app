@@ -13,8 +13,9 @@ export default function EconomicAssumptionsCard() {
       </div>
       <div className="card-body p-4">
           <div className="row g-4">
-              <div className="col-12 col-lg-5">
-                  {/* Changed to flex-column */}
+              
+              {/* Inflation Rate */}
+              <div className="col-12 col-lg-4">
                   <div className="border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column">
                       <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0">
                           <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
@@ -22,7 +23,6 @@ export default function EconomicAssumptionsCard() {
                           </div>
                           <span className="fw-bold text-main small text-uppercase ls-1">Inflation Rate</span>
                       </div>
-                      {/* Replaced h-100 with flex-grow-1 */}
                       <div className="p-3 bg-input rounded-bottom-4 flex-grow-1">
                           <label className="form-label small text-muted mb-2 d-flex align-items-center">Long-term Target <InfoBtn align="right" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%."/></label>
                           <PercentInput className="form-control" value={data.inputs.inflation_rate} onChange={(val: any) => updateInput('inflation_rate', val)} />
@@ -30,33 +30,60 @@ export default function EconomicAssumptionsCard() {
                   </div>
               </div>
               
-              <div className="col-12 col-lg-7">
-                  {/* Changed to flex-column */}
+              {/* Contribution Timing */}
+              <div className="col-12 col-lg-4">
                   <div className="border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column">
                       <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0">
                           <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
-                              <i className="bi bi-clock-history"></i>
+                              <i className="bi bi-box-arrow-in-right"></i>
                           </div>
-                          <span className="fw-bold text-main small text-uppercase ls-1">Cashflow Timing</span>
+                          <span className="fw-bold text-main small text-uppercase ls-1">Contribution Timing</span>
                       </div>
-                      {/* Replaced h-100 with flex-grow-1 */}
                       <div className="p-3 bg-input rounded-bottom-4 flex-grow-1">
                           <label className="form-label small text-muted mb-2 d-flex align-items-center">
-                              Withdrawal / Deposit Timing 
-                              <InfoBtn align="right" title="Cashflow Timing" text="Determines when money enters or leaves your accounts during the simulated year, which heavily impacts compounding.<br/><br/><b class='text-main'>Start of Year:</b> Conservative for retirement. Withdrawals happen Jan 1st and miss out on that year's growth. (Note: Contributions earn a full year of interest).<br/><br/><b class='text-main'>Mid-Year:</b> Average approach. Assumes cash flows happen evenly throughout the year (earning half-growth).<br/><br/><b class='text-main'>End of Year:</b> Aggressive for retirement. Assumes your full balance compounds all year before withdrawals are taken on Dec 31st."/>
+                              Deposit Timing 
+                              <InfoBtn align="right" title="Contribution Timing" text="Determines when surplus cash is invested into your portfolio.<br/><br/><b class='text-main'>End of Year (Conservative):</b> Earns no investment growth during the current year.<br/><br/><b class='text-main'>Mid-Year:</b> Earns half a year of growth.<br/><br/><b class='text-main'>Start of Year (Aggressive):</b> Earns a full year of growth immediately."/>
                           </label>
                           <SegmentedControl 
-                              value={data.inputs.cashflow_timing || 'end'} 
-                              onChange={(val: string) => updateInput('cashflow_timing', val)}
+                              value={data.inputs.contribution_timing || data.inputs.cashflow_timing || 'end'} 
+                              onChange={(val: string) => updateInput('contribution_timing', val)}
                               options={[
-                                  { value: 'start', label: 'Start of Year' },
-                                  { value: 'mid', label: 'Mid-Year' },
-                                  { value: 'end', label: 'End of Year' }
+                                  { value: 'start', label: 'Start' },
+                                  { value: 'mid', label: 'Mid' },
+                                  { value: 'end', label: 'End' }
                               ]}
                           />
                       </div>
                   </div>
               </div>
+
+              {/* Withdrawal Timing */}
+              <div className="col-12 col-lg-4">
+                  <div className="border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column">
+                      <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0">
+                          <div className="bg-secondary bg-opacity-25 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
+                              <i className="bi bi-box-arrow-right"></i>
+                          </div>
+                          <span className="fw-bold text-main small text-uppercase ls-1">Withdrawal Timing</span>
+                      </div>
+                      <div className="p-3 bg-input rounded-bottom-4 flex-grow-1">
+                          <label className="form-label small text-muted mb-2 d-flex align-items-center">
+                              Withdrawal Timing 
+                              <InfoBtn align="right" title="Withdrawal Timing" text="Determines when cash is withdrawn to fund your lifestyle.<br/><br/><b class='text-main'>Start of Year (Conservative):</b> Misses out on a full year of growth.<br/><br/><b class='text-main'>Mid-Year:</b> Misses out on half a year of growth.<br/><br/><b class='text-main'>End of Year (Aggressive):</b> Benefits from a full year of growth before being withdrawn."/>
+                          </label>
+                          <SegmentedControl 
+                              value={data.inputs.withdrawal_timing || data.inputs.cashflow_timing || 'end'} 
+                              onChange={(val: string) => updateInput('withdrawal_timing', val)}
+                              options={[
+                                  { value: 'start', label: 'Start' },
+                                  { value: 'mid', label: 'Mid' },
+                                  { value: 'end', label: 'End' }
+                              ]}
+                          />
+                      </div>
+                  </div>
+              </div>
+
           </div>
       </div>
     </div>

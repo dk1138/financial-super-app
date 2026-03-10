@@ -50,7 +50,8 @@ export function applyPensionSplitting(craTaxableIncome1: number, craTaxableIncom
 
 export function handleSurplus(surplusAmount: number, person1: any, person2: any, alive1: boolean, alive2: boolean, flowLog: any, yearIndex: number, tfsaLimit: number, rrspLimit1: number, rrspLimit2: number, cryptoLimit: number, fhsaLimit1: number, fhsaLimit2: number, respLimit: number, deductionsObj: any, fhsaLifetimeRooms: any, strategies: any, inputs: any, constants: any, age1: number, age2: number) {
     let remainingSurplus = surplusAmount;
-    const timing = inputs.cashflow_timing || 'end';
+    // UPDATED: Look for specific contribution timing
+    const timing = inputs.contribution_timing || inputs.cashflow_timing || 'end';
     
     strategies.accum.forEach((accountType: string) => { 
         if (remainingSurplus <= 0) return;
@@ -162,7 +163,8 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
     
     const MARGINAL_TOLERANCE = 50; 
     const withdrawalStrategies = overrideStrategies || inputs.strategies?.decum || ['nonreg', 'tfsa', 'rrsp'];
-    const timing = inputs.cashflow_timing || 'end';
+    // UPDATED: Look for specific withdrawal timing
+    const timing = inputs.withdrawal_timing || inputs.cashflow_timing || 'end';
 
     let hasBalance = (person: any, accountType: string, prefix: string) => {
         if (accountType === 'tfsa') return (person.tfsa + (person.tfsa_successor || 0)) > 0;
@@ -197,14 +199,13 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
                 effectiveTaxRate = Math.min(marginalRate || 0, 0.54); 
                 grossWithdrawalNeeded = remainingNeed / (1 - effectiveTaxRate);
             } else if (isCapitalGain) {
-                // Gain ratio is determined based on the pre-withdrawal true balance to be perfectly accurate
                 let preWithdrawalBalance = person[account] / m;
                 let gainRatio = preWithdrawalBalance > 0 ? Math.max(0, 1 - (person[acbKey] / preWithdrawalBalance)) : 0;
                 effectiveTaxRate = Math.min(marginalRate || 0, 0.54) * 0.5 * gainRatio;
                 grossWithdrawalNeeded = remainingNeed / (1 - effectiveTaxRate);
             }
             
-            let availableAccountBalance = person[account] / m; // Converted to nominal cash terms
+            let availableAccountBalance = person[account] / m; 
             
             if (account === 'lif' || account === 'lirf') {
                 let maxLimit = prefix === 'p1' ? lifLimits.lifMax1 : lifLimits.lifMax2;
@@ -213,7 +214,7 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
             }
             
             let takenAmount = Math.min(availableAccountBalance, grossWithdrawalNeeded);
-            let actualReduction = takenAmount * m; // Clawback the growth that was earned on these withdrawn funds
+            let actualReduction = takenAmount * m; 
 
             if (account === 'lif' || account === 'lirf') {
                 if (prefix === 'p1') lifLimits.lifMax1 -= takenAmount;
