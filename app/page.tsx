@@ -280,30 +280,30 @@ function DashboardLayout() {
 
       {/* --- STICKY TOP WRAPPER --- */}
       <div 
-        className="position-sticky top-0 pt-3 pb-3 mb-3" 
+        className="position-sticky top-0 pt-2 pb-2 mb-3" 
         style={{ 
-            backgroundColor: 'var(--bg-body)', /* CHANGED HERE */
+            backgroundColor: 'var(--bg-body)', 
             zIndex: 1030,
-            borderBottom: '1px solid var(--border-color)' /* Using custom border color for better blend */
+            borderBottom: '1px solid var(--border-color)' 
         }}
       >
           {/* TOP HEADER CONTROLS */}
-          <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-3 rounded-4 p-2 p-md-3 border border-secondary rp-card gap-3 m-0">
+          <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-2 rounded-4 p-2 border border-secondary rp-card gap-2 m-0">
             
-            <div className="d-flex align-items-center gap-2 gap-md-3">
-              <h4 className="mb-0 text-nowrap fw-bold d-flex align-items-center me-1">
-                <i className="bi bi-graph-up-arrow text-primary me-2 fs-4"></i>
-                <span className="d-none d-lg-inline fs-5">Retirement Planner</span>
-              </h4>
+            <div className="d-flex align-items-center gap-2">
+              <h5 className="mb-0 text-nowrap fw-bold d-flex align-items-center me-1">
+                <i className="bi bi-graph-up-arrow text-primary me-2 fs-5"></i>
+                <span className="d-none d-lg-inline fs-6">Retirement Planner</span>
+              </h5>
               
               <div className="position-relative">
                 <button 
                     className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
                     type="button" 
                     onClick={() => setFileMenuOpen(!fileMenuOpen)} 
-                    style={{ height: '40px' }}
+                    style={{ height: '36px' }}
                 >
-                    <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
+                    <i className="bi bi-folder2-open text-primary me-2"></i>
                     <span className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>{activePlanName}</span>
                     <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
                 </button>
@@ -338,7 +338,7 @@ function DashboardLayout() {
             <div className="d-flex align-items-center gap-2">
               <div 
                   className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" 
-                  style={{ height: '40px' }} 
+                  style={{ height: '36px' }} 
                   title="Toggle Real vs Nominal Dollars. When enabled, future values are discounted by inflation to show today's purchasing power."
               >
                   <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
@@ -349,7 +349,7 @@ function DashboardLayout() {
                           checked={data.useRealDollars ?? false} 
                           onChange={(e) => updateUseRealDollars(e.target.checked)} 
                       />
-                      <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block pt-1" htmlFor="useRealDollars">
+                      <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block" style={{paddingTop: '2px'}} htmlFor="useRealDollars">
                           Today's $
                       </label>
                   </div>
@@ -357,43 +357,43 @@ function DashboardLayout() {
 
               <button 
                   type="button"
-                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
-                  style={{ width: '40px', height: '40px' }} 
+                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" 
+                  style={{ width: '36px', height: '36px' }} 
                   onClick={toggleTheme} 
                   title="Toggle Light/Dark Mode"
               >
-                  <i className={`fs-5 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
+                  <i className={`fs-6 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
               </button>
 
               <a 
                   href="https://ko-fi.com/P5P11UYZUD" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all" 
-                  style={{ width: '40px', height: '40px' }}
+                  className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" 
+                  style={{ width: '36px', height: '36px' }}
                   title="Support me on Ko-fi"
               >
-                  <i className="bi bi-cup-hot-fill fs-5" style={{ color: '#72a4f2' }}></i>
+                  <i className="bi bi-cup-hot-fill fs-6" style={{ color: '#72a4f2' }}></i>
               </a>
 
               {session ? (
                 <div className="position-relative cursor-pointer" onClick={() => signOut()} title="Sign Out">
                     {session.user?.image ? (
-                        <img src={session.user.image} alt="User" className="rounded-circle shadow-sm border border-secondary" width="40" height="40" />
+                        <img src={session.user.image} alt="User" className="rounded-circle shadow-sm border border-secondary" width="36" height="36" />
                     ) : (
-                        <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm" style={{ width: '40px', height: '40px' }}>
-                            <i className="bi bi-person-fill fs-5"></i>
+                        <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm p-0" style={{ width: '36px', height: '36px' }}>
+                            <i className="bi bi-person-fill fs-6"></i>
                         </button>
                     )}
                 </div>
               ) : (
                   <button 
                       disabled 
-                      className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50" 
-                      style={{ width: '40px', height: '40px', cursor: 'not-allowed' }} 
+                      className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50 p-0" 
+                      style={{ width: '36px', height: '36px', cursor: 'not-allowed' }} 
                       title="Sign in is temporarily disabled"
                   >
-                      <i className="bi bi-google fs-5"></i> 
+                      <i className="bi bi-google fs-6"></i> 
                   </button>
               )}
             </div>
@@ -406,8 +406,9 @@ function DashboardLayout() {
                 {tabs.map(tab => (
                   <li className="nav-item flex-fill" key={tab.id}>
                     <div 
-                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-2 px-3 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
+                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
                       onClick={() => setActiveTab(tab.id)}
+                      style={{ fontSize: '0.85rem' }}
                     >
                       <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
                       <span className="text-nowrap">{tab.label}</span>
