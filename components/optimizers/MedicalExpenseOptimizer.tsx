@@ -76,26 +76,26 @@ export default function MedicalExpenseOptimizer() {
             </div>
 
             <div className="d-flex align-items-center gap-2 px-1 mb-1">
-                <span className="small fw-bold text-muted" style={{width: '155px', flexShrink: 0}}>Month</span>
+                <span className="small fw-bold text-muted w-50">Month</span>
                 <span className="small fw-bold text-muted w-50">Bill Amount ($)</span>
             </div>
             
             <div className="flex-grow-1 overflow-auto pe-1 mb-3 custom-scrollbar" style={{minHeight: '120px', maxHeight: '180px'}}>
                 {medBills.map(bill => (
                     <div key={bill.id} className="d-flex gap-2 mb-2 align-items-center">
-                        <div style={{width: '155px', flexShrink: 0}}>
+                        <div className="w-50 flex-shrink-0">
                             <MonthYearStepper value={bill.date} onChange={(val: string) => updateMedBill(bill.id, 'date', val)} />
                         </div>
-                        <div className="w-50">
+                        <div className="w-50 d-flex gap-2 align-items-center">
                             <CurrencyInput className="form-control form-control-sm border-secondary text-main fw-bold w-100" value={bill.amount} onChange={(val: any) => updateMedBill(bill.id, 'amount', val)} />
+                            <button className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeMedBill(bill.id)}><i className="bi bi-x-lg"></i></button>
                         </div>
-                        <button className="btn btn-sm btn-link text-danger px-2 opacity-75 hover-opacity-100 flex-shrink-0 ms-auto" onClick={() => removeMedBill(bill.id)}><i className="bi bi-x-lg"></i></button>
                     </div>
                 ))}
             </div>
-            <button className="btn btn-sm btn-outline-secondary w-100 fw-bold mb-3" onClick={addMedBill}>+ Add Expense Event</button>
+            <button className="btn btn-sm btn-outline-secondary w-100 fw-bold mb-3 mt-auto" onClick={addMedBill}>+ Add Expense Event</button>
 
-            <div className="bg-danger bg-opacity-10 border border-danger border-opacity-50 rounded-4 p-3 mt-auto shadow-inner text-center">
+            <div className="bg-danger bg-opacity-10 border border-danger border-opacity-50 rounded-4 p-3 shadow-inner text-center">
                 <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-danger border-opacity-25">
                     <span className="text-muted fw-bold small">CRA Hurdle (3%)</span>
                     <span className="fw-bold text-main">{formatCurrency(medHurdle)}</span>
