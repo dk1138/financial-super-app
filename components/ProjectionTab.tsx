@@ -261,7 +261,6 @@ export default function ProjectionTab() {
 
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
-      const totalProgramMatch = isP1 ? (y.rrspTotalMatch1 || 0) : (y.rrspTotalMatch2 || 0);
       
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
@@ -298,7 +297,7 @@ export default function ProjectionTab() {
 
       let actualGross = sum; 
       
-      let incStr = `<b>Gross Taxable Income:</b> $${formatStr(actualGross, year)}<br>`;
+      let incStr = `<b>Gross Income:</b> $${formatStr(actualGross, year)}<br>`;
       if (breakdownStr) {
            incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
@@ -345,7 +344,8 @@ export default function ProjectionTab() {
 
   const buildYieldTooltip = (math: any, year: number) => {
       if (!math) return "No yield.";
-      return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+      const priorYear = Math.max(baseYear, year - 1);
+      return `<b>Asset Balance:</b> $${formatStr(math.bal, priorYear)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
   };
 
   const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number, threshold: number) => {
@@ -456,7 +456,8 @@ export default function ProjectionTab() {
                   if (k.includes('RRIF')) {
                       const factor = getRrifFactor(age - 1);
                       const minAmount = priorRrifBal * factor;
-                      info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
+                      const priorYear = Math.max(baseYear, year - 1);
+                      info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, priorYear)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
                   }
                   else if (k.includes('LIF')) {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>LIF withdrawal bound by provincial limits.`;

@@ -615,7 +615,9 @@ export class FinanceEngine {
                     let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
                     if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
                         let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
-                        let targetBracketCap = (this.CONSTANTS.BPA_MAX_FED || 16452) * baseInflation; 
+                        // Dynamically pull updated BPA from nested FED_CREDITS config
+                        let bpaMaxVal = this.CONSTANTS?.FED_CREDITS?.BPA_MAX || 16452;
+                        let targetBracketCap = bpaMaxVal * baseInflation; 
                         
                         let room = Math.max(0, targetBracketCap - currentTaxable);
                         if (room > 0) {
@@ -799,7 +801,6 @@ export class FinanceEngine {
                 }
             }
             
-            // Unfunded portion must be paid out of pocket, added to debtRepayment
             debtRepayment += unfundedEdu; 
             
             if (detailed && simProperties.reduce((sum: number, p: any) => sum + p.mortgage, 0) <= 0 && !trackedEvents.has('Mortgage Paid') && simProperties.some((p: any) => p.mortgage === 0 && p.value > 0)) {                
@@ -826,7 +827,6 @@ export class FinanceEngine {
             let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
 
             if (netSurplus > 0) {
-                // Pass age1, age2 to handleSurplus
                 handleSurplus(netSurplus, person1, person2, alive1, alive2, flowLog, i, consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, this.strategies, this.inputs, this.CONSTANTS, age1, age2);
                 
                 if (actualDeductions.p1 > 0) pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend).totalTax;
@@ -840,7 +840,6 @@ export class FinanceEngine {
                     let currentDeficit = (expenses + mortgagePayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
                     if (currentDeficit < 1) break; 
                     
-                    // Pass age1, age2 to handleDeficit
                     handleDeficit(currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
                         if (prefix === 'p1') { craTaxableIncome1 += taxableAmt; cashIncome1 += cashAmt; }
                         if (prefix === 'p2') { craTaxableIncome2 += taxableAmt; cashIncome2 += cashAmt; }
