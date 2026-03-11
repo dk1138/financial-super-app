@@ -83,6 +83,20 @@ function DashboardLayout() {
       setRunTutorial(true);
   };
 
+  // --- LOAD DUMMY DATA WITHOUT TUTORIAL ---
+  const handleLoadDummyData = () => {
+      if (financeContext.loadData) {
+          financeContext.loadData({ inputs: sampleProfile });
+          
+          const sampleName = "Sarah & John (Sample)";
+          localStorage.setItem('active_plan_name', sampleName);
+          setActivePlanName(sampleName);
+      }
+      // Switch to the dashboard tab so they can see the charts instantly
+      setActiveTab('dashboard');
+      // Notice we do NOT set runTutorial(true) here
+  };
+
   const executeSave = () => {
       if (!newPlanName.trim()) { alert('Please enter a plan name.'); return; }
       const name = newPlanName.trim();
@@ -286,7 +300,10 @@ function DashboardLayout() {
     <div className="container-fluid pb-4 min-vh-100 transition-all position-relative d-flex flex-column" style={{ maxWidth: '1700px' }}>
       
       {/* 1. MOUNT THE SPLASH SCREEN AND TUTORIAL */}
-      <SplashScreen onStartTutorial={handleStartTutorial} />
+      <SplashScreen 
+        onStartTutorial={handleStartTutorial} 
+        onLoadDummyData={handleLoadDummyData}
+      />
       <Tutorial run={runTutorial} onFinish={() => setRunTutorial(false)} />
 
       <input 

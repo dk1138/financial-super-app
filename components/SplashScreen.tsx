@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 
-// 1. ADD THIS INTERFACE: This tells TypeScript what props to expect
+// Add the new prop to the interface
 interface SplashScreenProps {
   onStartTutorial: () => void;
+  onLoadDummyData: () => void;
 }
 
-// 2. PASS THE PROP INTO THE COMPONENT
-export default function SplashScreen({ onStartTutorial }: SplashScreenProps) {
+export default function SplashScreen({ onStartTutorial, onLoadDummyData }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,13 @@ export default function SplashScreen({ onStartTutorial }: SplashScreenProps) {
   const handleTutorialClick = () => {
     setIsVisible(false);
     localStorage.setItem("hasSeenSplash", "true");
-    onStartTutorial(); // This triggers the dummy data and the Joyride tour!
+    onStartTutorial(); 
+  };
+
+  const handleDummyDataClick = () => {
+    setIsVisible(false);
+    localStorage.setItem("hasSeenSplash", "true");
+    onLoadDummyData(); 
   };
 
   if (!isVisible) return null;
@@ -88,21 +94,30 @@ export default function SplashScreen({ onStartTutorial }: SplashScreenProps) {
           <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions.
         </p>
 
+        {/* 3 OPTIONS MENU */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <button
-            onClick={handleDismiss}
-            className="btn btn-primary w-100"
+            onClick={handleTutorialClick}
+            className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
             style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
           >
-            Acknowledge & Start Planning
+            <i className="bi bi-magic me-2 fs-5"></i> Guided Tutorial (Uses Sample Data)
           </button>
           
           <button
-            onClick={handleTutorialClick}
-            className="btn btn-outline-secondary w-100"
+            onClick={handleDummyDataClick}
+            className="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
             style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
           >
-            Start Quick Tutorial (Uses Sample Data)
+            <i className="bi bi-file-earmark-person me-2 fs-5"></i> Explore Sample Data Only
+          </button>
+
+          <button
+            onClick={handleDismiss}
+            className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center border-2"
+            style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
+          >
+            <i className="bi bi-calculator me-2 fs-5"></i> Start Blank Plan
           </button>
         </div>
       </div>
