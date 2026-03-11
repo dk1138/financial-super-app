@@ -70,8 +70,14 @@ function DashboardLayout() {
   // --- TUTORIAL START FUNCTION ---
   const handleStartTutorial = () => {
       if (financeContext.loadData) {
-          // Wrap the sample profile in the 'inputs' structure your engine expects
-          financeContext.loadData({ inputs: sampleProfile });
+          // Construct the exact object shape the FinanceContext expects
+          const dummyPlan = {
+              mode: "Couple",            // Mode must be at the root
+              useRealDollars: false,
+              inputs: sampleProfile      // The rest goes into inputs
+          };
+          
+          financeContext.loadData(dummyPlan);
           
           const sampleName = "Sarah & John (Sample)";
           localStorage.setItem('active_plan_name', sampleName);
@@ -86,7 +92,14 @@ function DashboardLayout() {
   // --- LOAD DUMMY DATA WITHOUT TUTORIAL ---
   const handleLoadDummyData = () => {
       if (financeContext.loadData) {
-          financeContext.loadData({ inputs: sampleProfile });
+          // Construct the exact object shape the FinanceContext expects
+          const dummyPlan = {
+              mode: "Couple",            // Mode must be at the root
+              useRealDollars: false,
+              inputs: sampleProfile      // The rest goes into inputs
+          };
+
+          financeContext.loadData(dummyPlan);
           
           const sampleName = "Sarah & John (Sample)";
           localStorage.setItem('active_plan_name', sampleName);
