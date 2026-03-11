@@ -62,7 +62,17 @@ function DashboardLayout() {
       setTimeout(() => setToastMsg(''), 3000);
   };
 
-  // --- LOAD DUMMY DATA ---
+  // --- START BLANK PLAN (FROM SPLASH SCREEN) ---
+  const handleStartBlankPlan = () => {
+      if (resetData) {
+          resetData();
+      }
+      localStorage.setItem('active_plan_name', 'Untitled Plan');
+      setActivePlanName('Untitled Plan');
+      setActiveTab('plan'); // Start them on the inputs tab
+  };
+
+  // --- LOAD DUMMY DATA (FROM SPLASH SCREEN) ---
   const handleLoadDummyData = () => {
       if (financeContext.loadData) {
           financeContext.loadData(sampleProfile);
@@ -71,7 +81,7 @@ function DashboardLayout() {
           localStorage.setItem('active_plan_name', sampleName);
           setActivePlanName(sampleName);
       }
-      setActiveTab('dashboard');
+      setActiveTab('dashboard'); // Jump straight to the dashboard charts
   };
 
   const executeSave = () => {
@@ -277,7 +287,10 @@ function DashboardLayout() {
     <div className="container-fluid pb-4 min-vh-100 transition-all position-relative d-flex flex-column" style={{ maxWidth: '1700px' }}>
       
       {/* 1. MOUNT THE SPLASH SCREEN */}
-      <SplashScreen onLoadDummyData={handleLoadDummyData} />
+      <SplashScreen 
+        onLoadDummyData={handleLoadDummyData} 
+        onStartBlankPlan={handleStartBlankPlan} 
+      />
 
       <input 
           type="file" 

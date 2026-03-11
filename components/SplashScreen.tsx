@@ -6,7 +6,7 @@ interface SplashScreenProps {
   onLoadDummyData: () => void;
 }
 
-export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
+export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -17,9 +17,10 @@ export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
     }
   }, []);
 
-  const handleDismiss = () => {
+  const handleStartBlankClick = () => {
     setIsVisible(false);
     localStorage.setItem("hasSeenSplash", "true");
+    onStartBlankPlan(); // <-- Trigger the reset
   };
 
   const handleDummyDataClick = () => {
@@ -92,19 +93,24 @@ export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
           <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions.
         </div>
 
+<<<<<<< HEAD
+        {/* SIDE-BY-SIDE BUTTONS */}
+        <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
+=======
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+>>>>>>> d8ec699a0a014d12c84a92132f6314cc28d7150d
           <button
-            onClick={handleDismiss}
-            className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
-            style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
+            onClick={handleStartBlankClick}
+            className="btn btn-primary d-flex align-items-center justify-content-center"
+            style={{ flex: 1, padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
           >
             <i className="bi bi-calculator me-2 fs-5"></i> Start Blank Plan
           </button>
           
           <button
             onClick={handleDummyDataClick}
-            className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center"
-            style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
+            className="btn btn-outline-secondary d-flex align-items-center justify-content-center"
+            style={{ flex: 1, padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
           >
             <i className="bi bi-file-earmark-person me-2 fs-5"></i> Load Sample Data
           </button>
