@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, ReactNode, useRef } from 'react';
+import React, { useEffect, ReactNode, useRef, useState } from 'react';
 import { create } from 'zustand';
 import { FINANCIAL_CONSTANTS } from './config';
 import { calculatePlanScore } from './financeEngine';
@@ -82,7 +82,7 @@ export const defaultData = {
         value: 700000,
         mortgage: 350000,
         rate: 4.5,
-        payment: 1945, // roughly 25-yr ammortization
+        payment: 1945, 
         growth: 3.0,
         includeInNW: true,
         sellEnabled: false
@@ -233,6 +233,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const setData = useFinanceStore(state => state.setData);
   const workerRef = useRef<Worker | null>(null);
 
+  // Prevents saving empty default data over your real save file before it loads
+  const [hasHydrated, setHasHydrated] = useState(false);
+
   useEffect(() => {
     try {
       const savedData = localStorage.getItem('retirement_plan_data');
@@ -245,6 +248,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error("Failed to parse local storage data:", e);
     }
+    
+    // Mark as hydrated so saving can begin
+    setHasHydrated(true);
 
     workerRef.current = new Worker(new URL('./financeWorker.ts', import.meta.url));
     
@@ -262,9 +268,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // --- EFFECT 1: FAST CALCULATOR ENGINE (300ms delay) ---
   useEffect(() => {
+    if (!hasHydrated) return;
+
     setIsCalculating(true);
-    const timeoutId = setTimeout(() => {
+    const calcTimeoutId = setTimeout(() => {
       if (workerRef.current) {
         workerRef.current.postMessage({
           data: JSON.parse(JSON.stringify(data)),
@@ -273,8 +282,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [data]);
+    return () => clearTimeout(calcTimeoutId);
+  }, [data, hasHydrated]);
+
+  // --- EFFECT 2: DEBOUNCED LOCAL STORAGE SAVER (1500ms delay) ---
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    // Waits 1.5 seconds after you STOP typing before writing to disk
+    const saveTimeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem('retirement_plan_data', JSON.stringify(data));
+      } catch (err) {
+        console.error("Auto-save to local storage failed:", err);
+      }
+    }, 1500);
+
+    return () => clearTimeout(saveTimeoutId);
+  }, [data, hasHydrated]);
 
   return <>{children}</>;
 }
