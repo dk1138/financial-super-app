@@ -74,6 +74,12 @@ export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
           🔒 Local Data Only - Your data never leaves your browser
         </div>
 
+        {/* WORK IN PROGRESS / BUG WARNING */}
+        <div style={{ backgroundColor: "#f8d7da", color: "#842029", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #f5c2c7", marginBottom: "1rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
+          <i className="bi bi-tools text-danger fs-5 me-2" style={{ verticalAlign: "middle" }}></i>
+          <strong>Work in Progress:</strong> This tool is in active development. You may encounter bugs, calculation adjustments, or unexpected behavior as we continue to build it.
+        </div>
+
         {/* DESKTOP OPTIMIZATION WARNING */}
         <div style={{ backgroundColor: "#fff3cd", color: "#664d03", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #ffecb5", marginBottom: "1.5rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
           <i className="bi bi-display text-warning fs-5 me-2" style={{ verticalAlign: "middle" }}></i>
