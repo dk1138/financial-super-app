@@ -9,7 +9,6 @@ import { calculatePlanScore } from './financeEngine';
 const calculateExactAge = (dobString: string): number => {
   if (!dobString || typeof dobString !== 'string') return 0;
   
-  // Handle formats like "1997-04", "1997/04", or "1997-04-15"
   const parts = dobString.split(/[-/T ]/); 
   if (parts.length < 2) {
       const year = parseInt(dobString, 10);
@@ -19,7 +18,7 @@ const calculateExactAge = (dobString: string): number => {
 
   const dobYear = parseInt(parts[0], 10);
   const dobMonth = parseInt(parts[1], 10);
-  const dobDay = parts.length >= 3 ? parseInt(parts[2], 10) : 1; // Default to 1st of month if no day provided
+  const dobDay = parts.length >= 3 ? parseInt(parts[2], 10) : 1; 
   
   if (isNaN(dobYear) || isNaN(dobMonth)) return 0;
 
@@ -30,12 +29,72 @@ const calculateExactAge = (dobString: string): number => {
 
   let age = currentYear - dobYear;
   
-  // If the current month is before the birth month, OR it's the birth month but the day hasn't arrived yet
+  // If the current month is before the birth month, OR it's the birth month but the day hasn't arrived
   if (currentMonth < dobMonth || (currentMonth === dobMonth && currentDay < dobDay)) {
     age--;
   }
   
-  return Math.max(0, age); // Ensure age never goes negative
+  return Math.max(0, age);
+};
+
+// --- REVERSE DOB CALCULATOR (FOR AGE STEPPER FIX) ---
+const shiftDobYear = (dobString: string, targetAge: number): string => {
+    if (!dobString || typeof dobString !== 'string') return `${new Date().getFullYear() - targetAge}-01`;
+    
+    const parts = dobString.split('-');
+    const monthStr = parts[1] || '01';
+    const dayStr = parts[2] || '';
+    
+    const month = parseInt(monthStr, 10);
+    const day = dayStr ? parseInt(dayStr, 10) : 1;
+    
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const currentDay = today.getDate();
+    
+    let newYear = currentYear - targetAge;
+    
+    // If they haven't had their birthday yet this year, they were actually born a year earlier!
+    if (currentMonth < month || (currentMonth === month && currentDay < day)) {
+        newYear--;
+    }
+    
+    return dayStr ? `${newYear}-${monthStr}-${dayStr}` : `${newYear}-${monthStr}`;
+};
+
+// --- 2-WAY BINDING SYNC ---
+const syncAgeAndDob = (player: string, prevInputs: any, finalInputs: any) => {
+    const oldAge = prevInputs[`${player}_age`];
+    const newAge = finalInputs[`${player}_age`];
+    const oldDob = prevInputs[`${player}_dob`] || "1990-01";
+    const newDob = finalInputs[`${player}_dob`] || oldDob;
+
+    const ageChanged = oldAge !== newAge;
+    const dobChanged = oldDob !== newDob;
+
+    if (ageChanged && !dobChanged) {
+        // User clicked the Age Stepper. Shift the DOB year to match.
+        finalInputs[`${player}_dob`] = shiftDobYear(oldDob, newAge);
+    } 
+    else if (dobChanged && !ageChanged) {
+        // User used the Month Picker. Recalculate exact age.
+        finalInputs[`${player}_age`] = calculateExactAge(newDob);
+    }
+    else if (ageChanged && dobChanged) {
+        // UI sent both simultaneously. Determine true intent:
+        const oldMonth = oldDob.split('-')[1];
+        const newMonth = newDob.split('-')[1];
+        
+        if (oldMonth !== newMonth) {
+            // Month changed, so they definitely touched the DOB picker.
+            finalInputs[`${player}_age`] = calculateExactAge(newDob);
+        } else {
+            // Month didn't change. UI probably guessed the new year poorly based on the Stepper.
+            // Ignore the UI's bad DOB guess and force the correct math.
+            finalInputs[`${player}_dob`] = shiftDobYear(oldDob, newAge);
+        }
+    }
 };
 
 // --- STRICT SANITIZATION ENGINE ---
@@ -59,7 +118,6 @@ export const defaultData = {
   useRealDollars: false, 
   expenseMode: 'Simple',
   inputs: {
-    // Player 1 Defaults
     p1_dob: '1996-01', p1_age: 30, p1_retireAge: 65, p1_lifeExp: 90,
     p1_income: 85000, p1_income_growth: 2.0, p1_rrsp_match: 3.0, p1_rrsp_match_tier: 100.0,
     p1_cash: 10000, p1_cash_ret: 2.0,
@@ -75,7 +133,6 @@ export const defaultData = {
     p1_cpp_enabled: true, p1_cpp_est_base: 12000, p1_cpp_start: 65,
     p1_oas_enabled: true, p1_oas_years: 40, p1_oas_start: 65,
 
-    // Player 2 Defaults
     p2_dob: '1996-01', p2_age: 30, p2_retireAge: 65, p2_lifeExp: 90,
     p2_income: 75000, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 100.0,
     p2_cash: 5000, p2_cash_ret: 2.0,
@@ -91,23 +148,15 @@ export const defaultData = {
     p2_cpp_enabled: true, p2_cpp_est_base: 10000, p2_cpp_start: 65,
     p2_oas_enabled: true, p2_oas_years: 40, p2_oas_start: 65,
 
-    // Global Defaults
     inflation_rate: 2.1, tax_province: 'ON',
     cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000, 
     cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
     
-    // Engine Features
-    portfolio_allocation: 'custom', 
-    use_glide_path: false,
-    fully_optimize_tax: false, 
-    oas_clawback_optimize: false, 
-    rrsp_meltdown_enabled: false,
-    enable_guardrails: false,
-    
+    portfolio_allocation: 'custom', use_glide_path: false,
+    fully_optimize_tax: false, oas_clawback_optimize: false, rrsp_meltdown_enabled: false, enable_guardrails: false,
     skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
     skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
-    exp_gogo_age: 75, exp_slow_age: 85,
-    pension_split_enabled: false
+    exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false
   },
   properties: [
     {
@@ -182,7 +231,6 @@ export const emptyData = {
   constants: FINANCIAL_CONSTANTS 
 };
 
-// --- LEGACY JSON ADAPTER ---
 export const migrateLegacyData = (parsedData: any, baseData: any) => {
     const merged = JSON.parse(JSON.stringify(baseData));
     if (!parsedData) return merged;
@@ -240,7 +288,7 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
         });
     }
 
-    // ALWAYS override and enforce precise ages based on the loaded date
+    // ALWAYS correct precise ages based on the loaded date to prevent drift
     ['p1', 'p2'].forEach(player => {
         const dob = merged.inputs[`${player}_dob`];
         if (dob) {
@@ -354,40 +402,26 @@ export function useFinance() {
     // --- ENFORCED INPUT HANDLERS ---
     updateInput: (key: string, value: any) => store.setData((prev: any) => {
       const cleanVal = sanitizeValue(value);
-      const extraInputs: any = {};
+      const finalInputs = { ...prev.inputs, [key]: cleanVal };
+      
+      syncAgeAndDob('p1', prev.inputs, finalInputs);
+      syncAgeAndDob('p2', prev.inputs, finalInputs);
 
-      if (key === 'p1_dob' || key === 'p2_dob') {
-        const player = key.split('_')[0];
-        extraInputs[`${player}_age`] = calculateExactAge(cleanVal);
-      }
-
-      return { 
-        ...prev, 
-        inputs: { ...prev.inputs, [key]: cleanVal, ...extraInputs } 
-      };
+      return { ...prev, inputs: finalInputs };
     }),
 
     updateMultipleInputs: (updates: Record<string, any>) => {
        const cleanUpdates: Record<string, any> = {};
-       
-       // 1. Sanitize whatever the UI sent us
-       Object.keys(updates).forEach(k => {
-           cleanUpdates[k] = sanitizeValue(updates[k]);
+       Object.keys(updates).forEach(k => cleanUpdates[k] = sanitizeValue(updates[k]));
+
+       store.setData((prev: any) => {
+           const finalInputs = { ...prev.inputs, ...cleanUpdates };
+           
+           syncAgeAndDob('p1', prev.inputs, finalInputs);
+           syncAgeAndDob('p2', prev.inputs, finalInputs);
+
+           return { ...prev, inputs: finalInputs };
        });
-
-       // 2. RUTHLESS OVERRIDE: If the UI passed a new Date of Birth, calculate the exact age and 
-       // overwrite whatever static age the UI tried to pass alongside it.
-       if (cleanUpdates.p1_dob !== undefined) {
-           cleanUpdates.p1_age = calculateExactAge(cleanUpdates.p1_dob);
-       }
-       if (cleanUpdates.p2_dob !== undefined) {
-           cleanUpdates.p2_age = calculateExactAge(cleanUpdates.p2_dob);
-       }
-
-       store.setData((prev: any) => ({ 
-           ...prev, 
-           inputs: { ...prev.inputs, ...cleanUpdates } 
-       }));
     },
     
     updateMode: (newMode: 'Single' | 'Couple') => store.setData((prev: any) => ({ ...prev, mode: newMode })),
