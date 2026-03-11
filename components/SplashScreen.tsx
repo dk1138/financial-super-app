@@ -21,7 +21,7 @@ export default function SplashScreen() {
   if (!isVisible) return null;
 
   return (
-    // 1. The Overlay: Inline styles guarantee a full-screen, 75% dark overlay
+    // The Overlay: Inline styles guarantee a full-screen, 75% dark grey overlay
     <div
       style={{
         position: "fixed",
@@ -36,62 +36,70 @@ export default function SplashScreen() {
         justifyContent: "center",
       }}
     >
-      {/* 2. The Text Popup Dialog: Forced to have a white background and centered text */}
+      {/* The Text Popup Dialog */}
       <div
         style={{
           backgroundColor: "#ffffff",
           color: "#212529", // Dark Bootstrap text color
-          maxWidth: "500px",
+          maxWidth: "550px",
           width: "90%",
-          padding: "2rem",
+          padding: "2.5rem",
           borderRadius: "16px",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
           textAlign: "center",
+          maxHeight: "90vh",
+          overflowY: "auto"
         }}
       >
         {/* Icon */}
-        <div style={{ marginBottom: "1.5rem", color: "#0d6efd" }}>
-          <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ margin: "0 auto" }}>
+        <div style={{ marginBottom: "1rem", color: "#0d6efd" }}>
+          <svg width="56" height="56" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ margin: "0 auto" }}>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
 
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
           Welcome to Retirement Planner Pro
         </h2>
         
-        <p style={{ marginBottom: "1.5rem", lineHeight: "1.6" }}>
-          This advanced financial forecasting engine is designed specifically for Canadians to help you transition from saving to spending.
-        </p>
+        {/* Local Data Badge */}
+        <div style={{ display: "inline-block", backgroundColor: "#e9ecef", color: "#495057", padding: "0.25rem 0.75rem", borderRadius: "50px", fontSize: "0.85rem", fontWeight: "600", marginBottom: "1.5rem" }}>
+          🔒 Local Data Only - Your data never leaves your browser
+        </div>
         
-        {/* Information Box */}
-        <div style={{ backgroundColor: "#f8f9fa", padding: "1rem", borderRadius: "8px", border: "1px solid #dee2e6", marginBottom: "1.5rem", textAlign: "left" }}>
-          <strong style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.9rem" }}>What this tool does:</strong>
+        {/* Shortlist of Features */}
+        <div style={{ backgroundColor: "#f8f9fa", padding: "1.25rem", borderRadius: "8px", border: "1px solid #dee2e6", marginBottom: "1.5rem", textAlign: "left" }}>
+          <strong style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.95rem" }}>Key Features:</strong>
           <ul style={{ paddingLeft: "1.5rem", margin: 0, fontSize: "0.9rem", lineHeight: "1.6" }}>
-            <li>Projects your net worth and cash flow through retirement.</li>
-            <li>Optimizes tax strategies across RRSPs, TFSAs, and non-registered accounts.</li>
-            <li>Calculates precise CRA withdrawal minimums and benefit phase-outs.</li>
+            <li><strong>Cash Flow Engine:</strong> Project your net worth and spending power through retirement.</li>
+            <li><strong>Tax Optimization:</strong> Smart withdrawal strategies across RRSPs, TFSAs, and Non-Reg.</li>
+            <li><strong>Built-in CRA Limits:</strong> Accurate CPP, OAS clawbacks, and CCB calculations.</li>
           </ul>
         </div>
 
-        {/* Security Reassurance */}
-        <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", marginBottom: "2rem", fontSize: "0.85rem", color: "#6c757d", fontWeight: "500" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            <span style={{ color: "#198754", fontSize: "1.1rem" }}>✔</span> 256-bit Encryption
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            <span style={{ color: "#dc3545", fontSize: "1.1rem" }}>✔</span> Canadian Data Residency
-          </span>
-        </div>
+        {/* Disclaimer */}
+        <p style={{ fontSize: "0.75rem", color: "#6c757d", marginBottom: "1.5rem", lineHeight: "1.5", textAlign: "justify" }}>
+          <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions.
+        </p>
 
-        {/* Button using standard Bootstrap classes */}
-        <button
-          onClick={handleDismiss}
-          className="btn btn-primary w-100"
-          style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
-        >
-          Acknowledge & Start Planning
-        </button>
+        {/* Action Buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <button
+            onClick={handleDismiss}
+            className="btn btn-primary w-100"
+            style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
+          >
+            Acknowledge & Start Planning
+          </button>
+          
+          <button
+            disabled
+            className="btn btn-secondary w-100"
+            style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600", opacity: 0.65, cursor: "not-allowed" }}
+          >
+            Start Quick Tutorial (Coming Soon)
+          </button>
+        </div>
       </div>
     </div>
   );
