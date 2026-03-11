@@ -43,6 +43,7 @@ export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        padding: "1rem"
       }}
     >
       <div
@@ -50,7 +51,7 @@ export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
           backgroundColor: "#ffffff",
           color: "#212529",
           maxWidth: "550px",
-          width: "90%",
+          width: "100%",
           padding: "2.5rem",
           borderRadius: "16px",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
@@ -69,8 +70,14 @@ export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
           Welcome to Retirement Planner Pro
         </h2>
         
-        <div style={{ display: "inline-block", backgroundColor: "#e9ecef", color: "#495057", padding: "0.25rem 0.75rem", borderRadius: "50px", fontSize: "0.85rem", fontWeight: "600", marginBottom: "1.5rem" }}>
+        <div style={{ display: "inline-block", backgroundColor: "#e9ecef", color: "#495057", padding: "0.25rem 0.75rem", borderRadius: "50px", fontSize: "0.85rem", fontWeight: "600", marginBottom: "1.25rem" }}>
           🔒 Local Data Only - Your data never leaves your browser
+        </div>
+
+        {/* DESKTOP OPTIMIZATION WARNING */}
+        <div style={{ backgroundColor: "#fff3cd", color: "#664d03", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #ffecb5", marginBottom: "1.5rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
+          <i className="bi bi-display text-warning fs-5 me-2" style={{ verticalAlign: "middle" }}></i>
+          <strong>Desktop Recommended:</strong> This tool features complex data tables and interactive charts that are optimized for larger screens. <strong>Mobile viewing is not supported.</strong>
         </div>
         
         <div style={{ backgroundColor: "#f8f9fa", padding: "1.25rem", borderRadius: "8px", border: "1px solid #dee2e6", marginBottom: "1.5rem", textAlign: "left" }}>
