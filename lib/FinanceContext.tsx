@@ -5,6 +5,27 @@ import { create } from 'zustand';
 import { FINANCIAL_CONSTANTS } from './config';
 import { calculatePlanScore } from './financeEngine';
 
+// --- EXACT AGE CALCULATOR (MONTH & YEAR) ---
+const calculateExactAge = (dobString: string): number => {
+  if (!dobString || typeof dobString !== 'string' || !dobString.includes('-')) return 0;
+  
+  const [dobYear, dobMonth] = dobString.split('-').map(Number);
+  if (isNaN(dobYear) || isNaN(dobMonth)) return 0;
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1; // JS getMonth() is 0-indexed (Jan=0)
+
+  let age = currentYear - dobYear;
+  
+  // If the current month is before the birth month, they haven't had their birthday yet this year
+  if (currentMonth < dobMonth) {
+    age--;
+  }
+  
+  return Math.max(0, age); // Ensure age never goes negative
+};
+
 // --- STRICT SANITIZATION ENGINE ---
 const sanitizeValue = (val: any): any => {
   if (typeof val === 'string') {
@@ -207,6 +228,14 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
         });
     }
 
+    // Auto-correct ages based on exact date whenever data is loaded
+    ['p1', 'p2'].forEach(player => {
+        const dob = merged.inputs[`${player}_dob`];
+        if (dob) {
+            merged.inputs[`${player}_age`] = calculateExactAge(dob);
+        }
+    });
+
     merged.constants = FINANCIAL_CONSTANTS;
     return merged;
 };
@@ -249,7 +278,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       console.error("Failed to parse local storage data:", e);
     }
     
-    // Mark as hydrated so saving can begin
     setHasHydrated(true);
 
     workerRef.current = new Worker(new URL('./financeWorker.ts', import.meta.url));
@@ -289,7 +317,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hasHydrated) return;
 
-    // Waits 1.5 seconds after you STOP typing before writing to disk
     const saveTimeoutId = setTimeout(() => {
       try {
         localStorage.setItem('retirement_plan_data', JSON.stringify(data));
@@ -312,12 +339,38 @@ export function useFinance() {
     results: store.results,
     planScore: store.planScore,
     isCalculating: store.isCalculating,
-    updateInput: (key: string, value: any) => store.setData((prev: any) => ({ ...prev, inputs: { ...prev.inputs, [key]: sanitizeValue(value) } })),
+
+    // --- UPDATED INPUT HANDLERS ---
+    updateInput: (key: string, value: any) => store.setData((prev: any) => {
+      const cleanVal = sanitizeValue(value);
+      const extraInputs: any = {};
+
+      // If DOB changes, instantly recalculate exact age
+      if (key === 'p1_dob' || key === 'p2_dob') {
+        const player = key.split('_')[0];
+        extraInputs[`${player}_age`] = calculateExactAge(cleanVal);
+      }
+
+      return { 
+        ...prev, 
+        inputs: { ...prev.inputs, [key]: cleanVal, ...extraInputs } 
+      };
+    }),
+
     updateMultipleInputs: (updates: Record<string, any>) => {
        const cleanUpdates: Record<string, any> = {};
-       Object.keys(updates).forEach(k => cleanUpdates[k] = sanitizeValue(updates[k]));
+       Object.keys(updates).forEach(k => {
+           cleanUpdates[k] = sanitizeValue(updates[k]);
+           
+           // If any of the multiple inputs is a DOB, instantly recalculate exact age
+           if (k === 'p1_dob' || k === 'p2_dob') {
+               const player = k.split('_')[0];
+               cleanUpdates[`${player}_age`] = calculateExactAge(cleanUpdates[k]);
+           }
+       });
        store.setData((prev: any) => ({ ...prev, inputs: { ...prev.inputs, ...cleanUpdates } }));
     },
+    
     updateMode: (newMode: 'Single' | 'Couple') => store.setData((prev: any) => ({ ...prev, mode: newMode })),
     updateUseRealDollars: (val: boolean) => store.setData((prev: any) => ({ ...prev, useRealDollars: val })),
     addArrayItem: (listName: string, defaultObj: any) => store.setData((prev: any) => ({ ...prev, [listName]: [...(prev[listName] || []), defaultObj] })),
