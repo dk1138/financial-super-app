@@ -164,9 +164,9 @@ export default function DashboardTab() {
   };
 
   const getScoreGradient = (score: number) => {
-      if (score >= 80) return 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'; // Green
-      if (score >= 60) return 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'; // Yellow
-      return 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)'; // Red
+      if (score >= 80) return 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'; 
+      if (score >= 60) return 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'; 
+      return 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)'; 
   };
 
   const getScoreShadow = (score: number) => {
@@ -312,7 +312,6 @@ export default function DashboardTab() {
   const maxTotalNW = rawMaxNW * 1.05; 
   const yAxisTicks = [1, 0.75, 0.5, 0.25, 0].map(f => maxTotalNW * f);
 
-  // --- FI Readiness Math ---
   const firstRetYearObj = results.timeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || results.timeline[results.timeline.length - 1];
   const firstRetNominalSpend = (firstRetYearObj.expenses || 0) + (firstRetYearObj.mortgagePay || 0);
   const yearsToRet = Math.max(0, firstRetYearObj.year - baseYear);
@@ -366,7 +365,6 @@ export default function DashboardTab() {
               </div>
           )}
 
-          {/* COMBINED PLAN HEALTH & FI READINESS OVERVIEW */}
           {planScore && (
             <div className="rp-card border-secondary rounded-4 p-4 shadow-sm mb-4">
               <h6 className="fw-bold text-uppercase ls-1 text-muted mb-4 d-flex align-items-center border-bottom border-secondary pb-3">
@@ -374,7 +372,6 @@ export default function DashboardTab() {
               </h6>
               
               <div className="row g-5 mb-2">
-                  {/* Overall Plan Health Pill */}
                   <div className="col-12 col-md-6 d-flex flex-column justify-content-center border-end-md border-secondary">
                       <div className="d-flex flex-column gap-1 mb-2">
                           <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-main">
@@ -400,7 +397,6 @@ export default function DashboardTab() {
                       </div>
                   </div>
 
-                  {/* FI Readiness Pill */}
                   <div className="col-12 col-md-6 d-flex flex-column justify-content-center">
                       <div className="d-flex flex-column gap-1 mb-2">
                           <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-primary">
@@ -430,7 +426,6 @@ export default function DashboardTab() {
                   </div>
               </div>
 
-              {/* 4 Health Breakdown Cards */}
               <div className="row g-3 pt-4 mt-1 border-top border-secondary border-opacity-50">
                   <div className="col-6 col-md-3">
                       <ScoreCard title="Retirement Funding" score={planScore.retirementReadiness} max={50} tooltip="Measures your projected trajectory towards FI and funding a safe retirement without cash shortfalls." />
@@ -448,7 +443,6 @@ export default function DashboardTab() {
             </div>
           )}
 
-          {/* Core Dashboard Metric Cards */}
           <div className="row g-4 mb-4">
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
@@ -483,8 +477,9 @@ export default function DashboardTab() {
                   </div>
               </div>
 
+              {/* TARGET: tour-tax-breakdown added here */}
               <div className="col-12 col-md-6 col-xl-4">
-                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm tour-tax-breakdown">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-receipt text-danger me-2"></i>
                           <span className="me-1">Lifetime Tax Paid</span>
@@ -520,8 +515,8 @@ export default function DashboardTab() {
               </div>
           </div>
 
-          <div className="row g-4 mb-4">
-              <div className="col-12 col-xl-4">
+          <div className="row mb-4">
+              <div className="col-12 col-xl-4 mb-4 mb-xl-0">
                   <div className="rp-card border-secondary rounded-4 h-100 overflow-hidden shadow-sm">
                       <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3">
                           <h6 className="mb-0 fw-bold text-uppercase ls-1 text-center"><i className="bi bi-flag-fill text-warning me-2"></i>Milestones & Estate</h6>
@@ -666,7 +661,8 @@ export default function DashboardTab() {
 
           <div className="row mt-2">
               <div className="col-12">
-                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm d-flex flex-column" style={{ height: '600px' }}>
+                  {/* TARGET: tour-cashflow-chart added here */}
+                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm d-flex flex-column tour-cashflow-chart" style={{ height: '600px' }}>
                       <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-bar-chart-line-fill text-primary me-2"></i>Net Worth Composition Over Time</h6>
                       
                       {maxTotalNW > 1 ? (
