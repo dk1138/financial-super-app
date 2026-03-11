@@ -22,15 +22,62 @@ export const sampleProfile = {
   p1_income: 85000,
   p2_income: 75000,
 
-  // --- Expenses & Lifestyle ---
-  base_expenses: 60000,       // Current annual living expenses (excluding debt/mortgage)
-  retirement_expenses: 55000, // Expected annual living expenses in retirement
+  // --- Granular Living Expenses (Middle-Class Ontario) ---
+  // Representing approx $5,000/month in base lifestyle + bills (excluding mortgage/debt)
+  base_expenses: 60000,       
+  retirement_expenses: 55000, 
+  
+  // (Optional Granular Breakdown for your UI Cards)
+  expense_property_tax: 4800,
+  expense_home_insurance: 1200,
+  expense_utilities: 3600,
+  expense_groceries: 12000,
+  expense_transportation: 6000, // Gas, transit, car insurance
+  expense_childcare_activities: 4000, // After-school, sports
+  expense_entertainment: 6000,
+  expense_health_medical: 2400,
+  expense_travel_vacation: 5000,
+  expense_misc_buffer: 11000, // Uncategorized / buffer
 
-  // --- Real Estate & Debt ---
+  // --- Real Estate & Mortgages ---
   property_value: 850000,
   mortgage_balance: 280000,
   mortgage_rate: 4.5,
   mortgage_payment: 26000, // Annual mortgage payments ($2,166/mo)
+
+  // --- Consumer Debt ---
+  debt_balance: 25000,     // Financed family SUV
+  debt_rate: 6.5,          // 6.5% interest
+  debt_payment: 6000,      // $500/month car payment
+
+  // --- Future One-Time & Phased Expenses ---
+  // These will create realistic "spikes" in the cash flow chart
+  future_expenses: [
+    {
+      name: "Child University (RESP shortfalls / Support)",
+      amount: 15000, // $15k per year
+      startAge: 51,  // Starts when Sarah is 51 (child is ~18)
+      endAge: 54,    // Lasts 4 years
+      owner: "p1",
+      inflation_adjusted: true
+    },
+    {
+      name: "New Car Purchase",
+      amount: 35000,
+      startAge: 48,  // In 5 years
+      endAge: 48,
+      owner: "p1",
+      inflation_adjusted: true
+    },
+    {
+      name: "Home Renovation (Roof & Kitchen)",
+      amount: 30000,
+      startAge: 55,  // Approaching retirement
+      endAge: 55,
+      owner: "p1",
+      inflation_adjusted: true
+    }
+  ],
 
   // --- Liquid Assets (Middle Class Accumulation) ---
   p1_rrsp: 135000,
