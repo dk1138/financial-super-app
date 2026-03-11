@@ -7,19 +7,31 @@ import { calculatePlanScore } from './financeEngine';
 
 // --- EXACT AGE CALCULATOR (MONTH & YEAR) ---
 const calculateExactAge = (dobString: string): number => {
-  if (!dobString || typeof dobString !== 'string' || !dobString.includes('-')) return 0;
+  if (!dobString || typeof dobString !== 'string') return 0;
   
-  const [dobYear, dobMonth] = dobString.split('-').map(Number);
+  // Handle formats like "1997-04", "1997/04", or "1997-04-15"
+  const parts = dobString.split(/[-/T ]/); 
+  if (parts.length < 2) {
+      const year = parseInt(dobString, 10);
+      if (!isNaN(year)) return Math.max(0, new Date().getFullYear() - year);
+      return 0;
+  }
+
+  const dobYear = parseInt(parts[0], 10);
+  const dobMonth = parseInt(parts[1], 10);
+  const dobDay = parts.length >= 3 ? parseInt(parts[2], 10) : 1; // Default to 1st of month if no day provided
+  
   if (isNaN(dobYear) || isNaN(dobMonth)) return 0;
 
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth() + 1; // JS getMonth() is 0-indexed (Jan=0)
+  const currentDay = today.getDate();
 
   let age = currentYear - dobYear;
   
-  // If the current month is before the birth month, they haven't had their birthday yet this year
-  if (currentMonth < dobMonth) {
+  // If the current month is before the birth month, OR it's the birth month but the day hasn't arrived yet
+  if (currentMonth < dobMonth || (currentMonth === dobMonth && currentDay < dobDay)) {
     age--;
   }
   
@@ -228,7 +240,7 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
         });
     }
 
-    // Auto-correct ages based on exact date whenever data is loaded
+    // ALWAYS override and enforce precise ages based on the loaded date
     ['p1', 'p2'].forEach(player => {
         const dob = merged.inputs[`${player}_dob`];
         if (dob) {
@@ -262,7 +274,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const setData = useFinanceStore(state => state.setData);
   const workerRef = useRef<Worker | null>(null);
 
-  // Prevents saving empty default data over your real save file before it loads
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
@@ -340,12 +351,11 @@ export function useFinance() {
     planScore: store.planScore,
     isCalculating: store.isCalculating,
 
-    // --- UPDATED INPUT HANDLERS ---
+    // --- ENFORCED INPUT HANDLERS ---
     updateInput: (key: string, value: any) => store.setData((prev: any) => {
       const cleanVal = sanitizeValue(value);
       const extraInputs: any = {};
 
-      // If DOB changes, instantly recalculate exact age
       if (key === 'p1_dob' || key === 'p2_dob') {
         const player = key.split('_')[0];
         extraInputs[`${player}_age`] = calculateExactAge(cleanVal);
@@ -359,16 +369,25 @@ export function useFinance() {
 
     updateMultipleInputs: (updates: Record<string, any>) => {
        const cleanUpdates: Record<string, any> = {};
+       
+       // 1. Sanitize whatever the UI sent us
        Object.keys(updates).forEach(k => {
            cleanUpdates[k] = sanitizeValue(updates[k]);
-           
-           // If any of the multiple inputs is a DOB, instantly recalculate exact age
-           if (k === 'p1_dob' || k === 'p2_dob') {
-               const player = k.split('_')[0];
-               cleanUpdates[`${player}_age`] = calculateExactAge(cleanUpdates[k]);
-           }
        });
-       store.setData((prev: any) => ({ ...prev, inputs: { ...prev.inputs, ...cleanUpdates } }));
+
+       // 2. RUTHLESS OVERRIDE: If the UI passed a new Date of Birth, calculate the exact age and 
+       // overwrite whatever static age the UI tried to pass alongside it.
+       if (cleanUpdates.p1_dob !== undefined) {
+           cleanUpdates.p1_age = calculateExactAge(cleanUpdates.p1_dob);
+       }
+       if (cleanUpdates.p2_dob !== undefined) {
+           cleanUpdates.p2_age = calculateExactAge(cleanUpdates.p2_dob);
+       }
+
+       store.setData((prev: any) => ({ 
+           ...prev, 
+           inputs: { ...prev.inputs, ...cleanUpdates } 
+       }));
     },
     
     updateMode: (newMode: 'Single' | 'Couple') => store.setData((prev: any) => ({ ...prev, mode: newMode })),
