@@ -1,132 +1,126 @@
 // lib/sampleData.ts
 
 export const sampleProfile = {
-  // --- Core Setup ---
   mode: "Couple",
-  province: "ON", // Ontario taxes and rules apply
-
-  // --- Basic Info - Sarah (43) & John (45) ---
-  p1_dob: "1983-04",
-  p1_retireAge: 60,
-  p1_lifeExp: 95,
-  p2_dob: "1981-08",
-  p2_retireAge: 62, 
-  p2_lifeExp: 95,
-  retire_same_time: true, // They will retire together when Sarah is 60 and John is 62
-
-  // --- Dependents ---
-  num_children: 1,
-  child_1_dob: "2016-06", // 10-year-old child (CCB calculations will apply for a few more years)
-
-  // --- Income (Medium/Middle-Class) ---
-  p1_income: 85000,
-  p2_income: 75000,
-
-  // --- Granular Living Expenses (Middle-Class Ontario) ---
-  // Representing approx $5,000/month in base lifestyle + bills (excluding mortgage/debt)
-  base_expenses: 60000,       
-  retirement_expenses: 55000, 
+  useRealDollars: false,
+  expenseMode: "Simple",
   
-  // (Optional Granular Breakdown for your UI Cards)
-  expense_property_tax: 4800,
-  expense_home_insurance: 1200,
-  expense_utilities: 3600,
-  expense_groceries: 12000,
-  expense_transportation: 6000, // Gas, transit, car insurance
-  expense_childcare_activities: 4000, // After-school, sports
-  expense_entertainment: 6000,
-  expense_health_medical: 2400,
-  expense_travel_vacation: 5000,
-  expense_misc_buffer: 11000, // Uncategorized / buffer
+  // 1. Core Variables & Investment Accounts
+  inputs: {
+    p1_dob: "1983-04", p1_age: 43, p1_retireAge: 60, p1_lifeExp: 95,
+    p1_income: 85000, p1_income_growth: 2, p1_rrsp_match: 3, p1_rrsp_match_tier: 100,
+    p1_cash: 10000, p1_cash_ret: 2,
+    p1_tfsa: 65000, p1_tfsa_ret: 6,
+    p1_fhsa: 0, p1_fhsa_ret: 6,
+    p1_rrsp: 135000, p1_rrsp_ret: 6,
+    p1_resp: 0, p1_resp_ret: 6,
+    p1_lirf: 0, p1_lirf_ret: 6,
+    p1_lif: 0, p1_lif_ret: 5,
+    p1_rrif_acct: 0, p1_rrif_acct_ret: 5,
+    p1_nonreg: 10000, p1_nonreg_acb: 5000, p1_nonreg_ret: 5, p1_nonreg_yield: 2,
+    p1_crypto: 0, p1_crypto_acb: 0, p1_crypto_ret: 8,
+    p1_cpp_enabled: true, p1_cpp_est_base: 12000, p1_cpp_start: 65,
+    p1_oas_enabled: true, p1_oas_years: 40, p1_oas_start: 65,
 
-  // --- Real Estate & Mortgages ---
-  property_value: 850000,
-  mortgage_balance: 280000,
-  mortgage_rate: 4.5,
-  mortgage_payment: 26000, // Annual mortgage payments ($2,166/mo)
+    p2_dob: "1981-08", p2_age: 45, p2_retireAge: 62, p2_lifeExp: 95,
+    p2_income: 75000, p2_income_growth: 2, p2_rrsp_match: 0, p2_rrsp_match_tier: 100,
+    p2_cash: 5000, p2_cash_ret: 2,
+    p2_tfsa: 40000, p2_tfsa_ret: 6,
+    p2_fhsa: 0, p2_fhsa_ret: 6,
+    p2_rrsp: 105000, p2_rrsp_ret: 6,
+    p2_resp: 0, p2_resp_ret: 6,
+    p2_lirf: 0, p2_lirf_ret: 6,
+    p2_lif: 0, p2_lif_ret: 5,
+    p2_rrif_acct: 0, p2_rrif_acct_ret: 5,
+    p2_nonreg: 5000, p2_nonreg_acb: 2500, p2_nonreg_ret: 5, p2_nonreg_yield: 2,
+    p2_crypto: 0, p2_crypto_acb: 0, p2_crypto_ret: 8,
+    p2_cpp_enabled: true, p2_cpp_est_base: 10000, p2_cpp_start: 65,
+    p2_oas_enabled: true, p2_oas_years: 40, p2_oas_start: 65,
 
-  // --- Consumer Debt ---
-  debt_balance: 25000,     // Financed family SUV
-  debt_rate: 6.5,          // 6.5% interest
-  debt_payment: 6000,      // $500/month car payment
+    // DB Pension for Sarah
+    p1_db_lifetime: 35000, 
+    p1_db_lifetime_start: 60,
+    p1_db_indexed: true,
 
-  // --- Future One-Time & Phased Expenses ---
-  // These will create realistic "spikes" in the cash flow chart
-  future_expenses: [
+    inflation_rate: 2.1,
+    tax_province: "ON",
+    cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000, 
+    cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
+    
+    portfolio_allocation: "custom", 
+    use_glide_path: false,
+    fully_optimize_tax: true, 
+    oas_clawback_optimize: false, 
+    rrsp_meltdown_enabled: true,
+    enable_guardrails: true,
+    
+    skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
+    skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
+    exp_gogo_age: 75, exp_slow_age: 85,
+    pension_split_enabled: true,
+    retire_same_time: true
+  },
+
+  // 2. Real Estate (Ontario Family Home)
+  properties: [
     {
-      name: "Child University (RESP shortfalls / Support)",
-      amount: 15000, // $15k per year
-      startAge: 51,  // Starts when Sarah is 51 (child is ~18)
-      endAge: 54,    // Lasts 4 years
-      owner: "p1",
-      inflation_adjusted: true
-    },
-    {
-      name: "New Car Purchase",
-      amount: 35000,
-      startAge: 48,  // In 5 years
-      endAge: 48,
-      owner: "p1",
-      inflation_adjusted: true
-    },
-    {
-      name: "Home Renovation (Roof & Kitchen)",
-      amount: 30000,
-      startAge: 55,  // Approaching retirement
-      endAge: 55,
-      owner: "p1",
-      inflation_adjusted: true
+      name: "Primary Residence",
+      value: 850000,
+      mortgage: 280000,
+      rate: 4.5,
+      payment: 2166,
+      growth: 3.0,
+      includeInNW: true,
+      sellEnabled: false
     }
   ],
 
-  // --- Liquid Assets (Middle Class Accumulation) ---
-  p1_rrsp: 135000,
-  p1_tfsa: 65000,
-  p1_nonreg: 10000,
-  p2_rrsp: 105000,
-  p2_tfsa: 40000,
-  p2_nonreg: 5000,
+  // 3. Expected Inheritance / Windfall
+  windfalls: [
+    {
+      name: "Expected Inheritance",
+      amount: 150000,
+      year: 2045,
+      owner: "p1",
+      inflation_adjusted: false
+    }
+  ],
+  additionalIncome: [],
+  customAssets: [],
+  leaves: [],
 
-  // --- Annual Savings Contributions ---
-  p1_rrsp_cont: 6000,
-  p1_tfsa_cont: 3000,
-  p2_rrsp_cont: 4000,
-  p2_tfsa_cont: 3000,
+  // 4. Dependents (Activates CCB Engine)
+  dependents: [
+    {
+      name: "Child 1",
+      birthYear: 2016
+    }
+  ],
 
-  // --- Default Return Rates ---
-  p1_rrsp_ret: 6.0,
-  p1_tfsa_ret: 6.0,
-  p1_nonreg_ret: 5.0,
-  p2_rrsp_ret: 6.0,
-  p2_tfsa_ret: 6.0,
-  p2_nonreg_ret: 5.0,
+  // 5. Debt (Car Loan)
+  debt: [
+    {
+      name: "Car Loan",
+      balance: 25000,
+      rate: 6.5,
+      payment: 500,
+      type: "loan",
+      deductible: false
+    }
+  ],
 
-  // --- Government Benefits ---
-  p1_cpp_enabled: true,
-  p1_oas_enabled: true,
-  p1_cpp_start: 65,
-  p1_oas_start: 65,
-  p2_cpp_enabled: true,
-  p2_oas_enabled: true,
-  p2_cpp_start: 65,
-  p2_oas_start: 65,
+  // 6. Drawdown Strategies
+  strategies: { 
+    accum: ["tfsa", "rrsp", "fhsa", "resp", "nonreg", "cash", "crypto"], 
+    decum: ["nonreg", "cash", "tfsa", "fhsa", "rrsp", "rrif_acct", "lif", "lirf", "crypto"] 
+  },
 
-  // --- Defined Benefit (DB) Pension ---
-  // Let's assume Sarah (P1) is a teacher or government employee with a pension
-  p1_db_pension_amount: 35000,
-  p1_db_start_age: 60,
-  p1_db_indexed: true,
-
-  // --- Future Windfalls / Liquidity Events ---
-  // e.g., an expected inheritance or downsizing the house in the future
-  windfall_amount: 150000, 
-  windfall_year: 2045, // Arrives when Sarah is roughly 62
-
-  // --- Base Engine Assumptions ---
-  inflation_rate: 2.1,
-  asset_mode_advanced: false,
-  use_glide_path: true,
-  enable_guardrails: true,
-  pension_split_enabled: true,
-  rrsp_meltdown_enabled: true,
+  // 7. Granular Living Expenses
+  expensesByCategory: {
+    housing: { items: [{ name: "Property Tax, Insurance & Utilities", curr: 800, ret: 800, trans: 800, gogo: 800, slow: 800, nogo: 800, freq: 12 }] },
+    transport: { items: [{ name: "Vehicle / Insurance / Gas", curr: 600, ret: 400, trans: 400, gogo: 400, slow: 200, nogo: 100, freq: 12 }] },
+    lifestyle: { items: [{ name: "Dining, Travel & Hobbies", curr: 1500, ret: 2000, trans: 1800, gogo: 2000, slow: 800, nogo: 300, freq: 12 }] },
+    essentials: { items: [{ name: "Groceries / Health", curr: 1000, ret: 1000, trans: 1000, gogo: 1000, slow: 1200, nogo: 1500, freq: 12 }] },
+    other: { items: [{ name: "Miscellaneous Buffer", curr: 500, ret: 400, trans: 400, gogo: 400, slow: 300, nogo: 300, freq: 12 }] }
+  }
 };
