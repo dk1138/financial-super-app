@@ -13,9 +13,7 @@ import { FinanceProvider, useFinance } from '../lib/FinanceContext';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { StepperInput, InfoBtn } from '../components/SharedUI'; 
 
-// --- TUTORIAL IMPORTS ---
 import SplashScreen from '../components/SplashScreen';
-import Tutorial from '../components/Tutorial';
 import { sampleProfile } from '../lib/sampleData';
 
 function DashboardLayout() {
@@ -43,8 +41,6 @@ function DashboardLayout() {
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const [runTutorial, setRunTutorial] = useState(false);
-
   const isCouple = data.mode === 'Couple';
 
   useEffect(() => {
@@ -66,24 +62,9 @@ function DashboardLayout() {
       setTimeout(() => setToastMsg(''), 3000);
   };
 
-  // --- TUTORIAL START FUNCTION ---
-  const handleStartTutorial = () => {
-      if (financeContext.loadData) {
-          // Pass the correctly shaped sampleProfile directly
-          financeContext.loadData(sampleProfile);
-          
-          const sampleName = "Sarah & John (Sample)";
-          localStorage.setItem('active_plan_name', sampleName);
-          setActivePlanName(sampleName);
-      }
-      setActiveTab('dashboard');
-      setRunTutorial(true);
-  };
-
-  // --- LOAD DUMMY DATA WITHOUT TUTORIAL ---
+  // --- LOAD DUMMY DATA ---
   const handleLoadDummyData = () => {
       if (financeContext.loadData) {
-          // Pass the correctly shaped sampleProfile directly
           financeContext.loadData(sampleProfile);
           
           const sampleName = "Sarah & John (Sample)";
@@ -295,12 +276,8 @@ function DashboardLayout() {
   return (
     <div className="container-fluid pb-4 min-vh-100 transition-all position-relative d-flex flex-column" style={{ maxWidth: '1700px' }}>
       
-      {/* 1. MOUNT THE SPLASH SCREEN AND TUTORIAL */}
-      <SplashScreen 
-        onStartTutorial={handleStartTutorial} 
-        onLoadDummyData={handleLoadDummyData}
-      />
-      <Tutorial run={runTutorial} onFinish={() => setRunTutorial(false)} />
+      {/* 1. MOUNT THE SPLASH SCREEN */}
+      <SplashScreen onLoadDummyData={handleLoadDummyData} />
 
       <input 
           type="file" 
@@ -338,9 +315,8 @@ function DashboardLayout() {
               </h5>
               
               <div className="position-relative">
-                {/* 2. TARGET: tour-clear-data */}
                 <button 
-                    className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all tour-clear-data" 
+                    className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
                     type="button" 
                     onClick={() => setFileMenuOpen(!fileMenuOpen)} 
                     style={{ height: '36px' }}
@@ -447,9 +423,8 @@ function DashboardLayout() {
               <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
                 {tabs.map(tab => (
                   <li className="nav-item flex-fill" key={tab.id}>
-                    {/* 3. TARGET: tour-guardrails is added to the Strategy tab */}
                     <div 
-                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'} ${tab.id === 'strategy' ? 'tour-guardrails' : ''}`} 
+                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
                       onClick={() => setActiveTab(tab.id)}
                       style={{ fontSize: '0.85rem' }}
                     >

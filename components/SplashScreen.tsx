@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 
-// Add the new prop to the interface
 interface SplashScreenProps {
-  onStartTutorial: () => void;
   onLoadDummyData: () => void;
 }
 
-export default function SplashScreen({ onStartTutorial, onLoadDummyData }: SplashScreenProps) {
+export default function SplashScreen({ onLoadDummyData }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -22,12 +20,6 @@ export default function SplashScreen({ onStartTutorial, onLoadDummyData }: Splas
   const handleDismiss = () => {
     setIsVisible(false);
     localStorage.setItem("hasSeenSplash", "true");
-  };
-
-  const handleTutorialClick = () => {
-    setIsVisible(false);
-    localStorage.setItem("hasSeenSplash", "true");
-    onStartTutorial(); 
   };
 
   const handleDummyDataClick = () => {
@@ -94,30 +86,21 @@ export default function SplashScreen({ onStartTutorial, onLoadDummyData }: Splas
           <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions.
         </p>
 
-        {/* 3 OPTIONS MENU */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <button
-            onClick={handleTutorialClick}
+            onClick={handleDismiss}
             className="btn btn-primary w-100 d-flex align-items-center justify-content-center"
             style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
           >
-            <i className="bi bi-magic me-2 fs-5"></i> Guided Tutorial (Uses Sample Data)
+            <i className="bi bi-calculator me-2 fs-5"></i> Start Blank Plan
           </button>
           
           <button
             onClick={handleDummyDataClick}
-            className="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
+            className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center"
             style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
           >
-            <i className="bi bi-file-earmark-person me-2 fs-5"></i> Explore Sample Data Only
-          </button>
-
-          <button
-            onClick={handleDismiss}
-            className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center border-2"
-            style={{ padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
-          >
-            <i className="bi bi-calculator me-2 fs-5"></i> Start Blank Plan
+            <i className="bi bi-file-earmark-person me-2 fs-5"></i> Load Sample Data
           </button>
         </div>
       </div>
