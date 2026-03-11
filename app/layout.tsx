@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
-import SessionWrapper from "../components/SessionWrapper"; // <-- 1. Import the wrapper
-import SplashScreen from "../components/SplashScreen"; // <-- Import the new Splash Screen
+import SessionWrapper from "../components/SessionWrapper"; 
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +13,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // The data-bs-theme="dark" attribute below fixes the dark text issue!
   return (
     <html lang="en" data-bs-theme="dark">
       <head>
@@ -22,9 +20,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
       </head>
       <body>
-        <SplashScreen /> {/* <-- Add the Splash Screen right here */}
-        
-        <SessionWrapper> {/* <-- 2. Wrap your children and Analytics */}
+        <SessionWrapper> 
           {children}
           <Analytics />
         </SessionWrapper>
