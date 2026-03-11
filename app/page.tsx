@@ -43,7 +43,6 @@ function DashboardLayout() {
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // --- TUTORIAL STATE ---
   const [runTutorial, setRunTutorial] = useState(false);
 
   const isCouple = data.mode === 'Couple';
@@ -70,44 +69,28 @@ function DashboardLayout() {
   // --- TUTORIAL START FUNCTION ---
   const handleStartTutorial = () => {
       if (financeContext.loadData) {
-          // Construct the exact object shape the FinanceContext expects
-          const dummyPlan = {
-              mode: "Couple",            // Mode must be at the root
-              useRealDollars: false,
-              inputs: sampleProfile      // The rest goes into inputs
-          };
-          
-          financeContext.loadData(dummyPlan);
+          // Pass the correctly shaped sampleProfile directly
+          financeContext.loadData(sampleProfile);
           
           const sampleName = "Sarah & John (Sample)";
           localStorage.setItem('active_plan_name', sampleName);
           setActivePlanName(sampleName);
       }
-      // Switch to the dashboard tab so they can see the charts instantly
       setActiveTab('dashboard');
-      // Start the joyride
       setRunTutorial(true);
   };
 
   // --- LOAD DUMMY DATA WITHOUT TUTORIAL ---
   const handleLoadDummyData = () => {
       if (financeContext.loadData) {
-          // Construct the exact object shape the FinanceContext expects
-          const dummyPlan = {
-              mode: "Couple",            // Mode must be at the root
-              useRealDollars: false,
-              inputs: sampleProfile      // The rest goes into inputs
-          };
-
-          financeContext.loadData(dummyPlan);
+          // Pass the correctly shaped sampleProfile directly
+          financeContext.loadData(sampleProfile);
           
           const sampleName = "Sarah & John (Sample)";
           localStorage.setItem('active_plan_name', sampleName);
           setActivePlanName(sampleName);
       }
-      // Switch to the dashboard tab so they can see the charts instantly
       setActiveTab('dashboard');
-      // Notice we do NOT set runTutorial(true) here
   };
 
   const executeSave = () => {
