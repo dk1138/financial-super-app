@@ -9,30 +9,45 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [neverShowAgain, setNeverShowAgain] = useState(false);
 
   useEffect(() => {
-    // Check if the user has visited before
+    // 1. Check if the user has permanently opted out of the splash screen
+    const skipPermanently = localStorage.getItem("neverShowSplash") === "true";
+    if (skipPermanently) {
+      setIsVisible(false);
+      return;
+    }
+
+    // 2. Otherwise, check standard session/version visit status
     const hasSeenSplash = localStorage.getItem("hasSeenSplash");
     if (!hasSeenSplash) {
       setIsVisible(true);
     }
   }, []);
 
+  const savePreferences = () => {
+    if (neverShowAgain) {
+      localStorage.setItem("neverShowSplash", "true");
+    } else {
+      localStorage.setItem("hasSeenSplash", "true");
+    }
+  };
+
   const handleDismiss = () => {
-    // Just closes the modal and lets the app load normally from local storage
+    savePreferences();
     setIsVisible(false);
-    localStorage.setItem("hasSeenSplash", "true");
   };
 
   const handleStartBlankClick = () => {
+    savePreferences();
     setIsVisible(false);
-    localStorage.setItem("hasSeenSplash", "true");
     onStartBlankPlan(); 
   };
 
   const handleDummyDataClick = () => {
+    savePreferences();
     setIsVisible(false);
-    localStorage.setItem("hasSeenSplash", "true");
     onLoadDummyData(); 
   };
 
@@ -104,6 +119,21 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
           <div>
             <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions. For support, feedback, or inquiries, contact <a href="mailto:retirementplannerpro@gmail.com" style={{ color: "#0d6efd", textDecoration: "none", fontWeight: "600" }}>retirementplannerpro@gmail.com</a>.
           </div>
+        </div>
+
+        {/* NEVER SHOW AGAIN CHECKBOX */}
+        <div className="form-check d-flex justify-content-center align-items-center mb-3">
+          <input 
+            className="form-check-input me-2 mt-0" 
+            type="checkbox" 
+            id="neverShowAgain" 
+            checked={neverShowAgain}
+            onChange={(e) => setNeverShowAgain(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          <label className="form-check-label text-secondary" htmlFor="neverShowAgain" style={{ cursor: "pointer", fontSize: "0.9rem", userSelect: "none" }}>
+            Never show this screen again
+          </label>
         </div>
 
         {/* SIDE-BY-SIDE BUTTONS (3-COL) */}
