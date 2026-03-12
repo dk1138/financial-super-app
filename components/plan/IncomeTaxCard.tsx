@@ -86,7 +86,6 @@ export default function IncomeTaxCard() {
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
                                   </div>
                               )}
-                              {/* Future credits (Medical, Tuition, etc.) will map here */}
                           </div>
                       )}
                   </div>
@@ -187,32 +186,47 @@ export default function IncomeTaxCard() {
                       {showCredits[p] && (
                           <div className="p-3 bg-input border-top border-secondary border-opacity-25">
                               <div className="row g-3">
-                                  <div className="col-12 col-md-6 d-flex flex-column gap-3 justify-content-center pt-2">
+                                  
+                                  {/* Disability & Caregiver Block */}
+                                  <div className="col-12 col-md-6 d-flex flex-column gap-3 pt-1">
                                       <div className="form-check form-switch mb-0 d-flex align-items-center">
                                           <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_disability`} checked={data.inputs[`${p}_disability`] || false} onChange={(e) => updateInput(`${p}_disability`, e.target.checked)} />
                                           <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer" htmlFor={`${p}_disability`}>Disability Tax Credit</label>
                                       </div>
-                                      <div className="form-check form-switch mb-0 d-flex align-items-center">
-                                          <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_caregiver`} checked={data.inputs[`${p}_caregiver`] || false} onChange={(e) => updateInput(`${p}_caregiver`, e.target.checked)} />
-                                          <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer" htmlFor={`${p}_caregiver`}>Caregiver Amount</label>
+                                      
+                                      <div className="bg-black bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2 mt-1">
+                                          <div className="d-flex align-items-center mb-2">
+                                              <label className="form-label small fw-bold text-main mb-0 me-2">Canada Caregiver Credit</label>
+                                              <InfoBtn title="Canada Caregiver Amount" text="This non-refundable tax credit helps caregivers with the expenses involved with taking care of their spouse or common-law partner or dependant who has an impairment in physical or mental functions.<br/><br/>If both you and your spouse claim this credit, the engine will automatically split the eligible amount 50/50.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
+                                          </div>
+                                          <div className="form-check form-switch mb-2 d-flex align-items-center">
+                                              <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_caregiver_under_18`} checked={data.inputs[`${p}_caregiver_under_18`] || false} onChange={(e) => updateInput(`${p}_caregiver_under_18`, e.target.checked)} />
+                                              <label className="form-check-label small fw-medium text-muted ms-2 cursor-pointer" htmlFor={`${p}_caregiver_under_18`}>Dependant Under 18</label>
+                                          </div>
+                                          <div className="form-check form-switch mb-0 d-flex align-items-center">
+                                              <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_caregiver_over_18`} checked={data.inputs[`${p}_caregiver_over_18`] || false} onChange={(e) => updateInput(`${p}_caregiver_over_18`, e.target.checked)} />
+                                              <label className="form-check-label small fw-medium text-muted ms-2 cursor-pointer" htmlFor={`${p}_caregiver_over_18`}>Dependant 18 or Older</label>
+                                          </div>
                                       </div>
                                   </div>
                                   
-                                  <div className="col-12 col-md-6">
-                                      <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
-                                        Home Buyer (Year) <InfoBtn title="First-Time Home Buyer" text="Enter the year you plan to buy your first home to apply the $10,000 credit for that specific year."/>
-                                      </label>
-                                      <input type="number" className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main shadow-none rounded-3" placeholder="e.g. 2026" value={data.inputs[`${p}_first_time_home_buyer_year`] || ''} onChange={(e) => updateInput(`${p}_first_time_home_buyer_year`, e.target.value)} />
+                                  <div className="col-12 col-md-6 d-flex flex-column gap-3 pt-1">
+                                      <div>
+                                          <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
+                                            Home Buyer (Year) <InfoBtn title="First-Time Home Buyer" text="Enter the year you plan to buy your first home to apply the $10,000 credit for that specific year."/>
+                                          </label>
+                                          <input type="number" className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main shadow-none rounded-3" placeholder="e.g. 2026" value={data.inputs[`${p}_first_time_home_buyer_year`] || ''} onChange={(e) => updateInput(`${p}_first_time_home_buyer_year`, e.target.value)} />
+                                      </div>
+                                      <div>
+                                          <label className="form-label small text-muted mb-1">Medical Expenses ($/yr)</label>
+                                          <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
+                                      </div>
+                                      <div>
+                                          <label className="form-label small text-muted mb-1">Charitable Donations ($/yr)</label>
+                                          <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
+                                      </div>
                                   </div>
 
-                                  <div className="col-12 col-md-6">
-                                      <label className="form-label small text-muted mb-1">Medical Expenses ($/yr)</label>
-                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
-                                  </div>
-                                  <div className="col-12 col-md-6">
-                                      <label className="form-label small text-muted mb-1">Charitable Donations ($/yr)</label>
-                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
-                                  </div>
                                   <div className="col-12 col-md-6">
                                       <label className="form-label small text-muted mb-1">Tuition Paid ($/yr)</label>
                                       <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_tuition`] ?? ''} onChange={(val: any) => updateInput(`${p}_tuition`, val)} />

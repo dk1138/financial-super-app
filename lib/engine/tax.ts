@@ -179,9 +179,18 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
 
     let fedCaregiverCredit = 0;
     let provCaregiverCredit = 0;
-    if (credits.caregiver) {
-        fedCaregiverCredit = (constants.FED_CAREGIVER_AMOUNT || 8500) * baseInflation * lowestFedRate;
-        provCaregiverCredit = (constants.PROV_CAREGIVER_AMOUNT?.[province] || 5000) * baseInflation * provRateLowest;
+    
+    let under18Share = credits.caregiver_under_18_share || (credits.caregiver_under_18 ? 1 : 0);
+    let over18Share = credits.caregiver_over_18_share || (credits.caregiver_over_18 ? 1 : 0);
+
+    if (under18Share > 0) {
+        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_UNDER_18 || 2687) * baseInflation * lowestFedRate * under18Share;
+        provCaregiverCredit += (constants.PROV_CAREGIVER_AMOUNT_UNDER_18?.[province] || 0) * baseInflation * provRateLowest * under18Share;
+    }
+    
+    if (over18Share > 0) {
+        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_OVER_18 || 8601) * baseInflation * lowestFedRate * over18Share;
+        provCaregiverCredit += (constants.PROV_CAREGIVER_AMOUNT_OVER_18?.[province] || 5000) * baseInflation * provRateLowest * over18Share;
     }
 
     let fedMedicalCredit = 0;

@@ -647,9 +647,21 @@ export class FinanceEngine {
 
             const taxBrackets = getInflatedTaxData(this.CONSTANTS.TAX_DATA, baseInflation);
 
+            // Dynamic Caregiver Share Processing
+            let p1_under = this.inputs['p1_caregiver_under_18'] || false;
+            let p2_under = this.inputs['p2_caregiver_under_18'] || false;
+            let p1_over = this.inputs['p1_caregiver_over_18'] || false;
+            let p2_over = this.inputs['p2_caregiver_over_18'] || false;
+            
+            let under18_share_p1 = p1_under ? (p2_under ? 0.5 : 1) : 0;
+            let under18_share_p2 = p2_under ? (p1_under ? 0.5 : 1) : 0;
+            let over18_share_p1 = p1_over ? (p2_over ? 0.5 : 1) : 0;
+            let over18_share_p2 = p2_over ? (p1_over ? 0.5 : 1) : 0;
+
             let credits1 = {
                 disability: this.inputs['p1_disability'] || false,
-                caregiver: this.inputs['p1_caregiver'] || false,
+                caregiver_under_18_share: under18_share_p1,
+                caregiver_over_18_share: over18_share_p1,
                 medicalExpenses: this.getVal('p1_medical_expenses'),
                 donations: this.getVal('p1_donations'),
                 firstTimeHomeBuyer: parseInt(this.getRaw('p1_first_time_home_buyer_year')) === yr,
@@ -659,7 +671,8 @@ export class FinanceEngine {
 
             let credits2 = {
                 disability: this.inputs['p2_disability'] || false,
-                caregiver: this.inputs['p2_caregiver'] || false,
+                caregiver_under_18_share: under18_share_p2,
+                caregiver_over_18_share: over18_share_p2,
                 medicalExpenses: this.getVal('p2_medical_expenses'),
                 donations: this.getVal('p2_donations'),
                 firstTimeHomeBuyer: parseInt(this.getRaw('p2_first_time_home_buyer_year')) === yr,
