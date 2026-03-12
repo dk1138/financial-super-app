@@ -10,9 +10,13 @@ export function getInflatedTaxData(baseTaxData: any, baseInflation: number) {
                 return bracket * baseInflation;
             });
         }
-        if (data.surtax) { 
-            if (data.surtax.t1) data.surtax.t1 *= baseInflation; 
-            if (data.surtax.t2) data.surtax.t2 *= baseInflation; 
+        
+        // Handle the new scalable surtaxes array
+        if (data.surtaxes && Array.isArray(data.surtaxes)) { 
+            data.surtaxes = data.surtaxes.map((s: any) => ({
+                ...s,
+                threshold: s.threshold * baseInflation
+            }));
         } 
     });
     return taxData;
@@ -64,7 +68,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let yearlyAdditionalMaxPensionableEarnings = (constants.YAMPE || 85000) * baseInflation; 
     let eiMaxInsurableEarnings = (constants.EI_MAX_INSURABLE || 68900) * baseInflation; 
     
-    // BUG FIX: The $3500 CPP exemption is statutory and NEVER indexes with inflation
+    // The $3500 CPP exemption is statutory and NEVER indexes with inflation
     let cppExemption = constants.CPP_EXEMPTION || 3500;
 
     let cppRate = constants.CPP_RATE || 0.0495;
@@ -192,7 +196,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         if (don <= thresh) {
             fedDonationCredit = don * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15);
         } else {
-            let topRateInc = Math.max(0, craTaxableIncome - ((constants.BPA_PHASE_END_FED || 258482) * baseInflation)); // Income subject to 33% bracket
+            let topRateInc = Math.max(0, craTaxableIncome - ((constants.BPA_PHASE_END_FED || 258482) * baseInflation)); 
             let eligibleFor33 = Math.min(don - thresh, topRateInc);
             let eligibleFor29 = Math.max(0, don - thresh - eligibleFor33);
             fedDonationCredit = (thresh * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15)) + 
@@ -232,21 +236,18 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         provTax = Math.max(0, provTax - provDividendCredit);
         
         let surtax = 0; 
-        // BUG FIX: Surtax is calculated BEFORE LIFT and OTR are applied. 
-        if (taxData.ON.surtax) { 
-            if (provTax > taxData.ON.surtax.t1) {
-                surtax += (provTax - taxData.ON.surtax.t1) * taxData.ON.surtax.r1; 
-            }
-            if (provTax > taxData.ON.surtax.t2) {
-                surtax += (provTax - taxData.ON.surtax.t2) * taxData.ON.surtax.r2; 
-            }
-        } 
         
-        if (surtax > 0) {
-            if (provTax > (taxData.ON.surtax.t2 || 7446)) {
-                provMarginalRate *= 1.56; 
-            } else {
-                provMarginalRate *= 1.20;
+        // Surtax is calculated using the scalable array format BEFORE LIFT and OTR are applied.
+        if (taxData.ON.surtaxes && Array.isArray(taxData.ON.surtaxes)) {
+            let currentMarginalMultiplier = 1;
+            for (let s of taxData.ON.surtaxes) {
+                if (provTax > s.threshold) {
+                    surtax += (provTax - s.threshold) * s.rate;
+                    currentMarginalMultiplier += s.rate;
+                }
+            }
+            if (surtax > 0) {
+                provMarginalRate *= currentMarginalMultiplier;
             }
         }
         
@@ -298,8 +299,6 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
 
     } else {
         provTax = Math.max(0, provTax - provDividendCredit);
-        
-        // Note: PEI dropped its surtax. Code to handle PEI surtax has been safely removed. 
     }
 
     fedTax = Math.max(0, fedTax - fedDividendCredit);
