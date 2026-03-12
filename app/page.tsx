@@ -476,7 +476,7 @@ function DashboardLayout() {
                   <strong>Disclaimer:</strong> Retirement Planner Pro is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice. While we strive for mathematical accuracy, tax laws and economic variables are complex and subject to change. You must verify all calculations and consult with a certified financial planner or tax professional before making any financial decisions. The developer(s) assume no liability for any actions taken based on this tool.
               </p>
               <p className="text-muted mb-3" style={{ fontSize: '0.75rem' }}>
-                  This tool is for <strong>personal use only</strong>. For commercial use, integration, or licensing inquiries, please contact the developer.
+                  This tool is for <strong>personal use only</strong>. For commercial use, integration, licensing inquiries, or feedback, please contact <a href="mailto:retirementplannerpro@gmail.com" className="text-decoration-none fw-bold">retirementplannerpro@gmail.com</a>.
               </p>
               <p className="text-muted fw-bold ls-1" style={{ fontSize: '0.8rem' }}>
                   <i className="bi bi-shield-check text-success me-1"></i> Retirement Planner Pro © {new Date().getFullYear()}. Data is processed securely and locally.

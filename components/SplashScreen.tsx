@@ -91,7 +91,7 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
         {/* DISCLAIMER CARD */}
         <div style={{ backgroundColor: "#f8f9fa", color: "#495057", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #dee2e6", marginBottom: "1.5rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
           <i className="bi bi-info-circle-fill text-secondary fs-5 me-2" style={{ verticalAlign: "middle" }}></i>
-          <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions.
+          <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions. For support, feedback, or inquiries, contact <a href="mailto:retirementplannerpro@gmail.com" style={{ color: "#0d6efd", textDecoration: "none", fontWeight: "600" }}>retirementplannerpro@gmail.com</a>.
         </div>
 
         {/* SIDE-BY-SIDE BUTTONS */}
