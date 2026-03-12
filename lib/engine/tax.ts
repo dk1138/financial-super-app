@@ -46,7 +46,7 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
 
 export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
-        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0 };
+        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0 } };
     }
     
     let oasClawback = 0;
@@ -190,9 +190,12 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
 
     let fedDonationCredit = 0;
+    let provDonationCredit = 0;
     if (credits.donations > 0) {
         let don = credits.donations * baseInflation;
         let thresh = constants.FED_CHARITABLE_DONATION_THRESHOLD || 200;
+        
+        // Federal Donation Credit
         if (don <= thresh) {
             fedDonationCredit = don * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15);
         } else {
@@ -202,6 +205,14 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
             fedDonationCredit = (thresh * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15)) + 
                                 (eligibleFor33 * (constants.FED_CHARITABLE_DONATION_RATE_3 || 0.33)) +
                                 (eligibleFor29 * (constants.FED_CHARITABLE_DONATION_RATE_2 || 0.29));
+        }
+
+        // Provincial Donation Credit
+        let provHighest = taxData[province]?.rates?.[taxData[province]?.rates?.length - 1] || 0.1316;
+        if (don <= thresh) {
+            provDonationCredit = don * provRateLowest;
+        } else {
+            provDonationCredit = (thresh * provRateLowest) + ((don - thresh) * provHighest);
         }
     }
 
@@ -221,7 +232,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
     
     fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit - fedEmploymentCredit - fedDisabilityCredit - fedCaregiverCredit - fedMedicalCredit - fedDonationCredit - fedHomeBuyerCredit - fedTuitionCredit - fedStudentLoanCredit);
-    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit - provDisabilityCredit);
+    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit - provDisabilityCredit - provDonationCredit);
     
     let grossUp = isEligibleDividend ? (constants.DIVIDEND_GROSS_UP_ELIGIBLE || 1.38) : (constants.DIVIDEND_GROSS_UP_NON_ELIGIBLE || 1.15);
     let grossedUpDividend = actualDividendIncome * grossUp;
@@ -318,6 +329,9 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         cpp_ei: cppBasePremium + cppEnhancedPremium + eiPremium, 
         oas_clawback: oasClawback, 
         totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + eiPremium + oasClawback, 
-        margRate: actualMargRate 
+        margRate: actualMargRate,
+        nrtc: {
+            donations: fedDonationCredit + provDonationCredit
+        }
     };
 }

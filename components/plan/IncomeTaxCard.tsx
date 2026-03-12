@@ -8,6 +8,9 @@ export default function IncomeTaxCard() {
   
   // State for collapsible tax credits sections
   const [showCredits, setShowCredits] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  
+  // State for collapsible non-refundable tax credits breakdown in the tax box
+  const [showNrtc, setShowNrtc] = useState<Record<string, boolean>>({ p1: false, p2: false });
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -25,9 +28,14 @@ export default function IncomeTaxCard() {
   const hhNet = hhGross > 0 ? Math.max(0, hhGross - totalTax) : 0;
 
   const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleNrtc = (p: string) => setShowNrtc(prev => ({ ...prev, [p]: !prev[p] }));
 
-  const renderTaxBox = (taxDetails: any, gross: number) => {
+  const renderTaxBox = (taxDetails: any, gross: number, p: string) => {
       if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
+      
+      const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
+      const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
+
       return (
           <div className="border border-secondary rounded-4 mt-4 shadow-sm">
             <div className="bg-danger bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center justify-content-between rounded-top-4">
@@ -45,8 +53,39 @@ export default function IncomeTaxCard() {
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Federal Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span></div>
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Provincial Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.prov/gross)*100).toFixed(1)}%</span></span></div>
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">CPP / EI Premiums</span> <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
+              
               <div className="d-flex justify-content-between mt-1"><span className="text-danger fw-bold small">Total Tax Paid</span> <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
               <div className="d-flex justify-content-between"><span className="text-muted small fw-medium">Marginal Rate</span> <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span></div>
+
+              {/* Collapsible Applied Non-Refundable Tax Credits */}
+              {hasNrtc && (
+                  <div className="mt-2 pt-2 border-top border-secondary border-opacity-50">
+                      <div 
+                          className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none"
+                          onClick={() => toggleNrtc(p)}
+                      >
+                          <span className="text-info small fw-bold d-flex align-items-center gap-1">
+                              <i className={`bi bi-chevron-${showNrtc[p] ? 'up' : 'down'} small`}></i> Applied Non-Refundable Credits
+                          </span>
+                          <span className="small fw-bold text-info">
+                              -${Math.round(nrtcTotal).toLocaleString()}
+                          </span>
+                      </div>
+                      
+                      {showNrtc[p] && (
+                          <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-info ms-1 border-opacity-25">
+                              {taxDetails.nrtc.donations > 0 && (
+                                  <div className="d-flex justify-content-between">
+                                      <span className="text-muted small fst-italic">Charitable Donations</span>
+                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
+                                  </div>
+                              )}
+                              {/* Future credits (Medical, Tuition, etc.) will map here */}
+                          </div>
+                      )}
+                  </div>
+              )}
+
               <div className="d-flex justify-content-between mt-2 pt-3 border-top border-secondary"><span className="text-success fw-bold">After-Tax Net</span> <span className="text-success fw-bold fs-5">${Math.round(gross - taxDetails.totalTax).toLocaleString()}</span></div>
             </div>
           </div>
@@ -245,7 +284,7 @@ export default function IncomeTaxCard() {
                         </div>
                       );
                   })}
-                  {renderTaxBox(p === 'p1' ? results?.timeline?.[0]?.taxDetailsP1 : results?.timeline?.[0]?.taxDetailsP2, p === 'p1' ? p1Gross : p2Gross)}
+                  {renderTaxBox(p === 'p1' ? results?.timeline?.[0]?.taxDetailsP1 : results?.timeline?.[0]?.taxDetailsP2, p === 'p1' ? p1Gross : p2Gross, p)}
                 </div>
               </div>
             </div>
