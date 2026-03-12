@@ -74,6 +74,12 @@ export default function IncomeTaxCard() {
                       
                       {showNrtc[p] && (
                           <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-info ms-1 border-opacity-25">
+                              {taxDetails.nrtc.caregiver > 0 && (
+                                  <div className="d-flex justify-content-between">
+                                      <span className="text-muted small fst-italic">Caregiver Amount</span>
+                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
+                                  </div>
+                              )}
                               {taxDetails.nrtc.donations > 0 && (
                                   <div className="d-flex justify-content-between">
                                       <span className="text-muted small fst-italic">Charitable Donations</span>

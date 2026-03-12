@@ -46,7 +46,7 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
 
 export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
-        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0 } };
+        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0 } };
     }
     
     let oasClawback = 0;
@@ -178,8 +178,10 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
 
     let fedCaregiverCredit = 0;
+    let provCaregiverCredit = 0;
     if (credits.caregiver) {
         fedCaregiverCredit = (constants.FED_CAREGIVER_AMOUNT || 8500) * baseInflation * lowestFedRate;
+        provCaregiverCredit = (constants.PROV_CAREGIVER_AMOUNT?.[province] || 5000) * baseInflation * provRateLowest;
     }
 
     let fedMedicalCredit = 0;
@@ -236,7 +238,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
     
     fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit - fedEmploymentCredit - fedDisabilityCredit - fedCaregiverCredit - fedMedicalCredit - fedDonationCredit - fedHomeBuyerCredit - fedTuitionCredit - fedStudentLoanCredit);
-    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit - provDisabilityCredit - provDonationCredit);
+    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit - provDisabilityCredit - provCaregiverCredit - provDonationCredit);
     
     let grossUp = isEligibleDividend ? (constants.DIVIDEND_GROSS_UP_ELIGIBLE || 1.38) : (constants.DIVIDEND_GROSS_UP_NON_ELIGIBLE || 1.15);
     let grossedUpDividend = actualDividendIncome * grossUp;
@@ -335,7 +337,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + eiPremium + oasClawback, 
         margRate: actualMargRate,
         nrtc: {
-            donations: fedDonationCredit + provDonationCredit
+            donations: fedDonationCredit + provDonationCredit,
+            caregiver: fedCaregiverCredit + provCaregiverCredit
         }
     };
 }
