@@ -45,7 +45,7 @@ export default function PersonalInformationCard() {
 
   const handleAgeChange = (player: 'p1'|'p2', newAge: number) => {
       const currentYear = new Date().getFullYear();
-      const currentMonth = (data.inputs[`${player}_dob`] || "1990-01").split('-')[1];
+      const currentMonth = (data.inputs[`${player}_dob`] || "1990-01").split('-')[1] || "01";
       const newDobStr = `${currentYear - newAge}-${currentMonth}`;
       handleAgeChangeBase(player, newAge, newDobStr);
   };
@@ -131,19 +131,47 @@ export default function PersonalInformationCard() {
                 <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                         <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
-                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p1_dob} onChange={(val: string) => handleDobChange('p1', val)} /></div>
+                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                          <MonthYearStepper 
+                            min="1900-01" 
+                            max={`${new Date().getFullYear()}-12`} 
+                            value={data.inputs.p1_dob} 
+                            onChange={(val: string) => handleDobChange('p1', val)} 
+                          />
+                        </div>
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                         <span className="small text-muted fw-bold text-nowrap">Current Age</span>
-                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={18} max={100} value={data.inputs.p1_age ?? 38} onChange={(val: any) => handleAgeChange('p1', val)} /></div>
+                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                          <StepperInput 
+                            min={1} 
+                            max={99} 
+                            value={data.inputs.p1_age ?? 38} 
+                            onChange={(val: any) => handleAgeChange('p1', val)} 
+                          />
+                        </div>
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                         <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
-                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={100} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireChange('p1', val)} /></div>
+                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                          <StepperInput 
+                            min={data.inputs.p1_age ?? 18} 
+                            max={100} 
+                            value={data.inputs.p1_retireAge ?? 60} 
+                            onChange={(val: any) => handleRetireChange('p1', val)} 
+                          />
+                        </div>
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                         <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
-                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={Math.max(data.inputs.p1_age ?? 18, data.inputs.p1_retireAge ?? 60)} max={120} value={data.inputs.p1_lifeExp ?? 90} onChange={(val: any) => updateInput(`p1_lifeExp`, val)} /></div>
+                        <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                          <StepperInput 
+                            min={Math.max(data.inputs.p1_age ?? 18, data.inputs.p1_retireAge ?? 60)} 
+                            max={120} 
+                            value={data.inputs.p1_lifeExp ?? 90} 
+                            onChange={(val: any) => updateInput(`p1_lifeExp`, val)} 
+                          />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -161,19 +189,48 @@ export default function PersonalInformationCard() {
                     <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
-                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><MonthYearStepper value={data.inputs.p2_dob} onChange={(val: string) => handleDobChange('p2', val)} /></div>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                              <MonthYearStepper 
+                                min="1900-01" 
+                                max={`${new Date().getFullYear()}-12`} 
+                                value={data.inputs.p2_dob} 
+                                onChange={(val: string) => handleDobChange('p2', val)} 
+                              />
+                            </div>
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Current Age</span>
-                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={18} max={100} value={data.inputs.p2_age ?? 34} onChange={(val: any) => handleAgeChange('p2', val)} /></div>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                              <StepperInput 
+                                min={1} 
+                                max={99} 
+                                value={data.inputs.p2_age ?? 34} 
+                                onChange={(val: any) => handleAgeChange('p2', val)} 
+                              />
+                            </div>
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
-                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={100} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireChange('p2', val)} /></div>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                              <StepperInput 
+                                disabled={data.inputs.retire_same_time} 
+                                min={data.inputs.p2_age ?? 18} 
+                                max={100} 
+                                value={data.inputs.p2_retireAge ?? 60} 
+                                onChange={(val: any) => handleRetireChange('p2', val)} 
+                              />
+                            </div>
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
-                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}><StepperInput min={Math.max(data.inputs.p2_age ?? 18, data.inputs.p2_retireAge ?? 60)} max={120} value={data.inputs.p2_lifeExp ?? 95} onChange={(val: any) => updateInput(`p2_lifeExp`, val)} /></div>
+                            <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
+                              <StepperInput 
+                                min={Math.max(data.inputs.p2_age ?? 18, data.inputs.p2_retireAge ?? 60)} 
+                                max={120} 
+                                value={data.inputs.p2_lifeExp ?? 95} 
+                                onChange={(val: any) => updateInput(`p2_lifeExp`, val)} 
+                              />
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -63,23 +63,48 @@ const shiftDobYear = (dobString: string, targetAge: number): string => {
     return dayStr ? `${newYear}-${monthStr}-${dayStr}` : `${newYear}-${monthStr}`;
 };
 
-// --- 2-WAY BINDING SYNC ---
+// --- STRICT BOUNDARY ENFORCERS ---
+const boundAge = (age: number): number => {
+    if (isNaN(age)) return 30; // Safe fallback
+    return Math.max(1, Math.min(99, age)); // Clamps between 1 and 99
+};
+
+const boundDob = (dobString: string): string => {
+    if (!dobString || typeof dobString !== 'string') return `${new Date().getFullYear()}-01`;
+    const parts = dobString.split('-');
+    let year = parseInt(parts[0], 10);
+    if (isNaN(year)) return `${new Date().getFullYear()}-01`;
+    
+    const currentYear = new Date().getFullYear();
+    
+    // Enforce 1900 to Current Year boundaries
+    if (year < 1900) year = 1900;
+    if (year > currentYear) year = currentYear;
+    
+    return `${year}-${parts[1] || '01'}${parts[2] ? '-' + parts[2] : ''}`;
+};
+
+// --- 2-WAY BINDING SYNC WITH GUARDRAILS ---
 const syncAgeAndDob = (player: string, prevInputs: any, finalInputs: any) => {
-    const oldAge = prevInputs[`${player}_age`];
-    const newAge = finalInputs[`${player}_age`];
-    const oldDob = prevInputs[`${player}_dob`] || "1990-01";
-    const newDob = finalInputs[`${player}_dob`] || oldDob;
+    let oldAge = prevInputs[`${player}_age`];
+    let newAge = finalInputs[`${player}_age`];
+    let oldDob = prevInputs[`${player}_dob`] || "1990-01";
+    let newDob = finalInputs[`${player}_dob`] || oldDob;
 
     const ageChanged = oldAge !== newAge;
     const dobChanged = oldDob !== newDob;
 
     if (ageChanged && !dobChanged) {
-        // User clicked the Age Stepper. Shift the DOB year to match.
-        finalInputs[`${player}_dob`] = shiftDobYear(oldDob, newAge);
+        // User clicked the Age Stepper. Shift DOB and Enforce Bounds.
+        newAge = boundAge(newAge);
+        finalInputs[`${player}_age`] = newAge;
+        finalInputs[`${player}_dob`] = boundDob(shiftDobYear(oldDob, newAge));
     } 
     else if (dobChanged && !ageChanged) {
-        // User used the Month Picker. Recalculate exact age.
-        finalInputs[`${player}_age`] = calculateExactAge(newDob);
+        // User used the Month Picker. Recalculate Age and Enforce Bounds.
+        newDob = boundDob(newDob);
+        finalInputs[`${player}_dob`] = newDob;
+        finalInputs[`${player}_age`] = boundAge(calculateExactAge(newDob));
     }
     else if (ageChanged && dobChanged) {
         // UI sent both simultaneously. Determine true intent:
@@ -87,12 +112,13 @@ const syncAgeAndDob = (player: string, prevInputs: any, finalInputs: any) => {
         const newMonth = newDob.split('-')[1];
         
         if (oldMonth !== newMonth) {
-            // Month changed, so they definitely touched the DOB picker.
-            finalInputs[`${player}_age`] = calculateExactAge(newDob);
+            newDob = boundDob(newDob);
+            finalInputs[`${player}_dob`] = newDob;
+            finalInputs[`${player}_age`] = boundAge(calculateExactAge(newDob));
         } else {
-            // Month didn't change. UI probably guessed the new year poorly based on the Stepper.
-            // Ignore the UI's bad DOB guess and force the correct math.
-            finalInputs[`${player}_dob`] = shiftDobYear(oldDob, newAge);
+            newAge = boundAge(newAge);
+            finalInputs[`${player}_age`] = newAge;
+            finalInputs[`${player}_dob`] = boundDob(shiftDobYear(oldDob, newAge));
         }
     }
 };
@@ -288,11 +314,13 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
         });
     }
 
-    // ALWAYS correct precise ages based on the loaded date to prevent drift
+    // Apply Boundaries to legacy loaded data
     ['p1', 'p2'].forEach(player => {
-        const dob = merged.inputs[`${player}_dob`];
+        let dob = merged.inputs[`${player}_dob`];
         if (dob) {
-            merged.inputs[`${player}_age`] = calculateExactAge(dob);
+            dob = boundDob(dob);
+            merged.inputs[`${player}_dob`] = dob;
+            merged.inputs[`${player}_age`] = boundAge(calculateExactAge(dob));
         }
     });
 
@@ -324,7 +352,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const [hasHydrated, setHasHydrated] = useState(false);
 
-  // Keep a mutable ref of data so the background backup timer doesn't reset on every keystroke
   const dataRef = useRef(data);
   useEffect(() => {
     dataRef.current = data;
@@ -397,12 +424,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hasHydrated) return;
 
-    // Runs exactly once every 60 seconds, independently of typing
     const backupIntervalId = setInterval(() => {
       try {
         const backupName = "Latest Auto-Backup";
-        
-        // Save the LATEST data using the ref we created above
         localStorage.setItem(`rp_saved_plan_${backupName}`, JSON.stringify(dataRef.current));
         
         let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
@@ -410,15 +434,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           plans.unshift(backupName); 
           localStorage.setItem('rp_plan_list', JSON.stringify(plans));
         }
-        
-        console.log("Rotating backup updated.");
       } catch (err) {
-        console.error("Auto-Backup failed (Storage likely full):", err);
+        console.error("Auto-Backup failed:", err);
       }
-    }, 60 * 1000); // 1 minute
+    }, 60 * 1000); 
 
     return () => clearInterval(backupIntervalId);
-  }, [hasHydrated]); // NO data dependency! Timer will never reset.
+  }, [hasHydrated]);
 
   return <>{children}</>;
 }
