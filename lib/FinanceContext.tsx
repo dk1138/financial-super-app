@@ -387,6 +387,34 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(saveTimeoutId);
   }, [data, hasHydrated]);
 
+  // --- EFFECT 3: 3-MINUTE ROTATING BACKUP (FOR THE LOAD MENU) ---
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    // Every 3 minutes, save a hard copy to the UI's Saved Plans list
+    const backupIntervalId = setInterval(() => {
+      try {
+        const backupName = "Latest Auto-Backup";
+        
+        // 1. Save the file data
+        localStorage.setItem(`rp_saved_plan_${backupName}`, JSON.stringify(data));
+        
+        // 2. Ensure it exists in the Dropdown List
+        let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
+        if (!plans.includes(backupName)) {
+          plans.unshift(backupName); // Add it to the very top of the list
+          localStorage.setItem('rp_plan_list', JSON.stringify(plans));
+        }
+        
+        console.log("Rotating backup updated.");
+      } catch (err) {
+        console.error("Auto-Backup failed (Storage likely full):", err);
+      }
+    }, 3 * 60 * 1000); // 3 minutes in milliseconds
+
+    return () => clearInterval(backupIntervalId);
+  }, [data, hasHydrated]);
+
   return <>{children}</>;
 }
 
