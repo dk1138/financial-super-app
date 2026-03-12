@@ -30,9 +30,16 @@ export default function IncomeTaxCard() {
       if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
       return (
           <div className="border border-secondary rounded-4 mt-4 shadow-sm">
-            <div className="bg-danger bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
-                <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-receipt"></i></div>
-                <span className="fw-bold text-danger small text-uppercase ls-1">Estimated Tax Breakdown</span>
+            <div className="bg-danger bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center justify-content-between rounded-top-4">
+                <div className="d-flex align-items-center gap-3">
+                    <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-receipt"></i></div>
+                    <span className="fw-bold text-danger small text-uppercase ls-1">Estimated Tax Breakdown</span>
+                </div>
+                <InfoBtn 
+                    title="Applied Tax Credits" 
+                    align="right" 
+                    text="The tax engine calculates and applies non-refundable tax credits automatically based on your profile and inputs.<br/><br/><b>Automatic Credits:</b><br/>• Basic Personal Amount (Fed & Prov)<br/>• Age Amount (65+)<br/>• Pension Income Amount<br/>• Canada Employment Amount<br/>• CPP/EI Premium Credits<br/>• Dividend Tax Credits<br/><br/><b>User-Specified Credits:</b><br/>• Disability & Caregiver Amount<br/>• First-Time Home Buyer<br/>• Medical Expenses<br/>• Charitable Donations<br/>• Tuition & Student Loan Interest" 
+                />
             </div>
             <div className="p-3 bg-input d-flex flex-column gap-2 rounded-bottom-4">
               <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Federal Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span></div>
@@ -52,7 +59,7 @@ export default function IncomeTaxCard() {
           <i className="bi bi-cash-coin text-success fs-4 me-3"></i>
           <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
               5. Income & Taxation
-              <InfoBtn align="left" title="Income & Tax" text="Enter <b>Gross Annual Income</b> (before tax). The system automatically calculates Federal and Provincial taxes based on your selected Province." />
+              <InfoBtn align="left" title="Income & Tax" text="Enter <b>Gross Annual Income</b> (before tax). The system automatically calculates Federal and Provincial taxes based on your selected Province, automatically applying basic, age, and pension tax credits where eligible." />
           </h5>
       </div>
       <div className="card-body p-4">
