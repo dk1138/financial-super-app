@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 
 interface SplashScreenProps {
   onLoadDummyData: () => void;
+  onStartBlankPlan: () => void;
 }
 
 export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: SplashScreenProps) {
@@ -20,7 +21,7 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
   const handleStartBlankClick = () => {
     setIsVisible(false);
     localStorage.setItem("hasSeenSplash", "true");
-    onStartBlankPlan(); // <-- Trigger the reset
+    onStartBlankPlan(); 
   };
 
   const handleDummyDataClick = () => {
@@ -93,12 +94,8 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
           <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions.
         </div>
 
-<<<<<<< HEAD
         {/* SIDE-BY-SIDE BUTTONS */}
         <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
-=======
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
->>>>>>> d8ec699a0a014d12c84a92132f6314cc28d7150d
           <button
             onClick={handleStartBlankClick}
             className="btn btn-primary d-flex align-items-center justify-content-center"
