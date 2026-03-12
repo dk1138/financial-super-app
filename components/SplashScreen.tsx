@@ -77,21 +77,27 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
         </div>
 
         {/* WORK IN PROGRESS / BUG WARNING */}
-        <div style={{ backgroundColor: "#f8d7da", color: "#842029", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #f5c2c7", marginBottom: "1rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
-          <i className="bi bi-tools text-danger fs-5 me-2" style={{ verticalAlign: "middle" }}></i>
-          <strong>Work in Progress:</strong> This tool is in active development. You may encounter bugs, calculation adjustments, or unexpected behavior as we continue to build it.
+        <div style={{ display: "flex", alignItems: "flex-start", backgroundColor: "#f8d7da", color: "#842029", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #f5c2c7", marginBottom: "1rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
+          <i className="bi bi-tools text-danger fs-5 me-3" style={{ lineHeight: 1, marginTop: "0.1rem" }}></i>
+          <div>
+            <strong>Work in Progress:</strong> This tool is in active development. You may encounter bugs, calculation adjustments, or unexpected behavior as we continue to build it.
+          </div>
         </div>
 
         {/* DESKTOP OPTIMIZATION WARNING */}
-        <div style={{ backgroundColor: "#fff3cd", color: "#664d03", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #ffecb5", marginBottom: "1rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
-          <i className="bi bi-display text-warning fs-5 me-2" style={{ verticalAlign: "middle" }}></i>
-          <strong>Desktop Recommended:</strong> This tool features complex data tables and interactive charts that are optimized for larger screens. <strong>Mobile viewing is not supported.</strong>
+        <div style={{ display: "flex", alignItems: "flex-start", backgroundColor: "#fff3cd", color: "#664d03", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #ffecb5", marginBottom: "1rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
+          <i className="bi bi-display text-warning fs-5 me-3" style={{ lineHeight: 1, marginTop: "0.1rem" }}></i>
+          <div>
+            <strong>Desktop Recommended:</strong> This tool features complex data tables and interactive charts that are optimized for larger screens. <strong>Mobile viewing is not supported.</strong>
+          </div>
         </div>
         
         {/* DISCLAIMER CARD */}
-        <div style={{ backgroundColor: "#f8f9fa", color: "#495057", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #dee2e6", marginBottom: "1.5rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
-          <i className="bi bi-info-circle-fill text-secondary fs-5 me-2" style={{ verticalAlign: "middle" }}></i>
-          <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions. For support, feedback, or inquiries, contact <a href="mailto:retirementplannerpro@gmail.com" style={{ color: "#0d6efd", textDecoration: "none", fontWeight: "600" }}>retirementplannerpro@gmail.com</a>.
+        <div style={{ display: "flex", alignItems: "flex-start", backgroundColor: "#f8f9fa", color: "#495057", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #dee2e6", marginBottom: "1.5rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
+          <i className="bi bi-info-circle-fill text-secondary fs-5 me-3" style={{ lineHeight: 1, marginTop: "0.1rem" }}></i>
+          <div>
+            <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions. For support, feedback, or inquiries, contact <a href="mailto:retirementplannerpro@gmail.com" style={{ color: "#0d6efd", textDecoration: "none", fontWeight: "600" }}>retirementplannerpro@gmail.com</a>.
+          </div>
         </div>
 
         {/* SIDE-BY-SIDE BUTTONS */}
