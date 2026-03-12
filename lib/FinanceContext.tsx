@@ -324,6 +324,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const [hasHydrated, setHasHydrated] = useState(false);
 
+  // Keep a mutable ref of data so the background backup timer doesn't reset on every keystroke
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   useEffect(() => {
     try {
       const savedData = localStorage.getItem('retirement_plan_data');
@@ -387,22 +393,21 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(saveTimeoutId);
   }, [data, hasHydrated]);
 
-  // --- EFFECT 3: 3-MINUTE ROTATING BACKUP (FOR THE LOAD MENU) ---
+  // --- EFFECT 3: 1-MINUTE ROTATING BACKUP ---
   useEffect(() => {
     if (!hasHydrated) return;
 
-    // Every 3 minutes, save a hard copy to the UI's Saved Plans list
+    // Runs exactly once every 60 seconds, independently of typing
     const backupIntervalId = setInterval(() => {
       try {
         const backupName = "Latest Auto-Backup";
         
-        // 1. Save the file data
-        localStorage.setItem(`rp_saved_plan_${backupName}`, JSON.stringify(data));
+        // Save the LATEST data using the ref we created above
+        localStorage.setItem(`rp_saved_plan_${backupName}`, JSON.stringify(dataRef.current));
         
-        // 2. Ensure it exists in the Dropdown List
         let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
         if (!plans.includes(backupName)) {
-          plans.unshift(backupName); // Add it to the very top of the list
+          plans.unshift(backupName); 
           localStorage.setItem('rp_plan_list', JSON.stringify(plans));
         }
         
@@ -410,10 +415,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error("Auto-Backup failed (Storage likely full):", err);
       }
-    }, 3 * 60 * 1000); // 3 minutes in milliseconds
+    }, 60 * 1000); // 1 minute
 
     return () => clearInterval(backupIntervalId);
-  }, [data, hasHydrated]);
+  }, [hasHydrated]); // NO data dependency! Timer will never reset.
 
   return <>{children}</>;
 }
