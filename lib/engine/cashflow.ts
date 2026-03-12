@@ -163,8 +163,32 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
     
     const MARGINAL_TOLERANCE = 50; 
     const withdrawalStrategies = overrideStrategies || inputs.strategies?.decum || ['nonreg', 'tfsa', 'rrsp'];
-    // UPDATED: Look for specific withdrawal timing
     const timing = inputs.withdrawal_timing || inputs.cashflow_timing || 'end';
+
+    // Parse the new credits dynamically inside handleDeficit
+    const getNum = (val: any) => { 
+        if (typeof val === 'number') return val; 
+        if (!val) return 0; 
+        return Number(String(val).replace(/[^0-9.-]+/g,"")) || 0; 
+    };
+    
+    let credits1 = { 
+        donations: getNum(inputs['p1_donations']),
+        tuition: getNum(inputs['p1_tuition']),
+        studentLoanInterest: getNum(inputs['p1_student_loan_interest']),
+        medicalExpenses: getNum(inputs['p1_medical_expenses']),
+        disability: inputs['p1_disability'] || false,
+        caregiver: inputs['p1_caregiver'] || false,
+    };
+    
+    let credits2 = { 
+        donations: getNum(inputs['p2_donations']),
+        tuition: getNum(inputs['p2_tuition']),
+        studentLoanInterest: getNum(inputs['p2_student_loan_interest']),
+        medicalExpenses: getNum(inputs['p2_medical_expenses']),
+        disability: inputs['p2_disability'] || false,
+        caregiver: inputs['p2_caregiver'] || false,
+    };
 
     let hasBalance = (person: any, accountType: string, prefix: string) => {
         if (accountType === 'tfsa') return (person.tfsa + (person.tfsa_successor || 0)) > 0;
@@ -291,8 +315,8 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
             const typeP2 = indexP2 < currentStrategies.length ? currentStrategies[indexP2] : null;
             if (!typeP1 && !typeP2) break;
 
-            const marginalRate1 = calculateTaxDetailed(runningTaxInc1, province, taxBrackets, constants, oasReceived1, oasThresholdInflation, earnedIncome1, baseInflation, dividendIncome1, age1, eligPension1, alive2 ? runningTaxInc2 : -1).margRate;
-            const marginalRate2 = calculateTaxDetailed(runningTaxInc2, province, taxBrackets, constants, oasReceived2, oasThresholdInflation, earnedIncome2, baseInflation, dividendIncome2, age2, eligPension2, alive1 ? runningTaxInc1 : -1).margRate;
+            const marginalRate1 = calculateTaxDetailed(runningTaxInc1, province, taxBrackets, constants, oasReceived1, oasThresholdInflation, earnedIncome1, baseInflation, dividendIncome1, age1, eligPension1, alive2 ? runningTaxInc2 : -1, true, credits1).margRate;
+            const marginalRate2 = calculateTaxDetailed(runningTaxInc2, province, taxBrackets, constants, oasReceived2, oasThresholdInflation, earnedIncome2, baseInflation, dividendIncome2, age2, eligPension2, alive1 ? runningTaxInc1 : -1, true, credits2).margRate;
 
             let withdrawTarget: any = null;
             if (!typeP1) withdrawTarget = 'p2';

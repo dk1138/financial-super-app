@@ -193,26 +193,30 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let provDonationCredit = 0;
     if (credits.donations > 0) {
         let don = credits.donations * baseInflation;
-        let thresh = constants.FED_CHARITABLE_DONATION_THRESHOLD || 200;
+        let thresh = constants.CHARITABLE_DONATION_THRESHOLD || 200;
         
         // Federal Donation Credit
+        let fedRate1 = constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15;
+        let fedRate2 = constants.FED_CHARITABLE_DONATION_RATE_2 || 0.29;
+        let fedRate3 = constants.FED_CHARITABLE_DONATION_RATE_3 || 0.33;
+        
         if (don <= thresh) {
-            fedDonationCredit = don * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15);
+            fedDonationCredit = don * fedRate1;
         } else {
             let topRateInc = Math.max(0, craTaxableIncome - ((constants.BPA_PHASE_END_FED || 258482) * baseInflation)); 
             let eligibleFor33 = Math.min(don - thresh, topRateInc);
             let eligibleFor29 = Math.max(0, don - thresh - eligibleFor33);
-            fedDonationCredit = (thresh * (constants.FED_CHARITABLE_DONATION_RATE_1 || 0.15)) + 
-                                (eligibleFor33 * (constants.FED_CHARITABLE_DONATION_RATE_3 || 0.33)) +
-                                (eligibleFor29 * (constants.FED_CHARITABLE_DONATION_RATE_2 || 0.29));
+            fedDonationCredit = (thresh * fedRate1) + (eligibleFor33 * fedRate3) + (eligibleFor29 * fedRate2);
         }
 
         // Provincial Donation Credit
-        let provHighest = taxData[province]?.rates?.[taxData[province]?.rates?.length - 1] || 0.1316;
+        let provRate1 = constants.PROV_DONATION_RATE_1?.[province] || provRateLowest;
+        let provRate2 = constants.PROV_DONATION_RATE_2?.[province] || (taxData[province]?.rates?.[taxData[province]?.rates?.length - 1] || 0.1316);
+
         if (don <= thresh) {
-            provDonationCredit = don * provRateLowest;
+            provDonationCredit = don * provRate1;
         } else {
-            provDonationCredit = (thresh * provRateLowest) + ((don - thresh) * provHighest);
+            provDonationCredit = (thresh * provRate1) + ((don - thresh) * provRate2);
         }
     }
 
