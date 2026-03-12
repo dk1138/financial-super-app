@@ -18,6 +18,12 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
     }
   }, []);
 
+  const handleDismiss = () => {
+    // Just closes the modal and lets the app load normally from local storage
+    setIsVisible(false);
+    localStorage.setItem("hasSeenSplash", "true");
+  };
+
   const handleStartBlankClick = () => {
     setIsVisible(false);
     localStorage.setItem("hasSeenSplash", "true");
@@ -100,23 +106,36 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
           </div>
         </div>
 
-        {/* SIDE-BY-SIDE BUTTONS */}
-        <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
+        {/* SIDE-BY-SIDE BUTTONS (3-COL) */}
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+          
+          <button
+            onClick={handleDismiss}
+            className="btn btn-success d-flex align-items-center justify-content-center px-2"
+            style={{ flex: 1, padding: "0.75rem 0", fontSize: "0.9rem", borderRadius: "8px", fontWeight: "600" }}
+            title="Continue with your currently saved browser data"
+          >
+            <i className="bi bi-arrow-right-circle me-1 fs-5"></i> Continue
+          </button>
+
           <button
             onClick={handleStartBlankClick}
-            className="btn btn-primary d-flex align-items-center justify-content-center"
-            style={{ flex: 1, padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
+            className="btn btn-primary d-flex align-items-center justify-content-center px-2"
+            style={{ flex: 1, padding: "0.75rem 0", fontSize: "0.9rem", borderRadius: "8px", fontWeight: "600" }}
+            title="Clear all data and start a new blank plan"
           >
-            <i className="bi bi-calculator me-2 fs-5"></i> Start Blank Plan
+            <i className="bi bi-file-earmark-plus me-1 fs-5"></i> Blank Plan
           </button>
           
           <button
             onClick={handleDummyDataClick}
-            className="btn btn-outline-secondary d-flex align-items-center justify-content-center"
-            style={{ flex: 1, padding: "0.75rem", fontSize: "1rem", borderRadius: "8px", fontWeight: "600" }}
+            className="btn btn-outline-secondary d-flex align-items-center justify-content-center px-2"
+            style={{ flex: 1, padding: "0.75rem 0", fontSize: "0.9rem", borderRadius: "8px", fontWeight: "600" }}
+            title="Load the app with fake demo data"
           >
-            <i className="bi bi-file-earmark-person me-2 fs-5"></i> Load Sample Data
+            <i className="bi bi-people me-1 fs-5"></i> Sample Data
           </button>
+
         </div>
       </div>
     </div>
