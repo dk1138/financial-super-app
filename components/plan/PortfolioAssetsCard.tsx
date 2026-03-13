@@ -173,28 +173,38 @@ export default function PortfolioAssetsCard() {
                           </div>
 
                           {/* --- COMPACT STANDARD ACCOUNTS --- */}
-                          {ACCOUNT_TYPES.map(acct => (
-                              <div className="d-flex align-items-center gap-2 p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 w-100" key={`${p}_${acct.id}`}>
-                                  <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
-                                      <div className="d-flex align-items-center gap-1">
-                                          <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
-                                          <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                          {ACCOUNT_TYPES.map(acct => {
+                              const bal = Number(data.inputs[`${p}_${acct.id}`]) || 0;
+                              const showFhsaWarning = acct.id === 'fhsa' && bal > 40000;
+
+                              return (
+                                  <div className="d-flex align-items-center gap-2 p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 w-100" key={`${p}_${acct.id}`}>
+                                      <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
+                                          <div className="d-flex align-items-center gap-1">
+                                              <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
+                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                                              {showFhsaWarning && (
+                                                  <i className="bi bi-exclamation-triangle-fill text-warning ms-1" 
+                                                     title="The lifetime contribution limit for an FHSA is $40,000. Ensure any amount above this represents investment growth, not over-contributions." 
+                                                     style={{ cursor: 'help', fontSize: '0.85rem' }}></i>
+                                              )}
+                                          </div>
+                                          <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
                                       </div>
-                                      <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
-                                  </div>
-                                  <div style={{flex: '1 1 0%', minWidth: '80px'}}>
-                                      <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
-                                  </div>
-                                  <div style={{flex: '0 0 75px'}}>
-                                      <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
-                                  </div>
-                                  {showAssetMixUI && (
+                                      <div style={{flex: '1 1 0%', minWidth: '80px'}}>
+                                          <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
+                                      </div>
                                       <div style={{flex: '0 0 75px'}}>
-                                          <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
+                                          <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
                                       </div>
-                                  )}
-                              </div>
-                          ))}
+                                      {showAssetMixUI && (
+                                          <div style={{flex: '0 0 75px'}}>
+                                              <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
+                                          </div>
+                                      )}
+                                  </div>
+                              );
+                          })}
                           
                           {/* --- NON-REG & CRYPTO --- */}
                           {['nonreg', 'crypto'].map(acct => (
@@ -264,6 +274,7 @@ export default function PortfolioAssetsCard() {
                                           const globalIdx = data.customAssets.indexOf(ca);
                                           const updateCa = (field: string, val: any) => updateArrayItem('customAssets', globalIdx, field, val);
                                           const isNonReg = ca.type === 'nonreg' || ca.type === 'crypto';
+                                          const showCaWarning = ca.type === 'fhsa' && (Number(ca.balance) || 0) > 40000;
 
                                           return (
                                               <div className="d-flex flex-column p-2 bg-input border border-secondary rounded-3 shadow-sm mb-2 w-100" key={`ca_${globalIdx}`}>
@@ -279,8 +290,13 @@ export default function PortfolioAssetsCard() {
                                                       <div style={{flex: '1 1 0%', minWidth: '60px'}}>
                                                           <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-input text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
                                                       </div>
-                                                      <div style={{flex: '1 1 0%', minWidth: '80px'}}>
-                                                          <CurrencyInput className="form-control form-control-sm" value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />
+                                                      <div style={{flex: '1 1 0%', minWidth: '80px'}} className="d-flex align-items-center gap-1 position-relative">
+                                                          <CurrencyInput className={`form-control form-control-sm ${showCaWarning ? 'border-warning' : ''}`} value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />
+                                                          {showCaWarning && (
+                                                              <i className="bi bi-exclamation-triangle-fill text-warning position-absolute" 
+                                                                 title="The lifetime contribution limit for an FHSA is $40,000. Ensure any amount above this represents investment growth, not over-contributions." 
+                                                                 style={{ right: '6px', top: '50%', transform: 'translateY(-50%)', cursor: 'help', fontSize: '0.8rem', zIndex: 5 }}></i>
+                                                          )}
                                                       </div>
                                                       <div style={{flex: '0 0 75px'}}>
                                                           <PercentInput disabled={hasAutoAllocation && ca.type !== 'cash'} className="form-control form-control-sm px-1" value={ca.rate} onChange={(val: any) => updateCa('rate', val)} />
