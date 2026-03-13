@@ -50,19 +50,27 @@ export default function LivingExpensesCard() {
       <div className="card-body p-3 p-md-4">
         
         {expenseAdvancedMode && (
-          <div className="row g-4 mb-4 p-4 border border-secondary rounded-4 surface-card shadow-sm">
-            <div className="col-md-6 d-flex align-items-center justify-content-between bg-input p-2 px-3 rounded-3 border border-secondary">
-                <label className="form-label text-success fw-bold mb-0 text-nowrap">Go-Go Age Ends:</label>
-                <div style={{width: '180px'}}><StepperInput min={60} max={100} value={data.inputs.exp_gogo_age || 75} onChange={(val: any) => {
-                    updateInput('exp_gogo_age', val);
-                    if (val > (data.inputs.exp_slow_age || 85)) updateInput('exp_slow_age', val);
-                }} /></div>
-            </div>
-            <div className="col-md-6 d-flex align-items-center justify-content-between bg-input p-2 px-3 rounded-3 border border-secondary">
-                <label className="form-label text-primary fw-bold mb-0 text-nowrap">Slow-Go Age Ends:</label>
-                <div style={{width: '180px'}}><StepperInput min={60} max={120} value={data.inputs.exp_slow_age || 85} onChange={(val: any) => {
-                    if (val >= (data.inputs.exp_gogo_age || 75)) updateInput('exp_slow_age', val);
-                }} /></div>
+          <div className="card border-secondary surface-card shadow-sm rounded-4 mb-4">
+            <div className="card-body p-3">
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                    <div className="d-flex align-items-center justify-content-between bg-input p-2 px-3 rounded-3 border border-secondary h-100">
+                        <label className="form-label text-success fw-bold mb-0 text-nowrap">Go-Go Age Ends:</label>
+                        <div style={{width: '180px'}}><StepperInput min={60} max={100} value={data.inputs.exp_gogo_age || 75} onChange={(val: any) => {
+                            updateInput('exp_gogo_age', val);
+                            if (val > (data.inputs.exp_slow_age || 85)) updateInput('exp_slow_age', val);
+                        }} /></div>
+                    </div>
+                </div>
+                <div className="col-12 col-md-6">
+                    <div className="d-flex align-items-center justify-content-between bg-input p-2 px-3 rounded-3 border border-secondary h-100">
+                        <label className="form-label text-primary fw-bold mb-0 text-nowrap">Slow-Go Age Ends:</label>
+                        <div style={{width: '180px'}}><StepperInput min={60} max={120} value={data.inputs.exp_slow_age || 85} onChange={(val: any) => {
+                            if (val >= (data.inputs.exp_gogo_age || 75)) updateInput('exp_slow_age', val);
+                        }} /></div>
+                    </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
