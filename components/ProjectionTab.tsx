@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
+import html2canvas from 'html2canvas';
 
 const getRrifFactor = (age: number) => {
     if (age < 71) return 1 / (90 - age);
@@ -17,8 +18,18 @@ const getRrifFactor = (age: number) => {
 export default function ProjectionTab() {
   const { data, results } = useFinance();
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
+  
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const isCouple = data.mode === 'Couple';
+
+  const showToast = (msg: string) => {
+      setToastMsg(msg);
+      setTimeout(() => setToastMsg(''), 4000);
+  };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
     return (
@@ -117,6 +128,28 @@ export default function ProjectionTab() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+  };
+
+  const exportToPNG = async () => {
+      if (!tableRef.current) return;
+      setIsExporting(true);
+      showToast('Generating high-res image of the table...');
+      try {
+          setTimeout(async () => {
+              const canvas = await html2canvas(tableRef.current!, { backgroundColor: '#16181d', scale: 2 });
+              const url = canvas.toDataURL('image/png');
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
+              link.click();
+              showToast('✅ Table image downloaded successfully!');
+              setIsExporting(false);
+          }, 300);
+      } catch (err) {
+          console.error(err);
+          showToast('❌ Failed to download image.');
+          setIsExporting(false);
+      }
   };
 
   let totalTaxPaid = 0;
@@ -517,6 +550,15 @@ export default function ProjectionTab() {
   return (
     <div className="p-3 p-md-4">
       
+      {toastMsg && (
+          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
+              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
+                  {isExporting && <span className="spinner-border spinner-border-sm me-2"></span>}
+                  {toastMsg}
+              </div>
+          </div>
+      )}
+
       <div className="row g-2 g-md-3 mb-4">
           <div className="col-12 col-md-4 col-xl">
               <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
@@ -557,16 +599,37 @@ export default function ProjectionTab() {
               </div>
           </div>
 
-          <div className="col-12 col-md-4 col-xl cursor-pointer" onClick={exportToCSV}>
-              <div className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75">
+          <div className="col-12 col-md-4 col-xl position-relative">
+              <div 
+                  className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75 cursor-pointer"
+                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
+              >
                   <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap">
-                      <i className="bi bi-filetype-csv fs-5 me-2"></i> Export
+                      {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download fs-5 me-2"></i>}
+                      Export
                   </span>
               </div>
+              {exportMenuOpen && (
+                  <>
+                      <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
+                      <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '150px'}}>
+                          <li>
+                              <button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
+                                  <i className="bi bi-filetype-csv me-2"></i> Export to CSV
+                              </button>
+                          </li>
+                          <li>
+                              <button className="dropdown-item py-2 fw-bold text-success" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
+                                  <i className="bi bi-image me-2"></i> Export to PNG
+                              </button>
+                          </li>
+                      </ul>
+                  </>
+              )}
           </div>
       </div>
 
-      <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm">
+      <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm" ref={tableRef}>
         <div className="table-responsive hide-scrollbar" style={{ maxHeight: '75vh' }}>
           
           <table className="table table-hover align-middle mb-0" style={{ tableLayout: 'fixed', minWidth: '1100px', width: '100%' }}>
