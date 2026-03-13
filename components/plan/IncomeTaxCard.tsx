@@ -200,12 +200,12 @@ export default function IncomeTaxCard() {
                       </div>
                       <div className="p-3 bg-input rounded-bottom-4">
                           <div className="row g-3">
-                              <div className="col-12 col-md-6">
-                                  <label className="form-label small text-muted mb-1">Max Match (%)</label>
+                              <div className="col-12 col-md-6 d-flex flex-column">
+                                  <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1" style={{ minHeight: '24px' }}>Max Match (%)</label>
                                   <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match`]} onChange={(val: any) => updateInput(`${p}_rrsp_match`, val)} />
                               </div>
-                              <div className="col-12 col-md-6">
-                                  <label className="form-label small text-muted mb-1 d-flex align-items-center">Match Rate (%) <InfoBtn title="Match Rate" text="If they match 50 cents on the dollar, enter 50."/></label>
+                              <div className="col-12 col-md-6 d-flex flex-column">
+                                  <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1" style={{ minHeight: '24px' }}>Match Rate (%) <InfoBtn title="Match Rate" text="If they match 50 cents on the dollar, enter 50."/></label>
                                   <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match_tier`]} onChange={(val: any) => updateInput(`${p}_rrsp_match_tier`, val)} />
                               </div>
                           </div>
