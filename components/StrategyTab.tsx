@@ -19,6 +19,7 @@ export default function StrategyTab() {
   const { data, updateInput, updateStrategy } = useFinance();
   
   const isCouple = data.mode === 'Couple';
+  const isOptimized = data.inputs.fully_optimize_tax ?? false;
 
   // --- INSTANT-SWAP DRAG & DROP ENGINE ---
   const [draggingType, setDraggingType] = useState<'accum' | 'decum' | null>(null);
@@ -142,7 +143,7 @@ export default function StrategyTab() {
 
                 {/* Decumulation */}
                 <div className="col-12 col-xl-6">
-                    <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
+                    <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card position-relative">
                         <div className="bg-primary bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
                             <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
                                 <i className="bi bi-wallet2 fs-5"></i>
@@ -152,9 +153,33 @@ export default function StrategyTab() {
                                 <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of draining accounts during retirement</span>
                             </div>
                         </div>
-                        <div className="p-3 bg-transparent h-100">
+                        
+                        <div 
+                            className="p-3 bg-transparent h-100 transition-all" 
+                            style={{ 
+                                opacity: isOptimized ? 0.3 : 1, 
+                                pointerEvents: isOptimized ? 'none' : 'auto',
+                                filter: isOptimized ? 'grayscale(0.8)' : 'none'
+                            }}
+                        >
                             {renderDraggableList('decum')}
                         </div>
+
+                        {/* OVERLAY FOR SMART OPTIMIZER */}
+                        {isOptimized && (
+                            <div className="position-absolute top-50 start-50 translate-middle w-100 px-4" style={{ zIndex: 10 }}>
+                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-4 text-center d-flex flex-column align-items-center justify-content-center backdrop-blur">
+                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow" style={{width: '50px', height: '50px'}}>
+                                        <i className="bi bi-magic fs-4"></i>
+                                    </div>
+                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1">Smart Optimizer Active</span>
+                                    <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.8rem'}}>
+                                        The engine is automatically calculating the most tax-efficient withdrawal order every year. Manual sorting is disabled.
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             </div>
