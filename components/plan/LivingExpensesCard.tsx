@@ -102,16 +102,16 @@ export default function LivingExpensesCard() {
                                 {data.expensesByCategory[cat].items.map((exp:any, idx:number) => (
                                     <tr key={`${cat}_${idx}`} className="border-bottom border-secondary border-opacity-25">
                                         <td className="ps-4 py-2">
-                                            <input type="text" maxLength={50} className="form-control form-control-sm bg-black bg-opacity-25 border border-secondary fw-bold text-main shadow-none rounded-3" placeholder="Item name..." value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
+                                            <input type="text" maxLength={50} className="form-control form-control-sm bg-input border border-secondary fw-bold text-main shadow-none rounded-3" placeholder="Item name..." value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
                                         </td>
-                                        <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.curr ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'curr', val)} /></td>
-                                        {expenseAdvancedMode && <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.trans ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'trans', val)} /></td>}
-                                        <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.ret ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'ret', val)} /></td>
+                                        <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-input border-secondary" value={exp.curr ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'curr', val)} /></td>
+                                        {expenseAdvancedMode && <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary rounded-3 bg-input border-secondary" value={exp.trans ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'trans', val)} /></td>}
+                                        <td className="py-2"><CurrencyInput className="form-control form-control-sm rounded-3 bg-input border-secondary" value={exp.ret ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'ret', val)} /></td>
                                         {expenseAdvancedMode && (
                                             <>
-                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm text-success rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.gogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'gogo', val)} /></td>
-                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.slow ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'slow', val)} /></td>
-                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm text-danger rounded-3 bg-black bg-opacity-25 border-secondary" value={exp.nogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'nogo', val)} /></td>
+                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm text-success rounded-3 bg-input border-secondary" value={exp.gogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'gogo', val)} /></td>
+                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary rounded-3 bg-input border-secondary" value={exp.slow ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'slow', val)} /></td>
+                                            <td className="py-2"><CurrencyInput className="form-control form-control-sm text-danger rounded-3 bg-input border-secondary" value={exp.nogo ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'nogo', val)} /></td>
                                             </>
                                         )}
                                         <td className="py-2 text-center">
