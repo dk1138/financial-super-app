@@ -237,9 +237,26 @@ export default function DashboardTab() {
   const totalInvestmentGrowth = finalPort - initialPort - totalContributions + totalWithdrawals;
   const effTaxRate = totalGrossInflow > 0 ? (totalTaxPaid / totalGrossInflow) * 100 : 0;
 
-  const retYearData = results.timeline.find((y: any) => y.p1Age === data.inputs.p1_retireAge) || results.timeline[0];
+  // --- MILESTONES MATH ---
+  const retYearIndex = results.timeline.findIndex((y: any) => y.p1Age >= data.inputs.p1_retireAge);
+  const validRetYearIndex = retYearIndex >= 0 ? retYearIndex : 0;
+  const retYearData = results.timeline[validRetYearIndex];
+  
+  // 1. Initial Withdrawal Rate
+  const preRetYearObj = validRetYearIndex > 0 ? results.timeline[validRetYearIndex - 1] : retYearData;
+  let startRetLiquidNW = preRetYearObj.liquidNW;
+  if (validRetYearIndex === 0) {
+      startRetLiquidNW = ['tfsa', 'fhsa', 'rrsp', 'lirf', 'lif', 'rrif_acct', 'nonreg', 'cash', 'crypto']
+          .reduce((sum, acct) => sum + (Number(data.inputs[`p1_${acct}`]) || 0) + (data.mode === 'Couple' ? (Number(data.inputs[`p2_${acct}`]) || 0) : 0), 0);
+      startRetLiquidNW += data.customAssets?.reduce((sum: number, a: any) => sum + (Number(a.balance) || 0), 0) || 0;
+  }
+  const retDayWd = Object.values(retYearData.flows?.withdrawals || {}).reduce((a: any, b: any) => a + b, 0) as number;
+  const initialWithdrawalRate = startRetLiquidNW > 0 ? (retDayWd / startRetLiquidNW) * 100 : 0;
+
+  // 2. Retirement Day Net Worth
   const retDayNW = getRealValue(retYearData.liquidNW + (retYearData.reIncludedEq || 0), retYearData.year);
 
+  // 3. Peak Net Worth
   let peakNW = 0;
   let peakAge = 0;
   results.timeline.forEach((y: any) => {
@@ -526,6 +543,20 @@ export default function DashboardTab() {
                               <span className="text-muted fw-bold">Retirement Day NW <span className="small fw-normal ms-1">(Age {data.inputs.p1_retireAge})</span></span>
                               <span className="fw-bold text-info" title={formatExact(retDayNW)}>{formatCurrency(retDayNW)}</span>
                           </div>
+
+                          <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
+                              <span className="text-muted fw-bold d-flex align-items-center">
+                                  Initial Withdrawal Rate 
+                                  <InfoBtn align="left" title="Initial Withdrawal Rate" text="The percentage of your liquid portfolio withdrawn during your first year of retirement. The famous '4% Rule' suggests keeping this below 4% to minimize the risk of portfolio depletion over a 30-year retirement."/>
+                              </span>
+                              <span className={`fw-bold d-flex align-items-center ${initialWithdrawalRate > 4 ? 'text-warning' : 'text-info'}`}>
+                                  {initialWithdrawalRate > 4 && (
+                                      <i className="bi bi-exclamation-triangle-fill me-2" title={`Historically, withdrawal rates over 4% carry a higher risk of portfolio depletion over a 30+ year retirement. Your rate is ${initialWithdrawalRate.toFixed(1)}%.`} style={{cursor: 'help'}}></i>
+                                  )}
+                                  {initialWithdrawalRate.toFixed(1)}%
+                              </span>
+                          </div>
+
                           <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
                               <span className="text-muted fw-bold">Peak Net Worth</span>
                               <span className="fw-bold text-success" title={formatExact(peakNW)}>{formatCurrency(peakNW)} <span className="text-muted small fw-normal ms-1">(Age {peakAge})</span></span>
