@@ -86,13 +86,18 @@ export default function IncomeTaxCard() {
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
                                   </div>
                               )}
+                              {taxDetails.nrtc.homeBuyer > 0 && (
+                                  <div className="d-flex justify-content-between">
+                                      <span className="text-muted small fst-italic">First-Time Home Buyer</span>
+                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.homeBuyer).toLocaleString()}</span>
+                                  </div>
+                              )}
                               {taxDetails.nrtc.donations > 0 && (
                                   <div className="d-flex justify-content-between">
                                       <span className="text-muted small fst-italic">Charitable Donations</span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
                                   </div>
                               )}
-                              {/* Future credits (Tuition, etc.) will map here */}
                           </div>
                       )}
                   </div>
@@ -228,11 +233,21 @@ export default function IncomeTaxCard() {
                                   </div>
                                   
                                   <div className="col-12 col-md-6 d-flex flex-column gap-3 pt-1">
-                                      <div>
-                                          <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
-                                            Home Buyer (Year) <InfoBtn title="First-Time Home Buyer" text="Enter the year you plan to buy your first home to apply the $10,000 credit for that specific year."/>
-                                          </label>
-                                          <input type="number" className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main shadow-none rounded-3" placeholder="e.g. 2026" value={data.inputs[`${p}_first_time_home_buyer_year`] || ''} onChange={(e) => updateInput(`${p}_first_time_home_buyer_year`, e.target.value)} />
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-2 border border-secondary border-opacity-25">
+                                          <span className="small fw-medium text-muted d-flex align-items-center gap-1">
+                                              Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year." />
+                                          </span>
+                                          <select 
+                                              className="form-select form-select-sm bg-transparent border-0 text-main fw-bold shadow-none text-end py-0 pe-4" 
+                                              style={{ width: 'auto', cursor: 'pointer' }}
+                                              value={data.inputs[`${p}_first_time_home_buyer_year`] || ''} 
+                                              onChange={(e) => updateInput(`${p}_first_time_home_buyer_year`, e.target.value)}
+                                          >
+                                              <option value="" className="text-dark">None</option>
+                                              {Array.from({length: 51}, (_, i) => new Date().getFullYear() + i).map(year => (
+                                                  <option key={year} value={year} className="text-dark">{year}</option>
+                                              ))}
+                                          </select>
                                       </div>
                                       <div>
                                           <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
