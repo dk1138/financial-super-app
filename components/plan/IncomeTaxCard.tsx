@@ -74,6 +74,15 @@ export default function IncomeTaxCard() {
                       
                       {showNrtc[p] && (
                           <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-info ms-1 border-opacity-25">
+                              {taxDetails.nrtc.disability > 0 && (
+                                  <div className="d-flex justify-content-between align-items-center">
+                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
+                                          Disability Tax Credit
+                                          <InfoBtn title="Disability Tax Credit Math" text="A non-refundable tax credit that reduces the income tax you may have to pay. The base amount is multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> Base Amount × Lowest Tax Rate" />
+                                      </span>
+                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.disability).toLocaleString()}</span>
+                                  </div>
+                              )}
                               {taxDetails.nrtc.caregiver > 0 && (
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
