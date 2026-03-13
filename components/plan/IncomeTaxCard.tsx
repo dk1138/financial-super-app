@@ -46,7 +46,7 @@ export default function IncomeTaxCard() {
                 <InfoBtn 
                     title="Applied Tax Credits" 
                     align="right" 
-                    text="The tax engine calculates and applies non-refundable tax credits automatically based on your profile and inputs.<br/><br/><b>Automatic Credits:</b><br/>• Basic Personal Amount (Fed & Prov)<br/>• Age Amount (65+)<br/>• Pension Income Amount<br/>• Canada Employment Amount<br/>• CPP/EI Premium Credits<br/>• Dividend Tax Credits<br/><br/><b>User-Specified Credits:</b><br/>• Disability & Caregiver Amount<br/>• First-Time Home Buyer<br/>• Medical Expenses<br/>• Charitable Donations<br/>• Tuition & Student Loan Interest" 
+                    text="The tax engine calculates and applies non-refundable tax credits automatically based on your profile and inputs.<br/><br/><b>Automatic Credits:</b><br/>• Basic Personal Amount (Fed & Prov)<br/>• Age Amount (65+)<br/>• Pension Income Amount<br/>• Canada Employment Amount<br/>• CPP/EI Premium Credits<br/>• Dividend Tax Credits<br/><br/><b>User-Specified Credits:</b><br/>• Disability & Caregiver Amount<br/>• First-Time Home Buyer<br/>• Medical Expenses<br/>• Charitable Donations" 
                 />
             </div>
             <div className="p-3 bg-input d-flex flex-column gap-2 rounded-bottom-4">
@@ -218,23 +218,30 @@ export default function IncomeTaxCard() {
                       
                       {showCredits[p] && (
                           <div className="p-3 bg-input border-top border-secondary border-opacity-25">
-                              <div className="row g-3">
+                              <div className="row g-2">
                                   
-                                  {/* Disability & Caregiver Block */}
-                                  <div className="col-12 col-md-6 d-flex flex-column gap-3 pt-1">
-                                      <div className="form-check form-switch mb-0 d-flex align-items-center">
-                                          <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_disability`} checked={data.inputs[`${p}_disability`] || false} onChange={(e) => updateInput(`${p}_disability`, e.target.checked)} />
-                                          <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer" htmlFor={`${p}_disability`}>Disability Tax Credit</label>
+                                  {/* Left Column: Disability & Caregiver */}
+                                  <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
+                                      
+                                      {/* Disability Tax Credit */}
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                          <span className="small fw-medium text-main d-flex align-items-center gap-1">
+                                              Disability Tax Credit
+                                          </span>
+                                          <div className="form-check form-switch mb-0">
+                                              <input className="form-check-input cursor-pointer m-0 shadow-none" type="checkbox" id={`${p}_disability`} checked={data.inputs[`${p}_disability`] || false} onChange={(e) => updateInput(`${p}_disability`, e.target.checked)} />
+                                          </div>
                                       </div>
                                       
-                                      <div className="bg-black bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2 mt-1">
-                                          <div className="d-flex align-items-center mb-2">
-                                              <label className="form-label small fw-bold text-main mb-0 me-2">Canada Caregiver Credit</label>
+                                      {/* Caregiver Block */}
+                                      <div className="bg-black bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2">
+                                          <div className="d-flex align-items-center px-1 mb-2">
+                                              <span className="small fw-medium text-main mb-0 me-1">Canada Caregiver Credit</span>
                                               <InfoBtn title="Canada Caregiver Amount" text="This non-refundable tax credit helps caregivers with the expenses involved with taking care of their spouse or common-law partner or dependant who has an impairment in physical or mental functions.<br/><br/>Enter the number of eligible dependants you are claiming for this credit.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </div>
                                           
                                           <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 mb-2 border border-secondary border-opacity-25 user-select-none">
-                                              <span className="small fw-medium text-muted">Dependant Under 18</span>
+                                              <span className="small fw-medium text-muted">Under 18</span>
                                               <div className="d-flex align-items-center gap-3">
                                                   <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_under_18`, Math.max(0, (data.inputs[`${p}_caregiver_under_18`] || 0) - 1))}></i>
                                                   <span className="fw-bold text-main" style={{width: '12px', textAlign: 'center'}}>{data.inputs[`${p}_caregiver_under_18`] || 0}</span>
@@ -243,7 +250,7 @@ export default function IncomeTaxCard() {
                                           </div>
 
                                           <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 border border-secondary border-opacity-25 user-select-none">
-                                              <span className="small fw-medium text-muted">Dependant 18 or Older</span>
+                                              <span className="small fw-medium text-muted">18 or Older</span>
                                               <div className="d-flex align-items-center gap-3">
                                                   <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_over_18`, Math.max(0, (data.inputs[`${p}_caregiver_over_18`] || 0) - 1))}></i>
                                                   <span className="fw-bold text-main" style={{width: '12px', textAlign: 'center'}}>{data.inputs[`${p}_caregiver_over_18`] || 0}</span>
@@ -253,12 +260,15 @@ export default function IncomeTaxCard() {
                                       </div>
                                   </div>
                                   
-                                  <div className="col-12 col-md-6 d-flex flex-column gap-3 pt-1">
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 border border-secondary border-opacity-25 user-select-none">
-                                          <span className="small fw-medium text-muted d-flex align-items-center gap-1">
+                                  {/* Right Column: Home Buyer, Medical, Donations */}
+                                  <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
+                                      
+                                      {/* Home Buyer */}
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25 user-select-none">
+                                          <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year."/>
                                           </span>
-                                          <div className="d-flex align-items-center gap-2">
+                                          <div className="d-flex align-items-center gap-2 bg-black bg-opacity-25 rounded-pill px-2 py-1 border border-secondary border-opacity-25">
                                               <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => {
                                                   const cy = new Date().getFullYear();
                                                   const yr = data.inputs[`${p}_first_time_home_buyer_year`];
@@ -274,25 +284,26 @@ export default function IncomeTaxCard() {
                                               }}></i>
                                           </div>
                                       </div>
-                                      <div>
-                                          <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
-                                              Medical Expenses ($/yr) <InfoBtn title="Medical Expense Tax Credit" text="Enter your total eligible medical expenses for the year. The system automatically calculates the eligible amount by subtracting the threshold (the lesser of 3% of your net income or the maximum base amount) before applying the credit rate." />
-                                          </label>
-                                          <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
-                                      </div>
-                                      <div>
-                                          <label className="form-label small text-muted mb-1">Charitable Donations ($/yr)</label>
-                                          <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
-                                      </div>
-                                  </div>
 
-                                  <div className="col-12 col-md-6">
-                                      <label className="form-label small text-muted mb-1">Tuition Paid ($/yr)</label>
-                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_tuition`] ?? ''} onChange={(val: any) => updateInput(`${p}_tuition`, val)} />
-                                  </div>
-                                  <div className="col-12 col-md-6">
-                                      <label className="form-label small text-muted mb-1">Student Loan Interest ($)</label>
-                                      <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_student_loan_interest`] ?? ''} onChange={(val: any) => updateInput(`${p}_student_loan_interest`, val)} />
+                                      {/* Medical Expenses */}
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                          <span className="small fw-medium text-main d-flex align-items-center gap-1">
+                                              Medical Exp. <InfoBtn title="Medical Expense Tax Credit" text="Enter your total eligible medical expenses for the year. The system automatically calculates the eligible amount by subtracting the threshold (the lesser of 3% of your net income or the maximum base amount) before applying the credit rate." />
+                                          </span>
+                                          <div style={{ width: '120px' }}>
+                                              <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
+                                          </div>
+                                      </div>
+
+                                      {/* Charitable Donations */}
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                          <span className="small fw-medium text-main d-flex align-items-center gap-1">
+                                              Donations
+                                          </span>
+                                          <div style={{ width: '120px' }}>
+                                              <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
+                                          </div>
+                                      </div>
                                   </div>
                               </div>
                           </div>
