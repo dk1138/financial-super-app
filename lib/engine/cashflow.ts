@@ -171,16 +171,12 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
         return Number(String(val).replace(/[^0-9.-]+/g,"")) || 0; 
     };
     
-    // Dynamic Caregiver Share Processing
-    let p1_under = inputs['p1_caregiver_under_18'] || false;
-    let p2_under = inputs['p2_caregiver_under_18'] || false;
-    let p1_over = inputs['p1_caregiver_over_18'] || false;
-    let p2_over = inputs['p2_caregiver_over_18'] || false;
+    // Dynamic Caregiver Count Processing (User inputs exact number of dependents claimed)
+    let under18_count_p1 = Number(inputs['p1_caregiver_under_18']) || 0;
+    let over18_count_p1 = Number(inputs['p1_caregiver_over_18']) || 0;
     
-    let under18_share_p1 = p1_under ? (p2_under ? 0.5 : 1) : 0;
-    let under18_share_p2 = p2_under ? (p1_under ? 0.5 : 1) : 0;
-    let over18_share_p1 = p1_over ? (p2_over ? 0.5 : 1) : 0;
-    let over18_share_p2 = p2_over ? (p1_over ? 0.5 : 1) : 0;
+    let under18_count_p2 = Number(inputs['p2_caregiver_under_18']) || 0;
+    let over18_count_p2 = Number(inputs['p2_caregiver_over_18']) || 0;
     
     let credits1 = { 
         donations: getNum(inputs['p1_donations']),
@@ -188,8 +184,8 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
         studentLoanInterest: getNum(inputs['p1_student_loan_interest']),
         medicalExpenses: getNum(inputs['p1_medical_expenses']),
         disability: inputs['p1_disability'] || false,
-        caregiver_under_18_share: under18_share_p1,
-        caregiver_over_18_share: over18_share_p1,
+        caregiver_under_18_share: under18_count_p1,
+        caregiver_over_18_share: over18_count_p1,
     };
     
     let credits2 = { 
@@ -198,8 +194,8 @@ export function handleDeficit(deficitAmount: number, person1: any, person2: any,
         studentLoanInterest: getNum(inputs['p2_student_loan_interest']),
         medicalExpenses: getNum(inputs['p2_medical_expenses']),
         disability: inputs['p2_disability'] || false,
-        caregiver_under_18_share: under18_share_p2,
-        caregiver_over_18_share: over18_share_p2,
+        caregiver_under_18_share: under18_count_p2,
+        caregiver_over_18_share: over18_count_p2,
     };
 
     let hasBalance = (person: any, accountType: string, prefix: string) => {

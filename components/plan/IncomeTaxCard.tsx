@@ -197,15 +197,25 @@ export default function IncomeTaxCard() {
                                       <div className="bg-black bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2 mt-1">
                                           <div className="d-flex align-items-center mb-2">
                                               <label className="form-label small fw-bold text-main mb-0 me-2">Canada Caregiver Credit</label>
-                                              <InfoBtn title="Canada Caregiver Amount" text="This non-refundable tax credit helps caregivers with the expenses involved with taking care of their spouse or common-law partner or dependant who has an impairment in physical or mental functions.<br/><br/>If both you and your spouse claim this credit, the engine will automatically split the eligible amount 50/50.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
+                                              <InfoBtn title="Canada Caregiver Amount" text="This non-refundable tax credit helps caregivers with the expenses involved with taking care of their spouse or common-law partner or dependant who has an impairment in physical or mental functions.<br/><br/>Enter the number of eligible dependants you are claiming for this credit.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </div>
-                                          <div className="form-check form-switch mb-2 d-flex align-items-center">
-                                              <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_caregiver_under_18`} checked={data.inputs[`${p}_caregiver_under_18`] || false} onChange={(e) => updateInput(`${p}_caregiver_under_18`, e.target.checked)} />
-                                              <label className="form-check-label small fw-medium text-muted ms-2 cursor-pointer" htmlFor={`${p}_caregiver_under_18`}>Dependant Under 18</label>
+                                          
+                                          <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 mb-2 border border-secondary border-opacity-25 user-select-none">
+                                              <span className="small fw-medium text-muted">Dependant Under 18</span>
+                                              <div className="d-flex align-items-center gap-3">
+                                                  <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_under_18`, Math.max(0, (data.inputs[`${p}_caregiver_under_18`] || 0) - 1))}></i>
+                                                  <span className="fw-bold text-main" style={{width: '12px', textAlign: 'center'}}>{data.inputs[`${p}_caregiver_under_18`] || 0}</span>
+                                                  <i className="bi bi-plus-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_under_18`, Math.min(9, (data.inputs[`${p}_caregiver_under_18`] || 0) + 1))}></i>
+                                              </div>
                                           </div>
-                                          <div className="form-check form-switch mb-0 d-flex align-items-center">
-                                              <input className="form-check-input cursor-pointer m-0" type="checkbox" id={`${p}_caregiver_over_18`} checked={data.inputs[`${p}_caregiver_over_18`] || false} onChange={(e) => updateInput(`${p}_caregiver_over_18`, e.target.checked)} />
-                                              <label className="form-check-label small fw-medium text-muted ms-2 cursor-pointer" htmlFor={`${p}_caregiver_over_18`}>Dependant 18 or Older</label>
+
+                                          <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 border border-secondary border-opacity-25 user-select-none">
+                                              <span className="small fw-medium text-muted">Dependant 18 or Older</span>
+                                              <div className="d-flex align-items-center gap-3">
+                                                  <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_over_18`, Math.max(0, (data.inputs[`${p}_caregiver_over_18`] || 0) - 1))}></i>
+                                                  <span className="fw-bold text-main" style={{width: '12px', textAlign: 'center'}}>{data.inputs[`${p}_caregiver_over_18`] || 0}</span>
+                                                  <i className="bi bi-plus-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_over_18`, Math.min(9, (data.inputs[`${p}_caregiver_over_18`] || 0) + 1))}></i>
+                                              </div>
                                           </div>
                                       </div>
                                   </div>
