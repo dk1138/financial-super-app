@@ -124,6 +124,17 @@ export default function IncomeTaxCard() {
                   </div>
               )}
 
+              {/* Refundable Tax Credits (Applied Directly to reduce Total Tax) */}
+              {taxDetails.rtc && taxDetails.rtc.transit > 0 && (
+                  <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary border-opacity-50">
+                      <span className="text-success small fw-bold d-flex align-items-center gap-1">
+                          <i className="bi bi-arrow-return-left"></i> Transit Refund
+                          <InfoBtn title="Refundable Transit Credit" text="Because this is a Refundable Tax Credit, it is applied directly against your final provincial tax bill. If it reduces your provincial tax below $0, you receive the difference as a cash refund!<br/><br/><b>Calculation:</b> Eligible Expenses (Max $3,000) × 15%<br/><br/><a href='https://www.ontario.ca/page/ontario-seniors-public-transit-tax-credit' target='_blank'>Learn more on Ontario.ca</a>" />
+                      </span>
+                      <span className="small fw-bold text-success">+${Math.round(taxDetails.rtc.transit).toLocaleString()}</span>
+                  </div>
+              )}
+
               <div className="d-flex justify-content-between mt-2 pt-3 border-top border-secondary"><span className="text-success fw-bold">After-Tax Net</span> <span className="text-success fw-bold fs-5">${Math.round(gross - taxDetails.totalTax).toLocaleString()}</span></div>
             </div>
           </div>
@@ -220,7 +231,7 @@ export default function IncomeTaxCard() {
                           <div className="p-3 bg-input rounded-bottom-4">
                               <div className="row g-2">
                                   
-                                  {/* Left Column: Disability & Caregiver */}
+                                  {/* Left Column: Disability, Caregiver, Home Buyer */}
                                   <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
                                       
                                       {/* Disability Tax Credit */}
@@ -259,13 +270,9 @@ export default function IncomeTaxCard() {
                                               </div>
                                           </div>
                                       </div>
-                                  </div>
-                                  
-                                  {/* Right Column: Home Buyer, Medical, Donations */}
-                                  <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
-                                      
+
                                       {/* Home Buyer */}
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25 user-select-none">
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25 user-select-none mt-1">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html' target='_blank'>Learn more on Canada.ca</a>"/>
                                           </span>
@@ -285,7 +292,11 @@ export default function IncomeTaxCard() {
                                               }}></i>
                                           </div>
                                       </div>
-
+                                  </div>
+                                  
+                                  {/* Right Column: Medical, Donations, Transit */}
+                                  <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
+                                      
                                       {/* Medical Expenses */}
                                       <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
@@ -306,6 +317,18 @@ export default function IncomeTaxCard() {
                                               <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
                                           </div>
                                       </div>
+
+                                      {/* Seniors Public Transit */}
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                          <span className="small fw-medium text-main d-flex align-items-center gap-1">
+                                              Transit Exp.
+                                              <InfoBtn title="Seniors' Public Transit Tax Credit" text="A refundable tax credit for Ontario residents aged 65 and older. Enter your total annual eligible public transit expenses (up to $3,000). The engine automatically verifies your age and province in the timeline before applying the 15% refund.<br/><br/><a href='https://www.ontario.ca/page/ontario-seniors-public-transit-tax-credit' target='_blank'>Learn more on Ontario.ca</a>" />
+                                          </span>
+                                          <div style={{ width: '120px' }}>
+                                              <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_transit`] ?? ''} onChange={(val: any) => updateInput(`${p}_transit`, val)} />
+                                          </div>
+                                      </div>
+
                                   </div>
                               </div>
                           </div>

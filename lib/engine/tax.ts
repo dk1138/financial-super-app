@@ -46,7 +46,7 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
 
 export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
-        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0 } };
+        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0 }, rtc: { transit: 0 } };
     }
     
     let oasClawback = 0;
@@ -341,6 +341,15 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         fedTax = Math.max(0, fedTax - (fedTax * taxData.QC.abatement));
     }
 
+    // --- REFUNDABLE TAX CREDITS ---
+    let provTransitCredit = 0;
+    if (province === 'ON' && age >= (constants.ON_SENIORS_TRANSIT_ELIGIBLE_AGE || 65) && credits.transit > 0) {
+        let maxTransitExpense = (constants.ON_SENIORS_TRANSIT_MAX_EXPENSE || 3000) * baseInflation;
+        let eligibleTransit = Math.min(credits.transit * baseInflation, maxTransitExpense);
+        provTransitCredit = eligibleTransit * (constants.ON_SENIORS_TRANSIT_RATE || 0.15);
+        provTax -= provTransitCredit; // Refundable: Allowed to reduce provTax below $0
+    }
+
     let actualMargRate = fedMarginalRate + provMarginalRate;
     if (oasMarginalRate > 0) {
         actualMargRate = 0.15 + 0.85 * (fedMarginalRate + provMarginalRate);
@@ -359,6 +368,9 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
             medical: fedMedicalCredit + provMedicalCredit,
             homeBuyer: fedHomeBuyerCredit + provHomeBuyerCredit,
             disability: fedDisabilityCredit + provDisabilityCredit
+        },
+        rtc: {
+            transit: provTransitCredit
         }
     };
 }
