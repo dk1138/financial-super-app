@@ -78,7 +78,7 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Disability Tax Credit
-                                          <InfoBtn title="Disability Tax Credit Math" text="A non-refundable tax credit that reduces the income tax you may have to pay. The base amount is multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> Base Amount × Lowest Tax Rate" />
+                                          <InfoBtn title="Disability Tax Credit Math" text="A non-refundable tax credit that reduces the income tax you may have to pay. The base amount is multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> Base Amount × Lowest Tax Rate<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.disability).toLocaleString()}</span>
                                   </div>
@@ -87,7 +87,7 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Caregiver Amount
-                                          <InfoBtn title="Caregiver Amount Math" text="Tax savings are calculated by multiplying the eligible base amounts for your dependants by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Federal Savings:</b> Base Amount × Lowest Fed Rate<br/><b>Provincial Savings:</b> Base Amount × Lowest Prov Rate" />
+                                          <InfoBtn title="Caregiver Amount Math" text="Tax savings are calculated by multiplying the eligible base amounts for your dependants by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Federal Savings:</b> Base Amount × Lowest Fed Rate<br/><b>Provincial Savings:</b> Base Amount × Lowest Prov Rate<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
                                   </div>
@@ -96,7 +96,7 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Medical Expenses
-                                          <InfoBtn title="Medical Expenses Math" text="Your total eligible expenses are first reduced by a minimum threshold (the lesser of 3% of your net income or a fixed max cap). The remainder is then multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> (Total Expenses - Threshold) × Lowest Tax Rate" />
+                                          <InfoBtn title="Medical Expenses Math" text="Your total eligible expenses are first reduced by a minimum threshold (the lesser of 3% of your net income or a fixed max cap). The remainder is then multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> (Total Expenses - Threshold) × Lowest Tax Rate<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/lines-33099-33199-eligible-medical-expenses-you-claim-on-your-tax-return.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
                                   </div>
@@ -105,7 +105,7 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           First-Time Home Buyer
-                                          <InfoBtn title="First-Time Home Buyer Math" text="The $10,000 base amount is multiplied by the lowest Federal tax bracket rate.<br/><br/><b>Note:</b> Only SK and QC offer a provincial income tax credit for this. Other provinces issue Land Transfer Tax rebates at closing instead, which do not appear on your income tax return." />
+                                          <InfoBtn title="First-Time Home Buyer Math" text="The $10,000 base amount is multiplied by the lowest Federal tax bracket rate.<br/><br/><b>Note:</b> Only SK and QC offer a provincial income tax credit for this. Other provinces issue Land Transfer Tax rebates at closing instead, which do not appear on your income tax return.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.homeBuyer).toLocaleString()}</span>
                                   </div>
@@ -114,7 +114,7 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Charitable Donations
-                                          <InfoBtn title="Charitable Donations Math" text="Donations are calculated using a 2-tiered system to encourage larger gifts.<br/><br/><b>First $200:</b> Multiplied by the lowest tax bracket rates.<br/><b>Amount over $200:</b> Multiplied by the highest tax bracket rates." />
+                                          <InfoBtn title="Charitable Donations Math" text="Donations are calculated using a 2-tiered system to encourage larger gifts.<br/><br/><b>First $200:</b> Multiplied by the lowest tax bracket rates.<br/><b>Amount over $200:</b> Multiplied by the highest tax bracket rates.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-34900-donations-gifts.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
                                   </div>
@@ -227,6 +227,7 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Disability Tax Credit
+                                              <InfoBtn title="Disability Tax Credit" text="A non-refundable tax credit that helps persons with disabilities or their supporting persons reduce the amount of income tax they may have to pay.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </span>
                                           <div className="form-check form-switch mb-0">
                                               <input className="form-check-input cursor-pointer m-0 shadow-none" type="checkbox" id={`${p}_disability`} checked={data.inputs[`${p}_disability`] || false} onChange={(e) => updateInput(`${p}_disability`, e.target.checked)} />
@@ -266,7 +267,7 @@ export default function IncomeTaxCard() {
                                       {/* Home Buyer */}
                                       <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25 user-select-none">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
-                                              Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year."/>
+                                              Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html' target='_blank'>Learn more on Canada.ca</a>"/>
                                           </span>
                                           <div className="d-flex align-items-center gap-2 bg-black bg-opacity-25 rounded-pill px-2 py-1 border border-secondary border-opacity-25">
                                               <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => {
@@ -288,7 +289,7 @@ export default function IncomeTaxCard() {
                                       {/* Medical Expenses */}
                                       <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
-                                              Medical Exp. <InfoBtn title="Medical Expense Tax Credit" text="Enter your total eligible medical expenses for the year. The system automatically calculates the eligible amount by subtracting the threshold (the lesser of 3% of your net income or the maximum base amount) before applying the credit rate." />
+                                              Medical Exp. <InfoBtn title="Medical Expense Tax Credit" text="Enter your total eligible medical expenses for the year. The system automatically calculates the eligible amount by subtracting the threshold (the lesser of 3% of your net income or the maximum base amount) before applying the credit rate.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/lines-33099-33199-eligible-medical-expenses-you-claim-on-your-tax-return.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </span>
                                           <div style={{ width: '120px' }}>
                                               <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
@@ -299,6 +300,7 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Donations
+                                              <InfoBtn title="Charitable Donations" text="Enter your total annual charitable donations. The system automatically calculates the tax credit using the federal and provincial 2-tiered rates.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-34900-donations-gifts.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </span>
                                           <div style={{ width: '120px' }}>
                                               <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
