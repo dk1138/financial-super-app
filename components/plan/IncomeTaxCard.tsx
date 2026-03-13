@@ -233,21 +233,25 @@ export default function IncomeTaxCard() {
                                   </div>
                                   
                                   <div className="col-12 col-md-6 d-flex flex-column gap-3 pt-1">
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-2 border border-secondary border-opacity-25">
+                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 border border-secondary border-opacity-25 user-select-none">
                                           <span className="small fw-medium text-muted d-flex align-items-center gap-1">
-                                              Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year." />
+                                              Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year."/>
                                           </span>
-                                          <select 
-                                              className="form-select form-select-sm bg-transparent border-0 text-main fw-bold shadow-none text-end py-0 pe-4" 
-                                              style={{ width: 'auto', cursor: 'pointer' }}
-                                              value={data.inputs[`${p}_first_time_home_buyer_year`] || ''} 
-                                              onChange={(e) => updateInput(`${p}_first_time_home_buyer_year`, e.target.value)}
-                                          >
-                                              <option value="" className="text-dark">None</option>
-                                              {Array.from({length: 51}, (_, i) => new Date().getFullYear() + i).map(year => (
-                                                  <option key={year} value={year} className="text-dark">{year}</option>
-                                              ))}
-                                          </select>
+                                          <div className="d-flex align-items-center gap-2">
+                                              <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => {
+                                                  const cy = new Date().getFullYear();
+                                                  const yr = data.inputs[`${p}_first_time_home_buyer_year`];
+                                                  if (yr && Number(yr) > cy) updateInput(`${p}_first_time_home_buyer_year`, Number(yr) - 1);
+                                                  else if (yr && Number(yr) <= cy) updateInput(`${p}_first_time_home_buyer_year`, '');
+                                              }}></i>
+                                              <span className="fw-bold text-main" style={{width: '36px', textAlign: 'center', fontSize: '0.85rem'}}>{data.inputs[`${p}_first_time_home_buyer_year`] || 'None'}</span>
+                                              <i className="bi bi-plus-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => {
+                                                  const cy = new Date().getFullYear();
+                                                  const yr = data.inputs[`${p}_first_time_home_buyer_year`];
+                                                  if (!yr) updateInput(`${p}_first_time_home_buyer_year`, cy);
+                                                  else updateInput(`${p}_first_time_home_buyer_year`, Math.min(cy + 50, Number(yr) + 1));
+                                              }}></i>
+                                          </div>
                                       </div>
                                       <div>
                                           <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
