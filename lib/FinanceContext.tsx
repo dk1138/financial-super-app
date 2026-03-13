@@ -334,6 +334,8 @@ export const useFinanceStore = create<any>((set) => ({
   results: null,
   planScore: null,
   isCalculating: true,
+  mcResults: null, // Added to fix Monte Carlo saving
+  setMcResults: (mcResults: any) => set({ mcResults }), // Added to fix Monte Carlo saving
   setData: (updater: any) => set((state: any) => ({ data: typeof updater === 'function' ? updater(state.data) : updater })),
   setResults: (results: any) => set((state: any) => ({ 
       results, 
@@ -393,6 +395,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!hasHydrated) return;
 
     setIsCalculating(true);
+    
+    // Auto-wipe stale Monte Carlo results if any inputs change!
+    useFinanceStore.setState({ mcResults: null });
+
     const calcTimeoutId = setTimeout(() => {
       if (workerRef.current) {
         workerRef.current.postMessage({
@@ -453,6 +459,9 @@ export function useFinance() {
     results: store.results,
     planScore: store.planScore,
     isCalculating: store.isCalculating,
+    
+    mcResults: store.mcResults, 
+    setMcResults: store.setMcResults,
 
     // --- ENFORCED INPUT HANDLERS ---
     updateInput: (key: string, value: any) => store.setData((prev: any) => {
