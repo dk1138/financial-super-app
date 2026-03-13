@@ -168,8 +168,8 @@ export default function PortfolioAssetsCard() {
                           <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100" style={{fontSize: '0.65rem'}}>
                               <div style={{flex: '0 0 135px'}} className="text-start">Account</div>
                               <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
-                              <div style={{flex: '0 0 75px'}} className="text-start ps-1">Pre %</div>
-                              {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post %</div>}
+                              <div style={{flex: '0 0 75px'}} className="text-start ps-1">{showAssetMixUI ? 'Pre-Ret %' : 'Return %'}</div>
+                              {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post-Ret %</div>}
                           </div>
 
                           {/* --- COMPACT STANDARD ACCOUNTS --- */}
@@ -256,8 +256,8 @@ export default function PortfolioAssetsCard() {
                                           <div style={{flex: '0 0 130px'}} className="text-start">Type</div>
                                           <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1">Name</div>
                                           <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
-                                          <div style={{flex: '0 0 75px'}} className="text-start ps-1">Pre %</div>
-                                          {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post %</div>}
+                                          <div style={{flex: '0 0 75px'}} className="text-start ps-1">{showAssetMixUI ? 'Pre-Ret %' : 'Return %'}</div>
+                                          {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post-Ret %</div>}
                                       </div>
 
                                       {playerCustomAssets.map((ca: any) => {
