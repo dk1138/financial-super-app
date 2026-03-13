@@ -202,9 +202,9 @@ export default function IncomeTaxCard() {
                   </div>
 
                   {/* TAX CREDITS COLLAPSIBLE PANEL */}
-                  <div className="border border-secondary rounded-4 mb-3 shadow-sm overflow-hidden">
+                  <div className="border border-secondary rounded-4 mb-3 shadow-sm">
                       <div 
-                          className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center justify-content-between cursor-pointer hover-bg-input transition-all" 
+                          className={`bg-secondary bg-opacity-10 p-2 px-3 d-flex align-items-center justify-content-between cursor-pointer hover-bg-input transition-all rounded-top-4 ${showCredits[p] ? 'border-bottom border-secondary' : 'rounded-bottom-4'}`} 
                           onClick={() => toggleCredits(p)}
                       >
                           <div className="d-flex align-items-center gap-3">
@@ -217,7 +217,7 @@ export default function IncomeTaxCard() {
                       </div>
                       
                       {showCredits[p] && (
-                          <div className="p-3 bg-input border-top border-secondary border-opacity-25">
+                          <div className="p-3 bg-input rounded-bottom-4">
                               <div className="row g-2">
                                   
                                   {/* Left Column: Disability & Caregiver */}
