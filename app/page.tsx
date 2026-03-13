@@ -678,3 +678,11 @@ function DashboardLayout() {
     </div>
   );
 }
+
+export default function RetirementDashboard() {
+  return (
+    <FinanceProvider>
+      <DashboardLayout />
+    </FinanceProvider>
+  );
+}
