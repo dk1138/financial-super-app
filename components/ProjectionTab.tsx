@@ -133,23 +133,57 @@ export default function ProjectionTab() {
   const exportToPNG = async () => {
       if (!tableRef.current) return;
       setIsExporting(true);
-      showToast('Generating high-res image of the table...');
-      try {
-          setTimeout(async () => {
-              const canvas = await html2canvas(tableRef.current!, { backgroundColor: '#16181d', scale: 2 });
+      showToast('Generating high-res image of the full table...');
+
+      const targetEl = tableRef.current;
+      const scrollContainer = targetEl.querySelector('.table-responsive') as HTMLElement;
+      const originalStyle = scrollContainer ? scrollContainer.getAttribute('style') : null;
+
+      // Temporarily remove max-height and overflow to reveal the entire table
+      if (scrollContainer) {
+          scrollContainer.style.maxHeight = 'none';
+          scrollContainer.style.overflow = 'visible';
+      }
+
+      // Add a slight delay so the browser can fully render the expanded table
+      setTimeout(async () => {
+          try {
+              const canvas = await html2canvas(targetEl, { 
+                  backgroundColor: '#16181d', 
+                  scale: 2,
+                  windowHeight: targetEl.scrollHeight + 100 // Prevent clipping on very tall tables
+              });
+              
+              // Restore the original scrollable styles
+              if (scrollContainer) {
+                  if (originalStyle !== null) {
+                      scrollContainer.setAttribute('style', originalStyle);
+                  } else {
+                      scrollContainer.removeAttribute('style');
+                  }
+              }
+
               const url = canvas.toDataURL('image/png');
               const link = document.createElement('a');
               link.href = url;
               link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
               link.click();
               showToast('✅ Table image downloaded successfully!');
+          } catch (err) {
+              console.error(err);
+              // Ensure we restore styles even if the capture fails
+              if (scrollContainer) {
+                  if (originalStyle !== null) {
+                      scrollContainer.setAttribute('style', originalStyle);
+                  } else {
+                      scrollContainer.removeAttribute('style');
+                  }
+              }
+              showToast('❌ Failed to download image.');
+          } finally {
               setIsExporting(false);
-          }, 300);
-      } catch (err) {
-          console.error(err);
-          showToast('❌ Failed to download image.');
-          setIsExporting(false);
-      }
+          }
+      }, 500); 
   };
 
   let totalTaxPaid = 0;
