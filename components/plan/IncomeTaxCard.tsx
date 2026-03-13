@@ -75,26 +75,38 @@ export default function IncomeTaxCard() {
                       {showNrtc[p] && (
                           <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-info ms-1 border-opacity-25">
                               {taxDetails.nrtc.caregiver > 0 && (
-                                  <div className="d-flex justify-content-between">
-                                      <span className="text-muted small fst-italic">Caregiver Amount</span>
+                                  <div className="d-flex justify-content-between align-items-center">
+                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
+                                          Caregiver Amount
+                                          <InfoBtn title="Caregiver Amount Math" text="Tax savings are calculated by multiplying the eligible base amounts for your dependants by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Federal Savings:</b> Base Amount × Lowest Fed Rate<br/><b>Provincial Savings:</b> Base Amount × Lowest Prov Rate" />
+                                      </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
                                   </div>
                               )}
                               {taxDetails.nrtc.medical > 0 && (
-                                  <div className="d-flex justify-content-between">
-                                      <span className="text-muted small fst-italic">Medical Expenses</span>
+                                  <div className="d-flex justify-content-between align-items-center">
+                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
+                                          Medical Expenses
+                                          <InfoBtn title="Medical Expenses Math" text="Your total eligible expenses are first reduced by a minimum threshold (the lesser of 3% of your net income or a fixed max cap). The remainder is then multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> (Total Expenses - Threshold) × Lowest Tax Rate" />
+                                      </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
                                   </div>
                               )}
                               {taxDetails.nrtc.homeBuyer > 0 && (
-                                  <div className="d-flex justify-content-between">
-                                      <span className="text-muted small fst-italic">First-Time Home Buyer</span>
+                                  <div className="d-flex justify-content-between align-items-center">
+                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
+                                          First-Time Home Buyer
+                                          <InfoBtn title="First-Time Home Buyer Math" text="The $10,000 base amount is multiplied by the lowest Federal tax bracket rate.<br/><br/><b>Note:</b> Only SK and QC offer a provincial income tax credit for this. Other provinces issue Land Transfer Tax rebates at closing instead, which do not appear on your income tax return." />
+                                      </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.homeBuyer).toLocaleString()}</span>
                                   </div>
                               )}
                               {taxDetails.nrtc.donations > 0 && (
-                                  <div className="d-flex justify-content-between">
-                                      <span className="text-muted small fst-italic">Charitable Donations</span>
+                                  <div className="d-flex justify-content-between align-items-center">
+                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
+                                          Charitable Donations
+                                          <InfoBtn title="Charitable Donations Math" text="Donations are calculated using a 2-tiered system to encourage larger gifts.<br/><br/><b>First $200:</b> Multiplied by the lowest tax bracket rates.<br/><b>Amount over $200:</b> Multiplied by the highest tax bracket rates." />
+                                      </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
                                   </div>
                               )}
