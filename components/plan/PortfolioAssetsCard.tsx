@@ -277,7 +277,7 @@ export default function PortfolioAssetsCard() {
                                                           <ModernDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} options={EXTENDED_ACCOUNT_TYPES} />
                                                       </div>
                                                       <div style={{flex: '1 1 0%', minWidth: '60px'}}>
-                                                          <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-black bg-opacity-25 text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
+                                                          <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-input text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
                                                       </div>
                                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                                           <CurrencyInput className="form-control form-control-sm" value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />

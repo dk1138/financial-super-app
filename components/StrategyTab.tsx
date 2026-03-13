@@ -95,7 +95,7 @@ export default function StrategyTab() {
             <div className="d-flex align-items-center justify-content-center bg-secondary bg-opacity-25 rounded-circle fw-bold text-muted" style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
                 {index + 1}
             </div>
-            <div className={`bg-black bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center ${details.color} flex-shrink-0`} style={{width: '42px', height: '42px'}}>
+            <div className={`bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center ${details.color} flex-shrink-0`} style={{width: '42px', height: '42px'}}>
                 <i className={`bi ${details.icon} fs-5`}></i>
             </div>
             <div>

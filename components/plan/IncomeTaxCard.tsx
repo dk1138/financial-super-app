@@ -235,7 +235,7 @@ export default function IncomeTaxCard() {
                                   <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
                                       
                                       {/* Disability Tax Credit */}
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                      <div className="d-flex align-items-center justify-content-between bg-secondary bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Disability Tax Credit
                                               <InfoBtn title="Disability Tax Credit" text="A non-refundable tax credit that helps persons with disabilities or their supporting persons reduce the amount of income tax they may have to pay.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html' target='_blank'>Learn more on Canada.ca</a>" />
@@ -246,13 +246,13 @@ export default function IncomeTaxCard() {
                                       </div>
                                       
                                       {/* Caregiver Block */}
-                                      <div className="bg-black bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2">
+                                      <div className="bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2">
                                           <div className="d-flex align-items-center px-1 mb-2">
                                               <span className="small fw-medium text-main mb-0 me-1">Canada Caregiver Credit</span>
                                               <InfoBtn title="Canada Caregiver Amount" text="This non-refundable tax credit helps caregivers with the expenses involved with taking care of their spouse or common-law partner or dependant who has an impairment in physical or mental functions.<br/><br/>Enter the number of eligible dependants you are claiming for this credit.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </div>
                                           
-                                          <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 mb-2 border border-secondary border-opacity-25 user-select-none">
+                                          <div className="d-flex align-items-center justify-content-between bg-input rounded-pill px-3 py-1 mb-2 border border-secondary border-opacity-25 user-select-none">
                                               <span className="small fw-medium text-muted">Under 18</span>
                                               <div className="d-flex align-items-center gap-3">
                                                   <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_under_18`, Math.max(0, (data.inputs[`${p}_caregiver_under_18`] || 0) - 1))}></i>
@@ -261,7 +261,7 @@ export default function IncomeTaxCard() {
                                               </div>
                                           </div>
 
-                                          <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-25 rounded-pill px-3 py-1 border border-secondary border-opacity-25 user-select-none">
+                                          <div className="d-flex align-items-center justify-content-between bg-input rounded-pill px-3 py-1 border border-secondary border-opacity-25 user-select-none">
                                               <span className="small fw-medium text-muted">18 or Older</span>
                                               <div className="d-flex align-items-center gap-3">
                                                   <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_over_18`, Math.max(0, (data.inputs[`${p}_caregiver_over_18`] || 0) - 1))}></i>
@@ -272,11 +272,11 @@ export default function IncomeTaxCard() {
                                       </div>
 
                                       {/* Home Buyer */}
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25 user-select-none mt-1">
+                                      <div className="d-flex align-items-center justify-content-between bg-secondary bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25 user-select-none mt-1">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html' target='_blank'>Learn more on Canada.ca</a>"/>
                                           </span>
-                                          <div className="d-flex align-items-center gap-2 bg-black bg-opacity-25 rounded-pill px-2 py-1 border border-secondary border-opacity-25">
+                                          <div className="d-flex align-items-center gap-2 bg-input rounded-pill px-2 py-1 border border-secondary border-opacity-25">
                                               <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => {
                                                   const cy = new Date().getFullYear();
                                                   const yr = data.inputs[`${p}_first_time_home_buyer_year`];
@@ -298,34 +298,34 @@ export default function IncomeTaxCard() {
                                   <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
                                       
                                       {/* Medical Expenses */}
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                      <div className="d-flex align-items-center justify-content-between bg-secondary bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Medical Exp. <InfoBtn title="Medical Expense Tax Credit" text="Enter your total eligible medical expenses for the year. The system automatically calculates the eligible amount by subtracting the threshold (the lesser of 3% of your net income or the maximum base amount) before applying the credit rate.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/lines-33099-33199-eligible-medical-expenses-you-claim-on-your-tax-return.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </span>
                                           <div style={{ width: '120px' }}>
-                                              <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
+                                              <CurrencyInput className="form-control form-control-sm bg-input border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
                                           </div>
                                       </div>
 
                                       {/* Charitable Donations */}
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                      <div className="d-flex align-items-center justify-content-between bg-secondary bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Donations
                                               <InfoBtn title="Charitable Donations" text="Enter your total annual charitable donations. The system automatically calculates the tax credit using the federal and provincial 2-tiered rates.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-34900-donations-gifts.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </span>
                                           <div style={{ width: '120px' }}>
-                                              <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
+                                              <CurrencyInput className="form-control form-control-sm bg-input border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_donations`] ?? ''} onChange={(val: any) => updateInput(`${p}_donations`, val)} />
                                           </div>
                                       </div>
 
                                       {/* Seniors Public Transit */}
-                                      <div className="d-flex align-items-center justify-content-between bg-black bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
+                                      <div className="d-flex align-items-center justify-content-between bg-secondary bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                               Transit Exp.
                                               <InfoBtn title="Seniors' Public Transit Tax Credit" text="A refundable tax credit for Ontario residents aged 65 and older. Enter your total annual eligible public transit expenses (up to $3,000). The engine automatically verifies your age and province in the timeline before applying the 15% refund.<br/><br/><a href='https://www.ontario.ca/page/ontario-seniors-public-transit-tax-credit' target='_blank'>Learn more on Ontario.ca</a>" />
                                           </span>
                                           <div style={{ width: '120px' }}>
-                                              <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_transit`] ?? ''} onChange={(val: any) => updateInput(`${p}_transit`, val)} />
+                                              <CurrencyInput className="form-control form-control-sm bg-input border-secondary text-main text-end rounded-3 shadow-none py-1" value={data.inputs[`${p}_transit`] ?? ''} onChange={(val: any) => updateInput(`${p}_transit`, val)} />
                                           </div>
                                       </div>
 
