@@ -422,7 +422,7 @@ function DashboardLayout() {
                       disabled 
                       className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50 p-0" 
                       style={{ width: '36px', height: '36px', cursor: 'not-allowed' }} 
-                      title="Sign in is temporarily disabled"
+                      title="Google Sync coming soon"
                   >
                       <i className="bi bi-google fs-6"></i> 
                   </button>
