@@ -6,13 +6,12 @@ import { SegmentedControl } from '../SharedUI';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function MonteCarloCard() {
-    const { data } = useFinance();
-    const [simCount, setSimCount] = useState(100);
-    const [method, setMethod] = useState('random');
-    const [volatility, setVolatility] = useState(0.12);
+    const { data, mcResults, setMcResults } = useFinance();
+
+    const [simCount, setSimCount] = useState(mcResults?.simCount || 100);
+    const [method, setMethod] = useState(mcResults?.method || 'random');
+    const [volatility, setVolatility] = useState(mcResults?.volatility || 0.12);
     const [isCalculating, setIsCalculating] = useState(false);
-    const [chartData, setChartData] = useState<any[] | null>(null);
-    const [successRate, setSuccessRate] = useState<number | null>(null);
 
     const runMonteCarlo = () => {
         setIsCalculating(true);
@@ -25,14 +24,23 @@ export default function MonteCarloCard() {
             for (let i = 0; i < simCount; i++) {
               const engine = new FinanceEngine(JSON.parse(JSON.stringify(data)));
               let simContext: any = { method };
+              
               if (method === 'historical') {
                  const sp500 = FINANCIAL_CONSTANTS.SP500_HISTORICAL;
                  const startIdx = Math.floor(Math.random() * sp500.length);
-                 simContext.histSequence = [];
-                 for(let y = 0; y < 100; y++) { simContext.histSequence.push(sp500[(startIdx + y) % sp500.length]); }
+                 simContext.shockSequence = []; 
+                 
+                 for(let y = 0; y < 100; y++) { 
+                     // S&P 500 long-term average is ~9%. 
+                     // We subtract 0.09 to isolate the "shock" (variance) so we don't double-count the user's base return rate.
+                     const historicalReturn = sp500[(startIdx + y) % sp500.length];
+                     const shock = historicalReturn - 0.09; 
+                     simContext.shockSequence.push(shock); 
+                 }
               } else {
                  simContext.volatility = volatility;
               }
+              
               const result = engine.runSimulation(false, simContext);
               trajectories.push(result);
             }
@@ -41,10 +49,9 @@ export default function MonteCarloCard() {
             const runs = trajectories.length;
             const successCount = trajectories.filter(t => t[t.length - 1] > 0).length;
             
-            setSuccessRate(Number(((successCount / runs) * 100).toFixed(1)));
+            const finalSuccessRate = Number(((successCount / runs) * 100).toFixed(1));
             const discount = (val: number, idx: number) => Math.max(0, Math.round(val / Math.pow(1 + inflationRate, idx)));
             
-            // Format for Recharts (Array of Objects)
             const optData = trajectories[Math.floor(runs * 0.90)];
             const medData = trajectories[Math.floor(runs * 0.50)];
             const pesData = trajectories[Math.floor(runs * 0.10)];
@@ -56,7 +63,14 @@ export default function MonteCarloCard() {
                 pessimistic: discount(pesData[i], i)
             }));
             
-            setChartData(formattedData);
+            setMcResults({
+                chartData: formattedData,
+                successRate: finalSuccessRate,
+                simCount,
+                method,
+                volatility
+            });
+            
           } catch(err) { console.error(err); alert("Simulation failed."); }
           setIsCalculating(false);
         }, 50);
@@ -67,6 +81,9 @@ export default function MonteCarloCard() {
         if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
         return `$${val}`;
     };
+
+    const chartData = mcResults?.chartData || null;
+    const successRate = mcResults?.successRate ?? null;
 
     const gaugeRadius = 100;
     const gaugeCircumference = Math.PI * gaugeRadius;
@@ -97,8 +114,10 @@ export default function MonteCarloCard() {
 
     const chartComponent = useMemo(() => {
         if (!chartData) return (
-            <div className="d-flex flex-grow-1 align-items-center justify-content-center text-muted fst-italic p-5 border border-secondary border-opacity-25 rounded" style={{ height: '500px' }}>
-                Click "Run Monte Carlo" to generate projections.
+            <div className="d-flex flex-grow-1 flex-column align-items-center justify-content-center text-muted p-5 border border-secondary border-opacity-25 rounded text-center" style={{ height: '500px' }}>
+                <i className="bi bi-graph-up-arrow fs-1 mb-2 opacity-50"></i>
+                <span className="fst-italic">Click "Run Monte Carlo" to generate projections.</span>
+                <span className="small mt-2 opacity-75">Note: The chart will clear if you change your underlying inputs to prevent showing stale data!</span>
             </div>
         );
         return (
