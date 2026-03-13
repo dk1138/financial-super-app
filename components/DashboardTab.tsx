@@ -242,16 +242,49 @@ export default function DashboardTab() {
   const validRetYearIndex = retYearIndex >= 0 ? retYearIndex : 0;
   const retYearData = results.timeline[validRetYearIndex];
   
-  // 1. Initial Withdrawal Rate
-  const preRetYearObj = validRetYearIndex > 0 ? results.timeline[validRetYearIndex - 1] : retYearData;
-  let startRetLiquidNW = preRetYearObj.liquidNW;
-  if (validRetYearIndex === 0) {
-      startRetLiquidNW = ['tfsa', 'fhsa', 'rrsp', 'lirf', 'lif', 'rrif_acct', 'nonreg', 'cash', 'crypto']
+  // 1. Initial Withdrawal Rate (First FULL year of retirement)
+  let initialWithdrawalRate = 0;
+  const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+  const p2Ret = data.mode === 'Couple' ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
+  
+  const firstFullRetYearIdx = results.timeline.findIndex((y: any) => {
+      const p1FullyRet = y.p1Age > p1Ret;
+      const p2FullyRet = data.mode === 'Couple' ? y.p2Age > p2Ret : true;
+      return p1FullyRet && p2FullyRet;
+  });
+
+  if (firstFullRetYearIdx > 0) {
+      const targetYear = results.timeline[firstFullRetYearIdx];
+      const prevYear = results.timeline[firstFullRetYearIdx - 1];
+      const startNW = prevYear.liquidNW;
+      
+      const actualWds = Object.values(targetYear.flows?.withdrawals || {}).reduce((a: any, b: any) => a + b, 0) as number;
+      
+      let shortfall = 0;
+      const totalSourcedRaw = targetYear.grossInflow || 0;
+      let contsRaw = 0;
+      if (targetYear.flows?.contributions) {
+          contsRaw += Object.values(targetYear.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+          if (data.mode === 'Couple') contsRaw += Object.values(targetYear.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+      }
+      const yrTaxRaw = (targetYear.taxP1||0) + (targetYear.taxP2||0);
+      const yrExpRaw = (targetYear.expenses||0) + (targetYear.mortgagePay||0) + (targetYear.debtRepayment||0);
+      const totalSpentRaw = yrExpRaw + yrTaxRaw + contsRaw;
+      
+      if (totalSourcedRaw < totalSpentRaw - 1) shortfall = totalSpentRaw - totalSourcedRaw;
+
+      const requiredWd = actualWds + shortfall;
+      initialWithdrawalRate = startNW > 0 ? (requiredWd / startNW) * 100 : 0;
+
+  } else if (firstFullRetYearIdx === 0) {
+      const targetYear = results.timeline[0];
+      let startNW = ['tfsa', 'fhsa', 'rrsp', 'lirf', 'lif', 'rrif_acct', 'nonreg', 'cash', 'crypto']
           .reduce((sum, acct) => sum + (Number(data.inputs[`p1_${acct}`]) || 0) + (data.mode === 'Couple' ? (Number(data.inputs[`p2_${acct}`]) || 0) : 0), 0);
-      startRetLiquidNW += data.customAssets?.reduce((sum: number, a: any) => sum + (Number(a.balance) || 0), 0) || 0;
+      startNW += data.customAssets?.reduce((sum: number, a: any) => sum + (Number(a.balance) || 0), 0) || 0;
+      
+      const actualWds = Object.values(targetYear.flows?.withdrawals || {}).reduce((a: any, b: any) => a + b, 0) as number;
+      initialWithdrawalRate = startNW > 0 ? (actualWds / startNW) * 100 : 0;
   }
-  const retDayWd = Object.values(retYearData.flows?.withdrawals || {}).reduce((a: any, b: any) => a + b, 0) as number;
-  const initialWithdrawalRate = startRetLiquidNW > 0 ? (retDayWd / startRetLiquidNW) * 100 : 0;
 
   // 2. Retirement Day Net Worth
   const retDayNW = getRealValue(retYearData.liquidNW + (retYearData.reIncludedEq || 0), retYearData.year);
@@ -534,8 +567,8 @@ export default function DashboardTab() {
 
           <div className="row mb-4">
               <div className="col-12 col-xl-4 mb-4 mb-xl-0">
-                  <div className="rp-card border-secondary rounded-4 h-100 overflow-hidden shadow-sm">
-                      <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3">
+                  <div className="rp-card border-secondary rounded-4 h-100 shadow-sm">
+                      <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3 rounded-top-4">
                           <h6 className="mb-0 fw-bold text-uppercase ls-1 text-center"><i className="bi bi-flag-fill text-warning me-2"></i>Milestones & Estate</h6>
                       </div>
                       <div className="card-body p-0">
@@ -547,7 +580,7 @@ export default function DashboardTab() {
                           <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
                               <span className="text-muted fw-bold d-flex align-items-center">
                                   Initial Withdrawal Rate 
-                                  <InfoBtn align="left" title="Initial Withdrawal Rate" text="The percentage of your liquid portfolio withdrawn during your first year of retirement. The famous '4% Rule' suggests keeping this below 4% to minimize the risk of portfolio depletion over a 30-year retirement."/>
+                                  <InfoBtn title="Initial Withdrawal Rate" text="The percentage of your liquid portfolio withdrawn during your first FULL year of retirement (once all employment income has stopped).<br><br>The famous '4% Rule' suggests keeping this below 4% to minimize the risk of portfolio depletion over a 30-year retirement."/>
                               </span>
                               <span className={`fw-bold d-flex align-items-center ${initialWithdrawalRate > 4 ? 'text-warning' : 'text-info'}`}>
                                   {initialWithdrawalRate > 4 && (
@@ -566,10 +599,13 @@ export default function DashboardTab() {
                               <span className="fw-bold text-primary">{mortgageFreeYear}</span>
                           </div>
                           <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                              <span className="text-muted fw-bold d-flex align-items-center">Final Estate Value <InfoBtn align="left" title="After-Tax Estate" text="The final value of your entire portfolio and real estate <b>after</b> applying the terminal tax on remaining RRSPs/RRIFs and Capital Gains at death."/></span>
+                              <span className="text-muted fw-bold d-flex align-items-center">
+                                  Final Estate Value 
+                                  <InfoBtn title="After-Tax Estate" text="The final value of your entire portfolio and real estate <b>after</b> applying the terminal tax on remaining RRSPs/RRIFs and Capital Gains at death."/>
+                              </span>
                               <span className="fw-bold fs-5 text-success" title={formatExact(finalEstate)}>{formatCurrency(finalEstate)}</span>
                           </div>
-                          <div className="d-flex justify-content-between align-items-center p-3 bg-black bg-opacity-10">
+                          <div className="d-flex justify-content-between align-items-center p-3 bg-black bg-opacity-10 rounded-bottom-4">
                               <span className="text-muted fw-bold">Plan Health</span>
                               {planHealth === "Success" 
                                 ? <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 fs-6 shadow-sm">SUCCESS</span>
