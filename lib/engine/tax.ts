@@ -46,7 +46,7 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
 
 export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
-        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0 } };
+        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0 } };
     }
     
     let oasClawback = 0;
@@ -180,8 +180,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let fedCaregiverCredit = 0;
     let provCaregiverCredit = 0;
     
-    let under18Share = credits.caregiver_under_18_share || (credits.caregiver_under_18 ? 1 : 0);
-    let over18Share = credits.caregiver_over_18_share || (credits.caregiver_over_18 ? 1 : 0);
+    let under18Share = credits.caregiver_under_18_share || 0;
+    let over18Share = credits.caregiver_over_18_share || 0;
 
     if (under18Share > 0) {
         fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_UNDER_18 || 2687) * baseInflation * lowestFedRate * under18Share;
@@ -194,10 +194,23 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
 
     let fedMedicalCredit = 0;
+    let provMedicalCredit = 0;
     if (credits.medicalExpenses > 0) {
-        let medThreshold = Math.min((constants.FED_MEDICAL_EXPENSE_THRESHOLD_MAX || 2900) * baseInflation, craTaxableIncome * (constants.FED_MEDICAL_EXPENSE_THRESHOLD_RATE || 0.03));
-        let eligibleMed = Math.max(0, credits.medicalExpenses * baseInflation - medThreshold);
-        fedMedicalCredit = eligibleMed * lowestFedRate;
+        let medExp = credits.medicalExpenses * baseInflation;
+        let medRate = constants.FED_MEDICAL_EXPENSE_THRESHOLD_RATE || 0.03; // usually 3%
+        
+        // Federal Medical Expense
+        let fedMedMax = (constants.FED_MEDICAL_EXPENSE_THRESHOLD_MAX || 2900) * baseInflation;
+        let fedMedThreshold = Math.min(fedMedMax, craTaxableIncome * medRate);
+        let fedEligibleMed = Math.max(0, medExp - fedMedThreshold);
+        fedMedicalCredit = fedEligibleMed * lowestFedRate;
+
+        // Provincial Medical Expense
+        let provMedMaxBase = constants.PROV_MEDICAL_EXPENSE_THRESHOLD_MAX?.[province];
+        let provMedMax = (provMedMaxBase !== undefined && provMedMaxBase > 0) ? (provMedMaxBase * baseInflation) : Infinity; 
+        let provMedThreshold = Math.min(provMedMax, craTaxableIncome * medRate);
+        let provEligibleMed = Math.max(0, medExp - provMedThreshold);
+        provMedicalCredit = provEligibleMed * provRateLowest;
     }
 
     let fedDonationCredit = 0;
@@ -247,7 +260,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
     
     fedTax = Math.max(0, fedTax - fedAgeCredit - fedPensionCredit - fedCppEiCredit - fedEmploymentCredit - fedDisabilityCredit - fedCaregiverCredit - fedMedicalCredit - fedDonationCredit - fedHomeBuyerCredit - fedTuitionCredit - fedStudentLoanCredit);
-    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit - provDisabilityCredit - provCaregiverCredit - provDonationCredit);
+    provTax = Math.max(0, provTax - provAgeCredit - provPensionCredit - provCppEiCredit - provDisabilityCredit - provCaregiverCredit - provMedicalCredit - provDonationCredit);
     
     let grossUp = isEligibleDividend ? (constants.DIVIDEND_GROSS_UP_ELIGIBLE || 1.38) : (constants.DIVIDEND_GROSS_UP_NON_ELIGIBLE || 1.15);
     let grossedUpDividend = actualDividendIncome * grossUp;
@@ -347,7 +360,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         margRate: actualMargRate,
         nrtc: {
             donations: fedDonationCredit + provDonationCredit,
-            caregiver: fedCaregiverCredit + provCaregiverCredit
+            caregiver: fedCaregiverCredit + provCaregiverCredit,
+            medical: fedMedicalCredit + provMedicalCredit
         }
     };
 }

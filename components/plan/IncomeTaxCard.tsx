@@ -80,12 +80,19 @@ export default function IncomeTaxCard() {
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
                                   </div>
                               )}
+                              {taxDetails.nrtc.medical > 0 && (
+                                  <div className="d-flex justify-content-between">
+                                      <span className="text-muted small fst-italic">Medical Expenses</span>
+                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
+                                  </div>
+                              )}
                               {taxDetails.nrtc.donations > 0 && (
                                   <div className="d-flex justify-content-between">
                                       <span className="text-muted small fst-italic">Charitable Donations</span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
                                   </div>
                               )}
+                              {/* Future credits (Tuition, etc.) will map here */}
                           </div>
                       )}
                   </div>
@@ -228,7 +235,9 @@ export default function IncomeTaxCard() {
                                           <input type="number" className="form-control form-control-sm bg-black bg-opacity-25 border-secondary text-main shadow-none rounded-3" placeholder="e.g. 2026" value={data.inputs[`${p}_first_time_home_buyer_year`] || ''} onChange={(e) => updateInput(`${p}_first_time_home_buyer_year`, e.target.value)} />
                                       </div>
                                       <div>
-                                          <label className="form-label small text-muted mb-1">Medical Expenses ($/yr)</label>
+                                          <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1">
+                                              Medical Expenses ($/yr) <InfoBtn title="Medical Expense Tax Credit" text="Enter your total eligible medical expenses for the year. The system automatically calculates the eligible amount by subtracting the threshold (the lesser of 3% of your net income or the maximum base amount) before applying the credit rate." />
+                                          </label>
                                           <CurrencyInput className="form-control form-control-sm bg-black bg-opacity-25 border-secondary rounded-3" value={data.inputs[`${p}_medical_expenses`] ?? ''} onChange={(val: any) => updateInput(`${p}_medical_expenses`, val)} />
                                       </div>
                                       <div>
