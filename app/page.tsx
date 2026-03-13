@@ -631,35 +631,35 @@ function DashboardLayout() {
       )}
 
       {showQuickAdjust && (
-          <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 transition-all" 
+          <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
                style={{ 
-                   bottom: '100px', 
+                   bottom: '90px', 
                    right: '30px', 
                    zIndex: 1040, 
-                   minWidth: '280px', 
+                   minWidth: '220px', 
                    backgroundColor: theme === 'dark' ? '#16181d' : '#ffffff', 
-                   boxShadow: '0 15px 50px rgba(0,0,0,0.6)' 
+                   boxShadow: '0 10px 40px rgba(0,0,0,0.5)' 
                }}>
-              <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
-                  <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.8rem'}}>
+              <div className="d-flex justify-content-between align-items-center mb-2 pb-2 mt-1 border-bottom border-secondary">
+                  <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.7rem'}}>
                       <i className="bi bi-sliders me-2"></i>Quick Adjust
                   </h6>
               </div>
               {isCouple && (
-                  <div className="form-check form-switch mb-3 pb-3 border-bottom border-secondary border-opacity-50 d-flex align-items-center justify-content-between px-0">
-                      <label className="form-check-label small fw-bold text-muted cursor-pointer" htmlFor="syncRetireFAB">Retire at same time</label>
-                      <input className="form-check-input ms-0 mt-0 cursor-pointer" type="checkbox" id="syncRetireFAB" checked={data.inputs.retire_same_time ?? false} onChange={e => handleSyncToggle(e.target.checked)} />
+                  <div className="form-check form-switch mb-2 pb-2 border-bottom border-secondary border-opacity-50 d-flex align-items-center justify-content-between px-0">
+                      <label className="form-check-label fw-bold text-muted cursor-pointer" style={{fontSize: '0.75rem'}} htmlFor="syncRetireFAB">Retire at same time</label>
+                      <input className="form-check-input ms-0 mt-0 cursor-pointer" style={{transform: 'scale(0.8)'}} type="checkbox" id="syncRetireFAB" checked={data.inputs.retire_same_time ?? false} onChange={e => handleSyncToggle(e.target.checked)} />
                   </div>
               )}
-              <div className="d-flex flex-column gap-3">
+              <div className="d-flex flex-column gap-2">
                   <div className="d-flex justify-content-between align-items-center">
-                      <span className="fw-bold text-muted small me-3">P1 Retire Age</span>
-                      <StepperInput min={data.inputs.p1_age ?? 18} max={data.inputs.p1_lifeExp ?? 90} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p1', val)} />
+                      <span className="fw-bold text-muted" style={{fontSize: '0.75rem'}}>P1 Retire Age</span>
+                      <div style={{width: '100px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={data.inputs.p1_lifeExp ?? 90} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p1', val)} /></div>
                   </div>
                   {isCouple && (
                       <div className="d-flex justify-content-between align-items-center">
-                          <span className="fw-bold text-muted small me-3">P2 Retire Age</span>
-                          <StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={data.inputs.p2_lifeExp ?? 90} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p2', val)} />
+                          <span className="fw-bold text-muted" style={{fontSize: '0.75rem'}}>P2 Retire Age</span>
+                          <div style={{width: '100px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={data.inputs.p2_lifeExp ?? 90} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p2', val)} /></div>
                       </div>
                   )}
               </div>
@@ -668,21 +668,13 @@ function DashboardLayout() {
 
       <button 
         className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
-        style={{ width: '60px', height: '60px', bottom: '30px', right: '30px', zIndex: 1050 }}
+        style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }}
         title="Quick Adjust Variables"
         onClick={() => setShowQuickAdjust(!showQuickAdjust)}
       >
-        <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-4`}></i>
+        <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
       </button>
 
     </div>
-  );
-}
-
-export default function RetirementDashboard() {
-  return (
-    <FinanceProvider>
-      <DashboardLayout />
-    </FinanceProvider>
   );
 }
