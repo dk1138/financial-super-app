@@ -5,13 +5,13 @@ export function getInflatedTaxData(baseTaxData: any, baseInflation: number) {
     Object.values(taxData).forEach((data: any) => { 
         if (data.brackets) {
             data.brackets = data.brackets.map((bracket: number) => {
-                // ON top brackets are fixed
+                // ON top brackets are fixed by the provincial government
                 if (bracket === 150000 || bracket === 220000) return bracket; 
                 return bracket * baseInflation;
             });
         }
         
-        // Handle the new scalable surtaxes array
+        // Handle the scalable surtaxes array
         if (data.surtaxes && Array.isArray(data.surtaxes)) { 
             data.surtaxes = data.surtaxes.map((s: any) => ({
                 ...s,
@@ -272,16 +272,17 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let provDividendCredit = grossedUpDividend * (provDivRates[province] || 0.10);
 
     if (province === 'ON') { 
+        // DTC is applied to Basic Ontario Tax BEFORE Surtax
         provTax = Math.max(0, provTax - provDividendCredit);
         
+        // 1. ONTARIO SURTAX (Calculated strictly on Basic ON Tax)
         let surtax = 0; 
-        
         if (taxData.ON.surtaxes && Array.isArray(taxData.ON.surtaxes)) {
             let currentMarginalMultiplier = 1;
             for (let s of taxData.ON.surtaxes) {
                 if (provTax > s.threshold) {
                     surtax += (provTax - s.threshold) * s.rate;
-                    currentMarginalMultiplier += s.rate;
+                    currentMarginalMultiplier += s.rate; // 20% tier stacks with 36% tier
                 }
             }
             if (surtax > 0) {
@@ -291,6 +292,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         
         provTax += surtax;
 
+        // 2. LIFT CREDIT
         let liftMax = (constants.ON_LIFT_MAX || 875) * baseInflation;
         let liftRate = constants.ON_LIFT_RATE || 0.0505;
         let liftPhaseStart = (constants.ON_LIFT_PHASE_OUT_START || 32500) * baseInflation;
@@ -302,16 +304,20 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         
         provTax = Math.max(0, provTax - liftCredit);
 
+        // 3. ONTARIO TAX REDUCTION (Strict CRA ON428 Translation)
         let otrBase = (constants.ON_OTR_BASE || 284) * baseInflation;
         if (spouseIncome >= 0 && spouseIncome < provBpa) {
             otrBase += ((constants.ON_OTR_BASE || 284) * baseInflation); 
         }
         
-        let otrAmount = (otrBase * 2) - provTax;
-        if (otrAmount > 0) {
-            provTax = Math.max(0, provTax - otrAmount);
-        }
+        let line80 = otrBase * 2;
+        let line81 = provTax;
+        let line82 = Math.max(0, line80 - line81);
+        let otrAmount = Math.max(0, otrBase - line82);
         
+        provTax = Math.max(0, provTax - otrAmount);
+        
+        // 4. ONTARIO HEALTH PREMIUM (OHP)
         let ohp = 0;
         let ti = craTaxableIncome;
         let ohpTiers = constants.ON_OHP_TIERS || [

@@ -139,22 +139,19 @@ export default function ProjectionTab() {
       const scrollContainer = targetEl.querySelector('.table-responsive') as HTMLElement;
       const originalStyle = scrollContainer ? scrollContainer.getAttribute('style') : null;
 
-      // Temporarily remove max-height and overflow to reveal the entire table
       if (scrollContainer) {
           scrollContainer.style.maxHeight = 'none';
           scrollContainer.style.overflow = 'visible';
       }
 
-      // Add a slight delay so the browser can fully render the expanded table
       setTimeout(async () => {
           try {
               const canvas = await html2canvas(targetEl, { 
                   backgroundColor: '#16181d', 
                   scale: 2,
-                  windowHeight: targetEl.scrollHeight + 100 // Prevent clipping on very tall tables
+                  windowHeight: targetEl.scrollHeight + 100 
               });
               
-              // Restore the original scrollable styles
               if (scrollContainer) {
                   if (originalStyle !== null) {
                       scrollContainer.setAttribute('style', originalStyle);
@@ -171,7 +168,6 @@ export default function ProjectionTab() {
               showToast('✅ Table image downloaded successfully!');
           } catch (err) {
               console.error(err);
-              // Ensure we restore styles even if the capture fails
               if (scrollContainer) {
                   if (originalStyle !== null) {
                       scrollContainer.setAttribute('style', originalStyle);
@@ -328,7 +324,6 @@ export default function ProjectionTab() {
 
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
-      const totalProgramMatch = isP1 ? (y.rrspTotalMatch1 || 0) : (y.rrspTotalMatch2 || 0);
       
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
@@ -410,8 +405,11 @@ export default function ProjectionTab() {
       return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
   };
 
-  const buildYieldTooltip = (math: any, year: number) => {
+  const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
       if (!math) return "No yield.";
+      if (useRealDollars) {
+          return `<b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>In Today's $:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+      }
       return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
   };
 
@@ -510,7 +508,7 @@ export default function ProjectionTab() {
               )}
               {invInc > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year)}`} align="left" /></span>
+                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, data.useRealDollars)}`} align="left" /></span>
                       <span className="text-success">+{formatCurrency(invInc, year)}</span>
                   </div>
               )}
@@ -523,7 +521,11 @@ export default function ProjectionTab() {
                   if (k.includes('RRIF')) {
                       const factor = getRrifFactor(age - 1);
                       const minAmount = priorRrifBal * factor;
-                      info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
+                      if (data.useRealDollars) {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorRrifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>In Today's $:</b> $${formatStr(minAmount, year)}`;
+                      } else {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
+                      }
                   }
                   else if (k.includes('LIF')) {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>LIF withdrawal bound by provincial limits.`;
@@ -534,7 +536,11 @@ export default function ProjectionTab() {
                   else if (k.includes('Non-Reg') || k.includes('Crypto')) {
                       const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
                       if (mathObj) {
-                          info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          if (data.useRealDollars) {
+                              info = `<span class='text-info fw-bold'>Partially Taxable.</span><br><span class='text-muted small'>Nominal Math:</span><br><div class="d-flex justify-content-between text-muted small"><span>Gross W/D:</span><span>$${Math.round(mathObj.wd).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small"><span>ACB Disposed:</span><span>-$${Math.round(mathObj.acb).toLocaleString()}</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Nominal Gain:</span><span>$${Math.round(mathObj.gain).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small mb-1"><span>Nominal Taxable (50%):</span><span>$${Math.round(mathObj.tax).toLocaleString()}</span></div><hr class="my-1 border-secondary"><b>Taxable in Today's $:</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          } else {
+                              info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          }
                       } else {
                           info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Withdrawal includes principal and capital gains. Only 50% of the capital gain is added to taxable income.`;
                       }
@@ -694,7 +700,6 @@ export default function ProjectionTab() {
                 const totalIncome = (y.grossInflow || 0) - (totalWithdrawals as number) - totalClawback;
                 const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
                 
-                // Account for RESP offsets safely
                 const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
