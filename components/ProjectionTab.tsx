@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
+import html2canvas from 'html2canvas';
 
 const getRrifFactor = (age: number) => {
     if (age < 71) return 1 / (90 - age);
@@ -17,8 +18,18 @@ const getRrifFactor = (age: number) => {
 export default function ProjectionTab() {
   const { data, results } = useFinance();
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
+  
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const isCouple = data.mode === 'Couple';
+
+  const showToast = (msg: string) => {
+      setToastMsg(msg);
+      setTimeout(() => setToastMsg(''), 4000);
+  };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
     return (
@@ -117,6 +128,58 @@ export default function ProjectionTab() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+  };
+
+  const exportToPNG = async () => {
+      if (!tableRef.current) return;
+      setIsExporting(true);
+      showToast('Generating high-res image of the full table...');
+
+      const targetEl = tableRef.current;
+      const scrollContainer = targetEl.querySelector('.table-responsive') as HTMLElement;
+      const originalStyle = scrollContainer ? scrollContainer.getAttribute('style') : null;
+
+      if (scrollContainer) {
+          scrollContainer.style.maxHeight = 'none';
+          scrollContainer.style.overflow = 'visible';
+      }
+
+      setTimeout(async () => {
+          try {
+              const canvas = await html2canvas(targetEl, { 
+                  backgroundColor: '#16181d', 
+                  scale: 2,
+                  windowHeight: targetEl.scrollHeight + 100 
+              });
+              
+              if (scrollContainer) {
+                  if (originalStyle !== null) {
+                      scrollContainer.setAttribute('style', originalStyle);
+                  } else {
+                      scrollContainer.removeAttribute('style');
+                  }
+              }
+
+              const url = canvas.toDataURL('image/png');
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
+              link.click();
+              showToast('✅ Table image downloaded successfully!');
+          } catch (err) {
+              console.error(err);
+              if (scrollContainer) {
+                  if (originalStyle !== null) {
+                      scrollContainer.setAttribute('style', originalStyle);
+                  } else {
+                      scrollContainer.removeAttribute('style');
+                  }
+              }
+              showToast('❌ Failed to download image.');
+          } finally {
+              setIsExporting(false);
+          }
+      }, 500); 
   };
 
   let totalTaxPaid = 0;
@@ -261,7 +324,6 @@ export default function ProjectionTab() {
 
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
-      const totalProgramMatch = isP1 ? (y.rrspTotalMatch1 || 0) : (y.rrspTotalMatch2 || 0);
       
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
@@ -298,7 +360,7 @@ export default function ProjectionTab() {
 
       let actualGross = sum; 
       
-      let incStr = `<b>Gross Taxable Income:</b> $${formatStr(actualGross, year)}<br>`;
+      let incStr = `<b>Gross Income:</b> $${formatStr(actualGross, year)}<br>`;
       if (breakdownStr) {
            incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
@@ -343,8 +405,11 @@ export default function ProjectionTab() {
       return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
   };
 
-  const buildYieldTooltip = (math: any, year: number) => {
+  const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
       if (!math) return "No yield.";
+      if (useRealDollars) {
+          return `<b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>In Today's $:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+      }
       return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
   };
 
@@ -443,7 +508,7 @@ export default function ProjectionTab() {
               )}
               {invInc > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year)}`} align="left" /></span>
+                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, data.useRealDollars)}`} align="left" /></span>
                       <span className="text-success">+{formatCurrency(invInc, year)}</span>
                   </div>
               )}
@@ -456,7 +521,11 @@ export default function ProjectionTab() {
                   if (k.includes('RRIF')) {
                       const factor = getRrifFactor(age - 1);
                       const minAmount = priorRrifBal * factor;
-                      info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
+                      if (data.useRealDollars) {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorRrifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>In Today's $:</b> $${formatStr(minAmount, year)}`;
+                      } else {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
+                      }
                   }
                   else if (k.includes('LIF')) {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>LIF withdrawal bound by provincial limits.`;
@@ -467,7 +536,11 @@ export default function ProjectionTab() {
                   else if (k.includes('Non-Reg') || k.includes('Crypto')) {
                       const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
                       if (mathObj) {
-                          info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          if (data.useRealDollars) {
+                              info = `<span class='text-info fw-bold'>Partially Taxable.</span><br><span class='text-muted small'>Nominal Math:</span><br><div class="d-flex justify-content-between text-muted small"><span>Gross W/D:</span><span>$${Math.round(mathObj.wd).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small"><span>ACB Disposed:</span><span>-$${Math.round(mathObj.acb).toLocaleString()}</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Nominal Gain:</span><span>$${Math.round(mathObj.gain).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small mb-1"><span>Nominal Taxable (50%):</span><span>$${Math.round(mathObj.tax).toLocaleString()}</span></div><hr class="my-1 border-secondary"><b>Taxable in Today's $:</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          } else {
+                              info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          }
                       } else {
                           info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Withdrawal includes principal and capital gains. Only 50% of the capital gain is added to taxable income.`;
                       }
@@ -517,6 +590,15 @@ export default function ProjectionTab() {
   return (
     <div className="p-3 p-md-4">
       
+      {toastMsg && (
+          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
+              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
+                  {isExporting && <span className="spinner-border spinner-border-sm me-2"></span>}
+                  {toastMsg}
+              </div>
+          </div>
+      )}
+
       <div className="row g-2 g-md-3 mb-4">
           <div className="col-12 col-md-4 col-xl">
               <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
@@ -557,16 +639,37 @@ export default function ProjectionTab() {
               </div>
           </div>
 
-          <div className="col-12 col-md-4 col-xl cursor-pointer" onClick={exportToCSV}>
-              <div className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75">
+          <div className="col-12 col-md-4 col-xl position-relative">
+              <div 
+                  className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75 cursor-pointer"
+                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
+              >
                   <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap">
-                      <i className="bi bi-filetype-csv fs-5 me-2"></i> Export
+                      {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download fs-5 me-2"></i>}
+                      Export
                   </span>
               </div>
+              {exportMenuOpen && (
+                  <>
+                      <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
+                      <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '150px'}}>
+                          <li>
+                              <button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
+                                  <i className="bi bi-filetype-csv me-2"></i> Export to CSV
+                              </button>
+                          </li>
+                          <li>
+                              <button className="dropdown-item py-2 fw-bold text-success" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
+                                  <i className="bi bi-image me-2"></i> Export to PNG
+                              </button>
+                          </li>
+                      </ul>
+                  </>
+              )}
           </div>
       </div>
 
-      <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm">
+      <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm" ref={tableRef}>
         <div className="table-responsive hide-scrollbar" style={{ maxHeight: '75vh' }}>
           
           <table className="table table-hover align-middle mb-0" style={{ tableLayout: 'fixed', minWidth: '1100px', width: '100%' }}>
@@ -597,7 +700,6 @@ export default function ProjectionTab() {
                 const totalIncome = (y.grossInflow || 0) - (totalWithdrawals as number) - totalClawback;
                 const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
                 
-                // Account for RESP offsets safely
                 const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
