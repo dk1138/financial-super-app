@@ -880,11 +880,11 @@ export class FinanceEngine {
                     let currentDeficit = (expenses + mortgagePayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
                     if (currentDeficit < 1) break; 
                     
-                    // Pass age1, age2 to handleDeficit
+                    // FIX: Pass this.strategies.decum directly to respect manual ordering!
                     handleDeficit(currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
                         if (prefix === 'p1') { craTaxableIncome1 += taxableAmt; cashIncome1 += cashAmt; }
                         if (prefix === 'p2') { craTaxableIncome2 += taxableAmt; cashIncome2 += cashAmt; }
-                    }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, simContext?.forceOrder || null, getEligPension1(), getEligPension2(), this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, expenses);
+                    }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, simContext?.forceOrder || this.strategies.decum, getEligPension1(), getEligPension2(), this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, expenses);
                 }
                 tax1 = calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1);
                 tax2 = calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2);

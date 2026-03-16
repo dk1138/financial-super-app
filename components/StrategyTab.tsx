@@ -111,10 +111,13 @@ export default function StrategyTab() {
         }
     }
 
-    return currentList.map((item: string, index: number) => {
+    const listItems = currentList.map((item: string, index: number) => {
       const details = ACCOUNT_MAP[item] || { label: item, icon: 'bi-wallet', color: 'text-white', desc: '' };
       const isDragging = draggingType === type && draggedItemIndex === index;
       const isLocked = type === 'decum' && isOptimized;
+      
+      // If optimized, we shift the numbering down by 1 because we are injecting a "Virtual Step 1" above it
+      const displayIndex = (type === 'decum' && isOptimized) ? index + 2 : index + 1;
 
       return (
         <div
@@ -129,7 +132,7 @@ export default function StrategyTab() {
         >
           <div className="d-flex align-items-center gap-3">
             <div className={`d-flex align-items-center justify-content-center ${isLocked ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-25 text-muted'} rounded-circle fw-bold`} style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
-                {index + 1}
+                {displayIndex}
             </div>
             <div className={`bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center ${details.color} flex-shrink-0`} style={{width: '42px', height: '42px'}}>
                 <i className={`bi ${details.icon} fs-5`}></i>
@@ -149,6 +152,37 @@ export default function StrategyTab() {
         </div>
       );
     });
+
+    // Inject the visual "Phase 1: Meltdown" block when optimized
+    if (type === 'decum' && isOptimized) {
+        return (
+            <div className="d-flex flex-column">
+                <div className="mb-2 ms-2 mt-1 small fw-bold text-danger text-uppercase ls-1" style={{fontSize: '0.65rem', letterSpacing: '1px'}}>Phase 1: Bracket Filling</div>
+                <div className="d-flex align-items-center justify-content-between p-3 mb-3 rounded-4 shadow-sm border border-danger bg-danger bg-opacity-10" style={{ cursor: 'default' }}>
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="d-flex align-items-center justify-content-center bg-danger text-white rounded-circle fw-bold shadow-sm" style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
+                        1
+                    </div>
+                    <div className="bg-danger bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center text-danger flex-shrink-0" style={{width: '42px', height: '42px'}}>
+                        <i className="bi bi-fire fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 className="mb-0 fw-bold text-danger">Proactive RRSP Meltdown</h6>
+                        <div className="small fw-medium text-danger opacity-75" style={{ fontSize: '0.7rem', lineHeight: 1.2 }}>
+                            Sips from RRSP to perfectly fill the lowest tax brackets.
+                        </div>
+                    </div>
+                  </div>
+                  <i className="bi bi-lock-fill text-danger fs-5 opacity-50 ms-2"></i>
+                </div>
+
+                <div className="mb-2 ms-2 mt-2 small fw-bold text-primary text-uppercase ls-1" style={{fontSize: '0.65rem', letterSpacing: '1px'}}>Phase 2: Lifestyle Funding</div>
+                {listItems}
+            </div>
+        );
+    }
+
+    return listItems;
   };
 
   return (
@@ -199,23 +233,23 @@ export default function StrategyTab() {
                         <div 
                             className="p-3 bg-transparent h-100 transition-all" 
                             style={{ 
-                                opacity: isOptimized ? 0.7 : 1, 
+                                opacity: isOptimized ? 0.85 : 1, 
                                 pointerEvents: isOptimized ? 'none' : 'auto'
                             }}
                         >
                             {renderDraggableList('decum')}
                         </div>
 
-                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER */}
+                        {/* COMPACT OFFSET OVERLAY FOR SMART OPTIMIZER */}
                         {isOptimized && (
-                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: '65%', minWidth: '220px' }}>
-                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
-                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
-                                        <i className="bi bi-lock-fill fs-5"></i>
+                            <div className="position-absolute top-50 end-0 translate-middle-y me-3 me-md-4" style={{ zIndex: 10, width: '220px', maxWidth: 'calc(100% - 2rem)' }}>
+                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(2px)' }}>
+                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '32px', height: '32px'}}>
+                                        <i className="bi bi-lock-fill" style={{fontSize: '0.9rem'}}></i>
                                     </div>
-                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
+                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.8rem' }}>Optimized</span>
                                     <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.7rem'}}>
-                                        Showing Engine's Tax-Efficient Route
+                                        Engine's tax-efficient route is locked in.
                                     </span>
                                 </div>
                             </div>
