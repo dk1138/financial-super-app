@@ -10,7 +10,7 @@ export function getInflatedTaxData(baseTaxData: any, baseInflation: number) {
             });
         }
         
-        // Surtaxes are manually overridden for Ontario below, but we keep this for other provinces
+        // Handle the scalable surtaxes array
         if (data.surtaxes && Array.isArray(data.surtaxes)) { 
             data.surtaxes = data.surtaxes.map((s: any) => ({
                 ...s,
@@ -45,7 +45,7 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
 
 export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
-        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0 }, rtc: { transit: 0 }, surtax: 0, ohp: 0 };
+        return { fed: 0, prov: 0, cpp_ei: 0, cpp: 0, cpp2: 0, ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0 }, rtc: { transit: 0 }, surtax: 0, ohp: 0 };
     }
     
     let oasClawback = 0;
@@ -61,7 +61,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
 
     let cppBasePremium = 0;
-    let cppEnhancedPremium = 0;
+    let cppTier1Enhanced = 0;
+    let cppTier2 = 0;
     
     // CRA 2024 Exact Fallbacks
     let yearlyMaxPensionableEarnings = (constants.YMPE || 68500) * baseInflation; 
@@ -76,13 +77,14 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let eiRate = constants.EI_RATE || 0.0166;
 
     if (earnedIncome > cppExemption) {
-        cppBasePremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * cppRate; 
-        cppEnhancedPremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * cppEnhancedRate;
+        cppBasePremium = (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * cppRate; 
+        cppTier1Enhanced = (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * cppEnhancedRate;
     }
     if (earnedIncome > yearlyMaxPensionableEarnings) {
-        cppEnhancedPremium += (Math.min(earnedIncome, yearlyAdditionalMaxPensionableEarnings) - yearlyMaxPensionableEarnings) * cppEnhancedTier2Rate;
+        cppTier2 = (Math.min(earnedIncome, yearlyAdditionalMaxPensionableEarnings) - yearlyMaxPensionableEarnings) * cppEnhancedTier2Rate;
     }
     
+    let cppEnhancedPremium = cppTier1Enhanced + cppTier2;
     const eiPremium = Math.min(earnedIncome, eiMaxInsurableEarnings) * eiRate; 
 
     let taxIncomeForFedProv = Math.max(0, craTaxableIncome - cppEnhancedPremium - oasClawback);
@@ -268,18 +270,16 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let fedDividendCredit = grossedUpDividend * fedDivRate;
     
     let provDivRates = isEligibleDividend ? (constants.PROV_DIV_CREDIT_ELIGIBLE || {}) : (constants.PROV_DIV_CREDIT_NON_ELIGIBLE || {});
-    let provDivCreditFallback = isEligibleDividend ? 0.10 : 0.029863; // ON 2024 Exact Fallback
+    let provDivCreditFallback = isEligibleDividend ? 0.10 : 0.029863; 
     let provDividendCredit = grossedUpDividend * (provDivRates[province] || provDivCreditFallback);
 
-    // Explicitly track these so we can expose them to the UI
     let ontarioSurtaxAmt = 0;
     let ontarioHealthPremium = 0;
 
     if (province === 'ON') { 
-        // DTC is applied to Basic Ontario Tax BEFORE Surtax
         provTax = Math.max(0, provTax - provDividendCredit);
         
-        // 1. ONTARIO SURTAX (Strict Additive Formula, overriding JSON)
+        // 1. ONTARIO SURTAX 
         let s1 = 5554 * baseInflation;
         let s2 = 7108 * baseInflation;
         let surtaxMultiplier = 1;
@@ -289,7 +289,6 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
             surtaxMultiplier += 0.20;
         }
         if (provTax > s2) {
-            // This 36% is strictly ADDITIVE to the 20% tier above
             ontarioSurtaxAmt += (provTax - s2) * 0.36; 
             surtaxMultiplier += 0.36;
         }
@@ -309,7 +308,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         
         provTax = Math.max(0, provTax - liftCredit);
 
-        // 3. ONTARIO TAX REDUCTION (Strict CRA ON428 Translation)
+        // 3. ONTARIO TAX REDUCTION
         let otrBase = (constants.ON_OTR_BASE || 284) * baseInflation;
         if (spouseIncome >= 0 && spouseIncome < provBpa) {
             otrBase += ((constants.ON_OTR_BASE || 284) * baseInflation); 
@@ -322,7 +321,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         
         provTax = Math.max(0, provTax - otrAmount);
         
-        // 4. ONTARIO HEALTH PREMIUM (Strict Taxtips Plateaus, NOT INFLATED)
+        // 4. ONTARIO HEALTH PREMIUM (OHP)
         let ti = craTaxableIncome;
         let ohp = 0;
         
@@ -369,7 +368,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         let maxTransitExpense = (constants.ON_SENIORS_TRANSIT_MAX_EXPENSE || 3000) * baseInflation;
         let eligibleTransit = Math.min(credits.transit * baseInflation, maxTransitExpense);
         provTransitCredit = eligibleTransit * (constants.ON_SENIORS_TRANSIT_RATE || 0.15);
-        provTax -= provTransitCredit; // Refundable: Allowed to reduce provTax below $0
+        provTax -= provTransitCredit; 
     }
 
     let actualMargRate = fedMarginalRate + provMarginalRate;
@@ -381,6 +380,9 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         fed: fedTax, 
         prov: provTax, 
         cpp_ei: cppBasePremium + cppEnhancedPremium + eiPremium, 
+        cpp: cppBasePremium + cppTier1Enhanced,
+        cpp2: cppTier2,
+        ei: eiPremium,
         oas_clawback: oasClawback, 
         surtax: ontarioSurtaxAmt, 
         ohp: ontarioHealthPremium, 

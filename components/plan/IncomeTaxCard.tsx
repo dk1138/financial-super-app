@@ -11,6 +11,7 @@ export default function IncomeTaxCard() {
   const [showNrtc, setShowNrtc] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  const [showCppEi, setShowCppEi] = useState<Record<string, boolean>>({ p1: false, p2: false });
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -31,6 +32,7 @@ export default function IncomeTaxCard() {
   const toggleNrtc = (p: string) => setShowNrtc(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleFedTax = (p: string) => setShowFedTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleProvTax = (p: string) => setShowProvTax(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleCppEi = (p: string) => setShowCppEi(prev => ({ ...prev, [p]: !prev[p] }));
 
   const renderTaxBox = (taxDetails: any, gross: number, p: string) => {
       if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
@@ -103,7 +105,27 @@ export default function IncomeTaxCard() {
                   )}
               </div>
 
-              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-1"><span className="text-muted small fw-medium">CPP / EI Premiums</span> <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
+              {/* CPP / EI Breakdown */}
+              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+                  <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleCppEi(p)}>
+                      <span className={`small fw-medium d-flex align-items-center gap-1 ${showCppEi[p] ? 'text-main' : 'text-muted'}`}>
+                          <i className={`bi bi-chevron-${showCppEi[p] ? 'up' : 'down'} small`}></i> CPP / EI Premiums
+                      </span>
+                      <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span>
+                  </div>
+                  {showCppEi[p] && (
+                      <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
+                          <div className="d-flex justify-content-between align-items-center">
+                              <span className="text-muted small fst-italic">CPP Contributions</span>
+                              <span className="small text-muted fw-bold">(${Math.round(taxDetails.cppPremium || 0).toLocaleString()})</span>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center">
+                              <span className="text-muted small fst-italic">EI Premiums</span>
+                              <span className="small text-muted fw-bold">(${Math.round(taxDetails.eiPremium || 0).toLocaleString()})</span>
+                          </div>
+                      </div>
+                  )}
+              </div>
               
               <div className="d-flex justify-content-between mt-1"><span className="text-danger fw-bold small">Total Tax Paid</span> <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
               <div className="d-flex justify-content-between"><span className="text-muted small fw-medium">Marginal Rate</span> <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span></div>
