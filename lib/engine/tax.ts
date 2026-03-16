@@ -10,7 +10,7 @@ export function getInflatedTaxData(baseTaxData: any, baseInflation: number) {
             });
         }
         
-        // Handle the scalable surtaxes array
+        // Surtaxes are manually overridden for Ontario below, but we keep this for other provinces
         if (data.surtaxes && Array.isArray(data.surtaxes)) { 
             data.surtaxes = data.surtaxes.map((s: any) => ({
                 ...s,
@@ -63,17 +63,17 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let cppBasePremium = 0;
     let cppEnhancedPremium = 0;
     
-    let yearlyMaxPensionableEarnings = (constants.YMPE || 74600) * baseInflation; 
-    let yearlyAdditionalMaxPensionableEarnings = (constants.YAMPE || 85000) * baseInflation; 
-    let eiMaxInsurableEarnings = (constants.EI_MAX_INSURABLE || 68900) * baseInflation; 
+    // CRA 2024 Exact Fallbacks
+    let yearlyMaxPensionableEarnings = (constants.YMPE || 68500) * baseInflation; 
+    let yearlyAdditionalMaxPensionableEarnings = (constants.YAMPE || 73200) * baseInflation; 
+    let eiMaxInsurableEarnings = (constants.EI_MAX_INSURABLE || 63200) * baseInflation; 
     
-    // The $3500 CPP exemption is statutory and NEVER indexes with inflation
-    let cppExemption = constants.CPP_EXEMPTION || 3500;
+    let cppExemption = constants.CPP_EXEMPTION || 3500; // Never inflates
 
     let cppRate = constants.CPP_RATE || 0.0495;
     let cppEnhancedRate = constants.CPP_ENHANCED_RATE || 0.01;
     let cppEnhancedTier2Rate = constants.CPP_ENHANCED_TIER2_RATE || 0.04;
-    let eiRate = constants.EI_RATE || 0.0163;
+    let eiRate = constants.EI_RATE || 0.0166;
 
     if (earnedIncome > cppExemption) {
         cppBasePremium += (Math.min(earnedIncome, yearlyMaxPensionableEarnings) - cppExemption) * cppRate; 
@@ -99,11 +99,11 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let fedMarginalRate = fedCalc.marginalRate;
     let provMarginalRate = provCalc.marginalRate;
 
-    // --- FED/PROV BPA CREDITS ---
-    let bpaMax = (constants.BPA_MAX_FED || 16452) * baseInflation;
-    let bpaMin = (constants.BPA_MIN_FED || 14829) * baseInflation;
-    let bpaPhaseStart = (constants.BPA_PHASE_START_FED || 181440) * baseInflation;
-    let bpaPhaseEnd = (constants.BPA_PHASE_END_FED || 258482) * baseInflation;
+    // --- FED/PROV BPA CREDITS (2024 Exact Fallbacks) ---
+    let bpaMax = (constants.BPA_MAX_FED || 15705) * baseInflation;
+    let bpaMin = (constants.BPA_MIN_FED || 14156) * baseInflation;
+    let bpaPhaseStart = (constants.BPA_PHASE_START_FED || 173205) * baseInflation;
+    let bpaPhaseEnd = (constants.BPA_PHASE_END_FED || 246752) * baseInflation;
     
     let fedBpa = bpaMax;
     if (craTaxableIncome > bpaPhaseStart) {
@@ -111,13 +111,13 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         fedBpa = Math.max(bpaMin, bpaMax - reduction);
     }
     
-    let provBpaAmounts = constants.PROV_BPA || { 'ON': 12989 };
+    let provBpaAmounts = constants.PROV_BPA || { 'ON': 12399 }; 
     let provBpa = (provBpaAmounts[province] || 15000) * baseInflation;
 
-    let lowestFedRate = taxData.FED?.rates?.[0] || 0.14; 
+    let lowestFedRate = taxData.FED?.rates?.[0] || 0.15; 
     let fedBpaCredit = fedBpa * lowestFedRate; 
     
-    let provRateLowest = taxData[province]?.rates?.[0] || 0.0505;
+    let provRateLowest = taxData[province]?.rates?.[0] || 0.0505; 
     let provBpaCredit = provBpa * provRateLowest;
 
     let fedSpousalCredit = 0;
@@ -141,19 +141,19 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
 
     let fedEmploymentCredit = 0;
     if (earnedIncome > 0) {
-        fedEmploymentCredit = Math.min(earnedIncome, (constants.FED_EMPLOYMENT_AMOUNT || 1501) * baseInflation) * lowestFedRate;
+        fedEmploymentCredit = Math.min(earnedIncome, (constants.FED_EMPLOYMENT_AMOUNT || 1433) * baseInflation) * lowestFedRate;
     }
 
     let fedAgeCredit = 0;
     let provAgeCredit = 0;
     if (age >= 65) {
-        let fedAgeBase = constants.FED_AGE_AMOUNT || 9212;
-        let fedAgePhase = constants.FED_AGE_PHASE_START || 46432;
+        let fedAgeBase = constants.FED_AGE_AMOUNT || 8790;
+        let fedAgePhase = constants.FED_AGE_PHASE_START || 44325;
         let ageAmt = Math.max(0, fedAgeBase * baseInflation - Math.max(0, craTaxableIncome - fedAgePhase * baseInflation) * 0.15);
         fedAgeCredit = ageAmt * lowestFedRate; 
         
-        let provAgeBase = constants.PROV_AGE_AMOUNT?.[province] || 6342;
-        let provAgePhase = constants.PROV_AGE_PHASE_START?.[province] || 47210;
+        let provAgeBase = constants.PROV_AGE_AMOUNT?.[province] || 6054;
+        let provAgePhase = constants.PROV_AGE_PHASE_START?.[province] || 45068;
         let provAgeAmt = Math.max(0, provAgeBase * baseInflation - Math.max(0, craTaxableIncome - provAgePhase * baseInflation) * 0.15);
         provAgeCredit = provAgeAmt * provRateLowest; 
     }
@@ -162,7 +162,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let provPensionCredit = 0;
     if (eligiblePension > 0) {
         fedPensionCredit = Math.min(eligiblePension, constants.FED_PENSION_AMOUNT || 2000) * lowestFedRate;
-        provPensionCredit = Math.min(eligiblePension, constants.PROV_PENSION_AMOUNT?.[province] || 1796) * provRateLowest; 
+        provPensionCredit = Math.min(eligiblePension, constants.PROV_PENSION_AMOUNT?.[province] || 1681) * provRateLowest; 
     }
 
     let fedCppEiCredit = (cppBasePremium + eiPremium) * lowestFedRate;
@@ -172,8 +172,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let fedDisabilityCredit = 0;
     let provDisabilityCredit = 0;
     if (credits.disability) {
-        fedDisabilityCredit = (constants.FED_DISABILITY_AMOUNT || 10138) * baseInflation * lowestFedRate;
-        provDisabilityCredit = (constants.PROV_DISABILITY_AMOUNT?.[province] || 9000) * baseInflation * provRateLowest;
+        fedDisabilityCredit = (constants.FED_DISABILITY_AMOUNT || 9872) * baseInflation * lowestFedRate;
+        provDisabilityCredit = (constants.PROV_DISABILITY_AMOUNT?.[province] || 9800) * baseInflation * provRateLowest;
     }
 
     let fedCaregiverCredit = 0;
@@ -183,13 +183,13 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let over18Share = credits.caregiver_over_18_share || 0;
 
     if (under18Share > 0) {
-        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_UNDER_18 || 2687) * baseInflation * lowestFedRate * under18Share;
+        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_UNDER_18 || 2616) * baseInflation * lowestFedRate * under18Share;
         provCaregiverCredit += (constants.PROV_CAREGIVER_AMOUNT_UNDER_18?.[province] || 0) * baseInflation * provRateLowest * under18Share;
     }
     
     if (over18Share > 0) {
-        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_OVER_18 || 8601) * baseInflation * lowestFedRate * over18Share;
-        provCaregiverCredit += (constants.PROV_CAREGIVER_AMOUNT_OVER_18?.[province] || 5000) * baseInflation * provRateLowest * over18Share;
+        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_OVER_18 || 8375) * baseInflation * lowestFedRate * over18Share;
+        provCaregiverCredit += (constants.PROV_CAREGIVER_AMOUNT_OVER_18?.[province] || 5700) * baseInflation * provRateLowest * over18Share;
     }
 
     let fedMedicalCredit = 0;
@@ -198,7 +198,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         let medExp = credits.medicalExpenses * baseInflation;
         let medRate = constants.FED_MEDICAL_EXPENSE_THRESHOLD_RATE || 0.03;
         
-        let fedMedMax = (constants.FED_MEDICAL_EXPENSE_THRESHOLD_MAX || 2900) * baseInflation;
+        let fedMedMax = (constants.FED_MEDICAL_EXPENSE_THRESHOLD_MAX || 2759) * baseInflation;
         let fedMedThreshold = Math.min(fedMedMax, craTaxableIncome * medRate);
         let fedEligibleMed = Math.max(0, medExp - fedMedThreshold);
         fedMedicalCredit = fedEligibleMed * lowestFedRate;
@@ -232,7 +232,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         if (don <= thresh) {
             fedDonationCredit = don * fedRate1;
         } else {
-            let topRateInc = Math.max(0, craTaxableIncome - ((constants.BPA_PHASE_END_FED || 258482) * baseInflation)); 
+            let topRateInc = Math.max(0, craTaxableIncome - ((constants.BPA_PHASE_END_FED || 246752) * baseInflation)); 
             let eligibleFor33 = Math.min(don - thresh, topRateInc);
             let eligibleFor29 = Math.max(0, don - thresh - eligibleFor33);
             fedDonationCredit = (thresh * fedRate1) + (eligibleFor33 * fedRate3) + (eligibleFor29 * fedRate2);
@@ -268,7 +268,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let fedDividendCredit = grossedUpDividend * fedDivRate;
     
     let provDivRates = isEligibleDividend ? (constants.PROV_DIV_CREDIT_ELIGIBLE || {}) : (constants.PROV_DIV_CREDIT_NON_ELIGIBLE || {});
-    let provDividendCredit = grossedUpDividend * (provDivRates[province] || 0.10);
+    let provDivCreditFallback = isEligibleDividend ? 0.10 : 0.029863; // ON 2024 Exact Fallback
+    let provDividendCredit = grossedUpDividend * (provDivRates[province] || provDivCreditFallback);
 
     // Explicitly track these so we can expose them to the UI
     let ontarioSurtaxAmt = 0;
@@ -278,20 +279,22 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         // DTC is applied to Basic Ontario Tax BEFORE Surtax
         provTax = Math.max(0, provTax - provDividendCredit);
         
-        // 1. ONTARIO SURTAX (Calculated strictly on Basic ON Tax)
-        if (taxData.ON.surtaxes && Array.isArray(taxData.ON.surtaxes)) {
-            let currentMarginalMultiplier = 1;
-            for (let s of taxData.ON.surtaxes) {
-                if (provTax > s.threshold) {
-                    ontarioSurtaxAmt += (provTax - s.threshold) * s.rate;
-                    currentMarginalMultiplier += s.rate; // 20% tier stacks with 36% tier
-                }
-            }
-            if (ontarioSurtaxAmt > 0) {
-                provMarginalRate *= currentMarginalMultiplier;
-            }
+        // 1. ONTARIO SURTAX (Strict Additive Formula, overriding JSON)
+        let s1 = 5554 * baseInflation;
+        let s2 = 7108 * baseInflation;
+        let surtaxMultiplier = 1;
+        
+        if (provTax > s1) {
+            ontarioSurtaxAmt += (provTax - s1) * 0.20;
+            surtaxMultiplier += 0.20;
+        }
+        if (provTax > s2) {
+            // This 36% is strictly ADDITIVE to the 20% tier above
+            ontarioSurtaxAmt += (provTax - s2) * 0.36; 
+            surtaxMultiplier += 0.36;
         }
         
+        if (ontarioSurtaxAmt > 0) provMarginalRate *= surtaxMultiplier;
         provTax += ontarioSurtaxAmt;
 
         // 2. LIFT CREDIT
@@ -319,23 +322,35 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         
         provTax = Math.max(0, provTax - otrAmount);
         
-        // 4. ONTARIO HEALTH PREMIUM (OHP)
+        // 4. ONTARIO HEALTH PREMIUM (Strict Taxtips Plateaus, NOT INFLATED)
         let ti = craTaxableIncome;
-        let ohpTiers = constants.ON_OHP_TIERS || [
-            { threshold: 20000, base: 0,   maxAdd: 300, rate: 0.06 },
-            { threshold: 36000, base: 300, maxAdd: 150, rate: 0.06 },
-            { threshold: 48000, base: 450, maxAdd: 150, rate: 0.25 },
-            { threshold: 72000, base: 600, maxAdd: 150, rate: 0.25 },
-            { threshold: 200000, base: 750, maxAdd: 150, rate: 0.25 }
-        ];
-
-        for (let i = ohpTiers.length - 1; i >= 0; i--) {
-            let tier = ohpTiers[i];
-            if (ti > tier.threshold) {
-                ontarioHealthPremium = tier.base + Math.min(tier.maxAdd, (ti - tier.threshold) * tier.rate);
-                break;
-            }
+        let ohp = 0;
+        
+        if (ti <= 20000) {
+            ohp = 0;
+        } else if (ti <= 25000) {
+            ohp = (ti - 20000) * 0.06;
+        } else if (ti <= 36000) {
+            ohp = 300;
+        } else if (ti <= 38500) {
+            ohp = 300 + (ti - 36000) * 0.06;
+        } else if (ti <= 48000) {
+            ohp = 450;
+        } else if (ti <= 48600) {
+            ohp = 450 + (ti - 48000) * 0.25;
+        } else if (ti <= 72000) {
+            ohp = 600;
+        } else if (ti <= 72600) {
+            ohp = 600 + (ti - 72000) * 0.25;
+        } else if (ti <= 200000) {
+            ohp = 750;
+        } else if (ti <= 200600) {
+            ohp = 750 + (ti - 200000) * 0.25;
+        } else {
+            ohp = 900;
         }
+        
+        ontarioHealthPremium = ohp;
         provTax += ontarioHealthPremium;
 
     } else {
@@ -367,8 +382,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         prov: provTax, 
         cpp_ei: cppBasePremium + cppEnhancedPremium + eiPremium, 
         oas_clawback: oasClawback, 
-        surtax: ontarioSurtaxAmt, // Exposed to UI
-        ohp: ontarioHealthPremium, // Exposed to UI
+        surtax: ontarioSurtaxAmt, 
+        ohp: ontarioHealthPremium, 
         totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + eiPremium + oasClawback, 
         margRate: actualMargRate,
         nrtc: {
