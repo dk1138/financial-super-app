@@ -41,6 +41,10 @@ export default function ProjectionTab() {
     );
   }
 
+  // --- BUGFIX: Safe falsy check for 0% inflation ---
+  const rawInf = data.inputs?.inflation_rate;
+  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
+  
   // --- BUGFIX: Robust check for the "Today's Dollars" toggle state across possible keys ---
   const useRealDollars = Boolean(
       data.useRealDollars === true || 
@@ -50,7 +54,6 @@ export default function ProjectionTab() {
   );
 
   const baseYear = results.timeline[0]?.year || new Date().getFullYear();
-  const inflation = (Number(data.inputs.inflation_rate) || 2.1) / 100;
 
   const getRealValue = (nominalValue: number, year?: number) => {
       if (!useRealDollars || year === undefined) return nominalValue;

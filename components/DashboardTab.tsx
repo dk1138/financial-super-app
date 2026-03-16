@@ -100,10 +100,21 @@ export default function DashboardTab() {
   }
 
   const baseYear = results.timeline[0]?.year || new Date().getFullYear();
-  const inflation = (data.inputs.inflation_rate || 2.1) / 100;
+  
+  // --- BUGFIX: Safe falsy check for 0% inflation ---
+  const rawInf = data.inputs?.inflation_rate;
+  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
+  
+  // --- BUGFIX: Robust check for the "Today's Dollars" toggle state across possible keys ---
+  const useRealDollars = Boolean(
+      data.useRealDollars === true || 
+      data.inputs?.todays_dollars === true || 
+      data.inputs?.use_real_dollars === true ||
+      data.inputs?.useRealDollars === true
+  );
 
   const getRealValue = (nominalValue: number, year?: number) => {
-      if (!data.useRealDollars || year === undefined) return nominalValue;
+      if (!useRealDollars || year === undefined) return nominalValue;
       const yearsOut = Math.max(0, year - baseYear);
       return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
@@ -527,7 +538,6 @@ export default function DashboardTab() {
                   </div>
               </div>
 
-              {/* TARGET: tour-tax-breakdown added here */}
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm tour-tax-breakdown">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
@@ -728,7 +738,6 @@ export default function DashboardTab() {
 
           <div className="row mt-2">
               <div className="col-12">
-                  {/* TARGET: tour-cashflow-chart added here */}
                   <div className="rp-card border-secondary rounded-4 p-4 shadow-sm d-flex flex-column tour-cashflow-chart" style={{ height: '600px' }}>
                       <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-bar-chart-line-fill text-primary me-2"></i>Net Worth Composition Over Time</h6>
                       

@@ -45,9 +45,21 @@ export default function CashFlowTab() {
   const yData = results.timeline.find((y: any) => y.year === currentVal) || results.timeline[0];
 
   const baseYear = startYear;
-  const inflation = (data.inputs.inflation_rate || 2.1) / 100;
+  
+  // --- BUGFIX: Safe falsy check for 0% inflation ---
+  const rawInf = data.inputs?.inflation_rate;
+  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
+  
+  // --- BUGFIX: Robust check for the "Today's Dollars" toggle state across possible keys ---
+  const useRealDollars = Boolean(
+      data.useRealDollars === true || 
+      data.inputs?.todays_dollars === true || 
+      data.inputs?.use_real_dollars === true ||
+      data.inputs?.useRealDollars === true
+  );
+
   const getRealValue = (nominalValue: number) => {
-      if (!data.useRealDollars) return nominalValue;
+      if (!useRealDollars) return nominalValue;
       const yearsOut = Math.max(0, yData.year - baseYear);
       return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
