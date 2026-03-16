@@ -37,17 +37,18 @@ export default function StrategyTab() {
   // --- INSTANT-SWAP DRAG & DROP ENGINE ---
   const [draggingType, setDraggingType] = useState<'accum' | 'decum' | null>(null);
   
-  // HARD FILTER: Prevent non-contributable accounts from ever showing in Accumulation Queue
+  // HARD FILTERS: Prevent impossible accounts from showing in the queues
   const filterAccum = (list: string[]) => list.filter(a => !['rrif_acct', 'lif', 'lirf'].includes(a));
+  const filterDecum = (list: string[]) => list.filter(a => !['fhsa', 'resp'].includes(a));
 
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
-  const [localAccum, setLocalAccum] = useState<string[]>(filterAccum(data.strategies.accum));
-  const [localDecum, setLocalDecum] = useState<string[]>(data.strategies.decum);
+  const [localAccum, setLocalAccum] = useState<string[]>(filterAccum(data.strategies.accum || []));
+  const [localDecum, setLocalDecum] = useState<string[]>(filterDecum(data.strategies.decum || []));
 
   useEffect(() => {
       if (!draggingType) {
-          setLocalAccum(filterAccum(data.strategies.accum));
-          setLocalDecum(data.strategies.decum);
+          setLocalAccum(filterAccum(data.strategies.accum || []));
+          setLocalDecum(filterDecum(data.strategies.decum || []));
       }
   }, [data.strategies, draggingType]);
 
@@ -99,10 +100,10 @@ export default function StrategyTab() {
         const engineOptimalRoute = results?.timeline?.[0]?.optimalStrategy;
         
         if (engineOptimalRoute && Array.isArray(engineOptimalRoute) && engineOptimalRoute.length > 0) {
-            currentList = engineOptimalRoute;
+            currentList = filterDecum(engineOptimalRoute); // Filter the engine's list too!
         } else {
-            // Fallback while waiting for calculation to finish
-            const fallbackOrder = ['nonreg', 'cash', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'tfsa', 'fhsa', 'resp', 'crypto'];
+            // Fallback while waiting for calculation to finish (Removed FHSA & RESP)
+            const fallbackOrder = ['nonreg', 'cash', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'tfsa', 'crypto'];
             currentList = [...currentList].sort((a, b) => {
                 const idxA = fallbackOrder.indexOf(a);
                 const idxB = fallbackOrder.indexOf(b);
@@ -240,10 +241,10 @@ export default function StrategyTab() {
                             {renderDraggableList('decum')}
                         </div>
 
-                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER (CENTERED) */}
+                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER (CENTERED & HUGGED) */}
                         {isOptimized && (
-                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: '65%', minWidth: '220px' }}>
-                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
+                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: 'fit-content', minWidth: '220px' }}>
+                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 px-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
                                     <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
                                         <i className="bi bi-lock-fill fs-5"></i>
                                     </div>
