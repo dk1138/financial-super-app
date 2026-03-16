@@ -25,20 +25,26 @@ const CarLease = dynamic(() => import('./optimizers/CarLease'), { ssr: false });
 const MortgageAffordability = dynamic(() => import('./optimizers/MortgageAffordability'), { ssr: false });
 const CPPImporter = dynamic(() => import('./optimizers/CPPImporter'), { ssr: false });
 
+// New Import!
+const BuyVsRentAnalyzer = dynamic(() => import('./optimizers/BuyVsRentAnalyzer'), { ssr: false });
+
 export default function OptimizersTab() {
-  const [activeCategory, setActiveCategory] = useState('Master Simulations'); 
+  const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash'); // Defaulted here so you can see it instantly
   
   const toolCategories = [
     { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv', 'pensionbb'] },
     { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa', 'resp', 'medical'] },
     { title: "Business & Income", keys: ['sidehustle'] },
-    { title: "Debt, Real Estate & Cash", keys: ['mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal'] },
+    { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal'] },
     { title: "Data Importers", keys: ['cppimport'] }
   ];
 
   const renderToolCard = (id: string) => {
       let ContentComponent = null;
+      let isFullWidth = false; // Flag to let complex UI tools span the full row
+
       switch (id) {
+          case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer />; isFullWidth = true; break;
           case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
           case 'sidehustle': ContentComponent = <SideHustleROI />; break;
           case 'dwz': ContentComponent = <DieWithZero />; break;
@@ -63,7 +69,7 @@ export default function OptimizersTab() {
       }
 
       return (
-          <div key={id} className="col-12 col-md-6 col-xl-4">
+          <div key={id} className={isFullWidth ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"}>
               {ContentComponent}
           </div>
       );
