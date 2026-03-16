@@ -258,7 +258,7 @@ export default function BuyVsRentAnalyzer() {
                   <Tooltip 
                     contentStyle={{ backgroundColor: 'var(--bs-gray-900)', borderColor: 'var(--bs-border-color)', borderRadius: '12px', color: '#fff' }}
                     itemStyle={{ fontWeight: 'bold' }}
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value: any) => formatCurrency(Number(value) || 0)}
                     labelFormatter={(label) => `Year ${label}`}
                   />
                   <Legend verticalAlign="top" height={36} iconType="circle" />
