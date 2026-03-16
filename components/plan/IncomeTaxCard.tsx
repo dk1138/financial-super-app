@@ -6,11 +6,11 @@ export default function IncomeTaxCard() {
   const { data, results, updateInput, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   const isCouple = data.mode === 'Couple';
   
-  // State for collapsible tax credits sections
+  // State for collapsible panels
   const [showCredits, setShowCredits] = useState<Record<string, boolean>>({ p1: false, p2: false });
-  
-  // State for collapsible non-refundable tax credits breakdown in the tax box
   const [showNrtc, setShowNrtc] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -29,12 +29,16 @@ export default function IncomeTaxCard() {
 
   const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleNrtc = (p: string) => setShowNrtc(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleFedTax = (p: string) => setShowFedTax(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleProvTax = (p: string) => setShowProvTax(prev => ({ ...prev, [p]: !prev[p] }));
 
   const renderTaxBox = (taxDetails: any, gross: number, p: string) => {
       if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
       
       const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
       const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
+      
+      const provBase = Math.max(0, taxDetails.prov - (taxDetails.surtax || 0) - (taxDetails.ohp || 0));
 
       return (
           <div className="border border-secondary rounded-4 mt-4 shadow-sm">
@@ -50,9 +54,56 @@ export default function IncomeTaxCard() {
                 />
             </div>
             <div className="p-3 bg-input d-flex flex-column gap-2 rounded-bottom-4">
-              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Federal Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span></div>
-              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">Provincial Tax</span> <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.prov/gross)*100).toFixed(1)}%</span></span></div>
-              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2"><span className="text-muted small fw-medium">CPP / EI Premiums</span> <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
+              
+              {/* Federal Tax Breakdown */}
+              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+                  <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleFedTax(p)}>
+                      <span className={`small fw-medium d-flex align-items-center gap-1 ${showFedTax[p] ? 'text-main' : 'text-muted'}`}>
+                          <i className={`bi bi-chevron-${showFedTax[p] ? 'up' : 'down'} small`}></i> Federal Tax
+                      </span>
+                      <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span>
+                  </div>
+                  {showFedTax[p] && (
+                      <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
+                          <div className="d-flex justify-content-between align-items-center">
+                              <span className="text-muted small fst-italic">Federal Income Tax</span>
+                              <span className="small text-muted fw-bold">(${Math.round(taxDetails.fed).toLocaleString()})</span>
+                          </div>
+                      </div>
+                  )}
+              </div>
+
+              {/* Provincial Tax Breakdown */}
+              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+                  <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleProvTax(p)}>
+                      <span className={`small fw-medium d-flex align-items-center gap-1 ${showProvTax[p] ? 'text-main' : 'text-muted'}`}>
+                          <i className={`bi bi-chevron-${showProvTax[p] ? 'up' : 'down'} small`}></i> Provincial Tax
+                      </span>
+                      <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.prov/gross)*100).toFixed(1)}%</span></span>
+                  </div>
+                  {showProvTax[p] && (
+                      <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
+                          <div className="d-flex justify-content-between align-items-center">
+                              <span className="text-muted small fst-italic">Base Provincial Tax</span>
+                              <span className="small text-muted fw-bold">(${Math.round(provBase).toLocaleString()})</span>
+                          </div>
+                          {(taxDetails.surtax > 0) && (
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span className="text-muted small fst-italic">Ontario Surtax</span>
+                                  <span className="small text-danger fw-bold opacity-75">(${Math.round(taxDetails.surtax).toLocaleString()})</span>
+                              </div>
+                          )}
+                          {(taxDetails.ohp > 0) && (
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span className="text-muted small fst-italic">Ontario Health Premium</span>
+                                  <span className="small text-danger fw-bold opacity-75">(${Math.round(taxDetails.ohp).toLocaleString()})</span>
+                              </div>
+                          )}
+                      </div>
+                  )}
+              </div>
+
+              <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-1"><span className="text-muted small fw-medium">CPP / EI Premiums</span> <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span></div>
               
               <div className="d-flex justify-content-between mt-1"><span className="text-danger fw-bold small">Total Tax Paid</span> <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
               <div className="d-flex justify-content-between"><span className="text-muted small fw-medium">Marginal Rate</span> <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span></div>
@@ -61,7 +112,7 @@ export default function IncomeTaxCard() {
               {hasNrtc && (
                   <div className="mt-2 pt-2 border-top border-secondary border-opacity-50">
                       <div 
-                          className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none"
+                          className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75"
                           onClick={() => toggleNrtc(p)}
                       >
                           <span className="text-info small fw-bold d-flex align-items-center gap-1">
