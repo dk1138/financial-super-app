@@ -8,6 +8,8 @@ export default function IncomeTaxCard() {
   
   // State for collapsible panels
   const [showCredits, setShowCredits] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  const [showGross, setShowGross] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  const [showDeductions, setShowDeductions] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showNrtc, setShowNrtc] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
@@ -29,17 +31,87 @@ export default function IncomeTaxCard() {
   const hhNet = hhGross > 0 ? Math.max(0, hhGross - totalTax) : 0;
 
   const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleGross = (p: string) => setShowGross(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleDeductions = (p: string) => setShowDeductions(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleNrtc = (p: string) => setShowNrtc(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleFedTax = (p: string) => setShowFedTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleProvTax = (p: string) => setShowProvTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleCppEi = (p: string) => setShowCppEi(prev => ({ ...prev, [p]: !prev[p] }));
 
-  const renderTaxBox = (taxDetails: any, gross: number, p: string) => {
-      if (!taxDetails || gross <= 0) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data / Income</div>;
+  const renderTaxBox = (taxDetails: any, p: string) => {
+      const yData = results?.timeline?.[0];
+      if (!yData || !taxDetails) return <div className="text-muted text-center mt-3 small fst-italic">No Tax Data Computed</div>;
       
+      const isP1 = p === 'p1';
+      const pUpper = p.toUpperCase();
+
+      // Income Logic
+      const salary = isP1 ? ((yData.incomeP1 || 0) - (yData.rrspMatchP1 || 0)) : ((yData.incomeP2 || 0) - (yData.rrspMatchP2 || 0));
+      const match = isP1 ? (yData.rrspMatchP1 || 0) : (yData.rrspMatchP2 || 0);
+      const cpp = isP1 ? (yData.cppP1 || 0) : (yData.cppP2 || 0);
+      const oas = isP1 ? (yData.oasP1 || 0) : (yData.oasP2 || 0);
+      const db = isP1 ? (yData.dbP1 || 0) : (yData.dbP2 || 0);
+      const invInc = isP1 ? (yData.invIncP1 || 0) : (yData.invIncP2 || 0);
+
+      let grossBreakdown: {label: string, val: number}[] = [];
+      let sumGross = 0;
+
+      if (salary > 0) { grossBreakdown.push({label: 'Salary', val: salary}); sumGross += salary; }
+      if (match > 0) { grossBreakdown.push({label: 'Employer Match', val: match}); sumGross += match; }
+      if (cpp > 0) { grossBreakdown.push({label: 'CPP', val: cpp}); sumGross += cpp; }
+      if (oas > 0) { grossBreakdown.push({label: 'OAS', val: oas}); sumGross += oas; }
+      if (db > 0) { grossBreakdown.push({label: 'Pension', val: db}); sumGross += db; }
+      if (invInc > 0) { grossBreakdown.push({label: 'Inv. Yield', val: invInc}); sumGross += invInc; }
+
+      const wdKeys = Object.keys(yData.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && yData.flows.withdrawals[k] > 0);
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
+
+      taxableWds.forEach(k => {
+          const cleanName = k.replace(`${pUpper} `, '');
+          if (k.includes('RRIF') || k.includes('LIF') || k.includes('RRSP') || k.includes('LIRF')) {
+              const amt = yData.flows.withdrawals[k];
+              grossBreakdown.push({label: `${cleanName} W/D`, val: amt});
+              sumGross += amt;
+          } else if (k.includes('Non-Reg') || k.includes('Crypto')) {
+              const mathObj = yData.wdBreakdown?.[p]?.[`${cleanName}_math`];
+              if (mathObj && mathObj.tax > 0) {
+                  grossBreakdown.push({label: `${cleanName} Taxable`, val: mathObj.tax});
+                  sumGross += mathObj.tax;
+              }
+          }
+      });
+
+      const actualGross = sumGross;
+
+      // Deductions Logic
+      const rrspCont = yData.flows?.contributions?.[p]?.rrsp || 0;
+      const fhsaCont = yData.flows?.contributions?.[p]?.fhsa || 0;
+      const totalDeductions = rrspCont + fhsaCont;
+
+      let dedBreakdown: {label: string, val: number}[] = [];
+      if (rrspCont > 0) {
+          const ownCont = rrspCont - match;
+          if (match > 0) {
+              dedBreakdown.push({label: 'RRSP (Employer Match)', val: match});
+              if (ownCont > 0) dedBreakdown.push({label: 'RRSP (Own Contrib)', val: ownCont});
+          } else {
+              dedBreakdown.push({label: 'RRSP Contributions', val: rrspCont});
+          }
+      }
+      if (fhsaCont > 0) {
+          dedBreakdown.push({label: 'FHSA Contributions', val: fhsaCont});
+      }
+
+      // Net Taxable Logic
+      const taxIncAfter = isP1 ? yData.taxIncP1 : yData.taxIncP2;
+      const taxIncBefore = isP1 ? (yData.taxIncP1 + (yData.pensionSplit?.p1ToP2 || 0) - (yData.pensionSplit?.p2ToP1 || 0)) : (yData.taxIncP2 + (yData.pensionSplit?.p2ToP1 || 0) - (yData.pensionSplit?.p1ToP2 || 0));
+      const splitAmt = taxIncAfter - taxIncBefore;
+
+      const refund = isP1 ? ((yData.discTaxSavingsP1 || 0) + (yData.matchTaxSavingsP1 || 0)) : ((yData.discTaxSavingsP2 || 0) + (yData.matchTaxSavingsP2 || 0));
+
+      // Tax Details Logic
       const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
       const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
-      
       const provBase = Math.max(0, taxDetails.prov - (taxDetails.surtax || 0) - (taxDetails.ohp || 0));
 
       return (
@@ -57,13 +129,69 @@ export default function IncomeTaxCard() {
             </div>
             <div className="p-3 bg-input d-flex flex-column gap-2 rounded-bottom-4">
               
+              {/* Gross Income Breakdown */}
+              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+                  <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleGross(p)}>
+                      <span className={`small fw-medium d-flex align-items-center gap-1 ${showGross[p] ? 'text-main' : 'text-muted'}`}>
+                          <i className={`bi bi-chevron-${showGross[p] ? 'up' : 'down'} small`}></i> Gross Income
+                      </span>
+                      <span className="small fw-bold">${Math.round(actualGross).toLocaleString()}</span>
+                  </div>
+                  {showGross[p] && (
+                      <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
+                          {grossBreakdown.map((item, idx) => (
+                              <div key={idx} className="d-flex justify-content-between align-items-center">
+                                  <span className="text-muted small fst-italic">{item.label}</span>
+                                  <span className="small text-muted fw-bold">${Math.round(item.val).toLocaleString()}</span>
+                              </div>
+                          ))}
+                      </div>
+                  )}
+              </div>
+
+              {/* Total Deductions Breakdown */}
+              {totalDeductions > 0 && (
+              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+                  <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleDeductions(p)}>
+                      <span className={`small fw-medium d-flex align-items-center gap-1 ${showDeductions[p] ? 'text-main' : 'text-muted'}`}>
+                          <i className={`bi bi-chevron-${showDeductions[p] ? 'up' : 'down'} small`}></i> Total Deductions
+                      </span>
+                      <span className="small fw-bold text-info">-${Math.round(totalDeductions).toLocaleString()}</span>
+                  </div>
+                  {showDeductions[p] && (
+                      <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-info ms-1 border-opacity-25">
+                          {dedBreakdown.map((item, idx) => (
+                              <div key={idx} className="d-flex justify-content-between align-items-center">
+                                  <span className="text-muted small fst-italic">{item.label}</span>
+                                  <span className="small text-info fw-bold opacity-75">-${Math.round(item.val).toLocaleString()}</span>
+                              </div>
+                          ))}
+                      </div>
+                  )}
+              </div>
+              )}
+
+              {/* Pension Split */}
+              {Math.abs(splitAmt) > 1 && (
+                  <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+                      <span className="text-muted small fw-medium ms-3">Pension Split</span>
+                      <span className="small fw-bold">{splitAmt > 0 ? '+' : '-'}${Math.round(Math.abs(splitAmt)).toLocaleString()}</span>
+                  </div>
+              )}
+
+              {/* Net Taxable Income */}
+              <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-3">
+                  <span className="text-main small fw-bold">Net Taxable Income</span>
+                  <span className="small fw-bold">${Math.round(taxIncAfter).toLocaleString()}</span>
+              </div>
+
               {/* Federal Tax Breakdown */}
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleFedTax(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showFedTax[p] ? 'text-main' : 'text-muted'}`}>
                           <i className={`bi bi-chevron-${showFedTax[p] ? 'up' : 'down'} small`}></i> Federal Tax
                       </span>
-                      <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.fed/gross)*100).toFixed(1)}%</span></span>
+                      <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()})</span>
                   </div>
                   {showFedTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
@@ -81,7 +209,7 @@ export default function IncomeTaxCard() {
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showProvTax[p] ? 'text-main' : 'text-muted'}`}>
                           <i className={`bi bi-chevron-${showProvTax[p] ? 'up' : 'down'} small`}></i> Provincial Tax
                       </span>
-                      <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()}) <span className="text-muted fw-normal ms-1">{((taxDetails.prov/gross)*100).toFixed(1)}%</span></span>
+                      <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()})</span>
                   </div>
                   {showProvTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
@@ -133,8 +261,30 @@ export default function IncomeTaxCard() {
                   )}
               </div>
               
-              <div className="d-flex justify-content-between mt-1"><span className="text-danger fw-bold small">Total Tax Paid</span> <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span></div>
-              <div className="d-flex justify-content-between"><span className="text-muted small fw-medium">Marginal Rate</span> <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span></div>
+              {/* OAS Clawback */}
+              {taxDetails.oas_clawback > 0 && (
+                  <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+                      <span className="text-muted small fw-medium ms-3">OAS Clawback</span>
+                      <span className="small fw-bold text-danger">(${Math.round(taxDetails.oas_clawback).toLocaleString()})</span>
+                  </div>
+              )}
+
+              <div className="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-50">
+                  <span className="text-danger fw-bold small">Total Tax Generated</span> 
+                  <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span>
+              </div>
+
+              {refund > 0 && (
+                  <div className="d-flex justify-content-between mt-1">
+                      <span className="text-success fw-bold small">Est. Tax Savings/Refund</span> 
+                      <span className="text-success fw-bold small">+${Math.round(refund).toLocaleString()}</span>
+                  </div>
+              )}
+
+              <div className="d-flex justify-content-between mt-1 border-bottom border-secondary pb-2 mb-2">
+                  <span className="text-muted small fw-medium">Marginal Rate</span> 
+                  <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span>
+              </div>
 
               {/* Collapsible Applied Non-Refundable Tax Credits */}
               {hasNrtc && (
@@ -214,7 +364,6 @@ export default function IncomeTaxCard() {
                   </div>
               )}
 
-              <div className="d-flex justify-content-between mt-2 pt-3 border-top border-secondary"><span className="text-success fw-bold">After-Tax Net</span> <span className="text-success fw-bold fs-5">${Math.round(gross - taxDetails.totalTax).toLocaleString()}</span></div>
             </div>
           </div>
       );
@@ -478,7 +627,7 @@ export default function IncomeTaxCard() {
                         </div>
                       );
                   })}
-                  {renderTaxBox(p === 'p1' ? results?.timeline?.[0]?.taxDetailsP1 : results?.timeline?.[0]?.taxDetailsP2, p === 'p1' ? p1Gross : p2Gross, p)}
+                  {renderTaxBox(p === 'p1' ? results?.timeline?.[0]?.taxDetailsP1 : results?.timeline?.[0]?.taxDetailsP2, p)}
                 </div>
               </div>
             </div>
