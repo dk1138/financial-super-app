@@ -8,7 +8,6 @@ interface Props {
 }
 
 export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onToggle }: Props) {
-  // If not used inside OptimizersTab, it will gracefully fallback to its own local state!
   const [localIsExpanded, setLocalIsExpanded] = useState(false);
   const isExpanded = externalIsExpanded !== undefined ? externalIsExpanded : localIsExpanded;
   
@@ -113,7 +112,6 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
   // =======================================================================
   return (
     <>
-      {/* Embedded CSS for buttery smooth expanding/collapsing */}
       <style>{`
         @keyframes slideFadeIn {
           0% { opacity: 0; transform: translateY(15px) scale(0.98); }
@@ -144,19 +142,31 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
             
             <div className="row g-3 mb-4">
                 <div className="col-12">
-                    <label className="form-label small fw-bold text-muted mb-1">Target Home Price</label>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label className="form-label small fw-bold text-muted mb-0">Target Home Price</label>
+                        <InfoBtn align="right" title="Home Price" text="The total purchase price of the property you want to buy." />
+                    </div>
                     <CurrencyInput className="form-control form-control-sm" value={homePrice} onChange={setHomePrice} />
                 </div>
                 <div className="col-12">
-                    <label className="form-label small fw-bold text-muted mb-1">Equivalent Rent/mo</label>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label className="form-label small fw-bold text-muted mb-0">Equivalent Rent/mo</label>
+                        <InfoBtn align="right" title="Monthly Rent" text="The monthly cost to rent a highly comparable property." />
+                    </div>
                     <CurrencyInput className="form-control form-control-sm border-secondary" value={monthlyRent} onChange={setMonthlyRent} />
                 </div>
                 <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Mort %</label>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label className="form-label small fw-bold text-muted mb-0">Mort %</label>
+                        <InfoBtn align="right" title="Mortgage Rate" text="Annual mortgage interest rate." />
+                    </div>
                     <PercentInput className="form-control form-control-sm border-primary" value={mortgageRate} onChange={setMortgageRate} />
                 </div>
                 <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Mkt Ret %</label>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label className="form-label small fw-bold text-muted mb-0">Mkt Ret %</label>
+                        <InfoBtn align="right" title="Market Return" text="Expected annual return if you invested the down payment instead of buying." />
+                    </div>
                     <PercentInput className="form-control form-control-sm border-success" value={marketReturn} onChange={setMarketReturn} />
                 </div>
             </div>
@@ -189,7 +199,6 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
         // --- EXPANDED DASHBOARD VIEW ---
         <div className="rp-card border-primary rounded-4 p-4 p-md-5 shadow-lg position-relative d-flex flex-column anim-slide-up bg-surface" style={{ zIndex: 10 }}>
           
-          {/* Floating Close Button */}
           <button 
             className="btn btn-dark border-secondary rounded-circle shadow-sm position-absolute d-flex align-items-center justify-content-center transition-all hover-scale" 
             style={{top: '15px', right: '15px', width: '40px', height: '40px', zIndex: 20}} 
@@ -199,34 +208,40 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
             <i className="bi bi-dash-lg text-muted"></i>
           </button>
 
-          {/* HEADER & SUMMARY */}
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4 mb-4 pb-4 border-bottom border-secondary border-opacity-50">
-            <div className="d-flex align-items-center">
-                <div className="bg-gradient bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '55px', height: '55px'}}>
+          {/* SYMMETRICAL HEADER (3-Columns to perfectly center the winner badge) */}
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 mb-4 pb-4 border-bottom border-secondary border-opacity-50">
+            
+            {/* Left: Title Area */}
+            <div className="d-flex align-items-center justify-content-center justify-content-md-start" style={{ flex: '1 1 0%', width: '100%' }}>
+                <div className="bg-gradient bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3 flex-shrink-0" style={{width: '55px', height: '55px'}}>
                     <i className="bi bi-houses fs-3"></i>
                 </div>
                 <div>
-                <h3 className="fw-bold mb-1 text-main ls-1">Buy vs. Rent Sandbox</h3>
-                <p className="text-muted mb-0">Detailed unrecoverable cost & net worth modeling (25 Years)</p>
+                    <h3 className="fw-bold mb-1 text-main ls-1">Buy vs. Rent Sandbox</h3>
+                    <p className="text-muted mb-0 d-none d-xl-block">Detailed unrecoverable cost & net worth modeling</p>
                 </div>
             </div>
             
-            {/* Winner Badge */}
-            <div className={`p-3 rounded-4 shadow-sm border pe-md-5 ${winner === 'BUYING' ? 'border-primary bg-primary bg-opacity-10' : 'border-success bg-success bg-opacity-10'}`}>
-                <div className="small fw-bold text-uppercase ls-1 text-muted mb-1 d-flex align-items-center" style={{fontSize: '0.75rem'}}>
-                    <i className="bi bi-trophy-fill me-2 text-warning"></i> Year 25 Winner
+            {/* Center: Winner Badge */}
+            <div className="d-flex align-items-center justify-content-center" style={{ flex: '1 1 0%', width: '100%' }}>
+                <div className={`p-3 rounded-4 shadow-sm border w-100 text-center ${winner === 'BUYING' ? 'border-primary bg-primary bg-opacity-10' : 'border-success bg-success bg-opacity-10'}`} style={{ maxWidth: '300px' }}>
+                    <div className="small fw-bold text-uppercase ls-1 text-muted mb-1 d-flex align-items-center justify-content-center" style={{fontSize: '0.75rem'}}>
+                        <i className="bi bi-trophy-fill me-2 text-warning"></i> Year 25 Winner
+                    </div>
+                    <h4 className={`fw-bold mb-0 ${winner === 'BUYING' ? 'text-primary' : 'text-success'}`}>
+                        {winner} by {formatCurrency(difference)}
+                    </h4>
                 </div>
-                <h4 className={`fw-bold mb-0 ${winner === 'BUYING' ? 'text-primary' : 'text-success'}`}>
-                    {winner} by {formatCurrency(difference)}
-                </h4>
             </div>
+
+            {/* Right: Invisible Spacer to Balance the Flexbox */}
+            <div className="d-none d-md-block" style={{ flex: '1 1 0%', width: '100%' }}></div>
           </div>
 
           <div className="row g-4">
             {/* LEFT COLUMN: INPUT TABS & CONTROL PANEL */}
             <div className="col-12 col-xl-4 d-flex flex-column gap-3">
                 
-              {/* Sleek Tab Toggles */}
               <div className="d-flex p-1 bg-black bg-opacity-50 rounded-pill shadow-inner border border-secondary border-opacity-50">
                   <button 
                     className={`btn btn-sm rounded-pill flex-grow-1 fw-bold transition-all ${activeTab === 'core' ? 'bg-primary text-white shadow' : 'text-muted border-0 hover-opacity-100'}`} 
@@ -248,8 +263,11 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                   {activeTab === 'core' && (
                     <div className="anim-fade-in d-flex flex-column h-100">
                         <div className="mb-3">
-                            <div className="d-flex justify-content-between mb-1">
-                                <label className="small fw-bold text-main">Home Price</label>
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                <div className="d-flex align-items-center gap-2">
+                                    <label className="small fw-bold text-main mb-0">Home Price</label>
+                                    <InfoBtn align="left" title="Home Price" text="The total estimated purchase price of the property." />
+                                </div>
                                 <span className="small text-primary fw-bold fs-6">{formatCurrency(homePrice)}</span>
                             </div>
                             <input type="range" className="form-range" min="300000" max="3000000" step="25000" value={homePrice} onChange={(e) => setHomePrice(Number(e.target.value))} />
@@ -257,27 +275,36 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
 
                         <div className="row g-3 mb-3">
                             <div className="col-6">
-                                <label className="small fw-bold text-muted mb-1">Down Payment %</label>
+                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                    <label className="small fw-bold text-muted mb-0">Down Payment %</label>
+                                    <InfoBtn align="right" title="Down Payment" text="The percentage of the home's price paid upfront." />
+                                </div>
                                 <PercentInput className="form-control border-secondary bg-input shadow-sm" value={downPaymentPct} onChange={setDownPaymentPct} />
                             </div>
                             <div className="col-6">
-                                <label className="small fw-bold text-muted mb-1">Mortgage Rate</label>
+                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                    <label className="small fw-bold text-muted mb-0">Mortgage Rate</label>
+                                    <InfoBtn align="right" title="Mortgage Rate" text="The annual interest rate applied to your mortgage balance." />
+                                </div>
                                 <PercentInput className="form-control border-secondary bg-input shadow-sm" value={mortgageRate} onChange={setMortgageRate} />
                             </div>
                         </div>
 
                         <div className="pt-3 pb-3 border-top border-secondary border-opacity-50">
-                            <div className="d-flex justify-content-between mb-1">
-                                <label className="small fw-bold text-main">Alt. Monthly Rent</label>
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                <div className="d-flex align-items-center gap-2">
+                                    <label className="small fw-bold text-main mb-0">Alt. Monthly Rent</label>
+                                    <InfoBtn align="left" title="Alternative Rent" text="How much you would expect to pay to rent an equivalent home in the same area." />
+                                </div>
                                 <span className="small text-success fw-bold fs-6">{formatCurrency(monthlyRent)}/mo</span>
                             </div>
                             <input type="range" className="form-range" min="1000" max="8000" step="100" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} />
                         </div>
 
                         <div className="mt-auto pt-3 border-top border-secondary border-opacity-50">
-                            <div className="d-flex justify-content-between mb-2">
-                                <label className="small fw-bold text-muted">Expected Market Return</label>
-                                <InfoBtn align="right" title="Market Return" text="The average annual return the renter earns by investing their down payment and monthly cashflow savings." />
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <label className="small fw-bold text-muted mb-0">Expected Market Return</label>
+                                <InfoBtn align="right" title="Market Return" text="The average annual return the renter earns by investing their down payment and monthly cashflow savings in the stock market." />
                             </div>
                             <PercentInput className="form-control border-success bg-success bg-opacity-10 text-success fw-bold shadow-sm" value={marketReturn} onChange={setMarketReturn} />
                         </div>
@@ -292,11 +319,17 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                             <label className="small fw-bold text-main mb-2 d-block">Transaction Costs</label>
                             <div className="row g-2">
                                 <div className="col-6">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Closing/LTT (%)</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.7rem'}}>Closing/LTT (%)</label>
+                                        <InfoBtn align="right" title="Closing Costs" text="Land Transfer Tax, legal fees, and administrative closing costs." />
+                                    </div>
                                     <PercentInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={closingCostsPct} onChange={setClosingCostsPct} />
                                 </div>
                                 <div className="col-6">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Realtor Fee (%)</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.7rem'}}>Realtor Fee (%)</label>
+                                        <InfoBtn align="right" title="Realtor Fee" text="Commission paid to the real estate agent when you eventually sell the home." />
+                                    </div>
                                     <PercentInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={realtorCommPct} onChange={setRealtorCommPct} />
                                 </div>
                             </div>
@@ -306,19 +339,31 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                             <label className="small fw-bold text-main mb-2 d-block">Ongoing Home Costs</label>
                             <div className="row g-2">
                                 <div className="col-6">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Prop Tax/yr (%)</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.7rem'}}>Prop Tax/yr (%)</label>
+                                        <InfoBtn align="right" title="Property Tax" text="Annual property taxes, expressed as a percentage of the home's total value." />
+                                    </div>
                                     <PercentInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={propertyTaxRate} onChange={setPropertyTaxRate} />
                                 </div>
                                 <div className="col-6">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Maint/yr (%)</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.7rem'}}>Maint/yr (%)</label>
+                                        <InfoBtn align="right" title="Maintenance" text="Estimated annual maintenance and repair costs, expressed as a percentage of the home's value." />
+                                    </div>
                                     <PercentInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={maintenanceRate} onChange={setMaintenanceRate} />
                                 </div>
                                 <div className="col-6">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Condo Fee /mo</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.7rem'}}>Condo Fee /mo</label>
+                                        <InfoBtn align="right" title="Condo Fees" text="Monthly condominium or HOA maintenance fees." />
+                                    </div>
                                     <CurrencyInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={condoFees} onChange={setCondoFees} />
                                 </div>
                                 <div className="col-6">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.7rem'}}>Home Ins. /mo</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.7rem'}}>Home Ins. /mo</label>
+                                        <InfoBtn align="right" title="Home Insurance" text="Monthly homeowner's insurance premium." />
+                                    </div>
                                     <CurrencyInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={homeInsurance} onChange={setHomeInsurance} />
                                 </div>
                             </div>
@@ -328,15 +373,24 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                             <label className="small fw-bold text-main mb-2 d-block">Market Realities</label>
                             <div className="row g-2">
                                 <div className="col-4">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.65rem'}}>Apprec. (%)</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.65rem'}}>Apprec. (%)</label>
+                                        <InfoBtn align="right" title="Property Appreciation" text="Expected annual growth rate of the property's market value." />
+                                    </div>
                                     <PercentInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={propertyAppreciation} onChange={setPropertyAppreciation} />
                                 </div>
                                 <div className="col-4">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.65rem'}}>Rent Infl. (%)</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.65rem'}}>Rent Infl. (%)</label>
+                                        <InfoBtn align="right" title="Rent Inflation" text="Expected annual increase in your monthly rent." />
+                                    </div>
                                     <PercentInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={rentInflation} onChange={setRentInflation} />
                                 </div>
                                 <div className="col-4">
-                                    <label className="small text-muted fw-bold mb-1" style={{fontSize: '0.65rem'}}>Rent Ins /mo</label>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <label className="small text-muted fw-bold mb-0" style={{fontSize: '0.65rem'}}>Rent Ins/mo</label>
+                                        <InfoBtn align="right" title="Renter Insurance" text="Monthly renter's insurance premium." />
+                                    </div>
                                     <CurrencyInput className="form-control form-control-sm border-secondary bg-input shadow-sm" value={renterInsurance} onChange={setRenterInsurance} />
                                 </div>
                             </div>
