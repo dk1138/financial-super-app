@@ -2,8 +2,21 @@ import React, { useState, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { InfoBtn, CurrencyInput, PercentInput } from '../SharedUI';
 
-export default function BuyVsRentAnalyzer() {
-  const [isExpanded, setIsExpanded] = useState(false);
+interface Props {
+    isExpanded?: boolean;
+    onToggle?: () => void;
+}
+
+export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onToggle }: Props) {
+  // If not used inside OptimizersTab, it will gracefully fallback to its own local state!
+  const [localIsExpanded, setLocalIsExpanded] = useState(false);
+  const isExpanded = externalIsExpanded !== undefined ? externalIsExpanded : localIsExpanded;
+  
+  const handleToggle = () => {
+      if (onToggle) onToggle();
+      else setLocalIsExpanded(!localIsExpanded);
+  };
+
   const [activeTab, setActiveTab] = useState<'core' | 'adv'>('core');
 
   // --- CORE TIER 1 INPUTS ---
@@ -14,40 +27,35 @@ export default function BuyVsRentAnalyzer() {
   const [marketReturn, setMarketReturn] = useState(6.0);
 
   // --- TIER 2 ADVANCED ASSUMPTIONS ---
-  const [closingCostsPct, setClosingCostsPct] = useState(2.0); // Land Transfer, Legal
-  const [realtorCommPct, setRealtorCommPct] = useState(5.0); // Paid when selling
-  const [propertyTaxRate, setPropertyTaxRate] = useState(0.75); // Vaughan/GTA standard
+  const [closingCostsPct, setClosingCostsPct] = useState(2.0);
+  const [realtorCommPct, setRealtorCommPct] = useState(5.0);
+  const [propertyTaxRate, setPropertyTaxRate] = useState(0.75);
   const [maintenanceRate, setMaintenanceRate] = useState(1.0);
   const [condoFees, setCondoFees] = useState(0);
   const [homeInsurance, setHomeInsurance] = useState(150);
 
-  // Renting / Market
   const [rentInflation, setRentInflation] = useState(2.5);
   const [propertyAppreciation, setPropertyAppreciation] = useState(3.5);
   const [renterInsurance, setRenterInsurance] = useState(30);
   
-  const timeHorizon = 25; // Standard 25-year amortization view
+  const timeHorizon = 25; 
 
   // --- THE MATH ENGINE ---
   const { data, winner, difference, finalBuyer, finalRenter } = useMemo(() => {
     let timeline = [];
     
-    // Initial Variables
     const downPayment = homePrice * (downPaymentPct / 100);
     const closingCosts = homePrice * (closingCostsPct / 100);
     let mortgageBal = homePrice - downPayment;
     let currentHomeValue = homePrice;
     
-    // Renter invests the exact same upfront cash the buyer had to burn
     let renterPortfolio = downPayment + closingCosts;
     let currentRent = monthlyRent;
 
-    // Canadian Mortgage Math (Approx monthly for sandbox)
     const r = (mortgageRate / 100) / 12;
     const n = timeHorizon * 12;
     const monthlyMortgage = r === 0 ? mortgageBal / n : mortgageBal * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 
-    // Inflating Variables
     let currentPropertyTax = homePrice * (propertyTaxRate / 100);
     let currentMaintenance = homePrice * (maintenanceRate / 100);
     let currentCondoFees = condoFees * 12;
@@ -55,24 +63,18 @@ export default function BuyVsRentAnalyzer() {
     let currentRentIns = renterInsurance * 12;
 
     for (let year = 1; year <= timeHorizon; year++) {
-      // 1. Buyer Cashflow
-      const annualInterest = mortgageBal * (mortgageRate / 100); // Rough annual estimate
+      const annualInterest = mortgageBal * (mortgageRate / 100);
       const annualPrincipal = (monthlyMortgage * 12) - annualInterest;
       mortgageBal = Math.max(0, mortgageBal - annualPrincipal);
       
       const buyerTotalOutflow = (monthlyMortgage * 12) + currentPropertyTax + currentMaintenance + currentCondoFees + currentHomeIns;
-
-      // 2. Renter Cashflow
       const renterTotalOutflow = (currentRent * 12) + currentRentIns;
 
-      // 3. The Opportunity Cost Differential
       const cashflowDiff = buyerTotalOutflow - renterTotalOutflow;
       
-      // Renter portfolio grows, plus they invest the monthly savings (or withdraw if rent is more expensive!)
       renterPortfolio *= (1 + (marketReturn / 100));
       renterPortfolio += cashflowDiff; 
 
-      // 4. Update Net Worths
       currentHomeValue *= (1 + (propertyAppreciation / 100));
       const sellingCosts = currentHomeValue * (realtorCommPct / 100);
       const buyerNetWorth = currentHomeValue - mortgageBal - sellingCosts;
@@ -84,7 +86,6 @@ export default function BuyVsRentAnalyzer() {
         cashflowDiff: Math.round(cashflowDiff)
       });
 
-      // 5. Inflate for next year
       currentRent *= (1 + (rentInflation / 100));
       currentPropertyTax *= (1 + (propertyAppreciation / 100)); 
       currentMaintenance *= (1 + (rentInflation / 100));
@@ -157,7 +158,7 @@ export default function BuyVsRentAnalyzer() {
               
               <div className="text-center mt-3 pt-3 border-top border-secondary">
                   <h6 className="fw-bold mb-2 small">Winner: <span className={winner === 'RENTING' ? 'text-success' : 'text-primary'}>{winner}</span></h6>
-                  <button onClick={() => setIsExpanded(true)} className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold shadow-sm">
+                  <button onClick={handleToggle} className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold shadow-sm">
                       Expand Analyzer <i className="bi bi-arrows-angle-expand ms-1"></i>
                   </button>
               </div>
@@ -188,7 +189,7 @@ export default function BuyVsRentAnalyzer() {
                 {winner} by {formatCurrency(difference)}
             </h5>
             </div>
-            <button className="btn btn-outline-secondary rounded-circle shadow-sm ms-2" style={{width: '40px', height: '40px'}} onClick={() => setIsExpanded(false)}>
+            <button className="btn btn-outline-secondary rounded-circle shadow-sm ms-2" style={{width: '40px', height: '40px'}} onClick={handleToggle}>
                 <i className="bi bi-x-lg"></i>
             </button>
         </div>

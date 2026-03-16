@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 
 // --- DYNAMIC IMPORTS (LAZY LOADING) ---
-// These components (and their heavy math) won't be downloaded by the browser 
-// until the user actually selects their category!
 const MedicalExpenseOptimizer = dynamic(() => import('./optimizers/MedicalExpenseOptimizer'), { ssr: false });
 const SideHustleROI = dynamic(() => import('./optimizers/SideHustleROI'), { ssr: false });
 const DieWithZero = dynamic(() => import('./optimizers/DieWithZero'), { ssr: false });
@@ -24,12 +22,11 @@ const EmergencyFund = dynamic(() => import('./optimizers/EmergencyFund'), { ssr:
 const CarLease = dynamic(() => import('./optimizers/CarLease'), { ssr: false });
 const MortgageAffordability = dynamic(() => import('./optimizers/MortgageAffordability'), { ssr: false });
 const CPPImporter = dynamic(() => import('./optimizers/CPPImporter'), { ssr: false });
-
-// New Import!
 const BuyVsRentAnalyzer = dynamic(() => import('./optimizers/BuyVsRentAnalyzer'), { ssr: false });
 
 export default function OptimizersTab() {
-  const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash'); // Defaulted here so you can see it instantly
+  const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash');
+  const [expandedTool, setExpandedTool] = useState<string | null>(null); // Tracks which card is full-width
   
   const toolCategories = [
     { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv', 'pensionbb'] },
@@ -41,10 +38,11 @@ export default function OptimizersTab() {
 
   const renderToolCard = (id: string) => {
       let ContentComponent = null;
-      let isFullWidth = false; // Flag to let complex UI tools span the full row
+      const isExpanded = expandedTool === id;
 
+      // Pass the state down via props so the card knows it should render its "Large" view
       switch (id) {
-          case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer />; isFullWidth = false; break;
+          case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
           case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
           case 'sidehustle': ContentComponent = <SideHustleROI />; break;
           case 'dwz': ContentComponent = <DieWithZero />; break;
@@ -69,7 +67,8 @@ export default function OptimizersTab() {
       }
 
       return (
-          <div key={id} className={isFullWidth ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"}>
+          // THIS is the magic line. If expanded, it takes 12 columns (full width). Otherwise, 4 columns (1/3 width).
+          <div key={id} className={`transition-all ${isExpanded ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"}`}>
               {ContentComponent}
           </div>
       );
@@ -88,7 +87,10 @@ export default function OptimizersTab() {
           {toolCategories.map(cat => (
               <button 
                   key={cat.title}
-                  onClick={() => setActiveCategory(cat.title)}
+                  onClick={() => {
+                      setActiveCategory(cat.title);
+                      setExpandedTool(null); // Reset expansions when switching categories
+                  }}
                   className={`btn rounded-pill fw-bold px-3 px-md-4 py-2 transition-all border-0 shadow-sm ${activeCategory === cat.title ? 'bg-primary text-white' : 'bg-input text-muted border border-secondary hover-opacity-100'}`}
               >
                   {cat.title}
@@ -96,7 +98,6 @@ export default function OptimizersTab() {
           ))}
       </div>
 
-      {/* When the activeCategory changes, Next.js dynamically fetches only the rendered cards! */}
       <div className="row g-4 mb-5">
           {toolCategories.find(c => c.title === activeCategory)?.keys.map(toolId => renderToolCard(toolId))}
       </div>
