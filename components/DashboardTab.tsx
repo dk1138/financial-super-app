@@ -755,7 +755,7 @@ export default function DashboardTab() {
                                               minTickGap={25} 
                                           />
                                           <YAxis 
-                                              tickFormatter={(val) => formatYAxis(val)} 
+                                              tickFormatter={(val: number) => formatYAxis(val)} 
                                               stroke="#888" 
                                               tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} 
                                               width={65} 

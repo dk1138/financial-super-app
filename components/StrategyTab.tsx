@@ -15,22 +15,8 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
   lirf: { label: 'LIRA / LIRF', icon: 'bi-lock-fill', color: 'text-muted', desc: 'Locked-In Retirement' },
 };
 
-// The mathematically optimal baseline withdrawal order for an RRSP Meltdown strategy
-const SMART_DECUM_ORDER = [
-  'nonreg',    // Eliminate ongoing taxable drag first
-  'cash',      // Use cash buffers
-  'rrsp',      // Meltdown phase (Fill lower tax brackets)
-  'rrif_acct', // Meltdown phase
-  'lif',       
-  'lirf',      
-  'tfsa',      // Preserve tax-free growth as long as possible
-  'fhsa',
-  'resp',
-  'crypto'     // Highest volatility, usually deferred
-];
-
 export default function StrategyTab() {
-  const { data, updateInput, updateStrategy } = useFinance();
+  const { data, updateInput, updateStrategy, results } = useFinance();
   
   const isCouple = data.mode === 'Couple';
   const isOptimized = data.inputs.fully_optimize_tax ?? false;
@@ -95,13 +81,21 @@ export default function StrategyTab() {
   const renderDraggableList = (type: 'accum' | 'decum') => {
     let currentList = type === 'accum' ? localAccum : localDecum;
 
-    // OVERRIDE: If Smart Optimizer is on, automatically sort the decumulation list to show the engine's route
+    // OVERRIDE: If Smart Optimizer is on, dynamically read the exact winning route from the Meta-Runner
     if (type === 'decum' && isOptimized) {
-        currentList = [...currentList].sort((a, b) => {
-            const idxA = SMART_DECUM_ORDER.indexOf(a);
-            const idxB = SMART_DECUM_ORDER.indexOf(b);
-            return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
-        });
+        const engineOptimalRoute = results?.timeline?.[0]?.optimalStrategy;
+        
+        if (engineOptimalRoute && Array.isArray(engineOptimalRoute) && engineOptimalRoute.length > 0) {
+            currentList = engineOptimalRoute;
+        } else {
+            // Fallback while waiting for calculation to finish
+            const fallbackOrder = ['nonreg', 'cash', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'tfsa', 'fhsa', 'resp', 'crypto'];
+            currentList = [...currentList].sort((a, b) => {
+                const idxA = fallbackOrder.indexOf(a);
+                const idxB = fallbackOrder.indexOf(b);
+                return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+            });
+        }
     }
 
     return currentList.map((item: string, index: number) => {
@@ -192,23 +186,23 @@ export default function StrategyTab() {
                         <div 
                             className="p-3 bg-transparent h-100 transition-all" 
                             style={{ 
-                                opacity: isOptimized ? 0.7 : 1, 
+                                opacity: isOptimized ? 0.85 : 1, 
                                 pointerEvents: isOptimized ? 'none' : 'auto'
                             }}
                         >
                             {renderDraggableList('decum')}
                         </div>
 
-                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER */}
+                        {/* COMPACT OFFSET OVERLAY FOR SMART OPTIMIZER */}
                         {isOptimized && (
-                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: '65%', minWidth: '220px' }}>
-                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
-                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
-                                        <i className="bi bi-lock-fill fs-5"></i>
+                            <div className="position-absolute top-50 end-0 translate-middle-y me-3 me-md-4" style={{ zIndex: 10, width: '220px', maxWidth: 'calc(100% - 2rem)' }}>
+                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(2px)' }}>
+                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '32px', height: '32px'}}>
+                                        <i className="bi bi-lock-fill" style={{fontSize: '0.9rem'}}></i>
                                     </div>
-                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
+                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.8rem' }}>Optimized</span>
                                     <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.7rem'}}>
-                                        Showing Engine's Tax-Efficient Route
+                                        Engine's tax-efficient route is locked in.
                                     </span>
                                 </div>
                             </div>

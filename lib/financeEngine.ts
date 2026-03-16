@@ -418,7 +418,8 @@ export class FinanceEngine {
 
     runSimulation(detailed = false, simContext: any = null): any[] {
         if (this.inputs['fully_optimize_tax'] && !simContext?.isMetaRun) {
-            let bestNW = -Infinity, bestData: any = null;
+            let bestNW = -Infinity, bestData: any = null, bestOrder: string[] = [];
+            
             let groupA = this.strategies.decum.filter(x => ['nonreg', 'cash', 'crypto'].includes(x));
             let groupB = this.strategies.decum.filter(x => ['tfsa', 'fhsa'].includes(x));
             let groupC = this.strategies.decum.filter(x => ['rrif_acct', 'lif', 'lirf', 'rrsp'].includes(x));
@@ -443,8 +444,15 @@ export class FinanceEngine {
                 if (tempResult?.length > 0 && tempResult[tempResult.length - 1].afterTaxEstate > bestNW) {
                     bestNW = tempResult[tempResult.length - 1].afterTaxEstate;
                     bestData = tempResult;
+                    bestOrder = decumOrder;
                 }
             }
+            
+            // Attach the exact winning array to the first year so the UI can read it
+            if (detailed && bestData && bestData.length > 0) {
+                bestData[0].optimalStrategy = bestOrder;
+            }
+            
             return detailed ? bestData : bestData.map((y: any) => y.liquidNW + (y.reIncludedEq || 0));
         }
 

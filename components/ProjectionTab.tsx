@@ -341,7 +341,7 @@ export default function ProjectionTab() {
       if (invInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Inv. Yield:</span> <span>$${formatStr(invInc, year)}</span></div>`; sum += invInc; }
 
       const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
-      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('CASH') && !k.includes('RESP'));
 
       taxableWds.forEach(k => {
           const cleanName = k.replace(`${pUpper} `, '');
@@ -451,8 +451,8 @@ export default function ProjectionTab() {
       const refund = isP1 ? y.rrspRefundP1 : y.rrspRefundP2;
 
       const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
-      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
-      const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash') || k.includes('RESP'));
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('CASH') && !k.includes('RESP'));
+      const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('CASH') || k.includes('RESP'));
 
       const oasClawback = taxDetails?.oas_clawback || 0;
       const oasGross = oas;
@@ -928,7 +928,7 @@ export default function ProjectionTab() {
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
-                                                        {getAccountFlow(y, 'p1', ['cash'], ['Cash'], y.year)}
+                                                        {getAccountFlow(y, 'p1', ['cash'], ['CASH'], y.year)}
                                                         <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
@@ -1018,7 +1018,7 @@ export default function ProjectionTab() {
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
-                                                        {getAccountFlow(y, 'p2', ['cash'], ['Cash'], y.year)}
+                                                        {getAccountFlow(y, 'p2', ['cash'], ['CASH'], y.year)}
                                                         <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
