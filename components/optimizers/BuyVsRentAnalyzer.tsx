@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { InfoBtn, CurrencyInput } from './SharedUI';
+import { InfoBtn, CurrencyInput } from '../SharedUI';
 
 export default function BuyVsRentAnalyzer() {
   // --- CORE TIER 1 INPUTS ---
