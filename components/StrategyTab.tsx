@@ -233,21 +233,21 @@ export default function StrategyTab() {
                         <div 
                             className="p-3 bg-transparent h-100 transition-all" 
                             style={{ 
-                                opacity: isOptimized ? 0.85 : 1, 
+                                opacity: isOptimized ? 0.7 : 1, 
                                 pointerEvents: isOptimized ? 'none' : 'auto'
                             }}
                         >
                             {renderDraggableList('decum')}
                         </div>
 
-                        {/* COMPACT OFFSET OVERLAY FOR SMART OPTIMIZER */}
+                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER (CENTERED) */}
                         {isOptimized && (
-                            <div className="position-absolute top-50 end-0 translate-middle-y me-3 me-md-4" style={{ zIndex: 10, width: '220px', maxWidth: 'calc(100% - 2rem)' }}>
-                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(2px)' }}>
-                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '32px', height: '32px'}}>
-                                        <i className="bi bi-lock-fill" style={{fontSize: '0.9rem'}}></i>
+                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: '65%', minWidth: '220px' }}>
+                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
+                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
+                                        <i className="bi bi-lock-fill fs-5"></i>
                                     </div>
-                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.8rem' }}>Optimized</span>
+                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
                                     <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.7rem'}}>
                                         Engine's tax-efficient route is locked in.
                                     </span>
