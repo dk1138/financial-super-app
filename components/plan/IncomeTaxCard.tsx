@@ -116,9 +116,15 @@ export default function IncomeTaxCard() {
                   {showCppEi[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
                           <div className="d-flex justify-content-between align-items-center">
-                              <span className="text-muted small fst-italic">CPP Contributions</span>
+                              <span className="text-muted small fst-italic">Base CPP (Tier 1)</span>
                               <span className="small text-muted fw-bold">(${Math.round(taxDetails.cppPremium || 0).toLocaleString()})</span>
                           </div>
+                          {(taxDetails.cpp2Premium > 0) && (
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span className="text-muted small fst-italic">CPP2 (Tier 2)</span>
+                                  <span className="small text-warning fw-bold opacity-75">(${Math.round(taxDetails.cpp2Premium).toLocaleString()})</span>
+                              </div>
+                          )}
                           <div className="d-flex justify-content-between align-items-center">
                               <span className="text-muted small fst-italic">EI Premiums</span>
                               <span className="small text-muted fw-bold">(${Math.round(taxDetails.eiPremium || 0).toLocaleString()})</span>
