@@ -182,7 +182,9 @@ export const defaultData = {
     fully_optimize_tax: false, oas_clawback_optimize: false, rrsp_meltdown_enabled: false, enable_guardrails: false,
     skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
     skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
-    exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false
+    exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
+    
+    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
   },
   properties: [
     {
@@ -244,7 +246,9 @@ export const emptyData = {
     fully_optimize_tax: false, oas_clawback_optimize: false, rrsp_meltdown_enabled: false, enable_guardrails: false,
     skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
     skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
-    exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false
+    exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
+    
+    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
   },
   properties: [], windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
   strategies: { 
@@ -312,6 +316,10 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
 
             merged.inputs[newKey] = val;
         });
+        
+        // Ensure new variables exist even on old saved plans
+        merged.inputs.emergency_fund_mode = parsedData.inputs.emergency_fund_mode || 'none';
+        merged.inputs.emergency_fund_custom_amount = parsedData.inputs.emergency_fund_custom_amount || 0;
     }
 
     // Apply Boundaries to legacy loaded data
@@ -334,8 +342,8 @@ export const useFinanceStore = create<any>((set) => ({
   results: null,
   planScore: null,
   isCalculating: true,
-  mcResults: null, // Added to fix Monte Carlo saving
-  setMcResults: (mcResults: any) => set({ mcResults }), // Added to fix Monte Carlo saving
+  mcResults: null, 
+  setMcResults: (mcResults: any) => set({ mcResults }), 
   setData: (updater: any) => set((state: any) => ({ data: typeof updater === 'function' ? updater(state.data) : updater })),
   setResults: (results: any) => set((state: any) => ({ 
       results, 

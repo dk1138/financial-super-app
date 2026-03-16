@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
-import { InfoBtn, CurrencyInput } from './SharedUI';
+import { InfoBtn, CurrencyInput, SegmentedControl } from './SharedUI';
 
 const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, desc: string }> = {
   tfsa: { label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', desc: 'Tax-Free Savings' },
@@ -20,6 +20,19 @@ export default function StrategyTab() {
   
   const isCouple = data.mode === 'Couple';
   const isOptimized = data.inputs.fully_optimize_tax ?? false;
+
+  // --- EMERGENCY FUND MATH ---
+  const calcMonthlyExpenses = () => {
+      let total = 0;
+      Object.values(data.expensesByCategory || {}).forEach((cat: any) => {
+          if(cat && cat.items) cat.items.forEach((item: any) => { total += (item.curr || 0) * (item.freq || 12); });
+      });
+      return total / 12;
+  };
+  const monthlyExp = calcMonthlyExpenses();
+  const efMode = data.inputs.emergency_fund_mode || 'none';
+  const efCustomAmt = data.inputs.emergency_fund_custom_amount || 0;
+  const showCashDragWarning = efMode === 'custom' && efCustomAmt > 100000;
 
   // --- INSTANT-SWAP DRAG & DROP ENGINE ---
   const [draggingType, setDraggingType] = useState<'accum' | 'decum' | null>(null);
@@ -186,23 +199,23 @@ export default function StrategyTab() {
                         <div 
                             className="p-3 bg-transparent h-100 transition-all" 
                             style={{ 
-                                opacity: isOptimized ? 0.85 : 1, 
+                                opacity: isOptimized ? 0.7 : 1, 
                                 pointerEvents: isOptimized ? 'none' : 'auto'
                             }}
                         >
                             {renderDraggableList('decum')}
                         </div>
 
-                        {/* COMPACT OFFSET OVERLAY FOR SMART OPTIMIZER */}
+                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER */}
                         {isOptimized && (
-                            <div className="position-absolute top-50 end-0 translate-middle-y me-3 me-md-4" style={{ zIndex: 10, width: '220px', maxWidth: 'calc(100% - 2rem)' }}>
-                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(2px)' }}>
-                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '32px', height: '32px'}}>
-                                        <i className="bi bi-lock-fill" style={{fontSize: '0.9rem'}}></i>
+                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: '65%', minWidth: '220px' }}>
+                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
+                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
+                                        <i className="bi bi-lock-fill fs-5"></i>
                                     </div>
-                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.8rem' }}>Optimized</span>
+                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
                                     <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.7rem'}}>
-                                        Engine's tax-efficient route is locked in.
+                                        Showing Engine's Tax-Efficient Route
                                     </span>
                                 </div>
                             </div>
@@ -215,12 +228,12 @@ export default function StrategyTab() {
       </div>
 
       <div className="row g-4">
-        {/* --- SECTION 2: ANNUAL LIMITS --- */}
+        {/* --- SECTION 2: ANNUAL LIMITS & EMERGENCY FUND --- */}
         <div className="col-12 col-xl-5 d-flex flex-column">
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
                     <i className="bi bi-speedometer2 text-info fs-4 me-3"></i>
-                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Annual Limits</h5>
+                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Account Limits</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10">
                     <div className="row g-3">
@@ -281,6 +294,53 @@ export default function StrategyTab() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* EMERGENCY FUND UI */}
+                        <div className="col-12 mt-2 pt-3 border-top border-secondary border-opacity-50">
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <span className="fw-bold text-success text-uppercase ls-1">Emergency Fund Buffer</span>
+                                <InfoBtn align="right" title="Emergency Fund" text="A protected cash buffer that the engine will not touch for normal retirement spending.<br><br><b>Break-the-Glass:</b> If your other accounts completely run out of money, the engine will be allowed to spend this buffer to prevent immediate plan failure.<br><br><b>Inflation:</b> Custom amounts will automatically inflate over time to preserve purchasing power." />
+                            </div>
+                            
+                            <SegmentedControl 
+                                value={efMode} 
+                                onChange={(val: string) => updateInput('emergency_fund_mode', val)} 
+                                options={[
+                                    { value: 'none', label: 'None ($0)' },
+                                    { value: '3_months', label: '3 Months' },
+                                    { value: '6_months', label: '6 Months' },
+                                    { value: 'custom', label: 'Custom' }
+                                ]} 
+                            />
+
+                            <div className="mt-3">
+                                {efMode === 'none' && (
+                                    <div className="bg-black bg-opacity-25 border border-secondary rounded-3 p-2 text-center text-muted small fst-italic shadow-inner">
+                                        $0 reserved. All cash is available for spending or investing.
+                                    </div>
+                                )}
+                                {(efMode === '3_months' || efMode === '6_months') && (
+                                    <div className="bg-black bg-opacity-25 border border-secondary rounded-3 p-2 d-flex justify-content-between align-items-center px-3 shadow-inner">
+                                        <span className="small text-muted fw-bold">Dynamic Target:</span>
+                                        <span className="fw-bold text-success">
+                                            {new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(monthlyExp * (efMode === '3_months' ? 3 : 6))}
+                                        </span>
+                                    </div>
+                                )}
+                                {efMode === 'custom' && (
+                                    <div className="position-relative">
+                                        <CurrencyInput className={`form-control border-secondary shadow-none ${showCashDragWarning ? 'border-warning text-warning' : ''}`} value={efCustomAmt} onChange={(val: any) => updateInput('emergency_fund_custom_amount', val)} placeholder="Enter base amount..." />
+                                        {showCashDragWarning && (
+                                            <div className="d-flex align-items-center mt-2 text-warning small fw-bold">
+                                                <i className="bi bi-exclamation-triangle-fill me-2"></i> 
+                                                High cash balances create "cash drag," losing value to inflation over decades.
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
