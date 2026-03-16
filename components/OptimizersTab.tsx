@@ -44,7 +44,7 @@ export default function OptimizersTab() {
       let isFullWidth = false; // Flag to let complex UI tools span the full row
 
       switch (id) {
-          case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer />; isFullWidth = true; break;
+          case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer />; isFullWidth = false; break;
           case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
           case 'sidehustle': ContentComponent = <SideHustleROI />; break;
           case 'dwz': ContentComponent = <DieWithZero />; break;

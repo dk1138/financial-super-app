@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { InfoBtn, CurrencyInput } from '../SharedUI';
+import { InfoBtn, CurrencyInput, PercentInput } from '../SharedUI';
 
 export default function BuyVsRentAnalyzer() {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'core' | 'adv'>('core');
+
   // --- CORE TIER 1 INPUTS ---
   const [homePrice, setHomePrice] = useState(1200000);
   const [downPaymentPct, setDownPaymentPct] = useState(20);
@@ -11,9 +14,6 @@ export default function BuyVsRentAnalyzer() {
   const [marketReturn, setMarketReturn] = useState(6.0);
 
   // --- TIER 2 ADVANCED ASSUMPTIONS ---
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  
-  // Buying Costs
   const [closingCostsPct, setClosingCostsPct] = useState(2.0); // Land Transfer, Legal
   const [realtorCommPct, setRealtorCommPct] = useState(5.0); // Paid when selling
   const [propertyTaxRate, setPropertyTaxRate] = useState(0.75); // Vaughan/GTA standard
@@ -29,7 +29,7 @@ export default function BuyVsRentAnalyzer() {
   const timeHorizon = 25; // Standard 25-year amortization view
 
   // --- THE MATH ENGINE ---
-  const { data, winner, difference } = useMemo(() => {
+  const { data, winner, difference, finalBuyer, finalRenter } = useMemo(() => {
     let timeline = [];
     
     // Initial Variables
@@ -93,147 +93,228 @@ export default function BuyVsRentAnalyzer() {
       currentRentIns *= (1 + (rentInflation / 100));
     }
 
-    const finalBuyer = timeline[timeHorizon - 1].buyerNW;
-    const finalRenter = timeline[timeHorizon - 1].renterNW;
+    const endBuyer = timeline[timeHorizon - 1].buyerNW;
+    const endRenter = timeline[timeHorizon - 1].renterNW;
     
     return {
       data: timeline,
-      winner: finalBuyer > finalRenter ? 'Buying' : 'Renting',
-      difference: Math.abs(finalBuyer - finalRenter)
+      winner: endBuyer > endRenter ? 'BUYING' : 'RENTING',
+      difference: Math.abs(endBuyer - endRenter),
+      finalBuyer: endBuyer,
+      finalRenter: endRenter
     };
   }, [homePrice, downPaymentPct, mortgageRate, monthlyRent, marketReturn, closingCostsPct, realtorCommPct, propertyTaxRate, maintenanceRate, condoFees, homeInsurance, rentInflation, propertyAppreciation, renterInsurance]);
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
+  const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
+  // =======================================================================
+  // COLLAPSED CARD VIEW
+  // =======================================================================
+  if (!isExpanded) {
+      return (
+          <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm transition-all hover-border-primary">
+              <div className="d-flex align-items-center mb-3">
+                  <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                      <i className="bi bi-houses fs-4"></i>
+                  </div>
+                  <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Buy vs. Rent</h5>
+              </div>
+              <p className="text-muted small mb-4">Compare the unrecoverable costs of homeownership vs. investing the down payment.</p>
+              
+              <div className="row g-3 mb-4">
+                  <div className="col-12">
+                      <label className="form-label small fw-bold text-muted mb-1">Target Home Price</label>
+                      <CurrencyInput className="form-control form-control-sm" value={homePrice} onChange={setHomePrice} />
+                  </div>
+                  <div className="col-12">
+                      <label className="form-label small fw-bold text-muted mb-1">Equivalent Rent/mo</label>
+                      <CurrencyInput className="form-control form-control-sm border-secondary" value={monthlyRent} onChange={setMonthlyRent} />
+                  </div>
+                  <div className="col-6">
+                      <label className="form-label small fw-bold text-muted mb-1">Mort %</label>
+                      <PercentInput className="form-control form-control-sm border-primary" value={mortgageRate} onChange={setMortgageRate} />
+                  </div>
+                  <div className="col-6">
+                      <label className="form-label small fw-bold text-muted mb-1">Mkt Ret %</label>
+                      <PercentInput className="form-control form-control-sm border-success" value={marketReturn} onChange={setMarketReturn} />
+                  </div>
+              </div>
+
+              <div className="row g-2 mt-auto text-center">
+                  <div className="col-6">
+                      <div className={`p-2 rounded-3 border h-100 d-flex flex-column justify-content-center ${winner === 'BUYING' ? 'bg-primary bg-opacity-10 border-primary' : 'bg-black bg-opacity-25 border-secondary'}`}>
+                          <div className="text-muted fw-bold" style={{fontSize: '0.65rem'}}>BUYER NET WORTH</div>
+                          <div className={`fs-5 fw-bold ${winner === 'BUYING' ? 'text-primary' : 'text-main'}`}>{formatCurrency(finalBuyer)}</div>
+                      </div>
+                  </div>
+                  <div className="col-6">
+                      <div className={`p-2 rounded-3 border h-100 d-flex flex-column justify-content-center ${winner === 'RENTING' ? 'bg-success bg-opacity-10 border-success' : 'bg-black bg-opacity-25 border-secondary'}`}>
+                          <div className="text-muted fw-bold" style={{fontSize: '0.65rem'}}>RENTER NET WORTH</div>
+                          <div className={`fs-5 fw-bold ${winner === 'RENTING' ? 'text-success' : 'text-main'}`}>{formatCurrency(finalRenter)}</div>
+                      </div>
+                  </div>
+              </div>
+              
+              <div className="text-center mt-3 pt-3 border-top border-secondary">
+                  <h6 className="fw-bold mb-2 small">Winner: <span className={winner === 'RENTING' ? 'text-success' : 'text-primary'}>{winner}</span></h6>
+                  <button onClick={() => setIsExpanded(true)} className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold shadow-sm">
+                      Expand Analyzer <i className="bi bi-arrows-angle-expand ms-1"></i>
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
+  // =======================================================================
+  // EXPANDED DASHBOARD VIEW
+  // =======================================================================
   return (
-    <div className="d-flex flex-column gap-4">
+    <div className="rp-card border-primary rounded-4 p-4 shadow-lg position-relative d-flex flex-column" style={{ zIndex: 10 }}>
       {/* HEADER & SUMMARY */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-        <div>
-          <h4 className="fw-bold mb-1 text-main d-flex align-items-center gap-2">
-            <i className="bi bi-house-door text-primary"></i> Buy vs. Rent Sandbox
-          </h4>
-          <p className="text-muted small mb-0">Compare the unrecoverable costs of homeownership vs. investing the down payment.</p>
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-3 border-bottom border-secondary">
+        <div className="d-flex align-items-center">
+            <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '50px', height: '50px'}}>
+                <i className="bi bi-houses fs-4"></i>
+            </div>
+            <div>
+            <h4 className="fw-bold mb-1 text-main">Buy vs. Rent Sandbox</h4>
+            <p className="text-muted small mb-0">Detailed unrecoverable cost & net worth modeling (25 Yrs)</p>
+            </div>
         </div>
-        <div className={`p-3 rounded-4 shadow-sm border ${winner === 'Buying' ? 'border-primary bg-primary bg-opacity-10' : 'border-success bg-success bg-opacity-10'} text-center px-4`}>
-          <div className="small fw-bold text-uppercase ls-1 text-muted mb-1">Year 25 Winner</div>
-          <h5 className={`fw-bold mb-0 ${winner === 'Buying' ? 'text-primary' : 'text-success'}`}>
-            {winner} by {formatCurrency(difference)}
-          </h5>
+        <div className="d-flex align-items-center gap-3">
+            <div className={`p-2 rounded-3 shadow-sm border ${winner === 'BUYING' ? 'border-primary bg-primary bg-opacity-10' : 'border-success bg-success bg-opacity-10'} text-center px-4`}>
+            <div className="small fw-bold text-uppercase ls-1 text-muted mb-1" style={{fontSize: '0.7rem'}}>Year 25 Winner</div>
+            <h5 className={`fw-bold mb-0 ${winner === 'BUYING' ? 'text-primary' : 'text-success'}`}>
+                {winner} by {formatCurrency(difference)}
+            </h5>
+            </div>
+            <button className="btn btn-outline-secondary rounded-circle shadow-sm ms-2" style={{width: '40px', height: '40px'}} onClick={() => setIsExpanded(false)}>
+                <i className="bi bi-x-lg"></i>
+            </button>
         </div>
       </div>
 
       <div className="row g-4">
-        {/* LEFT COLUMN: INPUTS */}
+        {/* LEFT COLUMN: INPUT TABS */}
         <div className="col-12 col-xl-4 d-flex flex-column gap-3">
             
-          {/* TIER 1: CORE INPUTS */}
-          <div className="rp-card border border-secondary rounded-4 shadow-sm p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
-            <h6 className="fw-bold text-uppercase ls-1 mb-2 border-bottom border-secondary pb-2">Core Parameters</h6>
-            
-            <div>
-              <div className="d-flex justify-content-between mb-1">
-                <label className="small fw-bold text-main">Home Price</label>
-                <span className="small text-muted">{formatCurrency(homePrice)}</span>
-              </div>
-              <input type="range" className="form-range" min="300000" max="3000000" step="25000" value={homePrice} onChange={(e) => setHomePrice(Number(e.target.value))} />
-            </div>
-
-            <div className="row g-2">
-                <div className="col-6">
-                    <label className="small fw-bold text-main mb-1">Down Payment %</label>
-                    <div className="input-group input-group-sm shadow-sm">
-                        <input type="number" className="form-control border-secondary bg-input text-main" value={downPaymentPct} onChange={(e) => setDownPaymentPct(Number(e.target.value))} />
-                        <span className="input-group-text border-secondary bg-secondary bg-opacity-25 text-muted">%</span>
-                    </div>
-                </div>
-                <div className="col-6">
-                    <label className="small fw-bold text-main mb-1">Mortgage Rate</label>
-                    <div className="input-group input-group-sm shadow-sm">
-                        <input type="number" className="form-control border-secondary bg-input text-main" step="0.1" value={mortgageRate} onChange={(e) => setMortgageRate(Number(e.target.value))} />
-                        <span className="input-group-text border-secondary bg-secondary bg-opacity-25 text-muted">%</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="pt-2 border-top border-secondary">
-              <div className="d-flex justify-content-between mb-1">
-                <label className="small fw-bold text-main">Alternative Monthly Rent</label>
-                <span className="small text-muted">{formatCurrency(monthlyRent)}/mo</span>
-              </div>
-              <input type="range" className="form-range" min="1000" max="8000" step="100" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} />
-            </div>
-
-            <div>
-              <div className="d-flex justify-content-between mb-1">
-                <label className="small fw-bold text-main">Expected Market Return</label>
-                <InfoBtn align="right" title="Market Return" text="The average annual return the renter earns by investing their down payment and monthly cashflow savings." />
-              </div>
-              <div className="input-group input-group-sm shadow-sm">
-                  <input type="number" className="form-control border-secondary bg-input text-main" step="0.1" value={marketReturn} onChange={(e) => setMarketReturn(Number(e.target.value))} />
-                  <span className="input-group-text border-secondary bg-secondary bg-opacity-25 text-muted">%</span>
-              </div>
-            </div>
+          <div className="d-flex p-1 bg-black bg-opacity-25 rounded-pill shadow-inner border border-secondary">
+              <button 
+                className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${activeTab === 'core' ? 'bg-primary text-white shadow-sm' : 'text-muted border-0 hover-opacity-100'}`} 
+                onClick={() => setActiveTab('core')}
+              >
+                Core Params
+              </button>
+              <button 
+                className={`btn btn-sm rounded-pill flex-grow-1 fw-bold ${activeTab === 'adv' ? 'bg-primary text-white shadow-sm' : 'text-muted border-0 hover-opacity-100'}`} 
+                onClick={() => setActiveTab('adv')}
+              >
+                Advanced
+              </button>
           </div>
 
-          {/* TIER 2: ADVANCED ASSUMPTIONS TOGGLE */}
-          <button 
-            className="btn btn-outline-secondary rounded-4 py-2 shadow-sm d-flex justify-content-between align-items-center"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            <span className="fw-bold small text-uppercase ls-1"><i className="bi bi-gear-fill me-2"></i> Advanced Assumptions</span>
-            <i className={`bi bi-chevron-${showAdvanced ? 'up' : 'down'}`}></i>
-          </button>
-
-          {showAdvanced && (
-            <div className="rp-card border border-secondary rounded-4 shadow-sm p-4 bg-input transition-all">
-                
-                <h6 className="small fw-bold text-muted text-uppercase ls-1 mb-3">Buying: One-Time Costs</h6>
-                <div className="row g-2 mb-3">
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Closing Costs (LTT)</label>
-                        <div className="input-group input-group-sm"><input type="number" step="0.1" className="form-control border-secondary bg-transparent text-main" value={closingCostsPct} onChange={(e) => setClosingCostsPct(Number(e.target.value))} /><span className="input-group-text border-secondary bg-transparent text-muted">%</span></div>
+          <div className="rp-card border border-secondary rounded-4 shadow-sm p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3 h-100">
+              
+              {/* --- TAB 1: CORE --- */}
+              {activeTab === 'core' && (
+                <>
+                    <div>
+                        <div className="d-flex justify-content-between mb-1">
+                            <label className="small fw-bold text-main">Home Price</label>
+                            <span className="small text-primary fw-bold">{formatCurrency(homePrice)}</span>
+                        </div>
+                        <input type="range" className="form-range" min="300000" max="3000000" step="25000" value={homePrice} onChange={(e) => setHomePrice(Number(e.target.value))} />
                     </div>
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Selling Realtor Fee</label>
-                        <div className="input-group input-group-sm"><input type="number" step="0.1" className="form-control border-secondary bg-transparent text-main" value={realtorCommPct} onChange={(e) => setRealtorCommPct(Number(e.target.value))} /><span className="input-group-text border-secondary bg-transparent text-muted">%</span></div>
+
+                    <div className="row g-2">
+                        <div className="col-6">
+                            <label className="small fw-bold text-muted mb-1">Down Payment %</label>
+                            <PercentInput className="form-control form-control-sm border-secondary" value={downPaymentPct} onChange={setDownPaymentPct} />
+                        </div>
+                        <div className="col-6">
+                            <label className="small fw-bold text-muted mb-1">Mortgage Rate</label>
+                            <PercentInput className="form-control form-control-sm border-secondary" value={mortgageRate} onChange={setMortgageRate} />
+                        </div>
+                    </div>
+
+                    <div className="pt-3 border-top border-secondary">
+                        <div className="d-flex justify-content-between mb-1">
+                            <label className="small fw-bold text-main">Alt. Monthly Rent</label>
+                            <span className="small text-success fw-bold">{formatCurrency(monthlyRent)}/mo</span>
+                        </div>
+                        <input type="range" className="form-range" min="1000" max="8000" step="100" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} />
+                    </div>
+
+                    <div className="mt-auto pt-3">
+                        <div className="d-flex justify-content-between mb-1">
+                            <label className="small fw-bold text-muted">Expected Market Return</label>
+                            <InfoBtn align="right" title="Market Return" text="The average annual return the renter earns by investing their down payment and monthly cashflow savings." />
+                        </div>
+                        <PercentInput className="form-control form-control-sm border-success" value={marketReturn} onChange={setMarketReturn} />
+                    </div>
+                </>
+              )}
+
+              {/* --- TAB 2: ADVANCED --- */}
+              {activeTab === 'adv' && (
+                <div className="d-flex flex-column gap-3 overflow-auto" style={{maxHeight: '400px'}}>
+                    <div>
+                        <h6 className="small fw-bold text-primary text-uppercase ls-1 mb-2 border-bottom border-secondary pb-1">Buy: One-Time Costs</h6>
+                        <div className="row g-2">
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Closing/LTT (%)</label>
+                                <PercentInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={closingCostsPct} onChange={setClosingCostsPct} />
+                            </div>
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Realtor Fee (%)</label>
+                                <PercentInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={realtorCommPct} onChange={setRealtorCommPct} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h6 className="small fw-bold text-primary text-uppercase ls-1 mb-2 border-bottom border-secondary pb-1">Buy: Ongoing Costs</h6>
+                        <div className="row g-2">
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Prop Tax/yr (%)</label>
+                                <PercentInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={propertyTaxRate} onChange={setPropertyTaxRate} />
+                            </div>
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Maint/yr (%)</label>
+                                <PercentInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={maintenanceRate} onChange={setMaintenanceRate} />
+                            </div>
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Condo Fee /mo</label>
+                                <CurrencyInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={condoFees} onChange={setCondoFees} />
+                            </div>
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Home Ins. /mo</label>
+                                <CurrencyInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={homeInsurance} onChange={setHomeInsurance} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h6 className="small fw-bold text-success text-uppercase ls-1 mb-2 border-bottom border-secondary pb-1">Market Realities</h6>
+                        <div className="row g-2">
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Prop Apprec. (%)</label>
+                                <PercentInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={propertyAppreciation} onChange={setPropertyAppreciation} />
+                            </div>
+                            <div className="col-6">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Rent Infl. (%)</label>
+                                <PercentInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={rentInflation} onChange={setRentInflation} />
+                            </div>
+                            <div className="col-12 mt-2">
+                                <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Renter Insurance /mo</label>
+                                <CurrencyInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={renterInsurance} onChange={setRenterInsurance} />
+                            </div>
+                        </div>
                     </div>
                 </div>
+              )}
 
-                <h6 className="small fw-bold text-muted text-uppercase ls-1 mb-3">Buying: Ongoing Costs</h6>
-                <div className="row g-2 mb-3">
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Property Tax/yr</label>
-                        <div className="input-group input-group-sm"><input type="number" step="0.05" className="form-control border-secondary bg-transparent text-main" value={propertyTaxRate} onChange={(e) => setPropertyTaxRate(Number(e.target.value))} /><span className="input-group-text border-secondary bg-transparent text-muted">%</span></div>
-                    </div>
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Maintenance/yr</label>
-                        <div className="input-group input-group-sm"><input type="number" step="0.1" className="form-control border-secondary bg-transparent text-main" value={maintenanceRate} onChange={(e) => setMaintenanceRate(Number(e.target.value))} /><span className="input-group-text border-secondary bg-transparent text-muted">%</span></div>
-                    </div>
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Condo/HOA Fee</label>
-                        <CurrencyInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={condoFees} onChange={(val: any) => setCondoFees(val)} />
-                    </div>
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Home Ins. /mo</label>
-                        <CurrencyInput className="form-control form-control-sm border-secondary bg-transparent text-main" value={homeInsurance} onChange={(val: any) => setHomeInsurance(val)} />
-                    </div>
-                </div>
-
-                <h6 className="small fw-bold text-muted text-uppercase ls-1 mb-3 pt-2 border-top border-secondary">Market Realities</h6>
-                <div className="row g-2">
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Property Apprec.</label>
-                        <div className="input-group input-group-sm"><input type="number" step="0.1" className="form-control border-secondary bg-transparent text-main" value={propertyAppreciation} onChange={(e) => setPropertyAppreciation(Number(e.target.value))} /><span className="input-group-text border-secondary bg-transparent text-muted">%</span></div>
-                    </div>
-                    <div className="col-6">
-                        <label className="small text-muted mb-1" style={{fontSize: '0.7rem'}}>Rent Inflation</label>
-                        <div className="input-group input-group-sm"><input type="number" step="0.1" className="form-control border-secondary bg-transparent text-main" value={rentInflation} onChange={(e) => setRentInflation(Number(e.target.value))} /><span className="input-group-text border-secondary bg-transparent text-muted">%</span></div>
-                    </div>
-                </div>
-
-            </div>
-          )}
+          </div>
         </div>
 
         {/* RIGHT COLUMN: VISUALIZATION */}
