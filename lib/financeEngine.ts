@@ -618,12 +618,15 @@ export class FinanceEngine {
             const regMins = calcRegMinimums(person1, person2, age1, age2, alive1, alive2, preGrowthRrsp1, preGrowthRrif1, preGrowthRrsp2, preGrowthRrif2, preGrowthLirf1, preGrowthLif1, preGrowthLirf2, preGrowthLif2, this.CONSTANTS?.RRIF_START_AGE || 72);
             let wdBreakdown = detailed ? { p1: {} as any, p2: {} as any } : null;
 
-            if (this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true) {
+            if (this.inputs['fully_optimize_tax'] === true || this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true) {
                 const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: 'p1' | 'p2', rrifMin: number, lifMin: number) => {
                     let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
                     if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
                         let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
-                        let targetBracketCap = (this.CONSTANTS.BPA_MAX_FED || 16452) * baseInflation; 
+                        
+                        // Target the top of the first Federal Tax Bracket to pull out the most money at the lowest rate
+                        let bracketTop = this.CONSTANTS.TAX_DATA?.FED?.brackets?.[0] || 55867;
+                        let targetBracketCap = bracketTop * baseInflation; 
                         
                         let room = Math.max(0, targetBracketCap - currentTaxable);
                         if (room > 0) {
