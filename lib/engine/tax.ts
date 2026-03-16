@@ -377,26 +377,25 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     }
     
     return { 
-        fed: fedTax, 
-        prov: provTax, 
-        cpp_ei: cppBasePremium + cppEnhancedPremium + eiPremium, 
-        cpp: cppBasePremium + cppTier1Enhanced,
-        cpp2: cppTier2,
-        ei: eiPremium,
-        oas_clawback: oasClawback, 
-        surtax: ontarioSurtaxAmt, 
-        ohp: ontarioHealthPremium, 
-        totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + eiPremium + oasClawback, 
-        margRate: actualMargRate,
-        nrtc: {
-            donations: fedDonationCredit + provDonationCredit,
-            caregiver: fedCaregiverCredit + provCaregiverCredit,
-            medical: fedMedicalCredit + provMedicalCredit,
-            homeBuyer: fedHomeBuyerCredit + provHomeBuyerCredit,
-            disability: fedDisabilityCredit + provDisabilityCredit
-        },
-        rtc: {
-            transit: provTransitCredit
-        }
-    };
-}
+            fed: fedTax, 
+            prov: provTax, 
+            cppPremium: cppBasePremium + cppEnhancedPremium, // <-- ADD THIS
+            eiPremium: eiPremium,                            // <-- ADD THIS
+            cpp_ei: cppBasePremium + cppEnhancedPremium + eiPremium, 
+            oas_clawback: oasClawback, 
+            surtax: ontarioSurtaxAmt, 
+            ohp: ontarioHealthPremium, 
+            totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + eiPremium + oasClawback, 
+            margRate: actualMargRate,
+            nrtc: {
+                donations: fedDonationCredit + provDonationCredit,
+                caregiver: fedCaregiverCredit + provCaregiverCredit,
+                medical: fedMedicalCredit + provMedicalCredit,
+                homeBuyer: fedHomeBuyerCredit + provHomeBuyerCredit,
+                disability: fedDisabilityCredit + provDisabilityCredit
+            },
+            rtc: {
+                transit: provTransitCredit
+            }
+        };
+    }
