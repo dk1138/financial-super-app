@@ -46,7 +46,7 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
 
 export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
-        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0 }, rtc: { transit: 0 } };
+        return { fed: 0, prov: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0 }, rtc: { transit: 0 }, surtax: 0, ohp: 0 };
     }
     
     let oasClawback = 0;
@@ -271,26 +271,29 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let provDivRates = isEligibleDividend ? (constants.PROV_DIV_CREDIT_ELIGIBLE || {}) : (constants.PROV_DIV_CREDIT_NON_ELIGIBLE || {});
     let provDividendCredit = grossedUpDividend * (provDivRates[province] || 0.10);
 
+    // Explicitly track these so we can expose them to the UI
+    let ontarioSurtaxAmt = 0;
+    let ontarioHealthPremium = 0;
+
     if (province === 'ON') { 
         // DTC is applied to Basic Ontario Tax BEFORE Surtax
         provTax = Math.max(0, provTax - provDividendCredit);
         
         // 1. ONTARIO SURTAX (Calculated strictly on Basic ON Tax)
-        let surtax = 0; 
         if (taxData.ON.surtaxes && Array.isArray(taxData.ON.surtaxes)) {
             let currentMarginalMultiplier = 1;
             for (let s of taxData.ON.surtaxes) {
                 if (provTax > s.threshold) {
-                    surtax += (provTax - s.threshold) * s.rate;
+                    ontarioSurtaxAmt += (provTax - s.threshold) * s.rate;
                     currentMarginalMultiplier += s.rate; // 20% tier stacks with 36% tier
                 }
             }
-            if (surtax > 0) {
+            if (ontarioSurtaxAmt > 0) {
                 provMarginalRate *= currentMarginalMultiplier;
             }
         }
         
-        provTax += surtax;
+        provTax += ontarioSurtaxAmt;
 
         // 2. LIFT CREDIT
         let liftMax = (constants.ON_LIFT_MAX || 875) * baseInflation;
@@ -318,7 +321,6 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         provTax = Math.max(0, provTax - otrAmount);
         
         // 4. ONTARIO HEALTH PREMIUM (OHP)
-        let ohp = 0;
         let ti = craTaxableIncome;
         let ohpTiers = constants.ON_OHP_TIERS || [
             { threshold: 20000, base: 0,   maxAdd: 300, rate: 0.06 },
@@ -331,11 +333,11 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         for (let i = ohpTiers.length - 1; i >= 0; i--) {
             let tier = ohpTiers[i];
             if (ti > tier.threshold) {
-                ohp = tier.base + Math.min(tier.maxAdd, (ti - tier.threshold) * tier.rate);
+                ontarioHealthPremium = tier.base + Math.min(tier.maxAdd, (ti - tier.threshold) * tier.rate);
                 break;
             }
         }
-        provTax += ohp;
+        provTax += ontarioHealthPremium;
 
     } else {
         provTax = Math.max(0, provTax - provDividendCredit);
@@ -366,6 +368,8 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         prov: provTax, 
         cpp_ei: cppBasePremium + cppEnhancedPremium + eiPremium, 
         oas_clawback: oasClawback, 
+        surtax: ontarioSurtaxAmt, // Exposed to UI
+        ohp: ontarioHealthPremium, // Exposed to UI
         totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + eiPremium + oasClawback, 
         margRate: actualMargRate,
         nrtc: {
