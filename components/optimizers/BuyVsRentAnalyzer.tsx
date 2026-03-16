@@ -107,31 +107,28 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
-  // =======================================================================
-  // RENDER
-  // =======================================================================
   return (
     <>
       <style>{`
         @keyframes slideFadeIn {
-          0% { opacity: 0; transform: translateY(15px) scale(0.98); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
+          0% { opacity: 0; transform: translateY(15px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
         @keyframes subtleFadeIn {
-          0% { opacity: 0; transform: scale(0.95); }
+          0% { opacity: 0; transform: scale(0.97); }
           100% { opacity: 1; transform: scale(1); }
         }
         .anim-slide-up {
-          animation: slideFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation: slideFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .anim-fade-in {
-          animation: subtleFadeIn 0.3s ease-out forwards;
+          animation: subtleFadeIn 0.25s ease-out forwards;
         }
       `}</style>
 
       {!isExpanded ? (
-        // --- COLLAPSED CARD VIEW ---
-        <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm transition-all hover-border-primary anim-fade-in">
+        // --- COLLAPSED CARD VIEW (Instant render, no animations to match grid) ---
+        <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
             <div className="d-flex align-items-center mb-3">
                 <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
                     <i className="bi bi-houses fs-4"></i>
@@ -144,28 +141,24 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                 <div className="col-12">
                     <div className="d-flex justify-content-between align-items-center mb-1">
                         <label className="form-label small fw-bold text-muted mb-0">Target Home Price</label>
-                        <InfoBtn align="right" title="Home Price" text="The total purchase price of the property you want to buy." />
                     </div>
                     <CurrencyInput className="form-control form-control-sm" value={homePrice} onChange={setHomePrice} />
                 </div>
                 <div className="col-12">
                     <div className="d-flex justify-content-between align-items-center mb-1">
                         <label className="form-label small fw-bold text-muted mb-0">Equivalent Rent/mo</label>
-                        <InfoBtn align="right" title="Monthly Rent" text="The monthly cost to rent a highly comparable property." />
                     </div>
                     <CurrencyInput className="form-control form-control-sm border-secondary" value={monthlyRent} onChange={setMonthlyRent} />
                 </div>
                 <div className="col-6">
                     <div className="d-flex justify-content-between align-items-center mb-1">
                         <label className="form-label small fw-bold text-muted mb-0">Mort %</label>
-                        <InfoBtn align="right" title="Mortgage Rate" text="Annual mortgage interest rate." />
                     </div>
                     <PercentInput className="form-control form-control-sm border-primary" value={mortgageRate} onChange={setMortgageRate} />
                 </div>
                 <div className="col-6">
                     <div className="d-flex justify-content-between align-items-center mb-1">
                         <label className="form-label small fw-bold text-muted mb-0">Mkt Ret %</label>
-                        <InfoBtn align="right" title="Market Return" text="Expected annual return if you invested the down payment instead of buying." />
                     </div>
                     <PercentInput className="form-control form-control-sm border-success" value={marketReturn} onChange={setMarketReturn} />
                 </div>
@@ -188,7 +181,7 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
             
             <div className="text-center mt-3 pt-3 border-top border-secondary">
                 <h6 className="fw-bold mb-2 small">Winner: <span className={winner === 'RENTING' ? 'text-success' : 'text-primary'}>{winner}</span></h6>
-                <button onClick={handleToggle} className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold shadow-sm transition-all hover-scale">
+                <button onClick={handleToggle} className="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold shadow-sm">
                     Expand Analyzer <i className="bi bi-arrows-angle-expand ms-1"></i>
                 </button>
             </div>
@@ -196,7 +189,7 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
 
       ) : (
 
-        // --- EXPANDED DASHBOARD VIEW ---
+        // --- EXPANDED DASHBOARD VIEW (Animated entry) ---
         <div className="rp-card border-primary rounded-4 p-4 p-md-5 shadow-lg position-relative d-flex flex-column anim-slide-up bg-surface" style={{ zIndex: 10 }}>
           
           <button 
