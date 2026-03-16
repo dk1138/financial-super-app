@@ -1,38 +1,13 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+orry if I missed seeing it - is there a place where it shows the best (tax-wise) draw down scenario (like depletion order of RRSP/TFSA/non-reg)? I chose the "Smart RRSP Meltdown & Tax Optimizer" which overrode my rank ordering but I can't see what it suggests.
 
-## Getting Started
+Maybe outside of the scope of what you want to do but it would be useful to have a buy housing vs. rent calculator too, as people consider downsizing options to reduce maintenance/responsibilities, fewer bills, have access to cash, avoid probate, etc.
 
-npm run build
+I saw your retirement calculator - it's very impressive. I had a few questions.
 
-First, run the development server:
+1) Changing the decumulation order or engine optimizations doesn't seem to make a difference in the summary. (net worth, investment growth, net worth composition over time, etc)
+2) is there a way to add a defined benefits plan as well as a bridge benefit for retiring before 65?
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Thanks
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+I am still seeing issues when I use the today's dollar option. Somewhere the inflation discounting is broken. As for taxation, ON tax is still on the low side. By chance did you include the health premium as a tax item?

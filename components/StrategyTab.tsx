@@ -15,6 +15,20 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
   lirf: { label: 'LIRA / LIRF', icon: 'bi-lock-fill', color: 'text-muted', desc: 'Locked-In Retirement' },
 };
 
+// The mathematically optimal baseline withdrawal order for an RRSP Meltdown strategy
+const SMART_DECUM_ORDER = [
+  'nonreg',    // Eliminate ongoing taxable drag first
+  'cash',      // Use cash buffers
+  'rrsp',      // Meltdown phase (Fill lower tax brackets)
+  'rrif_acct', // Meltdown phase
+  'lif',       
+  'lirf',      
+  'tfsa',      // Preserve tax-free growth as long as possible
+  'fhsa',
+  'resp',
+  'crypto'     // Highest volatility, usually deferred
+];
+
 export default function StrategyTab() {
   const { data, updateInput, updateStrategy } = useFinance();
   
@@ -39,6 +53,8 @@ export default function StrategyTab() {
   }, [data.strategies, draggingType]);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number, type: 'accum' | 'decum') => {
+      if (type === 'decum' && isOptimized) return; // Failsafe
+      
       setDraggingType(type);
       setDraggedItemIndex(index);
       
@@ -50,6 +66,7 @@ export default function StrategyTab() {
 
   const handleDragEnter = (index: number, type: 'accum' | 'decum') => {
       if (draggingType !== type || draggedItemIndex === null || draggedItemIndex === index) return;
+      if (type === 'decum' && isOptimized) return; // Failsafe
 
       const list = type === 'accum' ? [...localAccum] : [...localDecum];
       const draggedItemContent = list[draggedItemIndex];
@@ -64,6 +81,8 @@ export default function StrategyTab() {
   };
 
   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>, type: 'accum' | 'decum') => {
+      if (type === 'decum' && isOptimized) return; // Failsafe
+      
       const target = e.target as HTMLElement;
       target.style.opacity = '1';
 
@@ -74,25 +93,35 @@ export default function StrategyTab() {
   };
 
   const renderDraggableList = (type: 'accum' | 'decum') => {
-    const currentList = type === 'accum' ? localAccum : localDecum;
+    let currentList = type === 'accum' ? localAccum : localDecum;
+
+    // OVERRIDE: If Smart Optimizer is on, automatically sort the decumulation list to show the engine's route
+    if (type === 'decum' && isOptimized) {
+        currentList = [...currentList].sort((a, b) => {
+            const idxA = SMART_DECUM_ORDER.indexOf(a);
+            const idxB = SMART_DECUM_ORDER.indexOf(b);
+            return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+        });
+    }
 
     return currentList.map((item: string, index: number) => {
       const details = ACCOUNT_MAP[item] || { label: item, icon: 'bi-wallet', color: 'text-white', desc: '' };
       const isDragging = draggingType === type && draggedItemIndex === index;
+      const isLocked = type === 'decum' && isOptimized;
 
       return (
         <div
           key={item}
-          draggable
-          onDragStart={(e) => handleDragStart(e, index, type)}
-          onDragEnter={() => handleDragEnter(index, type)}
-          onDragEnd={(e) => handleDragEnd(e, type)}
+          draggable={!isLocked}
+          onDragStart={!isLocked ? (e) => handleDragStart(e, index, type) : undefined}
+          onDragEnter={!isLocked ? () => handleDragEnter(index, type) : undefined}
+          onDragEnd={!isLocked ? (e) => handleDragEnd(e, type) : undefined}
           onDragOver={(e) => e.preventDefault()}
           className={`d-flex align-items-center justify-content-between p-3 mb-2 rounded-4 transition-all shadow-sm ${isDragging ? 'border border-primary bg-primary bg-opacity-10 shadow' : 'border border-secondary bg-input hover-bg-secondary hover-bg-opacity-10'}`}
-          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          style={{ cursor: isLocked ? 'default' : (isDragging ? 'grabbing' : 'grab') }}
         >
           <div className="d-flex align-items-center gap-3">
-            <div className="d-flex align-items-center justify-content-center bg-secondary bg-opacity-25 rounded-circle fw-bold text-muted" style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
+            <div className={`d-flex align-items-center justify-content-center ${isLocked ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-25 text-muted'} rounded-circle fw-bold`} style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
                 {index + 1}
             </div>
             <div className={`bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center ${details.color} flex-shrink-0`} style={{width: '42px', height: '42px'}}>
@@ -100,10 +129,16 @@ export default function StrategyTab() {
             </div>
             <div>
                 <h6 className="mb-0 fw-bold text-main">{details.label}</h6>
-                <div className="small text-muted fw-medium" style={{ fontSize: '0.7rem' }}>{details.desc}</div>
+                <div className={`small fw-medium ${isLocked ? 'text-success opacity-75' : 'text-muted'}`} style={{ fontSize: '0.7rem' }}>
+                    {isLocked ? 'Auto-Managed' : details.desc}
+                </div>
             </div>
           </div>
-          <i className="bi bi-grip-vertical text-muted fs-4 opacity-50 ms-2"></i>
+          {isLocked ? (
+              <i className="bi bi-lock-fill text-success fs-5 opacity-50 ms-2"></i>
+          ) : (
+              <i className="bi bi-grip-vertical text-muted fs-4 opacity-50 ms-2"></i>
+          )}
         </div>
       );
     });
@@ -157,24 +192,23 @@ export default function StrategyTab() {
                         <div 
                             className="p-3 bg-transparent h-100 transition-all" 
                             style={{ 
-                                opacity: isOptimized ? 0.3 : 1, 
-                                pointerEvents: isOptimized ? 'none' : 'auto',
-                                filter: isOptimized ? 'grayscale(0.8)' : 'none'
+                                opacity: isOptimized ? 0.7 : 1, 
+                                pointerEvents: isOptimized ? 'none' : 'auto'
                             }}
                         >
                             {renderDraggableList('decum')}
                         </div>
 
-                        {/* OVERLAY FOR SMART OPTIMIZER */}
+                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER */}
                         {isOptimized && (
-                            <div className="position-absolute top-50 start-50 translate-middle w-100 px-4" style={{ zIndex: 10 }}>
-                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-4 text-center d-flex flex-column align-items-center justify-content-center backdrop-blur">
-                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow" style={{width: '50px', height: '50px'}}>
-                                        <i className="bi bi-magic fs-4"></i>
+                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: '65%', minWidth: '220px' }}>
+                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
+                                    <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
+                                        <i className="bi bi-lock-fill fs-5"></i>
                                     </div>
-                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1">Smart Optimizer Active</span>
-                                    <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.8rem'}}>
-                                        The engine is automatically calculating the most tax-efficient withdrawal order every year. Manual sorting is disabled.
+                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
+                                    <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.7rem'}}>
+                                        Showing Engine's Tax-Efficient Route
                                     </span>
                                 </div>
                             </div>
