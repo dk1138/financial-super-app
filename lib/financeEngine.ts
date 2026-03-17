@@ -30,10 +30,13 @@ export class FinanceEngine {
     constructor(data: any) {
         this.inputs = JSON.parse(JSON.stringify(data.inputs || {}));
         
-        // properties array is now strictly used for Additional/Rental properties
-        this.properties = data.properties || [];
-        this.housingTransitions = data.housingTransitions || [];
+        // CLEANUP: Automatically strip out legacy "Primary Residence" objects or old "Future Purchase" 
+        // properties from the previous architecture so they don't process as ghost rental properties!
+        this.properties = (data.properties || []).filter((p: any) => 
+            p.name !== 'Primary Residence' && p.isFuturePurchase !== true
+        );
         
+        this.housingTransitions = data.housingTransitions || [];
         this.windfalls = data.windfalls || [];
         this.additionalIncome = data.additionalIncome || [];
         this.customAssets = data.customAssets || [];
@@ -492,15 +495,13 @@ export class FinanceEngine {
         let simProperties = JSON.parse(JSON.stringify(this.properties));
         let housingTransitions = JSON.parse(JSON.stringify(this.housingTransitions));
         
-        // --- STRICT HOUSING MODE CHECK ---
+        // --- STRICT HOUSING STATE INIT ---
         let currentHousingMode = this.inputs.housing_mode || 'own';
         let primaryValue = currentHousingMode === 'own' ? (this.getVal('primary_value') || 0) : 0;
         let primaryMortgage = currentHousingMode === 'own' ? (this.getVal('primary_mortgage') || 0) : 0;
         let primaryRate = this.getVal('primary_rate') || 4.0;
-        let primaryPayment = this.getVal('primary_payment') || 0;
+        let primaryPayment = currentHousingMode === 'own' ? (this.getVal('primary_payment') || 0) : 0;
         let primaryGrowth = (this.getVal('primary_growth') || 3.0) / 100;
-        
-        // STRICTLY only pull current rent if mode is 'rent', ignores ghost inputs from 'free' mode.
         let currentRent = currentHousingMode === 'rent' ? (this.getVal('primary_rent') || 0) : 0;
         
         const p1StartAge = currentYear - person1.dob.getFullYear();
@@ -782,12 +783,17 @@ export class FinanceEngine {
                         let payment = transition.payment || 0;
                         if (payment === 0) payment = r === 0 ? primaryMortgage / 300 : (primaryMortgage * r) / (1 - Math.pow(1 + r, -300));
                         primaryPayment = payment;
+                    } else {
+                        primaryPayment = 0; // STRICT BINDING: Force 0 if buying outright
                     }
                     currentRent = 0;
                     if (detailed && !trackedEvents.has('Bought New Home')) { trackedEvents.add('Bought New Home'); inflows.events.push('Bought New Home'); }
                 } else if (transition.action === 'rent' || transition.action === 'ltc') {
                     currentHousingMode = transition.action;
                     currentRent = (transition.rent || 0); 
+                    primaryValue = 0;
+                    primaryMortgage = 0;
+                    primaryPayment = 0; // STRICT BINDING: Force 0 if transitioning to rent
                     if (detailed && !trackedEvents.has('Transitioned to ' + transition.action.toUpperCase())) { trackedEvents.add('Transitioned to ' + transition.action.toUpperCase()); inflows.events.push('Transitioned to ' + transition.action.toUpperCase()); }
                 }
             }
@@ -807,7 +813,6 @@ export class FinanceEngine {
                 realEstateDebt += primaryMortgage;
                 primaryValue *= (1 + primaryGrowth);
             } else if (currentHousingMode === 'rent' || currentHousingMode === 'ltc') {
-                // FIXED: Keep Rent completely separate from general living expenses
                 rentPayment = currentRent * 12 * baseInflation;
             }
 
