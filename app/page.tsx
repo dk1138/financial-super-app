@@ -335,7 +335,8 @@ function DashboardLayout() {
                     style={{ height: '36px' }}
                 >
                     <i className="bi bi-folder2-open text-primary me-2"></i>
-                    <span className="text-truncate d-inline-block" style={{ maxWidth: '150px' }}>{activePlanName}</span>
+                    {/* WIDER MAX WIDTH APPLIED HERE: Increased from 150px to 250px */}
+                    <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
                     <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
                 </button>
                 
