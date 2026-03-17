@@ -302,7 +302,6 @@ export default function ProjectionTab() {
       return (assets.cash||0) + (assets.tfsa||0) + (assets.fhsa||0) + (assets.rrsp||0) + (assets.lirf||0) + (assets.lif||0) + (assets.rrif_acct||0) + (assets.nonreg||0) + (assets.crypto||0);
   };
 
-  // BUGFIX: Increased width and added flex-shrink-0 and text-nowrap to prevent wrapping
   const getAccountFlow = (y: any, player: string, acctKeys: string[], wdKeys: string[], year: number) => {
       let added = 0;
       let withdrawn = 0;
@@ -336,7 +335,6 @@ export default function ProjectionTab() {
 
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
-      
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
       const db = isP1 ? y.dbP1 : y.dbP2;
@@ -370,11 +368,9 @@ export default function ProjectionTab() {
           }
       });
 
-      let actualGross = sum; 
-      
-      let incStr = `<b>Gross Income:</b> $${formatStr(actualGross, year)}<br>`;
+      let incStr = `<div class="d-flex justify-content-between fw-bold text-main"><span>Gross Income:</span><span>$${formatStr(sum, year)}</span></div>`;
       if (breakdownStr) {
-           incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
+           incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
 
       const rrspCont = y.flows?.contributions?.[player]?.rrsp || 0;
@@ -382,7 +378,7 @@ export default function ProjectionTab() {
       const totalDeductions = rrspCont + fhsaCont;
 
       if (totalDeductions > 0) {
-          incStr += `<b>Total Deductions:</b> -$${formatStr(totalDeductions, year)}<br>`;
+          incStr += `<div class="d-flex justify-content-between fw-bold text-info mt-1"><span>Total Deductions:</span><span>-$${formatStr(totalDeductions, year)}</span></div>`;
           let dedStr = '';
           
           if (rrspCont > 0) {
@@ -403,26 +399,68 @@ export default function ProjectionTab() {
               dedStr += `<div class="d-flex justify-content-between"><span>FHSA Contributions:</span> <span>-$${formatStr(fhsaCont, year)}</span></div>`;
           }
 
-          incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${dedStr}</div>`;
+          incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">${dedStr}</div>`;
       }
 
       if (Math.abs(taxIncAfter - taxIncBefore) > 1) {
           let splitAmt = taxIncAfter - taxIncBefore;
-          incStr += `<b>Pension Split:</b> ${splitAmt > 0 ? '+' : '-'}$${formatStr(Math.abs(splitAmt), year)}<br>`;
+          incStr += `<div class="d-flex justify-content-between small text-muted fw-medium mt-1"><span>Pension Split:</span><span>${splitAmt > 0 ? '+' : '-'}$${formatStr(Math.abs(splitAmt), year)}</span></div>`;
       }
-      incStr += `<b>Net Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
+      incStr += `<div class="d-flex justify-content-between fw-bold text-main mt-1"><span>Net Taxable Income:</span><span>$${formatStr(taxIncAfter, year)}</span></div><hr class="my-1 border-secondary">`;
 
-      let clawbackStr = taxData.oas_clawback > 0 ? `<br><b>OAS Clawback:</b> $${formatStr(taxData.oas_clawback, year)}` : '';
+      // Taxes
+      let taxStr = '';
+      taxStr += `<div class="d-flex justify-content-between fw-bold"><span>Federal Tax:</span><span>$${formatStr(taxData.fed, year)}</span></div>`;
+      
+      let provBase = Math.max(0, taxData.prov - (taxData.surtax || 0) - (taxData.ohp || 0));
+      taxStr += `<div class="d-flex justify-content-between fw-bold mt-1"><span>Provincial Tax:</span><span>$${formatStr(taxData.prov, year)}</span></div>`;
+      
+      taxStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">`;
+      taxStr += `<div class="d-flex justify-content-between"><span>Base Prov Tax:</span> <span>$${formatStr(provBase, year)}</span></div>`;
+      if (taxData.surtax > 0) taxStr += `<div class="d-flex justify-content-between"><span>Ontario Surtax:</span> <span class="text-danger">+$${formatStr(taxData.surtax, year)}</span></div>`;
+      if (taxData.ohp > 0) taxStr += `<div class="d-flex justify-content-between"><span>Ontario Health Premium:</span> <span class="text-danger">+$${formatStr(taxData.ohp, year)}</span></div>`;
+      taxStr += `</div>`;
 
-      let provStr = `<b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}`;
-      if (taxData.surtax > 0 || taxData.ohp > 0) {
-          provStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">`;
-          if (taxData.surtax > 0) provStr += `<div class="d-flex justify-content-between"><span>Includes ON Surtax:</span> <span>$${formatStr(taxData.surtax, year)}</span></div>`;
-          if (taxData.ohp > 0) provStr += `<div class="d-flex justify-content-between"><span>Includes Health Premium:</span> <span>$${formatStr(taxData.ohp, year)}</span></div>`;
-          provStr += `</div>`;
+      taxStr += `<div class="d-flex justify-content-between fw-bold mt-1"><span>CPP / EI Premiums:</span><span>$${formatStr(taxData.cpp_ei, year)}</span></div>`;
+      if (taxData.cppPremium > 0 || taxData.cpp2Premium > 0 || taxData.eiPremium > 0) {
+          taxStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">`;
+          if (taxData.cppPremium > 0) taxStr += `<div class="d-flex justify-content-between"><span>Base CPP (Tier 1):</span> <span>$${formatStr(taxData.cppPremium, year)}</span></div>`;
+          if (taxData.cpp2Premium > 0) taxStr += `<div class="d-flex justify-content-between"><span>CPP2 (Tier 2):</span> <span class="text-warning">+$${formatStr(taxData.cpp2Premium, year)}</span></div>`;
+          if (taxData.eiPremium > 0) taxStr += `<div class="d-flex justify-content-between"><span>EI Premiums:</span> <span>$${formatStr(taxData.eiPremium, year)}</span></div>`;
+          taxStr += `</div>`;
       }
 
-      return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br>${provStr}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
+      if (taxData.oas_clawback > 0) {
+          taxStr += `<div class="d-flex justify-content-between fw-bold text-danger mt-1"><span>OAS Clawback:</span><span>$${formatStr(taxData.oas_clawback, year)}</span></div>`;
+      }
+
+      // Credits
+      const hasNrtc = taxData.nrtc && Object.values(taxData.nrtc).some((v: any) => v > 0);
+      const nrtcTotal = hasNrtc ? Object.values(taxData.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
+      if (nrtcTotal > 0) {
+          taxStr += `<hr class="my-1 border-secondary"><div class="d-flex justify-content-between fw-bold text-info"><span>Applied NRTCs:</span><span>-$${formatStr(nrtcTotal, year)}</span></div>`;
+          taxStr += `<div class="text-muted border-start border-2 border-info border-opacity-50 ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">`;
+          if (taxData.nrtc.disability > 0) taxStr += `<div class="d-flex justify-content-between"><span>Disability Amount:</span> <span>-$${formatStr(taxData.nrtc.disability, year)}</span></div>`;
+          if (taxData.nrtc.caregiver > 0) taxStr += `<div class="d-flex justify-content-between"><span>Caregiver Amount:</span> <span>-$${formatStr(taxData.nrtc.caregiver, year)}</span></div>`;
+          if (taxData.nrtc.medical > 0) taxStr += `<div class="d-flex justify-content-between"><span>Medical Expenses:</span> <span>-$${formatStr(taxData.nrtc.medical, year)}</span></div>`;
+          if (taxData.nrtc.homeBuyer > 0) taxStr += `<div class="d-flex justify-content-between"><span>First-Time Home Buyer:</span> <span>-$${formatStr(taxData.nrtc.homeBuyer, year)}</span></div>`;
+          if (taxData.nrtc.donations > 0) taxStr += `<div class="d-flex justify-content-between"><span>Charitable Donations:</span> <span>-$${formatStr(taxData.nrtc.donations, year)}</span></div>`;
+          taxStr += `</div>`;
+      }
+
+      if (taxData.rtc && taxData.rtc.transit > 0) {
+          taxStr += `<div class="d-flex justify-content-between fw-bold text-success mt-1"><span>Transit Refund:</span><span>+$${formatStr(taxData.rtc.transit, year)}</span></div>`;
+      }
+
+      taxStr += `<hr class="my-1 border-secondary"><div class="d-flex justify-content-between fw-bold text-danger"><span>Total Tax Generated:</span><span>$${formatStr(taxData.totalTax, year)}</span></div>`;
+      
+      if (refund > 0) {
+          taxStr += `<div class="d-flex justify-content-between fw-bold text-success mt-1"><span>Est. Tax Savings/Refund:</span><span>+$${formatStr(refund, year)}</span></div>`;
+      }
+      
+      taxStr += `<div class="d-flex justify-content-between text-muted fw-medium small mt-1"><span>Marginal Rate:</span><span>${(taxData.margRate * 100).toFixed(1)}%</span></div>`;
+
+      return incStr + taxStr;
   };
 
   const buildYieldTooltip = (math: any, year: number) => {
