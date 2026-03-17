@@ -21,6 +21,8 @@ export default function MonteCarloCard() {
             const p1Age = data.inputs.p1_age || 38;
             const inflationRate = (data.inputs.inflation_rate || 2.1) / 100;
             
+            let successCount = 0;
+            
             for (let i = 0; i < simCount; i++) {
               const engine = new FinanceEngine(JSON.parse(JSON.stringify(data)));
               let simContext: any = { method };
@@ -41,27 +43,42 @@ export default function MonteCarloCard() {
                  simContext.volatility = volatility;
               }
               
-              const result = engine.runSimulation(false, simContext);
-              trajectories.push(result);
+              // Run in 'detailed' mode to expose the full objects rather than just Total Net Worth
+              const detailedResult = engine.runSimulation(true, simContext);
+              
+              // Extract ONLY the Liquid Net Worth for the chart
+              const liquidTrajectory = detailedResult.map((y: any) => y.liquidNW);
+              trajectories.push(liquidTrajectory);
+
+              // A run is successful if the liquid portfolio outlasts the plan
+              if (liquidTrajectory[liquidTrajectory.length - 1] > 0) {
+                  successCount++;
+              }
             }
             
-            trajectories.sort((a, b) => a[a.length - 1] - b[b.length - 1]);
             const runs = trajectories.length;
-            const successCount = trajectories.filter(t => t[t.length - 1] > 0).length;
-            
             const finalSuccessRate = Number(((successCount / runs) * 100).toFixed(1));
             const discount = (val: number, idx: number) => Math.max(0, Math.round(val / Math.pow(1 + inflationRate, idx)));
             
-            const optData = trajectories[Math.floor(runs * 0.90)];
-            const medData = trajectories[Math.floor(runs * 0.50)];
-            const pesData = trajectories[Math.floor(runs * 0.10)];
+            const yearsCount = trajectories[0].length;
+            const formattedData = [];
 
-            const formattedData = optData.map((_, i) => ({
-                age: p1Age + i,
-                optimistic: discount(optData[i], i),
-                median: discount(medData[i], i),
-                pessimistic: discount(pesData[i], i)
-            }));
+            // Cross-Sectional Percentiles: Calculate the 10th, 50th, and 90th percentile AT EACH YEAR
+            // This prevents lines from improperly crossing over each other.
+            for (let y = 0; y < yearsCount; y++) {
+                const yearValues = trajectories.map(t => t[y]).sort((a, b) => a - b);
+                
+                const pesVal = yearValues[Math.floor(runs * 0.10)];
+                const medVal = yearValues[Math.floor(runs * 0.50)];
+                const optVal = yearValues[Math.floor(runs * 0.90)];
+                
+                formattedData.push({
+                    age: p1Age + y,
+                    optimistic: discount(optVal, y),
+                    median: discount(medVal, y),
+                    pessimistic: discount(pesVal, y)
+                });
+            }
             
             setMcResults({
                 chartData: formattedData,
@@ -94,7 +111,7 @@ export default function MonteCarloCard() {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-input border border-secondary p-3 rounded-4 shadow-lg" style={{ minWidth: '220px' }}>
-                    <p className="fw-bold mb-2 border-bottom border-secondary pb-2 text-muted text-uppercase ls-1" style={{fontSize: '0.75rem'}}>Age {label}</p>
+                    <p className="fw-bold mb-2 border-bottom border-secondary pb-2 text-muted text-uppercase ls-1" style={{fontSize: '0.75rem'}}>Age {label} <span className="opacity-75">(Liquid NW)</span></p>
                     <div className="d-flex flex-column gap-2">
                         {payload.map((entry: any, index: number) => (
                             <div key={index} className="d-flex justify-content-between align-items-center gap-4">
@@ -176,7 +193,7 @@ export default function MonteCarloCard() {
             </div>
 
             <div className="col-12 col-xl-8 d-flex flex-column">
-                <h5 className="text-muted small text-uppercase fw-bold ls-1 mb-4 pb-2 border-bottom border-secondary"><i className="bi bi-graph-up me-2 text-info"></i>Monte Carlo Distributions</h5>
+                <h5 className="text-muted small text-uppercase fw-bold ls-1 mb-4 pb-2 border-bottom border-secondary"><i className="bi bi-graph-up me-2 text-info"></i>Liquid Portfolio Distribution</h5>
                 <div className="rp-card p-4 surface-card border border-secondary rounded-4 flex-grow-1 d-flex flex-column shadow-sm">
                     {chartComponent}
                 </div>
