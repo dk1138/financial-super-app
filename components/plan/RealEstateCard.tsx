@@ -29,10 +29,10 @@ export default function RealEstateCard() {
             <i className="bi bi-house-heart text-danger fs-4 me-3"></i>
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
                 4. Real Estate & Mortgage
-                <InfoBtn title="Property Tracking" text="Track home equity and mortgage payoff. <br><b>Growth:</b> Annual increase in property value.<br><b>Include in NW:</b> Toggle this if you plan to sell the home to fund retirement. If unchecked, it remains an asset but isn't counted as liquid retirement cash." />
+                <InfoBtn title="Property Tracking" text="Track your real estate assets, mortgages, and housing transitions. <br><br><b>Modular Housing:</b> To simulate downsizing, set your current home to 'Sell' at a specific age. Then, add a new property, toggle it to 'Future Purchase', and enter the same age! <br><br><b>Include in NW:</b> If unchecked, the property remains an asset but isn't counted as liquid cash." />
             </h5>
         </div>
-        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('properties', { name: `Primary Residence`, value: 800000, mortgage: 400000, rate: 3.5, payment: 2000, growth: 3.0, includeInNW: true, sellEnabled: false })}>
+        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('properties', { name: `Primary Residence`, value: 800000, mortgage: 400000, rate: 3.5, payment: 2000, growth: 3.0, includeInNW: true, sellEnabled: false, isFuturePurchase: false, purchaseAge: data.inputs.p1_retireAge || 60 })}>
             <i className="bi bi-plus-lg me-1"></i> Add Property
         </button>
       </div>
@@ -59,13 +59,29 @@ export default function RealEstateCard() {
                 </div>
 
                 <div className="p-4 bg-input rounded-bottom-4">
+                    
+                    {/* OWNERSHIP TOGGLE */}
+                    <div className="d-flex justify-content-center mb-4">
+                        <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100" style={{maxWidth: '400px'}}>
+                            <button type="button" onClick={() => updateArrayItem('properties', idx, 'isFuturePurchase', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${!prop.isFuturePurchase ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Currently Own</button>
+                            <button type="button" onClick={() => updateArrayItem('properties', idx, 'isFuturePurchase', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${prop.isFuturePurchase ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Future Purchase</button>
+                        </div>
+                    </div>
+
                     <div className="row g-4">
-                        
                         <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4">
-                            <h6 className="fw-bold text-success small text-uppercase ls-1 mb-3"><i className="bi bi-graph-up-arrow me-2"></i>Property Value</h6>
+                            <h6 className="fw-bold text-success small text-uppercase ls-1 mb-3"><i className="bi bi-graph-up-arrow me-2"></i>{prop.isFuturePurchase ? 'Purchase Details' : 'Property Value'}</h6>
                             <div className="row g-3">
+                                {prop.isFuturePurchase && (
+                                    <div className="col-12 mb-1">
+                                        <label className="form-label small text-muted mb-1 fw-bold">Purchase at P1 Age</label>
+                                        <div style={{maxWidth: '150px'}}>
+                                            <StepperInput min={data.inputs.p1_age || 18} max={120} value={prop.purchaseAge ?? (data.inputs.p1_retireAge || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'purchaseAge', val)} />
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="col-sm-7">
-                                    <label className="form-label small text-muted mb-1">Current Value ($)</label>
+                                    <label className="form-label small text-muted mb-1">{prop.isFuturePurchase ? "Target Price (Today's $)" : "Current Value ($)"}</label>
                                     <CurrencyInput className="form-control" value={prop.value ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'value', val)} />
                                 </div>
                                 <div className="col-sm-5">
@@ -86,7 +102,7 @@ export default function RealEstateCard() {
                             </div>
                             <div className="row g-3">
                                 <div className="col-sm-4">
-                                    <label className="form-label small text-muted mb-1">Balance ($)</label>
+                                    <label className="form-label small text-muted mb-1">{prop.isFuturePurchase ? "Planned Mortgage ($)" : "Balance ($)"}</label>
                                     <CurrencyInput className="form-control" value={prop.mortgage ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'mortgage', val)} />
                                 </div>
                                 <div className="col-sm-4">
@@ -108,8 +124,8 @@ export default function RealEstateCard() {
                             <div className="d-flex justify-content-between align-items-center mb-3">
                                 <div className="d-flex align-items-center gap-2">
                                     <i className="bi bi-house-up-fill text-info fs-5"></i>
-                                    <span className="fw-bold text-main small text-uppercase ls-1">Future Sell / Upgrade Plan</span>
-                                    <InfoBtn title="Home Upgrade" text="Simulate selling this property at a specific age. <br><br>If you enter a Replacement Value, it will buy a new home (applying 5% seller fees and 2% buyer fees), roll the equity, and calculate a new mortgage if needed. <br><br>If Replacement Value is $0, you downsize to renting and keep the cash." />
+                                    <span className="fw-bold text-main small text-uppercase ls-1">Future Sale Plan</span>
+                                    <InfoBtn title="Property Sale" text="Simulate selling this property at a specific age. <br><br>The net cash proceeds (after 5% seller fees and mortgage payoff) will automatically flow into your Liquid Net Worth. <br><br>The engine will seamlessly use this surplus cash to fund a 'Future Purchase' property, or to cover a new Phased Expense (like renting or Long-Term Care)." />
                                 </div>
                                 <div className="form-check form-switch mb-0">
                                     <input className="form-check-input mt-0 cursor-pointer fs-5" type="checkbox" checked={prop.sellEnabled ?? false} onChange={(e) => updateArrayItem('properties', idx, 'sellEnabled', e.target.checked)} />
@@ -118,15 +134,14 @@ export default function RealEstateCard() {
 
                             {prop.sellEnabled && (
                                 <div className="row g-3 bg-info bg-opacity-10 p-3 rounded-4 border border-secondary border-opacity-50">
-                                    <div className="col-12 col-md-6">
+                                    <div className="col-12 col-md-5">
                                         <label className="form-label small text-muted mb-1 fw-bold">Sell at P1 Age</label>
                                         <div style={{maxWidth: '200px'}}>
                                             <StepperInput min={data.inputs.p1_age || 18} max={120} value={prop.sellAge ?? (data.inputs.p1_retireAge || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'sellAge', val)} />
                                         </div>
                                     </div>
-                                    <div className="col-12 col-md-6">
-                                        <label className="form-label small text-muted mb-1 fw-bold">Replacement Home Value</label>
-                                        <CurrencyInput className="form-control border-secondary bg-black bg-opacity-25" value={prop.replacementValue ?? 0} onChange={(val: any) => updateArrayItem('properties', idx, 'replacementValue', val)} placeholder="Target Price (Today's $)" />
+                                    <div className="col-12 col-md-7 d-flex align-items-center">
+                                        <span className="small text-muted fst-italic mt-md-4"><i className="bi bi-info-circle me-1"></i>Net proceeds will flow to your Liquid Net Worth.</span>
                                     </div>
                                 </div>
                             )}

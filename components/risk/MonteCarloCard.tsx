@@ -143,7 +143,8 @@ export default function MonteCarloCard() {
                     <LineChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.4} />
                         <XAxis dataKey="age" stroke="#888" tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} tickMargin={12} minTickGap={30} />
-                        <YAxis tickFormatter={(val) => formatCurrencyAxis(val)} stroke="#888" tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} width={65} axisLine={false} tickLine={false} />
+                        {/* FIX: Added (val: number) to satisfy strict TypeScript rules */}
+                        <YAxis tickFormatter={(val: number) => formatCurrencyAxis(val)} stroke="#888" tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} width={65} axisLine={false} tickLine={false} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} />
                         
                         <Line type="monotone" dataKey="optimistic" name="Optimistic (Top 10%)" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 6, fill: '#10b981', stroke: '#16181d', strokeWidth: 2 }} />

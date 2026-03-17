@@ -3,7 +3,7 @@ import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, StepperInput, FrequencyToggle } from '../SharedUI';
 
 export default function LivingExpensesCard() {
-  const { data, updateInput, updateExpenseCategory } = useFinance(); 
+  const { data, updateInput, updateExpenseCategory, addArrayItem, updateArrayItem, removeArrayItem } = useFinance(); 
   const [expenseAdvancedMode, setExpenseAdvancedMode] = useState(false);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
@@ -49,6 +49,62 @@ export default function LivingExpensesCard() {
       </div>
       <div className="card-body p-3 p-md-4">
         
+        {/* --- NEW PHASED EXPENSES SECTION FOR RENT/LTC --- */}
+        <div className="card border-info border-opacity-50 surface-card shadow-sm rounded-4 mb-5">
+            <div className="card-header bg-info bg-opacity-10 border-bottom border-info border-opacity-50 p-3 d-flex justify-content-between align-items-center">
+                <h6 className="mb-0 fw-bold text-info text-uppercase ls-1 d-flex align-items-center gap-2">
+                    <i className="bi bi-calendar-range"></i> Phased Expenses & Housing Transitions
+                    <InfoBtn title="Phased Expenses" text="Use this section to model expenses that only occur during a specific window of time.<br><br><b>Perfect for Downsizing:</b> If you told the engine to 'Sell' your primary home at age 80 in the Real Estate tab, you can use this section to add a new '$4,000/mo Rent/LTC' expense starting at age 80. The engine will automatically pay for this new rent using the cash windfall from your house sale!" />
+                </h6>
+                <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('expensePhases', { name: 'Future Rent / LTC', amount: 4000, startAge: 80, endAge: 100, isPhased: true })}>
+                    <i className="bi bi-plus-lg me-1"></i> Add Phase
+                </button>
+            </div>
+            
+            {(!data.expensePhases || data.expensePhases.length === 0) ? (
+                <div className="card-body p-4 text-center">
+                    <span className="text-muted small fst-italic">No phased expenses added. Click "Add Phase" to model future rent, LTC, or temporary care costs.</span>
+                </div>
+            ) : (
+                <div className="card-body p-3">
+                    <div className="row g-3">
+                        {data.expensePhases.map((phase: any, idx: number) => (
+                            <div className="col-12 col-xl-6" key={`phase_${idx}`}>
+                                <div className="border border-secondary rounded-4 bg-input p-3 position-relative shadow-sm h-100">
+                                    <button type="button" className="btn btn-sm btn-link text-danger position-absolute top-0 end-0 mt-2 me-2 p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('expensePhases', idx)}>
+                                        <i className="bi bi-x-lg fs-5"></i>
+                                    </button>
+                                    
+                                    <div className="d-flex align-items-center gap-2 mb-3 w-75">
+                                        <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
+                                            <i className="bi bi-clock-history"></i>
+                                        </div>
+                                        <input type="text" maxLength={50} className="form-control form-control-sm bg-transparent border-0 text-main fw-bold shadow-none p-0" value={phase.name || ''} onChange={(e) => updateArrayItem('expensePhases', idx, 'name', e.target.value)} placeholder="Phase Name (e.g. Rent)" />
+                                    </div>
+                                    
+                                    <div className="row g-2 align-items-end">
+                                        <div className="col-12 col-sm-4">
+                                            <label className="form-label small text-muted fw-bold mb-1">Monthly Cost</label>
+                                            <CurrencyInput className="form-control form-control-sm" value={phase.amount} onChange={(val: any) => updateArrayItem('expensePhases', idx, 'amount', val)} />
+                                        </div>
+                                        <div className="col-6 col-sm-4">
+                                            <label className="form-label small text-muted fw-bold mb-1">Starts (Age)</label>
+                                            <StepperInput min={18} max={120} value={phase.startAge || 60} onChange={(val: any) => updateArrayItem('expensePhases', idx, 'startAge', val)} />
+                                        </div>
+                                        <div className="col-6 col-sm-4">
+                                            <label className="form-label small text-muted fw-bold mb-1">Ends (Age)</label>
+                                            <StepperInput min={18} max={120} value={phase.endAge || 90} onChange={(val: any) => updateArrayItem('expensePhases', idx, 'endAge', val)} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+        {/* --- END PHASED EXPENSES SECTION --- */}
+
         {expenseAdvancedMode && (
           <div className="card border-secondary surface-card shadow-sm rounded-4 mb-4">
             <div className="card-body p-3">

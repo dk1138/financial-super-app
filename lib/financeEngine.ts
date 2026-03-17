@@ -28,7 +28,13 @@ export class FinanceEngine {
 
     constructor(data: any) {
         this.inputs = JSON.parse(JSON.stringify(data.inputs || {}));
-        this.properties = data.properties || [];
+        
+        // Filter out future properties so they don't immediately affect NW or cause mortgage payments before they are bought
+        this.properties = (data.properties || []).filter((p: any) => !p.isFuturePurchase);
+        
+        // Store the future properties separately so we can trigger them in the loop
+        this.inputs.future_properties = (data.properties || []).filter((p: any) => p.isFuturePurchase);
+
         this.windfalls = data.windfalls || [];
         this.additionalIncome = data.additionalIncome || [];
         this.customAssets = data.customAssets || [];
@@ -404,14 +410,16 @@ export class FinanceEngine {
             this.expensePhases.forEach((phase: any) => {
                 const amt = Number(phase.amount) || 0;
                 if (!phase.isPhased || (age >= phase.startAge && age <= phase.endAge)) {
-                    activePhasesAmount += amt;
-                    activePhases.push({ name: phase.name, amount: amt * baseInflation });
+                    // Phased Expenses (like Rent) are NOT multiplied by the context multiplier or haircut 
+                    // because they are fixed obligations, unlike discretionary budget.
+                    activePhasesAmount += amt * 12; 
+                    activePhases.push({ name: phase.name, amount: (amt * 12) * baseInflation });
                 }
             });
         }
 
-        finalExpenses += activePhasesAmount;
         finalExpenses *= haircut;
+        finalExpenses += activePhasesAmount;
 
         return { total: finalExpenses * baseInflation, activePhases: activePhases };
     }
@@ -484,6 +492,8 @@ export class FinanceEngine {
         };
 
         let simProperties = JSON.parse(JSON.stringify(this.properties));
+        // Keep future properties ready to be injected
+        let futureProperties = JSON.parse(JSON.stringify(this.inputs.future_properties || []));
         
         const p1StartAge = currentYear - person1.dob.getFullYear();
         const p2StartAge = currentYear - person2.dob.getFullYear();
@@ -728,26 +738,54 @@ export class FinanceEngine {
             const outflowsObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, currentExpenseHaircut);
             const expenses = outflowsObj.total; const activeExpensePhases = outflowsObj.activePhases;
 
+            // --- REAL ESTATE & MODULAR HOUSING TRANSITIONS ---
             let mortgagePayment = 0, keptProperties: any[] = [];
+            
+            // 1. Check for Future Purchases that trigger this year
+            for (let idx = futureProperties.length - 1; idx >= 0; idx--) {
+                const fp = futureProperties[idx];
+                if (fp.purchaseAge === age1) {
+                    const newHomeCost = (fp.value || 0) * baseInflation;
+                    const plannedMortgage = (fp.mortgage || 0) * baseInflation;
+                    
+                    const downPaymentRequired = newHomeCost - plannedMortgage;
+                    
+                    if (downPaymentRequired > 0) {
+                        // The engine adds the downpayment requirement to "expenses" for this year.
+                        // The `handleDeficit` function later will pull this out of the portfolio!
+                        // If they sold a house this year, it will seamlessly cover it.
+                        inflows.p1.windfallNonTax -= downPaymentRequired; 
+                    }
+                    
+                    fp.isFuturePurchase = false; 
+                    fp.value = newHomeCost;
+                    fp.mortgage = plannedMortgage;
+                    
+                    if (plannedMortgage > 0) {
+                        const r = (fp.rate || 0) / 100 / 12;
+                        // Use provided payment, or auto-calculate 25yr amort if missing
+                        let payment = (fp.payment || 0);
+                        if (payment === 0) payment = r === 0 ? plannedMortgage / 300 : (plannedMortgage * r) / (1 - Math.pow(1 + r, -300));
+                        fp.payment = payment;
+                    }
+                    
+                    simProperties.push(fp);
+                    futureProperties.splice(idx, 1);
+                    if (detailed && !trackedEvents.has(`Bought: ${fp.name}`)) { trackedEvents.add(`Bought: ${fp.name}`); inflows.events.push(`Bought: ${fp.name}`); }
+                }
+            }
+
+            // 2. Process Existing Properties
             simProperties.forEach((p: any) => {
                 if (p.sellEnabled && p.sellAge === age1) {
-                    const proceeds = p.value, transCosts = proceeds * 0.05, netCash = proceeds - p.mortgage - transCosts;
-                    const newHomeCost = (p.replacementValue || 0) * baseInflation;
+                    // Straight Sale - Dump cash into Liquid NW
+                    const proceeds = p.value;
+                    const transCosts = proceeds * 0.05; // 5% seller friction
+                    const netCash = proceeds - p.mortgage - transCosts;
                     
-                    if (newHomeCost > 0) {
-                        const totalNewHomeCost = newHomeCost + (newHomeCost * 0.02);
-                        const surplusCash = netCash - totalNewHomeCost;
-                        
-                        if (surplusCash > 0) {
-                            inflows.p1.windfallNonTax += surplusCash;
-                            keptProperties.push({ name: "Replacement: " + p.name, value: newHomeCost, mortgage: 0, growth: p.growth, rate: p.rate, payment: 0, includeInNW: p.includeInNW, sellEnabled: false });
-                        } else {
-                            const newMortgage = Math.abs(surplusCash), r = (p.rate || 0) / 100 / 12;
-                            let newPayment = r === 0 ? newMortgage / 300 : (newMortgage * r) / (1 - Math.pow(1 + r, -300));
-                            keptProperties.push({ name: "Replacement: " + p.name, value: newHomeCost, mortgage: newMortgage, growth: p.growth, rate: p.rate, payment: newPayment, includeInNW: p.includeInNW, sellEnabled: false });
-                            mortgagePayment += newPayment * 12;
-                        }
-                    } else if (netCash > 0) inflows.p1.windfallNonTax += netCash;
+                    if (netCash > 0) {
+                        inflows.p1.windfallNonTax += netCash;
+                    }
 
                     if (detailed && !trackedEvents.has('Sold: ' + p.name)) { trackedEvents.add('Sold: ' + p.name); inflows.events.push('Sold: ' + p.name); }
                 } else {
