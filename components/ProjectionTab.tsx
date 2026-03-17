@@ -904,7 +904,7 @@ export default function ProjectionTab() {
                                     <div className="flex-grow-1">
                                         {y.p1Alive && (
                                             <div className="mb-3">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
@@ -994,7 +994,7 @@ export default function ProjectionTab() {
 
                                         {isCouple && y.p2Alive && (
                                             <div className="mb-2 border-top border-secondary border-opacity-25 pt-2">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold text-nowrap flex-shrink-0" style={{color: 'var(--bs-purple)', minWidth: '85px'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold text-end text-nowrap flex-shrink-0" style={{color: 'var(--bs-purple)', minWidth: '85px'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
@@ -1096,15 +1096,15 @@ export default function ProjectionTab() {
 
                                         <div className="d-flex justify-content-between small mb-1 mt-3">
                                             <span className="text-muted fw-bold">Liquid Portfolio Assets</span>
-                                            <span className="fw-medium">{formatCurrency(y.liquidNW, y.year)}</span>
+                                            <span className="fw-medium text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.liquidNW, y.year)}</span>
                                         </div>
                                         
                                         <div className="d-flex justify-content-between small mb-1">
                                             <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
-                                            <span className="d-flex align-items-center">
+                                            <div className="d-flex align-items-center justify-content-end">
                                                 {y.reIncludedEq > 0 && <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-1 me-2" style={{fontSize: '0.6rem'}}>INCLUDED</span>}
-                                                {formatCurrency((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)}
-                                            </span>
+                                                <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="mt-3"></div>
