@@ -24,7 +24,22 @@ export default function LivingCostCard() {
 
   const currentMode = data.inputs.housing_mode || 'own';
   const transitions = data.housingTransitions || [];
-  const rentals = data.properties || []; // Now strictly used for Investment/Rental properties
+  const rentals = data.properties || []; 
+
+  const getPhaseOptions = () => {
+      if (currentMode === 'own') {
+          return [
+              { value: 'downsize', label: 'Buy New' },
+              { value: 'rent', label: 'Rent' },
+              { value: 'ltc', label: 'LTC' }
+          ];
+      } else {
+          return [
+              { value: 'buy', label: 'Buy Home' },
+              { value: 'rent', label: 'Rent / LTC' }
+          ];
+      }
+  };
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
@@ -126,7 +141,7 @@ export default function LivingCostCard() {
         {/* --- SECTION 2: FUTURE HOUSING PHASES --- */}
         <div className="d-flex justify-content-between align-items-center mb-3">
             <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0"><i className="bi bi-fast-forward-circle-fill text-info me-2"></i>Future Housing Phases</h6>
-            <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('housingTransitions', { age: data.inputs.p1_retireAge || 65, action: 'downsize', price: 500000, mortgage: 0, rent: 0 })}>
+            <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('housingTransitions', { age: data.inputs.p1_retireAge || 65, action: currentMode === 'own' ? 'downsize' : 'buy', price: 500000, mortgage: 0, rent: 0 })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Phase
             </button>
         </div>
@@ -144,21 +159,26 @@ export default function LivingCostCard() {
                         </button>
                         
                         <div className="row g-3 align-items-center mb-3">
-                            <div className="col-12 col-sm-auto d-flex align-items-center gap-2">
+                            <div className="col-12 col-md-auto d-flex align-items-center gap-2">
                                 <span className="fw-bold text-muted small text-uppercase">At P1 Age</span>
                                 <div style={{width: '100px'}}>
                                     <StepperInput min={18} max={120} value={phase.age || 65} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'age', val)} />
                                 </div>
                             </div>
-                            <div className="col-12 col-sm-auto d-flex align-items-center gap-2">
-                                <span className="fw-bold text-muted small text-uppercase">I plan to</span>
-                                <select className="form-select form-select-sm bg-secondary bg-opacity-10 border-secondary fw-bold text-main shadow-none w-auto" value={phase.action} onChange={(e) => updateArrayItem('housingTransitions', idx, 'action', e.target.value)}>
-                                    {currentMode === 'own' && <option value="downsize">Sell current home & Buy a new home</option>}
-                                    {currentMode === 'own' && <option value="rent">Sell current home & Start Renting</option>}
-                                    {currentMode === 'own' && <option value="ltc">Sell current home & Move to Long-Term Care (LTC)</option>}
-                                    {currentMode !== 'own' && <option value="buy">Stop Renting & Buy a Home</option>}
-                                    {currentMode !== 'own' && <option value="rent">Change Rental / Move to LTC</option>}
-                                </select>
+                            <div className="col-12 col-md-auto d-flex align-items-center gap-2">
+                                <span className="fw-bold text-muted small text-uppercase me-1">I plan to</span>
+                                <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
+                                    {getPhaseOptions().map(opt => (
+                                        <button 
+                                            key={opt.value}
+                                            type="button" 
+                                            onClick={() => updateArrayItem('housingTransitions', idx, 'action', opt.value)} 
+                                            className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${phase.action === opt.value ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 

@@ -238,11 +238,14 @@ export default function ProjectionTab() {
     setExpandedYear(expandedYear === year ? null : year);
   };
 
-  const getEventIcons = (events: string[]) => {
+  const getEventIcons = (events: string[], y: any) => {
       if (!events || events.length === 0) return null;
       return events.map((ev, i) => {
           let colorClass = "text-secondary";
           let icon = "bi-info-circle-fill";
+          let tooltip = ev;
+          let warning = false;
+
           if (ev.includes('Retires')) { colorClass = "text-primary"; icon = "bi-cup-hot-fill"; }
           else if (ev.includes('Windfall')) { colorClass = "text-success"; icon = "bi-cash-coin"; }
           else if (ev.includes('Mortgage Paid')) { colorClass = "text-primary"; icon = "bi-house-check-fill"; }
@@ -250,9 +253,30 @@ export default function ProjectionTab() {
           else if (ev.includes('Leave')) { colorClass = "text-info"; icon = "bi-person-hearts"; }
           else if (ev.includes('Downsize')) { colorClass = "text-danger"; icon = "bi-house-down-fill"; }
           else if (ev.includes('RRSP')) { colorClass = "text-secondary"; icon = "bi-arrow-left-right"; }
+          else if (ev.includes('Sold Primary') || ev.includes('Sold:')) { colorClass = "text-success"; icon = "bi-house-dash-fill"; }
+          else if (ev.includes('Bought New Home') || ev.includes('Purchased:')) { 
+              colorClass = "text-primary"; icon = "bi-house-add-fill"; 
+              
+              // Check if investments were sold to fund this!
+              const totalWd = y.flows?.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number : 0;
+              if (totalWd > 1000) {
+                  warning = true;
+                  tooltip = `${ev} (Warning: Liquidated $${Math.round(totalWd).toLocaleString()} from portfolio. May trigger taxes/deplete assets.)`;
+              }
+          }
+          else if (ev.includes('Transitioned')) { colorClass = "text-info"; icon = "bi-arrow-right-circle-fill"; }
           
+          if (warning) {
+              return (
+                  <span key={i} className="ms-2 position-relative d-inline-block" title={tooltip} style={{cursor: 'help'}}>
+                      <i className={`bi ${icon} ${colorClass} fs-5`}></i>
+                      <i className="bi bi-exclamation-triangle-fill text-warning position-absolute top-0 start-100 translate-middle" style={{fontSize: '0.65rem'}}></i>
+                  </span>
+              );
+          }
+
           return (
-              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={ev} style={{cursor: 'help'}}></i>
+              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={tooltip} style={{cursor: 'help'}}></i>
           );
       });
   };
@@ -803,7 +827,8 @@ export default function ProjectionTab() {
                       <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
                         <div className="d-flex align-items-center">
                             <span className="fs-6">{y.year}</span>
-                            {getEventIcons(y.events)}
+                            {/* PASSED y HERE TO EVALUATE WITHDRAWALS */}
+                            {getEventIcons(y.events, y)}
                         </div>
                       </td>
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
