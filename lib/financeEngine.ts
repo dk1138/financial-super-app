@@ -193,13 +193,13 @@ export class FinanceEngine {
 
     calcInflows(currentYear: number, yearIndex: number, person1: any, person2: any, age1: number, age2: number, alive1: boolean, alive2: boolean, isRet1: boolean, isRet2: boolean, constants: any, baseInflation: number, trackedEvents: any) {
         let result = { 
-            p1: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0 }, 
-            p2: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0 },
+            p1: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0, rental:0, other:0 }, 
+            p2: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0, rental:0, other:0 },
             events: [] as string[]
         };
         
         const calculateInflowsForPerson = (person: any, age: number, isRetired: boolean, prefix: string, maxCpp: number, maxOas: number) => {
-            let inflows = { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, postRet:0, eiMat:0, topUp:0 };
+            let inflows = { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, postRet:0, eiMat:0, topUp:0, rental:0, other:0 };
             
             const birthMonth = person.dob.getMonth(); 
             const startProration = (12 - birthMonth) / 12;
@@ -355,7 +355,9 @@ export class FinanceEngine {
                     let targetPerson = (stream.owner === 'p2' && alive2) ? result.p2 : result.p1;
                     if (targetPerson) {
                         if (stream.taxable) { 
-                            targetPerson.gross += amount; targetPerson.earned += amount;
+                            targetPerson.gross += amount; 
+                            targetPerson.earned += amount;
+                            targetPerson.other += amount; 
                             if ((stream.owner === 'p2' ? isRet2 : isRet1)) targetPerson.postRet += amount;
                         } else {
                             targetPerson.windfallNonTax += amount;
@@ -579,6 +581,7 @@ export class FinanceEngine {
                     let annualRent = p.rentalIncome * 12 * baseInflation;
                     inflows.p1.gross += annualRent;
                     inflows.p1.earned += annualRent; 
+                    inflows.p1.rental += annualRent;
                     if (isRet1) inflows.p1.postRet += annualRent;
                 }
             });
@@ -773,7 +776,7 @@ export class FinanceEngine {
                     
                     if (primaryMortgage > 0) {
                         let r = primaryRate / 100 / 12;
-                        let payment = transition.payment || 0; // If payment isn't in transition, calculate it
+                        let payment = transition.payment || 0;
                         if (payment === 0) payment = r === 0 ? primaryMortgage / 300 : (primaryMortgage * r) / (1 - Math.pow(1 + r, -300));
                         primaryPayment = payment;
                     }
@@ -781,7 +784,7 @@ export class FinanceEngine {
                     if (detailed && !trackedEvents.has('Bought New Home')) { trackedEvents.add('Bought New Home'); inflows.events.push('Bought New Home'); }
                 } else if (transition.action === 'rent' || transition.action === 'ltc') {
                     currentHousingMode = transition.action;
-                    currentRent = (transition.rent || 0); // Base dollars
+                    currentRent = (transition.rent || 0); 
                     if (detailed && !trackedEvents.has('Transitioned to ' + transition.action.toUpperCase())) { trackedEvents.add('Transitioned to ' + transition.action.toUpperCase()); inflows.events.push('Transitioned to ' + transition.action.toUpperCase()); }
                 }
             }
@@ -803,7 +806,7 @@ export class FinanceEngine {
                 primaryValue *= (1 + primaryGrowth);
             } else if (currentHousingMode === 'rent' || currentHousingMode === 'ltc') {
                 housingExpensesThisYear = currentRent * 12 * baseInflation;
-                expenses += housingExpensesThisYear; // ADD RENT TO EXPENSES
+                expenses += housingExpensesThisYear; 
             }
 
             // --- RENTAL PROPERTIES ---
@@ -1011,6 +1014,7 @@ export class FinanceEngine {
                 projectionData.push({
                     year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
                     incomeP1: inflows.p1.gross, incomeP2: inflows.p2.gross, eiMatP1: inflows.p1.eiMat, eiMatP2: inflows.p2.eiMat, topUpP1: inflows.p1.topUp, topUpP2: inflows.p2.topUp,
+                    rentalP1: inflows.p1.rental, rentalP2: inflows.p2.rental, otherP1: inflows.p1.other, otherP2: inflows.p2.other,
                     cppP1: inflows.p1.cpp, cppP2: inflows.p2.cpp, oasP1: inflows.p1.oas, oasP2: inflows.p2.oas, ccbP1: inflows.p1.ccb || 0,
                     oasClawbackP1: (tax1 as any).oas_clawback || 0, oasClawbackP2: (tax2 as any).oas_clawback || 0, 
                     taxIncP1: Math.max(0, craTaxableIncome1 - actualDeductions.p1), taxIncP2: Math.max(0, craTaxableIncome2 - actualDeductions.p2), oasThreshold: oasThresholdInf,                    

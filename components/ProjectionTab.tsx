@@ -333,7 +333,10 @@ export default function ProjectionTab() {
       const isP1 = player === 'p1';
       const pUpper = player.toUpperCase();
 
-      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
+      const rental = isP1 ? (y.rentalP1 || 0) : (y.rentalP2 || 0);
+      const other = isP1 ? (y.otherP1 || 0) : (y.otherP2 || 0);
+      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0) - rental - other) : (y.incomeP2 - (y.rrspMatchP2 || 0) - rental - other);
+      
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
@@ -344,6 +347,8 @@ export default function ProjectionTab() {
       let sum = 0;
       
       if (salary > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Salary:</span> <span>$${formatStr(salary, year)}</span></div>`; sum += salary; }
+      if (rental > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Rental Income:</span> <span>$${formatStr(rental, year)}</span></div>`; sum += rental; }
+      if (other > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Side Hustle/Other:</span> <span>$${formatStr(other, year)}</span></div>`; sum += other; }
       if (match > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Employer Match:</span> <span>$${formatStr(match, year)}</span></div>`; sum += match; }
       if (cpp > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>CPP:</span> <span>$${formatStr(cpp, year)}</span></div>`; sum += cpp; }
       if (oas > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>OAS:</span> <span>$${formatStr(oas, year)}</span></div>`; sum += oas; }
@@ -492,7 +497,10 @@ export default function ProjectionTab() {
       const pUpper = player.toUpperCase();
       const age = isP1 ? (y.p1Age || y.ageP1) : (y.p2Age || y.ageP2);
       
-      const salary = isP1 ? y.incomeP1 - (y.rrspMatchP1 || 0) : y.incomeP2 - (y.rrspMatchP2 || 0);
+      const rental = isP1 ? (y.rentalP1 || 0) : (y.rentalP2 || 0);
+      const other = isP1 ? (y.otherP1 || 0) : (y.otherP2 || 0);
+      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0) - rental - other) : (y.incomeP2 - (y.rrspMatchP2 || 0) - rental - other);
+
       const match = isP1 ? y.rrspMatchP1 : y.rrspMatchP2;
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
@@ -527,8 +535,20 @@ export default function ProjectionTab() {
               
               {salary > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment/other income." align="left" /></span>
+                      <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment income." align="left" /></span>
                       <span className="fw-medium">{formatCurrency(salary, year)}</span>
+                  </div>
+              )}
+              {rental > 0 && (
+                  <div className="d-flex justify-content-between small mb-1">
+                      <span className="text-muted ms-2 d-flex align-items-center">Rental Income <InfoBtn title="Rental Income" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Gross rental income from investment properties." align="left" /></span>
+                      <span className="text-success">+{formatCurrency(rental, year)}</span>
+                  </div>
+              )}
+              {other > 0 && (
+                  <div className="d-flex justify-content-between small mb-1">
+                      <span className="text-muted ms-2 d-flex align-items-center">Other Income <InfoBtn title="Other Income" text="<span class='text-info fw-bold'>Taxable.</span><br>Additional income streams and side hustles." align="left" /></span>
+                      <span className="text-success">+{formatCurrency(other, year)}</span>
                   </div>
               )}
               {match > 0 && (
