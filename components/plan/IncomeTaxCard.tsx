@@ -9,7 +9,6 @@ export default function IncomeTaxCard() {
   // State for collapsible panels
   const [showCredits, setShowCredits] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showGross, setShowGross] = useState<Record<string, boolean>>({ p1: false, p2: false });
-  const [showDeductions, setShowDeductions] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showNrtc, setShowNrtc] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
@@ -69,7 +68,6 @@ export default function IncomeTaxCard() {
 
   const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleGross = (p: string) => setShowGross(prev => ({ ...prev, [p]: !prev[p] }));
-  const toggleDeductions = (p: string) => setShowDeductions(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleNrtc = (p: string) => setShowNrtc(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleFedTax = (p: string) => setShowFedTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleProvTax = (p: string) => setShowProvTax(prev => ({ ...prev, [p]: !prev[p] }));
@@ -120,32 +118,6 @@ export default function IncomeTaxCard() {
 
       const actualGross = sumGross;
 
-      // Deductions Logic
-      const rrspCont = yData.flows?.contributions?.[p]?.rrsp || 0;
-      const fhsaCont = yData.flows?.contributions?.[p]?.fhsa || 0;
-      const totalDeductions = rrspCont + fhsaCont;
-
-      let dedBreakdown: {label: string, val: number}[] = [];
-      if (rrspCont > 0) {
-          const ownCont = rrspCont - match;
-          if (match > 0) {
-              dedBreakdown.push({label: 'RRSP (Employer Match)', val: match});
-              if (ownCont > 0) dedBreakdown.push({label: 'RRSP (Own Contrib)', val: ownCont});
-          } else {
-              dedBreakdown.push({label: 'RRSP Contributions', val: rrspCont});
-          }
-      }
-      if (fhsaCont > 0) {
-          dedBreakdown.push({label: 'FHSA Contributions', val: fhsaCont});
-      }
-
-      // Net Taxable Logic
-      const taxIncAfter = isP1 ? yData.taxIncP1 : yData.taxIncP2;
-      const taxIncBefore = isP1 ? (yData.taxIncP1 + (yData.pensionSplit?.p1ToP2 || 0) - (yData.pensionSplit?.p2ToP1 || 0)) : (yData.taxIncP2 + (yData.pensionSplit?.p2ToP1 || 0) - (yData.pensionSplit?.p1ToP2 || 0));
-      const splitAmt = taxIncAfter - taxIncBefore;
-
-      const refund = isP1 ? ((yData.discTaxSavingsP1 || 0) + (yData.matchTaxSavingsP1 || 0)) : ((yData.discTaxSavingsP2 || 0) + (yData.matchTaxSavingsP2 || 0));
-
       // Tax Details Logic
       const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
       const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
@@ -181,49 +153,13 @@ export default function IncomeTaxCard() {
                   )}
               </div>
 
-              {/* Total Deductions Breakdown */}
-              {totalDeductions > 0 && (
-              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
-                  <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleDeductions(p)}>
-                      <span className={`small fw-medium d-flex align-items-center gap-1 ${showDeductions[p] ? 'text-main' : 'text-muted'}`}>
-                          <i className={`bi bi-chevron-${showDeductions[p] ? 'up' : 'down'} small`}></i> Total Deductions
-                      </span>
-                      <span className="small fw-bold text-info">-${Math.round(totalDeductions).toLocaleString()}</span>
-                  </div>
-                  {showDeductions[p] && (
-                      <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-info ms-1 border-opacity-25">
-                          {dedBreakdown.map((item, idx) => (
-                              <div key={idx} className="d-flex justify-content-between align-items-center">
-                                  <span className="text-muted small fst-italic">{item.label}</span>
-                                  <span className="small text-info fw-bold opacity-75">-${Math.round(item.val).toLocaleString()}</span>
-                              </div>
-                          ))}
-                      </div>
-                  )}
-              </div>
-              )}
-
-              {/* Pension Split */}
-              {Math.abs(splitAmt) > 1 && (
-                  <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-1">
-                      <span className="text-muted small fw-medium ms-3">Pension Split</span>
-                      <span className="small fw-bold">{splitAmt > 0 ? '+' : '-'}${Math.round(Math.abs(splitAmt)).toLocaleString()}</span>
-                  </div>
-              )}
-
-              {/* Net Taxable Income */}
-              <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-3">
-                  <span className="text-main small fw-bold">Net Taxable Income</span>
-                  <span className="small fw-bold">${Math.round(taxIncAfter).toLocaleString()}</span>
-              </div>
-
               {/* Federal Tax Breakdown */}
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleFedTax(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showFedTax[p] ? 'text-main' : 'text-muted'}`}>
                           <i className={`bi bi-chevron-${showFedTax[p] ? 'up' : 'down'} small`}></i> Federal Tax
                       </span>
-                      <span className="small fw-bold">(${Math.round(taxDetails.fed).toLocaleString()})</span>
+                      <span className="small fw-bold text-danger">(${Math.round(taxDetails.fed).toLocaleString()})</span>
                   </div>
                   {showFedTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
@@ -241,7 +177,7 @@ export default function IncomeTaxCard() {
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showProvTax[p] ? 'text-main' : 'text-muted'}`}>
                           <i className={`bi bi-chevron-${showProvTax[p] ? 'up' : 'down'} small`}></i> Provincial Tax
                       </span>
-                      <span className="small fw-bold">(${Math.round(taxDetails.prov).toLocaleString()})</span>
+                      <span className="small fw-bold text-danger">(${Math.round(taxDetails.prov).toLocaleString()})</span>
                   </div>
                   {showProvTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
@@ -271,7 +207,7 @@ export default function IncomeTaxCard() {
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showCppEi[p] ? 'text-main' : 'text-muted'}`}>
                           <i className={`bi bi-chevron-${showCppEi[p] ? 'up' : 'down'} small`}></i> CPP / EI Premiums
                       </span>
-                      <span className="small fw-bold">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span>
+                      <span className="small fw-bold text-danger">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span>
                   </div>
                   {showCppEi[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
@@ -292,7 +228,7 @@ export default function IncomeTaxCard() {
                       </div>
                   )}
               </div>
-
+              
               {/* OAS Clawback */}
               {taxDetails.oas_clawback > 0 && (
                   <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-1">
@@ -300,18 +236,11 @@ export default function IncomeTaxCard() {
                       <span className="small fw-bold text-danger">(${Math.round(taxDetails.oas_clawback).toLocaleString()})</span>
                   </div>
               )}
-              
+
               <div className="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-50">
                   <span className="text-danger fw-bold small">Total Tax Generated</span> 
                   <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span>
               </div>
-
-              {refund > 0 && (
-                  <div className="d-flex justify-content-between mt-1">
-                      <span className="text-success fw-bold small">Est. Tax Savings/Refund</span> 
-                      <span className="text-success fw-bold small">+${Math.round(refund).toLocaleString()}</span>
-                  </div>
-              )}
 
               <div className="d-flex justify-content-between mt-1 border-bottom border-secondary pb-2 mb-2">
                   <span className="text-muted small fw-medium">Marginal Rate</span> 
