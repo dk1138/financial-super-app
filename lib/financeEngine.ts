@@ -495,14 +495,18 @@ export class FinanceEngine {
         let simProperties = JSON.parse(JSON.stringify(this.properties));
         let housingTransitions = JSON.parse(JSON.stringify(this.housingTransitions));
         
-        // --- STRICT HOUSING STATE INIT ---
+        // --- STRICT HOUSING STATE INIT WITH DEFAULTS ---
         let currentHousingMode = this.inputs.housing_mode || 'own';
-        let primaryValue = currentHousingMode === 'own' ? (this.getVal('primary_value') || 0) : 0;
-        let primaryMortgage = currentHousingMode === 'own' ? (this.getVal('primary_mortgage') || 0) : 0;
-        let primaryRate = this.getVal('primary_rate') || 4.0;
-        let primaryPayment = currentHousingMode === 'own' ? (this.getVal('primary_payment') || 0) : 0;
-        let primaryGrowth = (this.getVal('primary_growth') || 3.0) / 100;
-        let currentRent = currentHousingMode === 'rent' ? (this.getVal('primary_rent') || 0) : 0;
+        
+        // If mode is not "own", mathematically enforce $0 for ownership fields
+        let primaryValue = currentHousingMode === 'own' ? (this.inputs.primary_value !== undefined ? this.getVal('primary_value') : 800000) : 0;
+        let primaryMortgage = currentHousingMode === 'own' ? (this.inputs.primary_mortgage !== undefined ? this.getVal('primary_mortgage') : 400000) : 0;
+        let primaryRate = this.inputs.primary_rate !== undefined ? this.getVal('primary_rate') : 4.0;
+        let primaryPayment = currentHousingMode === 'own' ? (this.inputs.primary_payment !== undefined ? this.getVal('primary_payment') : 2000) : 0;
+        let primaryGrowth = (this.inputs.primary_growth !== undefined ? this.getVal('primary_growth') : 3.0) / 100;
+        
+        // If mode is not "rent", mathematically enforce $0 for rental field
+        let currentRent = currentHousingMode === 'rent' ? (this.inputs.primary_rent !== undefined ? this.getVal('primary_rent') : 2500) : 0;
         
         const p1StartAge = currentYear - person1.dob.getFullYear();
         const p2StartAge = currentYear - person2.dob.getFullYear();
@@ -784,7 +788,7 @@ export class FinanceEngine {
                         if (payment === 0) payment = r === 0 ? primaryMortgage / 300 : (primaryMortgage * r) / (1 - Math.pow(1 + r, -300));
                         primaryPayment = payment;
                     } else {
-                        primaryPayment = 0; // STRICT BINDING: Force 0 if buying outright
+                        primaryPayment = 0;
                     }
                     currentRent = 0;
                     if (detailed && !trackedEvents.has('Bought New Home')) { trackedEvents.add('Bought New Home'); inflows.events.push('Bought New Home'); }
@@ -793,7 +797,7 @@ export class FinanceEngine {
                     currentRent = (transition.rent || 0); 
                     primaryValue = 0;
                     primaryMortgage = 0;
-                    primaryPayment = 0; // STRICT BINDING: Force 0 if transitioning to rent
+                    primaryPayment = 0;
                     if (detailed && !trackedEvents.has('Transitioned to ' + transition.action.toUpperCase())) { trackedEvents.add('Transitioned to ' + transition.action.toUpperCase()); inflows.events.push('Transitioned to ' + transition.action.toUpperCase()); }
                 }
             }
