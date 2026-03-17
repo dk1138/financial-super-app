@@ -2,7 +2,7 @@ import React from 'react';
 import PersonalInformationCard from './plan/PersonalInformationCard';
 import DependentsCard from './plan/DependentsCard';
 import PortfolioAssetsCard from './plan/PortfolioAssetsCard';
-import RealEstateCard from './plan/RealEstateCard';
+import LivingCostCard from './plan/LivingCostCard';
 import IncomeTaxCard from './plan/IncomeTaxCard';
 import LivingExpensesCard from './plan/LivingExpensesCard';
 import FutureExpensesCard from './plan/FutureExpensesCard';
@@ -28,7 +28,7 @@ export default function PlanTab() {
         <PersonalInformationCard />
         <DependentsCard />
         <PortfolioAssetsCard />
-        <RealEstateCard />
+        <LivingCostCard />
         <IncomeTaxCard />
         <LivingExpensesCard />
         <FutureExpensesCard />

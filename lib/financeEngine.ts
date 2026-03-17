@@ -12,6 +12,7 @@ export { calculatePlanScore } from './engine/scoring';
 export class FinanceEngine {
     inputs: any;
     properties: any[];
+    housingTransitions: any[];
     windfalls: any[];
     additionalIncome: any[];
     customAssets: any[];
@@ -29,12 +30,10 @@ export class FinanceEngine {
     constructor(data: any) {
         this.inputs = JSON.parse(JSON.stringify(data.inputs || {}));
         
-        // Filter out future properties so they don't immediately affect NW or cause mortgage payments before they are bought
-        this.properties = (data.properties || []).filter((p: any) => !p.isFuturePurchase);
+        // properties array is now strictly used for Additional/Rental properties
+        this.properties = data.properties || [];
+        this.housingTransitions = data.housingTransitions || [];
         
-        // Store the future properties separately so we can trigger them in the loop
-        this.inputs.future_properties = (data.properties || []).filter((p: any) => p.isFuturePurchase);
-
         this.windfalls = data.windfalls || [];
         this.additionalIncome = data.additionalIncome || [];
         this.customAssets = data.customAssets || [];
@@ -410,8 +409,6 @@ export class FinanceEngine {
             this.expensePhases.forEach((phase: any) => {
                 const amt = Number(phase.amount) || 0;
                 if (!phase.isPhased || (age >= phase.startAge && age <= phase.endAge)) {
-                    // Phased Expenses (like Rent) are NOT multiplied by the context multiplier or haircut 
-                    // because they are fixed obligations, unlike discretionary budget.
                     activePhasesAmount += amt * 12; 
                     activePhases.push({ name: phase.name, amount: (amt * 12) * baseInflation });
                 }
@@ -443,7 +440,7 @@ export class FinanceEngine {
 
             for (let decumOrder of perms) {
                 let tempData = JSON.parse(JSON.stringify({
-                    inputs: this.inputs, properties: this.properties, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: { accum: this.strategies.accum, decum: decumOrder }, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
+                    inputs: this.inputs, properties: this.properties, housingTransitions: this.housingTransitions, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: { accum: this.strategies.accum, decum: decumOrder }, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
                 }));
                 
                 let tempEngine = new FinanceEngine(tempData);
@@ -456,7 +453,6 @@ export class FinanceEngine {
                 }
             }
             
-            // Attach the exact winning array to the first year so the UI can read it
             if (detailed && bestData && bestData.length > 0) {
                 bestData[0].optimalStrategy = bestOrder;
             }
@@ -492,8 +488,15 @@ export class FinanceEngine {
         };
 
         let simProperties = JSON.parse(JSON.stringify(this.properties));
-        // Keep future properties ready to be injected
-        let futureProperties = JSON.parse(JSON.stringify(this.inputs.future_properties || []));
+        let housingTransitions = JSON.parse(JSON.stringify(this.housingTransitions));
+        
+        let currentHousingMode = this.inputs.housing_mode || 'own';
+        let primaryValue = currentHousingMode === 'own' ? (this.getVal('primary_value') || 0) : 0;
+        let primaryMortgage = currentHousingMode === 'own' ? (this.getVal('primary_mortgage') || 0) : 0;
+        let primaryRate = this.getVal('primary_rate') || 4.0;
+        let primaryPayment = this.getVal('primary_payment') || 0;
+        let primaryGrowth = (this.getVal('primary_growth') || 3.0) / 100;
+        let currentRent = currentHousingMode !== 'own' ? (this.getVal('primary_rent') || 0) : 0;
         
         const p1StartAge = currentYear - person1.dob.getFullYear();
         const p2StartAge = currentYear - person2.dob.getFullYear();
@@ -570,6 +573,16 @@ export class FinanceEngine {
             let inflows = this.calcInflows(yr, i, person1, person2, age1, age2, alive1, alive2, isRet1, isRet2, consts, baseInflation, detailed ? trackedEvents : null);
             if (detailed && deathEvents.length > 0) inflows.events.push(...deathEvents);
 
+            // --- ADD RENTAL INCOME ---
+            simProperties.forEach((p: any) => {
+                if (!(p.sellEnabled && p.sellAge <= age1) && p.rentalIncome > 0) {
+                    let annualRent = p.rentalIncome * 12 * baseInflation;
+                    inflows.p1.gross += annualRent;
+                    inflows.p1.earned += annualRent; 
+                    if (isRet1) inflows.p1.postRet += annualRent;
+                }
+            });
+
             let isFullyRetired = isRet1 && (this.mode === 'Single' || isRet2);
             let currentLiquidNW = person1.tfsa + person1.tfsa_successor + person1.rrsp + person1.crypto + person1.nonreg + person1.cash + person1.rrif_acct + (person1.fhsa || 0);
             if (this.mode === 'Couple') currentLiquidNW += person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nonreg + person2.cash + person2.rrif_acct + (person2.fhsa || 0);
@@ -634,7 +647,6 @@ export class FinanceEngine {
                     if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
                         let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
                         
-                        // Target the top of the first Federal Tax Bracket to pull out the most money at the lowest rate
                         let bracketTop = this.CONSTANTS.TAX_DATA?.FED?.brackets?.[0] || 55867;
                         let targetBracketCap = bracketTop * baseInflation; 
                         
@@ -736,57 +748,71 @@ export class FinanceEngine {
             lifMax1 = Math.max(0, lifMax1 - regMins.lifTaken1); lifMax2 = Math.max(0, lifMax2 - regMins.lifTaken2);
 
             const outflowsObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, currentExpenseHaircut);
-            const expenses = outflowsObj.total; const activeExpensePhases = outflowsObj.activePhases;
+            let expenses = outflowsObj.total; const activeExpensePhases = outflowsObj.activePhases;
 
-            // --- REAL ESTATE & MODULAR HOUSING TRANSITIONS ---
             let mortgagePayment = 0, keptProperties: any[] = [];
             
-            // 1. Check for Future Purchases that trigger this year
-            for (let idx = futureProperties.length - 1; idx >= 0; idx--) {
-                const fp = futureProperties[idx];
-                if (fp.purchaseAge === age1) {
-                    const newHomeCost = (fp.value || 0) * baseInflation;
-                    const plannedMortgage = (fp.mortgage || 0) * baseInflation;
+            // --- PRIMARY HOUSING TRANSITIONS ---
+            let transition = housingTransitions.find((t: any) => t.age === age1);
+            if (transition) {
+                if (currentHousingMode === 'own') {
+                    let proceeds = primaryValue;
+                    let transCosts = proceeds * 0.05;
+                    let netCash = proceeds - primaryMortgage - transCosts;
+                    if (netCash > 0) inflows.p1.windfallNonTax += netCash;
+                    primaryValue = 0; primaryMortgage = 0; primaryPayment = 0;
+                    if (detailed && !trackedEvents.has('Sold Primary Home')) { trackedEvents.add('Sold Primary Home'); inflows.events.push('Sold Primary Home'); }
+                }
+                
+                if (transition.action === 'downsize' || transition.action === 'buy') {
+                    currentHousingMode = 'own';
+                    primaryValue = (transition.price || 0) * baseInflation;
+                    primaryMortgage = (transition.mortgage || 0) * baseInflation;
+                    let downPayment = primaryValue - primaryMortgage;
+                    inflows.p1.windfallNonTax -= downPayment;
                     
-                    const downPaymentRequired = newHomeCost - plannedMortgage;
-                    
-                    if (downPaymentRequired > 0) {
-                        // The engine adds the downpayment requirement to "expenses" for this year.
-                        // The `handleDeficit` function later will pull this out of the portfolio!
-                        // If they sold a house this year, it will seamlessly cover it.
-                        inflows.p1.windfallNonTax -= downPaymentRequired; 
+                    if (primaryMortgage > 0) {
+                        let r = primaryRate / 100 / 12;
+                        let payment = transition.payment || 0; // If payment isn't in transition, calculate it
+                        if (payment === 0) payment = r === 0 ? primaryMortgage / 300 : (primaryMortgage * r) / (1 - Math.pow(1 + r, -300));
+                        primaryPayment = payment;
                     }
-                    
-                    fp.isFuturePurchase = false; 
-                    fp.value = newHomeCost;
-                    fp.mortgage = plannedMortgage;
-                    
-                    if (plannedMortgage > 0) {
-                        const r = (fp.rate || 0) / 100 / 12;
-                        // Use provided payment, or auto-calculate 25yr amort if missing
-                        let payment = (fp.payment || 0);
-                        if (payment === 0) payment = r === 0 ? plannedMortgage / 300 : (plannedMortgage * r) / (1 - Math.pow(1 + r, -300));
-                        fp.payment = payment;
-                    }
-                    
-                    simProperties.push(fp);
-                    futureProperties.splice(idx, 1);
-                    if (detailed && !trackedEvents.has(`Bought: ${fp.name}`)) { trackedEvents.add(`Bought: ${fp.name}`); inflows.events.push(`Bought: ${fp.name}`); }
+                    currentRent = 0;
+                    if (detailed && !trackedEvents.has('Bought New Home')) { trackedEvents.add('Bought New Home'); inflows.events.push('Bought New Home'); }
+                } else if (transition.action === 'rent' || transition.action === 'ltc') {
+                    currentHousingMode = transition.action;
+                    currentRent = (transition.rent || 0); // Base dollars
+                    if (detailed && !trackedEvents.has('Transitioned to ' + transition.action.toUpperCase())) { trackedEvents.add('Transitioned to ' + transition.action.toUpperCase()); inflows.events.push('Transitioned to ' + transition.action.toUpperCase()); }
                 }
             }
 
-            // 2. Process Existing Properties
+            let housingExpensesThisYear = 0;
+            let realEstateValue = 0, realEstateDebt = 0, reExcludedValue = 0, reExcludedDebt = 0;
+
+            if (currentHousingMode === 'own') {
+                if (primaryMortgage > 0 && primaryPayment > 0) {
+                    let annualPayment = primaryPayment * 12;
+                    let interest = primaryMortgage * (primaryRate / 100);
+                    let principal = annualPayment - interest;
+                    if (principal > primaryMortgage) { principal = primaryMortgage; annualPayment = principal + interest; }
+                    primaryMortgage = Math.max(0, primaryMortgage - principal);
+                    mortgagePayment += annualPayment;
+                }
+                realEstateValue += primaryValue;
+                realEstateDebt += primaryMortgage;
+                primaryValue *= (1 + primaryGrowth);
+            } else if (currentHousingMode === 'rent' || currentHousingMode === 'ltc') {
+                housingExpensesThisYear = currentRent * 12 * baseInflation;
+                expenses += housingExpensesThisYear; // ADD RENT TO EXPENSES
+            }
+
+            // --- RENTAL PROPERTIES ---
             simProperties.forEach((p: any) => {
                 if (p.sellEnabled && p.sellAge === age1) {
-                    // Straight Sale - Dump cash into Liquid NW
                     const proceeds = p.value;
-                    const transCosts = proceeds * 0.05; // 5% seller friction
+                    const transCosts = proceeds * 0.05;
                     const netCash = proceeds - p.mortgage - transCosts;
-                    
-                    if (netCash > 0) {
-                        inflows.p1.windfallNonTax += netCash;
-                    }
-
+                    if (netCash > 0) inflows.p1.windfallNonTax += netCash;
                     if (detailed && !trackedEvents.has('Sold: ' + p.name)) { trackedEvents.add('Sold: ' + p.name); inflows.events.push('Sold: ' + p.name); }
                 } else {
                     if (p.mortgage > 0 && p.payment > 0) { 
@@ -796,6 +822,9 @@ export class FinanceEngine {
                         p.mortgage = Math.max(0, p.mortgage - principal); mortgagePayment += annualPayment; 
                     } 
                     p.value *= (1 + (p.growth / 100)); keptProperties.push(p);
+
+                    if (p.includeInNW) { realEstateValue += p.value; realEstateDebt += p.mortgage; } 
+                    else { reExcludedValue += p.value; reExcludedDebt += p.mortgage; }
                 }
             });
             simProperties = keptProperties;
@@ -877,7 +906,6 @@ export class FinanceEngine {
                 }
             }
             
-            // Unfunded portion must be paid out of pocket, added to debtRepayment
             debtRepayment += unfundedEdu; 
             
             if (detailed && simProperties.reduce((sum: number, p: any) => sum + p.mortgage, 0) <= 0 && !trackedEvents.has('Mortgage Paid') && simProperties.some((p: any) => p.mortgage === 0 && p.value > 0)) {                
@@ -904,7 +932,6 @@ export class FinanceEngine {
             let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
 
             if (netSurplus > 0) {
-                // Pass age1, age2 to handleSurplus
                 handleSurplus(netSurplus, person1, person2, alive1, alive2, flowLog, i, consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, this.strategies, this.inputs, this.CONSTANTS, age1, age2);
                 
                 if (actualDeductions.p1 > 0) pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend, credits1).totalTax;
@@ -918,7 +945,6 @@ export class FinanceEngine {
                     let currentDeficit = (expenses + mortgagePayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
                     if (currentDeficit < 1) break; 
                     
-                    // FIX: Pass this.strategies.decum directly to respect manual ordering!
                     handleDeficit(currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
                         if (prefix === 'p1') { craTaxableIncome1 += taxableAmt; cashIncome1 += cashAmt; }
                         if (prefix === 'p2') { craTaxableIncome2 += taxableAmt; cashIncome2 += cashAmt; }
@@ -937,11 +963,6 @@ export class FinanceEngine {
             const liquidAssets2 = this.mode === 'Couple' ? (person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nonreg + person2.cash + person2.lirf + person2.lif + person2.rrif_acct + (person2.fhsa || 0)) : 0;
             const liquidNetWorth = (liquidAssets1 + liquidAssets2);
             
-            let realEstateValue = 0, realEstateDebt = 0, reExcludedValue = 0, reExcludedDebt = 0;
-            simProperties.forEach((prop: any) => {
-                if (prop.includeInNW) { realEstateValue += prop.value; realEstateDebt += prop.mortgage; } 
-                else { reExcludedValue += prop.value; reExcludedDebt += prop.mortgage; }
-            });
             finalNetWorth = liquidNetWorth + (realEstateValue - realEstateDebt);
 
             let termInc1 = person1.rrsp + person1.rrif_acct + person1.lif + person1.lirf + ((Math.max(0, person1.nonreg - person1.acb) + Math.max(0, person1.crypto - person1.crypto_acb)) * 0.5);
