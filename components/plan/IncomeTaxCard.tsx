@@ -23,12 +23,49 @@ export default function IncomeTaxCard() {
       return base + addl;
   };
 
-  const p1Gross = getActiveIncome('p1');
-  const p2Gross = isCouple ? getActiveIncome('p2') : 0;
-  const hhGross = p1Gross + p2Gross;
-  const totalTax = (results?.timeline?.[0]?.taxP1 || 0) + (isCouple ? (results?.timeline?.[0]?.taxP2 || 0) : 0);
-  
-  const hhNet = hhGross > 0 ? Math.max(0, hhGross - totalTax) : 0;
+  const calculatePlayerMetrics = (p: 'p1' | 'p2') => {
+      const yData = results?.timeline?.[0];
+      if (!yData) return { gross: getActiveIncome(p), takeHome: getActiveIncome(p) };
+
+      const pUpper = p.toUpperCase();
+      const salary = p === 'p1' ? ((yData.incomeP1 || 0) - (yData.rrspMatchP1 || 0)) : ((yData.incomeP2 || 0) - (yData.rrspMatchP2 || 0));
+      const match = p === 'p1' ? (yData.rrspMatchP1 || 0) : (yData.rrspMatchP2 || 0);
+      const cpp = p === 'p1' ? (yData.cppP1 || 0) : (yData.cppP2 || 0);
+      const oas = p === 'p1' ? (yData.oasP1 || 0) : (yData.oasP2 || 0);
+      const db = p === 'p1' ? (yData.dbP1 || 0) : (yData.dbP2 || 0);
+      const invInc = p === 'p1' ? (yData.invIncP1 || 0) : (yData.invIncP2 || 0);
+
+      let actualGross = salary + match + cpp + oas + db + invInc;
+
+      const wdKeys = Object.keys(yData.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && yData.flows.withdrawals[k] > 0);
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
+
+      taxableWds.forEach(k => {
+          const cleanName = k.replace(`${pUpper} `, '');
+          if (k.includes('RRIF') || k.includes('LIF') || k.includes('RRSP') || k.includes('LIRF')) {
+              actualGross += yData.flows.withdrawals[k];
+          } else if (k.includes('Non-Reg') || k.includes('Crypto')) {
+              const mathObj = yData.wdBreakdown?.[p]?.[`${cleanName}_math`];
+              if (mathObj && mathObj.tax > 0) {
+                  actualGross += mathObj.tax;
+              }
+          }
+      });
+
+      const taxDetails = p === 'p1' ? yData.taxDetailsP1 : yData.taxDetailsP2;
+      const totalTax = taxDetails?.totalTax || 0;
+
+      // Take-home pay strips out the employer match (since it goes straight to RRSP) and Taxes
+      const takeHome = actualGross - match - totalTax;
+
+      return { actualGross, takeHome };
+  };
+
+  const p1Metrics = calculatePlayerMetrics('p1');
+  const p2Metrics = isCouple ? calculatePlayerMetrics('p2') : { actualGross: 0, takeHome: 0 };
+
+  const hhGross = p1Metrics.actualGross + p2Metrics.actualGross;
+  const hhNet = p1Metrics.takeHome + p2Metrics.takeHome;
 
   const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleGross = (p: string) => setShowGross(prev => ({ ...prev, [p]: !prev[p] }));
@@ -121,11 +158,6 @@ export default function IncomeTaxCard() {
                     <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-receipt"></i></div>
                     <span className="fw-bold text-danger small text-uppercase ls-1">Estimated Tax Breakdown</span>
                 </div>
-                <InfoBtn 
-                    title="Applied Tax Credits" 
-                    align="right" 
-                    text="The tax engine calculates and applies non-refundable tax credits automatically based on your profile and inputs.<br/><br/><b>Automatic Credits:</b><br/>• Basic Personal Amount (Fed & Prov)<br/>• Age Amount (65+)<br/>• Pension Income Amount<br/>• Canada Employment Amount<br/>• CPP/EI Premium Credits<br/>• Dividend Tax Credits<br/><br/><b>User-Specified Credits:</b><br/>• Disability & Caregiver Amount<br/>• First-Time Home Buyer<br/>• Medical Expenses<br/>• Charitable Donations" 
-                />
             </div>
             <div className="p-3 bg-input d-flex flex-column gap-2 rounded-bottom-4">
               
@@ -260,7 +292,7 @@ export default function IncomeTaxCard() {
                       </div>
                   )}
               </div>
-              
+
               {/* OAS Clawback */}
               {taxDetails.oas_clawback > 0 && (
                   <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-1">
@@ -268,7 +300,7 @@ export default function IncomeTaxCard() {
                       <span className="small fw-bold text-danger">(${Math.round(taxDetails.oas_clawback).toLocaleString()})</span>
                   </div>
               )}
-
+              
               <div className="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-50">
                   <span className="text-danger fw-bold small">Total Tax Generated</span> 
                   <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span>
@@ -307,7 +339,6 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Disability Tax Credit
-                                          <InfoBtn title="Disability Tax Credit Math" text="A non-refundable tax credit that reduces the income tax you may have to pay. The base amount is multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> Base Amount × Lowest Tax Rate<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.disability).toLocaleString()}</span>
                                   </div>
@@ -316,7 +347,6 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Caregiver Amount
-                                          <InfoBtn title="Caregiver Amount Math" text="Tax savings are calculated by multiplying the eligible base amounts for your dependants by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Federal Savings:</b> Base Amount × Lowest Fed Rate<br/><b>Provincial Savings:</b> Base Amount × Lowest Prov Rate<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
                                   </div>
@@ -325,7 +355,6 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Medical Expenses
-                                          <InfoBtn title="Medical Expenses Math" text="Your total eligible expenses are first reduced by a minimum threshold (the lesser of 3% of your net income or a fixed max cap). The remainder is then multiplied by the lowest Federal and Provincial tax bracket rates.<br/><br/><b>Calculation:</b> (Total Expenses - Threshold) × Lowest Tax Rate<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/lines-33099-33199-eligible-medical-expenses-you-claim-on-your-tax-return.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
                                   </div>
@@ -334,7 +363,6 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           First-Time Home Buyer
-                                          <InfoBtn title="First-Time Home Buyer Math" text="The $10,000 base amount is multiplied by the lowest Federal tax bracket rate.<br/><br/><b>Note:</b> Only SK and QC offer a provincial income tax credit for this. Other provinces issue Land Transfer Tax rebates at closing instead, which do not appear on your income tax return.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.homeBuyer).toLocaleString()}</span>
                                   </div>
@@ -343,7 +371,6 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex justify-content-between align-items-center">
                                       <span className="text-muted small fst-italic d-flex align-items-center gap-1">
                                           Charitable Donations
-                                          <InfoBtn title="Charitable Donations Math" text="Donations are calculated using a 2-tiered system to encourage larger gifts.<br/><br/><b>First $200:</b> Multiplied by the lowest tax bracket rates.<br/><b>Amount over $200:</b> Multiplied by the highest tax bracket rates.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-34900-donations-gifts.html' target='_blank'>Learn more on Canada.ca</a>" />
                                       </span>
                                       <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
                                   </div>
@@ -358,12 +385,19 @@ export default function IncomeTaxCard() {
                   <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary border-opacity-50">
                       <span className="text-success small fw-bold d-flex align-items-center gap-1">
                           <i className="bi bi-arrow-return-left"></i> Transit Refund
-                          <InfoBtn title="Refundable Transit Credit" text="Because this is a Refundable Tax Credit, it is applied directly against your final provincial tax bill. If it reduces your provincial tax below $0, you receive the difference as a cash refund!<br/><br/><b>Calculation:</b> Eligible Expenses (Max $3,000) × 15%<br/><br/><a href='https://www.ontario.ca/page/ontario-seniors-public-transit-tax-credit' target='_blank'>Learn more on Ontario.ca</a>" />
                       </span>
                       <span className="small fw-bold text-success">+${Math.round(taxDetails.rtc.transit).toLocaleString()}</span>
                   </div>
               )}
 
+              {/* Take Home Pay */}
+              <div className="d-flex justify-content-between mt-2 pt-3 border-top border-secondary">
+                  <span className="text-success fw-bold d-flex align-items-center">
+                      Take-Home Pay 
+                      <InfoBtn align="right" title="Take-Home Pay" text="Gross Income (excluding Employer RRSP Matches) minus Total Taxes Generated.<br><br><b>Note:</b> Tax refunds from RRSP contributions are excluded from this total, as they are typically received the following Spring." />
+                  </span> 
+                  <span className="text-success fw-bold fs-5">${Math.round(actualGross - match - taxDetails.totalTax).toLocaleString()}</span>
+              </div>
             </div>
           </div>
       );
@@ -643,7 +677,10 @@ export default function IncomeTaxCard() {
                   <div className="small text-muted fw-bold">{formatCurrency(hhGross / 12)} /mo</div>
                 </div>
                 <div className="col-md-6">
-                  <div className="small fw-bold text-success text-uppercase ls-1 mb-2">Total Household (After-Tax Net)</div>
+                  <div className="small fw-bold text-success text-uppercase ls-1 mb-2">
+                      Total Household (Take-Home Net)
+                      <InfoBtn align="center" title="Household Take-Home" text="Combined Gross Income (excluding employer matches) minus Total Taxes." />
+                  </div>
                   <div className="fs-3 fw-bold text-success mb-1">{formatCurrency(hhNet)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
                   <div className="small text-muted fw-bold">{formatCurrency(hhNet / 12)} /mo</div>
                 </div>
