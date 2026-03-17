@@ -28,8 +28,13 @@ export default function MonteCarloCard() {
               if (method === 'historical') {
                  const sp500 = FINANCIAL_CONSTANTS.SP500_HISTORICAL;
                  const startIdx = Math.floor(Math.random() * sp500.length);
-                 simContext.histSequence = [];
-                 for(let y = 0; y < 100; y++) { simContext.histSequence.push(sp500[(startIdx + y) % sp500.length]); }
+                 // FIX: The engine expects 'shockSequence', not 'histSequence'
+                 simContext.shockSequence = [];
+                 for(let y = 0; y < 100; y++) { 
+                     // Subtracting 0.07 (7%) assuming the engine already applies a base growth rate. 
+                     // This converts the raw historical return into a shock deviation.
+                     simContext.shockSequence.push(sp500[(startIdx + y) % sp500.length] - 0.07); 
+                 }
               } else {
                  simContext.volatility = volatility;
               }
@@ -37,27 +42,35 @@ export default function MonteCarloCard() {
               trajectories.push(result);
             }
             
-            trajectories.sort((a, b) => a[a.length - 1] - b[b.length - 1]);
             const runs = trajectories.length;
-            const successCount = trajectories.filter(t => t[t.length - 1] > 0).length;
+            const yearsCount = trajectories[0].length;
             
+            // Calculate Success Rate based on final year balances
+            const successCount = trajectories.filter(t => t[yearsCount - 1] > 0).length;
             setSuccessRate(Number(((successCount / runs) * 100).toFixed(1)));
+            
             const discount = (val: number, idx: number) => Math.max(0, Math.round(val / Math.pow(1 + inflationRate, idx)));
             
-            // Format for Recharts (Array of Objects)
-            const optData = trajectories[Math.floor(runs * 0.90)];
-            const medData = trajectories[Math.floor(runs * 0.50)];
-            const pesData = trajectories[Math.floor(runs * 0.10)];
-
-            const formattedData = optData.map((_, i) => ({
-                age: p1Age + i,
-                optimistic: discount(optData[i], i),
-                median: discount(medData[i], i),
-                pessimistic: discount(pesData[i], i)
-            }));
+            // FIX: Cross-Sectional Percentiles.
+            // Instead of grabbing one entire trajectory, we sort the net worths of ALL runs for EACH specific year.
+            const formattedData = [];
+            for (let yearIdx = 0; yearIdx < yearsCount; yearIdx++) {
+                // Extract just this year's values across all 100+ simulations and sort them
+                const yearValues = trajectories.map(t => t[yearIdx]).sort((a, b) => a - b);
+                
+                formattedData.push({
+                    age: p1Age + yearIdx,
+                    optimistic: discount(yearValues[Math.floor(runs * 0.90)], yearIdx),
+                    median: discount(yearValues[Math.floor(runs * 0.50)], yearIdx),
+                    pessimistic: discount(yearValues[Math.floor(runs * 0.10)], yearIdx)
+                });
+            }
             
             setChartData(formattedData);
-          } catch(err) { console.error(err); alert("Simulation failed."); }
+          } catch(err) { 
+              console.error(err); 
+              alert("Simulation failed."); 
+          }
           setIsCalculating(false);
         }, 50);
     };
