@@ -32,10 +32,9 @@ export default function IncomeTaxCard() {
       const cpp = p === 'p1' ? (yData.cppP1 || 0) : (yData.cppP2 || 0);
       const oas = p === 'p1' ? (yData.oasP1 || 0) : (yData.oasP2 || 0);
       const db = p === 'p1' ? (yData.dbP1 || 0) : (yData.dbP2 || 0);
-      const invInc = p === 'p1' ? (yData.invIncP1 || 0) : (yData.invIncP2 || 0);
 
-      // Gross strictly limited to active/passive income sources defined in inputs (no portfolio withdrawals)
-      let actualGross = salary + match + cpp + oas + db + invInc;
+      // Gross strictly limited to active paycheck/pension income sources (No yields, no withdrawals)
+      let actualGross = salary + match + cpp + oas + db;
 
       const taxDetails = p === 'p1' ? yData.taxDetailsP1 : yData.taxDetailsP2;
       const totalTax = taxDetails?.totalTax || 0;
@@ -66,43 +65,30 @@ export default function IncomeTaxCard() {
       
       const isP1 = p === 'p1';
 
-      // Income Logic
+      // Paycheck Income Logic
       const salary = isP1 ? ((yData.incomeP1 || 0) - (yData.rrspMatchP1 || 0)) : ((yData.incomeP2 || 0) - (yData.rrspMatchP2 || 0));
       const match = isP1 ? (yData.rrspMatchP1 || 0) : (yData.rrspMatchP2 || 0);
       const cpp = isP1 ? (yData.cppP1 || 0) : (yData.cppP2 || 0);
       const oas = isP1 ? (yData.oasP1 || 0) : (yData.oasP2 || 0);
       const db = isP1 ? (yData.dbP1 || 0) : (yData.dbP2 || 0);
-      const invInc = isP1 ? (yData.invIncP1 || 0) : (yData.invIncP2 || 0);
 
       let grossBreakdown: {label: string, val: number}[] = [];
       let sumGross = 0;
 
       if (salary > 0) { grossBreakdown.push({label: 'Salary', val: salary}); sumGross += salary; }
       if (match > 0) { grossBreakdown.push({label: 'Employer Match', val: match}); sumGross += match; }
-      if (cpp > 0) { grossBreakdown.push({label: 'CPP', val: cpp}); sumGross += cpp; }
+      if (cpp > 0) { grossBreakdown.push({label: 'CPP Benefit', val: cpp}); sumGross += cpp; }
       if (oas > 0) { grossBreakdown.push({label: 'OAS', val: oas}); sumGross += oas; }
       if (db > 0) { grossBreakdown.push({label: 'Pension', val: db}); sumGross += db; }
-      if (invInc > 0) { grossBreakdown.push({label: 'Inv. Yield', val: invInc}); sumGross += invInc; }
 
       const actualGross = sumGross;
 
-      // Deductions Logic
-      const rrspCont = yData.flows?.contributions?.[p]?.rrsp || 0;
-      const fhsaCont = yData.flows?.contributions?.[p]?.fhsa || 0;
-      const totalDeductions = rrspCont + fhsaCont;
+      // Deductions Logic (Strictly Paycheck Deductions)
+      const totalDeductions = match;
 
       let dedBreakdown: {label: string, val: number}[] = [];
-      if (rrspCont > 0) {
-          const ownCont = rrspCont - match;
-          if (match > 0) {
-              dedBreakdown.push({label: 'RRSP (Employer Match)', val: match});
-              if (ownCont > 0) dedBreakdown.push({label: 'RRSP (Own Contrib)', val: ownCont});
-          } else {
-              dedBreakdown.push({label: 'RRSP Contributions', val: rrspCont});
-          }
-      }
-      if (fhsaCont > 0) {
-          dedBreakdown.push({label: 'FHSA Contributions', val: fhsaCont});
+      if (match > 0) {
+          dedBreakdown.push({label: 'RRSP (Employer Match)', val: match});
       }
 
       // Net Taxable Logic
@@ -129,7 +115,7 @@ export default function IncomeTaxCard() {
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleGross(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showGross[p] ? 'text-main' : 'text-muted'}`}>
-                          <i className={`bi bi-chevron-${showGross[p] ? 'up' : 'down'} small`}></i> Gross Income
+                          <i className={`bi bi-chevron-${showGross[p] ? 'up' : 'down'} small`}></i> Gross Paycheck Income
                       </span>
                       <span className="small fw-bold">${Math.round(actualGross).toLocaleString()}</span>
                   </div>
@@ -150,7 +136,7 @@ export default function IncomeTaxCard() {
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleDeductions(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showDeductions[p] ? 'text-main' : 'text-muted'}`}>
-                          <i className={`bi bi-chevron-${showDeductions[p] ? 'up' : 'down'} small`}></i> Total Deductions
+                          <i className={`bi bi-chevron-${showDeductions[p] ? 'up' : 'down'} small`}></i> Paycheck Deductions
                       </span>
                       <span className="small fw-bold text-info">-${Math.round(totalDeductions).toLocaleString()}</span>
                   </div>
@@ -177,7 +163,7 @@ export default function IncomeTaxCard() {
 
               {/* Net Taxable Income */}
               <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-3">
-                  <span className="text-main small fw-bold">Net Taxable Income</span>
+                  <span className="text-main small fw-bold d-flex align-items-center gap-1">Net Taxable Income <InfoBtn title="Taxable Income" text="This is the final income number sent to the tax engine. It accounts for your personal RRSP contributions, FHSA contributions, investment yields, and taxable withdrawals happening in the background."/></span>
                   <span className="small fw-bold">${Math.round(taxIncAfter).toLocaleString()}</span>
               </div>
 
@@ -247,7 +233,7 @@ export default function IncomeTaxCard() {
                               <div className="d-flex justify-content-between align-items-center">
                                   <span className="text-muted small fst-italic">CPP2 (Tier 2)</span>
                                   <span className="small text-warning fw-bold opacity-75">(${Math.round(taxDetails.cpp2Premium).toLocaleString()})</span>
-                              </div>
+                          </div>
                           )}
                           <div className="d-flex justify-content-between align-items-center">
                               <span className="text-muted small fst-italic">EI Premiums</span>
@@ -351,7 +337,7 @@ export default function IncomeTaxCard() {
               <div className="d-flex justify-content-between mt-2 pt-3 border-top border-secondary">
                   <span className="text-success fw-bold d-flex align-items-center">
                       Take-Home Pay 
-                      <InfoBtn align="right" title="Take-Home Pay" text="Gross Income (excluding Employer RRSP Matches) minus Total Taxes Generated.<br><br><b>Note:</b> Tax refunds from RRSP contributions are excluded from this total, as they are typically received the following Spring." />
+                      <InfoBtn align="right" title="Take-Home Pay" text="Gross Paycheck Income (excluding Employer RRSP Matches) minus Total Taxes Generated.<br><br><b>Note:</b> Personal RRSP contributions, FHSA contributions, and Investment Yields are excluded from this cash-flow view to accurately reflect your standard monthly paycheck." />
                   </span> 
                   <span className="text-success fw-bold fs-5">${Math.round(actualGross - match - taxDetails.totalTax).toLocaleString()}</span>
               </div>
@@ -629,14 +615,14 @@ export default function IncomeTaxCard() {
             <div className="card-body p-4">
               <div className="row text-center align-items-center">
                 <div className="col-md-6 border-end border-primary border-opacity-25 mb-3 mb-md-0">
-                  <div className="small fw-bold text-primary text-uppercase ls-1 mb-2">Total Household (Gross)</div>
+                  <div className="small fw-bold text-primary text-uppercase ls-1 mb-2">Total Household (Gross Paycheck)</div>
                   <div className="fs-3 fw-bold text-primary mb-1">{formatCurrency(hhGross)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
                   <div className="small text-muted fw-bold">{formatCurrency(hhGross / 12)} /mo</div>
                 </div>
                 <div className="col-md-6">
                   <div className="small fw-bold text-success text-uppercase ls-1 mb-2">
                       Total Household (Take-Home Net)
-                      <InfoBtn align="center" title="Household Take-Home" text="Combined Gross Income (excluding employer matches) minus Total Taxes." />
+                      <InfoBtn align="center" title="Household Take-Home" text="Combined Gross Paycheck Income (excluding employer matches) minus Total Taxes." />
                   </div>
                   <div className="fs-3 fw-bold text-success mb-1">{formatCurrency(hhNet)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
                   <div className="small text-muted fw-bold">{formatCurrency(hhNet / 12)} /mo</div>
