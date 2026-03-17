@@ -41,11 +41,9 @@ export default function ProjectionTab() {
     );
   }
 
-  // --- BUGFIX: Safe falsy check for 0% inflation ---
   const rawInf = data.inputs?.inflation_rate;
   const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
   
-  // --- BUGFIX: Robust check for the "Today's Dollars" toggle state across possible keys ---
   const useRealDollars = Boolean(
       data.useRealDollars === true || 
       data.inputs?.todays_dollars === true || 
@@ -75,7 +73,7 @@ export default function ProjectionTab() {
 
       const headers = [
           "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
-          "Living Expenses", "Mortgage & Debt", "Education Costs", "Contributions", "Withdrawals",
+          "Living Expenses", "Housing & Debt", "Education Costs", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
 
@@ -121,7 +119,7 @@ export default function ProjectionTab() {
               Math.round(getRealValue((y.grossInflow || 0) - totalClawback, y.year)),
               Math.round(getRealValue(totalTaxes, y.year)),
               Math.round(getRealValue(y.expenses || 0, y.year)),
-              Math.round(getRealValue((y.mortgagePay || 0) + baseDebtRepayment, y.year)),
+              Math.round(getRealValue((y.mortgagePay || 0) + (y.rentPay || 0) + baseDebtRepayment, y.year)),
               Math.round(getRealValue(y.eduExpense || 0, y.year)),
               Math.round(getRealValue(engineContributions, y.year)),
               Math.round(getRealValue(totalWithdrawals as number, y.year)),
@@ -221,7 +219,7 @@ export default function ProjectionTab() {
 
       const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
       const totalSourced = y.grossInflow || 0;
-      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
+      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.rentPay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
       
       if (totalSourced < totalSpent - 1) {
           hasShortfall = true;
@@ -770,7 +768,7 @@ export default function ProjectionTab() {
                 const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
-                const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + baseDebtRepayment + (y.eduExpense || 0);
+                const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + (y.rentPay || 0) + baseDebtRepayment + (y.eduExpense || 0);
 
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
                 const totalNW = y.liquidNW + (y.reIncludedEq || 0); 
@@ -865,18 +863,28 @@ export default function ProjectionTab() {
                                     
                                     <div className="flex-grow-1">
                                         <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Living Expenses</span><span className="fw-medium">{formatCurrency(y.expenses, y.year)}</span></div>
+                                        
                                         {y.mortgagePay > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="d-flex align-items-center text-muted ms-2">Mortgage Payments <InfoBtn align="right" title="Mortgage" text="Principal and interest payments for the year based on your amortization schedule."/></span>
                                                 <span>{formatCurrency(y.mortgagePay, y.year)}</span>
                                             </div>
                                         )}
+                                        
+                                        {y.rentPay > 0 && (
+                                            <div className="d-flex justify-content-between small mb-1 align-items-center">
+                                                <span className="d-flex align-items-center text-muted ms-2">Rent / LTC Payments <InfoBtn align="right" title="Rent" text="Monthly rent or Long-Term Care costs based on your housing setup."/></span>
+                                                <span>{formatCurrency(y.rentPay, y.year)}</span>
+                                            </div>
+                                        )}
+                                        
                                         {y.eduExpense > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold text-info">Education Costs</span>
                                                 <span className="fw-medium text-info">{formatCurrency(y.eduExpense, y.year)}</span>
                                             </div>
                                         )}
+                                        
                                         {baseDebtRepayment > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold" style={{ color: '#d97706' }}>Large Purchases/Debt</span>

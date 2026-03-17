@@ -492,13 +492,16 @@ export class FinanceEngine {
         let simProperties = JSON.parse(JSON.stringify(this.properties));
         let housingTransitions = JSON.parse(JSON.stringify(this.housingTransitions));
         
+        // --- STRICT HOUSING MODE CHECK ---
         let currentHousingMode = this.inputs.housing_mode || 'own';
         let primaryValue = currentHousingMode === 'own' ? (this.getVal('primary_value') || 0) : 0;
         let primaryMortgage = currentHousingMode === 'own' ? (this.getVal('primary_mortgage') || 0) : 0;
         let primaryRate = this.getVal('primary_rate') || 4.0;
         let primaryPayment = this.getVal('primary_payment') || 0;
         let primaryGrowth = (this.getVal('primary_growth') || 3.0) / 100;
-        let currentRent = currentHousingMode !== 'own' ? (this.getVal('primary_rent') || 0) : 0;
+        
+        // STRICTLY only pull current rent if mode is 'rent', ignores ghost inputs from 'free' mode.
+        let currentRent = currentHousingMode === 'rent' ? (this.getVal('primary_rent') || 0) : 0;
         
         const p1StartAge = currentYear - person1.dob.getFullYear();
         const p2StartAge = currentYear - person2.dob.getFullYear();
@@ -753,7 +756,7 @@ export class FinanceEngine {
             const outflowsObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, currentExpenseHaircut);
             let expenses = outflowsObj.total; const activeExpensePhases = outflowsObj.activePhases;
 
-            let mortgagePayment = 0, keptProperties: any[] = [];
+            let mortgagePayment = 0, rentPayment = 0, keptProperties: any[] = [];
             
             // --- PRIMARY HOUSING TRANSITIONS ---
             let transition = housingTransitions.find((t: any) => t.age === age1);
@@ -789,7 +792,6 @@ export class FinanceEngine {
                 }
             }
 
-            let housingExpensesThisYear = 0;
             let realEstateValue = 0, realEstateDebt = 0, reExcludedValue = 0, reExcludedDebt = 0;
 
             if (currentHousingMode === 'own') {
@@ -805,8 +807,8 @@ export class FinanceEngine {
                 realEstateDebt += primaryMortgage;
                 primaryValue *= (1 + primaryGrowth);
             } else if (currentHousingMode === 'rent' || currentHousingMode === 'ltc') {
-                housingExpensesThisYear = currentRent * 12 * baseInflation;
-                expenses += housingExpensesThisYear; 
+                // FIXED: Keep Rent completely separate from general living expenses
+                rentPayment = currentRent * 12 * baseInflation;
             }
 
             // --- RENTAL PROPERTIES ---
@@ -930,7 +932,7 @@ export class FinanceEngine {
             let netCashIncome1 = cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
             let netCashIncome2 = alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0;
             
-            let netSurplus = (netCashIncome1 + netCashIncome2) - (expenses + mortgagePayment + debtRepayment);
+            let netSurplus = (netCashIncome1 + netCashIncome2) - (expenses + mortgagePayment + rentPayment + debtRepayment);
             let actualDeductions = { p1: 0, p2: 0 };
             let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
 
@@ -945,13 +947,13 @@ export class FinanceEngine {
                     let dynTax2 = calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2);
                     tax1 = dynTax1; tax2 = dynTax2;
 
-                    let currentDeficit = (expenses + mortgagePayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
+                    let currentDeficit = (expenses + mortgagePayment + rentPayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
                     if (currentDeficit < 1) break; 
                     
                     handleDeficit(currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
                         if (prefix === 'p1') { craTaxableIncome1 += taxableAmt; cashIncome1 += cashAmt; }
                         if (prefix === 'p2') { craTaxableIncome2 += taxableAmt; cashIncome2 += cashAmt; }
-                    }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, simContext?.forceOrder || this.strategies.decum, getEligPension1(), getEligPension2(), this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, expenses);
+                    }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, simContext?.forceOrder || this.strategies.decum, getEligPension1(), getEligPension2(), this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, expenses + mortgagePayment + rentPayment + debtRepayment);
                 }
                 tax1 = calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1);
                 tax2 = calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2);
@@ -1021,9 +1023,9 @@ export class FinanceEngine {
                     actualDeductionsP1: actualDeductions.p1, actualDeductionsP2: actualDeductions.p2,
                     benefitsP1: inflows.p1.cpp + inflows.p1.oas, benefitsP2: inflows.p2.cpp + inflows.p2.oas, dbP1: inflows.p1.pension, dbP2: inflows.p2.pension,
                     taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0), p2Net: alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0, pensionSplit: pensionSplitTransfer,
-                    expenses: expenses, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, eduExpense, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
+                    expenses: expenses, rentPay: rentPayment, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, eduExpense, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
                     wdBreakdown: wdBreakdown, flows: flowLog, events: inflows.events, householdNet: grossInflow, grossInflow: grossInflow, 
-                    visualExpenses: expenses + mortgagePayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
+                    visualExpenses: expenses + mortgagePayment + rentPayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
                     reIncludedEq: realEstateValue - realEstateDebt, reExcludedEq: reExcludedValue - reExcludedDebt, reIncludedValue: realEstateValue,
                     windfall: inflows.p1.windfallTaxable + (inflows.p1.windfallNonTax - appliedRefundP1) + inflows.p2.windfallTaxable + (inflows.p2.windfallNonTax - appliedRefundP2),
                     postRetP1: inflows.p1.postRet, postRetP2: inflows.p2.postRet, invIncP1: divInc1 + cryptoYield1, invIncP2: divInc2 + cryptoYield2, invYieldMathP1: { bal: preGrowthNonreg1, rate: person1.nonreg_yield, amt: divInc1 },
