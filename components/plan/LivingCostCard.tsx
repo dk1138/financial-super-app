@@ -26,21 +26,6 @@ export default function LivingCostCard() {
   const transitions = data.housingTransitions || [];
   const rentals = data.properties || []; 
 
-  const getPhaseOptions = () => {
-      if (currentMode === 'own') {
-          return [
-              { value: 'downsize', label: 'Buy New' },
-              { value: 'rent', label: 'Rent' },
-              { value: 'ltc', label: 'LTC' }
-          ];
-      } else {
-          return [
-              { value: 'buy', label: 'Buy Home' },
-              { value: 'rent', label: 'Rent / LTC' }
-          ];
-      }
-  };
-
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
       <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
@@ -141,7 +126,7 @@ export default function LivingCostCard() {
         {/* --- SECTION 2: FUTURE HOUSING PHASES --- */}
         <div className="d-flex justify-content-between align-items-center mb-3">
             <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0"><i className="bi bi-fast-forward-circle-fill text-info me-2"></i>Future Housing Phases</h6>
-            <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('housingTransitions', { age: data.inputs.p1_retireAge || 65, action: currentMode === 'own' ? 'downsize' : 'buy', price: 500000, mortgage: 0, rate: 4.0, payment: 0, growth: 3.0, rent: 0 })}>
+            <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('housingTransitions', { age: data.inputs.p1_retireAge || 65, action: currentMode === 'own' ? 'downsize' : 'buy', price: 500000, mortgage: 0, rate: 4.0, payment: 0, growth: 3.0, rent: 0, keepPrevious: false })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Phase
             </button>
         </div>
@@ -151,112 +136,129 @@ export default function LivingCostCard() {
                 <span className="text-muted small fst-italic">No future housing changes planned. You will stay in your current living situation indefinitely.</span>
             </div>
         ) : (
-            <div className="d-flex flex-column gap-3 mb-5 border-start border-4 border-info ps-3 ms-2">
-                {transitions.map((phase: any, idx: number) => (
-                    <div className="border border-secondary rounded-4 bg-input p-3 position-relative shadow-sm" key={`phase_${idx}`}>
-                        <button type="button" className="btn btn-sm btn-link text-danger position-absolute top-0 end-0 mt-2 me-2 p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('housingTransitions', idx)}>
-                            <i className="bi bi-x-lg fs-5"></i>
-                        </button>
-                        
-                        <div className="row g-3 align-items-center">
-                            <div className="col-12 col-md-auto d-flex align-items-center gap-2">
-                                <span className="fw-bold text-muted small text-uppercase">At P1 Age</span>
-                                <div style={{width: '100px'}}>
-                                    <StepperInput min={18} max={120} value={phase.age || 65} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'age', val)} />
-                                </div>
-                            </div>
-                            <div className="col-12 col-md-auto d-flex align-items-center gap-2">
-                                <span className="fw-bold text-muted small text-uppercase me-1">I plan to</span>
-                                <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
-                                    {getPhaseOptions().map(opt => (
-                                        <button 
-                                            key={opt.value}
-                                            type="button" 
-                                            onClick={() => updateArrayItem('housingTransitions', idx, 'action', opt.value)} 
-                                            className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${phase.action === opt.value ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
-                                        >
-                                            {opt.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+            <div className="d-flex flex-column gap-4 mb-5">
+                {transitions.map((phase: any, idx: number) => {
+                    const minAge = idx === 0 ? (data.inputs.p1_age || 18) : (transitions[idx - 1].age);
+                    const isOwningPrior = idx === 0 ? (currentMode === 'own') : (transitions[idx - 1].action === 'downsize' || transitions[idx - 1].action === 'buy');
 
-                        {/* PHASE DETAILS (Clean separation without the blue box) */}
-                        <div className="mt-3 pt-3 border-top border-secondary border-opacity-25">
-                            {/* IF BUYING A HOME */}
-                            {(phase.action === 'downsize' || phase.action === 'buy') && (
-                                <div className="row g-4 mt-1">
-                                    <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4">
-                                        <h6 className="fw-bold text-success small text-uppercase ls-1 mb-3">Property Value</h6>
-                                        <div className="row g-3">
-                                            <div className="col-sm-7">
-                                                <label className="form-label small text-muted mb-1">Target Price (Today's $)</label>
-                                                <CurrencyInput className="form-control border-secondary" value={phase.price ?? 500000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'price', val)} />
-                                            </div>
-                                            <div className="col-sm-5">
-                                                <label className="form-label small text-muted mb-1">Growth (%)</label>
-                                                <PercentInput className="form-control border-secondary" value={phase.growth ?? 3.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'growth', val)} />
-                                            </div>
+                    return (
+                    <div className="p-0 border border-secondary rounded-4 shadow-sm overflow-hidden" key={`phase_${idx}`}>
+                        <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
+                            <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0"><i className="bi bi-arrow-right-circle-fill text-info me-2"></i>Housing Phase {idx + 1}</h6>
+                            <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('housingTransitions', idx)}>
+                                <i className="bi bi-x-lg fs-5"></i>
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 bg-input">
+                            <div className="row g-3 align-items-center mb-4">
+                                <div className="col-12 col-md-auto d-flex align-items-center gap-2">
+                                    <span className="fw-bold text-muted small text-uppercase">At P1 Age</span>
+                                    <div style={{width: '130px'}}>
+                                        <StepperInput min={minAge} max={99} value={phase.age || 65} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'age', val)} />
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-auto d-flex align-items-center gap-2">
+                                    <span className="fw-bold text-muted small text-uppercase me-1">I plan to</span>
+                                    <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
+                                        {[{value: 'downsize', label: 'Buy New'}, {value: 'rent', label: 'Rent'}, {value: 'ltc', label: 'LTC'}].map(opt => (
+                                            <button 
+                                                key={opt.value}
+                                                type="button" 
+                                                onClick={() => updateArrayItem('housingTransitions', idx, 'action', opt.value)} 
+                                                className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${phase.action === opt.value ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                {isOwningPrior && (
+                                    <div className="col-12 col-md-auto d-flex align-items-center gap-2 border-start-md border-secondary ps-md-3 ms-md-1 mt-3 mt-md-0">
+                                        <span className="fw-bold text-muted small text-uppercase me-1">Prev. Home:</span>
+                                        <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
+                                            <button type="button" onClick={() => updateArrayItem('housingTransitions', idx, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!phase.keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Sell</button>
+                                            <button type="button" onClick={() => updateArrayItem('housingTransitions', idx, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${phase.keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Keep</button>
                                         </div>
                                     </div>
+                                )}
+                            </div>
 
-                                    <div className="col-12 col-xl-7 ps-xl-4">
-                                        <div className="d-flex justify-content-between align-items-center mb-3">
-                                            <h6 className="fw-bold text-danger small text-uppercase ls-1 mb-0">Mortgage Details</h6>
-                                            {(phase.mortgage > 0) && (phase.rate > 0) && (
-                                                <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 fw-bold" style={{fontSize: '0.7rem'}} onClick={() => updateArrayItem('housingTransitions', idx, 'payment', Math.round(calc25YearPayment(phase.mortgage, phase.rate)))}>
-                                                    <i className="bi bi-magic me-1 text-primary"></i> Auto 25-Yr
-                                                </button>
-                                            )}
+                            {/* PHASE DETAILS */}
+                            <div className="pt-3 border-top border-secondary border-opacity-25">
+                                {/* IF BUYING A HOME */}
+                                {(phase.action === 'downsize' || phase.action === 'buy') && (
+                                    <div className="row g-4 mt-1">
+                                        <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4">
+                                            <h6 className="fw-bold text-success small text-uppercase ls-1 mb-3">Property Value</h6>
+                                            <div className="row g-3">
+                                                <div className="col-sm-7">
+                                                    <label className="form-label small text-muted mb-1">Target Price (Today's $)</label>
+                                                    <CurrencyInput className="form-control border-secondary" value={phase.price ?? 500000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'price', val)} />
+                                                </div>
+                                                <div className="col-sm-5">
+                                                    <label className="form-label small text-muted mb-1">Growth (%)</label>
+                                                    <PercentInput className="form-control border-secondary" value={phase.growth ?? 3.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'growth', val)} />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="row g-3">
-                                            <div className="col-sm-4">
-                                                <label className="form-label small text-muted mb-1">Planned Mort. ($)</label>
-                                                <CurrencyInput className="form-control border-secondary" value={phase.mortgage ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'mortgage', val)} />
+
+                                        <div className="col-12 col-xl-7 ps-xl-4">
+                                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                                <h6 className="fw-bold text-danger small text-uppercase ls-1 mb-0">Mortgage Details</h6>
+                                                {(phase.mortgage > 0) && (phase.rate > 0) && (
+                                                    <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 fw-bold" style={{fontSize: '0.7rem'}} onClick={() => updateArrayItem('housingTransitions', idx, 'payment', Math.round(calc25YearPayment(phase.mortgage, phase.rate)))}>
+                                                        <i className="bi bi-magic me-1 text-primary"></i> Auto 25-Yr
+                                                    </button>
+                                                )}
                                             </div>
-                                            <div className="col-sm-4">
-                                                <label className="form-label small text-muted mb-1">Int. Rate (%)</label>
-                                                <PercentInput className="form-control border-secondary" value={phase.rate ?? 4.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rate', val)} />
-                                            </div>
-                                            <div className="col-sm-4">
-                                                <label className="form-label small text-muted mb-1">Payment /mo ($)</label>
-                                                <CurrencyInput className="form-control border-secondary" value={phase.payment ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'payment', val)} />
-                                                <div className="text-info fw-bold mt-1 text-end text-nowrap" style={{fontSize: '0.7rem', height: '14px', letterSpacing: '-0.2px'}}>
-                                                    {phase.mortgage > 0 && phase.payment > 0 ? `Payoff: ${calcAmortization(phase.mortgage, phase.rate, phase.payment)}` : ''}
+                                            <div className="row g-3">
+                                                <div className="col-sm-4">
+                                                    <label className="form-label small text-muted mb-1">Planned Mort. ($)</label>
+                                                    <CurrencyInput className="form-control border-secondary" value={phase.mortgage ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'mortgage', val)} />
+                                                </div>
+                                                <div className="col-sm-4">
+                                                    <label className="form-label small text-muted mb-1">Int. Rate (%)</label>
+                                                    <PercentInput className="form-control border-secondary" value={phase.rate ?? 4.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rate', val)} />
+                                                </div>
+                                                <div className="col-sm-4">
+                                                    <label className="form-label small text-muted mb-1">Payment /mo ($)</label>
+                                                    <CurrencyInput className="form-control border-secondary" value={phase.payment ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'payment', val)} />
+                                                    <div className="text-info fw-bold mt-1 text-end text-nowrap" style={{fontSize: '0.7rem', height: '14px', letterSpacing: '-0.2px'}}>
+                                                        {phase.mortgage > 0 && phase.payment > 0 ? `Payoff: ${calcAmortization(phase.mortgage, phase.rate, phase.payment)}` : ''}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* IF RENTING OR LTC */}
-                            {(phase.action === 'rent' || phase.action === 'ltc') && (
-                                <div className="row g-3 align-items-center">
-                                    <div className="col-12 col-md-6 col-lg-4">
-                                        <label className="form-label small text-muted fw-bold mb-1">Monthly Cost (Today's $)</label>
-                                        <CurrencyInput className="form-control border-primary border-opacity-50 text-main fw-bold shadow-sm text-center" value={phase.rent ?? 4000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rent', val)} />
+                                {/* IF RENTING OR LTC */}
+                                {(phase.action === 'rent' || phase.action === 'ltc') && (
+                                    <div className="row g-3 align-items-center">
+                                        <div className="col-12 col-md-6 col-lg-4">
+                                            <label className="form-label small text-muted fw-bold mb-1">Monthly Cost (Today's $)</label>
+                                            <CurrencyInput className="form-control border-primary border-opacity-50 text-main fw-bold shadow-sm text-center" value={phase.rent ?? 4000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rent', val)} />
+                                        </div>
+                                        <div className="col-12 col-md-6 col-lg-8">
+                                            <span className="small text-muted fst-italic">
+                                                <i className="bi bi-info-circle me-1"></i>
+                                                {isOwningPrior && !phase.keepPrevious ? "Net cash from your home sale will be added to your portfolio to help fund this cost." : "This new amount will override your previous rent/housing costs."}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="col-12 col-md-6 col-lg-8">
-                                        <span className="small text-muted fst-italic">
-                                            <i className="bi bi-info-circle me-1"></i>
-                                            {currentMode === 'own' ? "Net cash from your home sale will be added to your portfolio to help fund this cost." : "This new amount will override your previous rent."}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
-                ))}
+                )})}
             </div>
         )}
 
-
         {/* --- SECTION 3: INVESTMENT / RENTAL PROPERTIES --- */}
-        <hr className="border-secondary opacity-50 mb-4" />
+        <hr className="border-secondary opacity-25 mt-5 mb-5" />
         
-        <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex justify-content-between align-items-center mb-4">
             <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0"><i className="bi bi-building-up text-success me-2"></i>Investment & Rental Properties</h6>
             <button type="button" className="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('properties', { name: `Rental Property`, value: 600000, mortgage: 300000, rate: 4.5, payment: 1700, growth: 3.0, rentalIncome: 2500, includeInNW: true, sellEnabled: false })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Property
@@ -264,7 +266,7 @@ export default function LivingCostCard() {
         </div>
 
         {rentals.length === 0 ? (
-            <div className="text-center text-muted small fst-italic">No investment properties added.</div>
+            <div className="text-center text-muted small fst-italic border border-secondary rounded-4 bg-input p-4 border-opacity-50 border-dashed">No investment properties added.</div>
         ) : (
             <div className="row g-4">
                 {rentals.map((prop: any, idx: number) => (
