@@ -92,23 +92,23 @@ export default function DieWithZero() {
             </div>
             <p className="text-muted small mb-4">Calculates the absolute maximum lifestyle you can afford every year without running out of money before your life expectancy.</p>
 
-            <div className="flex-grow-1 d-flex flex-column justify-content-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4 position-relative overflow-hidden">
-                {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center" style={{zIndex: 10}}><span className="spinner-border text-success"></span></div>}
+            <div className="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4 bg-input border border-secondary rounded-4 shadow-inner mb-4 position-relative overflow-hidden">
+                {isCalculating && <div className="position-absolute top-0 start-0 w-100 h-100 bg-black bg-opacity-50 d-flex align-items-center justify-content-center" style={{zIndex: 10}}><span className="spinner-border text-success" style={{width: '3rem', height: '3rem'}}></span></div>}
                 
                 {maxSpendResult ? (
                     maxSpendResult.difference > 0 ? (
                         <>
-                            <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Max Safe Spend</span>
-                            <span className="fs-2 fw-bolder text-success mb-3">{formatCurrency(maxSpendResult.optSpend)} <span className="fs-6 text-muted fw-normal">/yr</span></span>
-                            <span className="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-3 py-2 mx-auto shadow-sm">
+                            <span className="text-muted fw-bold text-uppercase ls-1 mb-2" style={{letterSpacing: '0.1rem'}}>Max Safe Spend</span>
+                            <span className="display-3 fw-bolder text-success mb-3 lh-1" style={{letterSpacing: '-2px'}}>{formatCurrency(maxSpendResult.optSpend)} <span className="fs-5 text-muted fw-bold" style={{letterSpacing: '0px'}}>/yr</span></span>
+                            <span className="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-4 py-2 shadow-sm fs-6">
                                 <i className="bi bi-arrow-up-circle-fill me-2"></i>You can spend {formatCurrency(maxSpendResult.difference)} more per year
                             </span>
                         </>
                     ) : (
                         <>
-                            <span className="text-muted fw-bold small text-uppercase ls-1 mb-2">Current Plan Status</span>
-                            <span className="fs-3 fw-bolder text-danger mb-3">Overspending</span>
-                            <span className="badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill px-3 py-2 mx-auto text-wrap shadow-sm" style={{lineHeight: 1.5}}>
+                            <span className="text-muted fw-bold text-uppercase ls-1 mb-2" style={{letterSpacing: '0.1rem'}}>Current Plan Status</span>
+                            <span className="display-4 fw-bolder text-danger mb-3 lh-1">Overspending</span>
+                            <span className="badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill px-4 py-2 text-wrap shadow-sm fs-6" style={{lineHeight: 1.5}}>
                                 <i className="bi bi-exclamation-triangle-fill me-2"></i>Cut expenses by {formatCurrency(Math.abs(maxSpendResult.difference))} /yr
                             </span>
                         </>
