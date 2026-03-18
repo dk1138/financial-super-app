@@ -12,6 +12,8 @@ export interface FinanceData {
     expenseMode: 'Simple' | 'Advanced';
     inputs: Record<string, any>;
     properties: any[];
+    housingTransitions: any[]; // <-- Added
+    expensePhases: any[];      // <-- Added
     windfalls: any[];
     additionalIncome: any[];
     customAssets: any[];
@@ -24,6 +26,7 @@ export interface FinanceData {
     };
     expensesByCategory: Record<string, any>;
     constants: any;
+    strategyLabels?: any;      // <-- Added
 }
 
 interface FinanceState {
@@ -157,13 +160,22 @@ export const emptyData: FinanceData = {
         exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
         emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
     },
-    properties: [], windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
+    properties: [], 
+    housingTransitions: [], // <-- Added
+    expensePhases: [],      // <-- Added
+    windfalls: [], 
+    additionalIncome: [], 
+    customAssets: [], 
+    leaves: [], 
+    dependents: [], 
+    debt: [],
     strategies: {
         accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'],
         decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto']
     },
     expensesByCategory: { housing: { items: [] }, transport: { items: [] }, lifestyle: { items: [] }, essentials: { items: [] }, other: { items: [] } },
-    constants: FINANCIAL_CONSTANTS
+    constants: FINANCIAL_CONSTANTS,
+    strategyLabels: {} // <-- Added
 };
 
 export const defaultData: FinanceData = { ...emptyData, mode: 'Couple' };
@@ -176,7 +188,8 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
     merged.useRealDollars = parsedData.useRealDollars ?? parsedData.inputs?.useRealDollars ?? false;
     merged.expenseMode = parsedData.expenseMode || (parsedData.inputs?.expense_mode_advanced ? 'Advanced' : 'Simple');
 
-    ['properties', 'windfalls', 'additionalIncome', 'customAssets', 'leaves', 'dependents', 'debt'].forEach(arr => {
+    // Make sure we carry over the new arrays
+    ['properties', 'housingTransitions', 'expensePhases', 'windfalls', 'additionalIncome', 'customAssets', 'leaves', 'dependents', 'debt'].forEach(arr => {
         if (parsedData[arr]) merged[arr] = parsedData[arr];
     });
 
@@ -395,6 +408,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
         return () => clearInterval(backupIntervalId);
     }, [hasHydrated]);
-
+maybe
     return <>{children}</>;
 }
