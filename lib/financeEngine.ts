@@ -983,7 +983,10 @@ export class FinanceEngine {
             previousAFNI = Math.max(0, (craTaxableIncome1 - actualDeductions.p1) + (craTaxableIncome2 - actualDeductions.p2));
 
             // --- APPLY GLOBAL TIMING DELTA MATH ---
-            let timingStr = this.inputs.cashflow_timing || 'end';
+            // Fix: Fallback through possible key names to catch the toggle regardless of UI binding, 
+            // and rigidly enforce lowercasing so the string match doesn't fail.
+            let rawTiming = this.inputs.contribution_timing || this.inputs.cashflow_timing || this.inputs.timing || 'end';
+            let timingStr = String(rawTiming).toLowerCase();
             let timingMultiplier = timingStr === 'start' ? 1.0 : (timingStr === 'mid' ? 0.5 : 0.0);
 
             if (timingMultiplier > 0) {
@@ -992,8 +995,11 @@ export class FinanceEngine {
                         const delta = (person[key] || 0) - (postGrowth[key] || 0);
                         if (delta !== 0 && rates && rates[key] !== undefined) {
                             let r = rates[key];
-                            if (key === 'nonreg') r = rates.nonreg - person.nonreg_yield;
-                            person[key] += delta * r * timingMultiplier;
+                            if (key === 'nonreg') r = Math.max(0, rates.nonreg - (person.nonreg_yield || 0));
+                            
+                            // The bonus/penalty growth on the delta amount
+                            const timingAdjustment = delta * r * timingMultiplier;
+                            person[key] += timingAdjustment;
                         }
                     });
                 };
