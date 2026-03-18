@@ -192,6 +192,8 @@ export class FinanceEngine {
         
         applyGrowthToPerson(person1, ratesP1, isRet1); 
         applyGrowthToPerson(person2, ratesP2, isRet2);
+
+        return { ratesP1, ratesP2 };
     }
 
     calcInflows(currentYear: number, yearIndex: number, person1: any, person2: any, age1: number, age2: number, alive1: boolean, alive2: boolean, isRet1: boolean, isRet2: boolean, constants: any, baseInflation: number, trackedEvents: any) {
@@ -495,17 +497,12 @@ export class FinanceEngine {
         let simProperties = JSON.parse(JSON.stringify(this.properties));
         let housingTransitions = JSON.parse(JSON.stringify(this.housingTransitions));
         
-        // --- STRICT HOUSING STATE INIT WITH DEFAULTS ---
         let currentHousingMode = this.inputs.housing_mode || 'own';
-        
-        // If mode is not "own", mathematically enforce $0 for ownership fields
         let primaryValue = currentHousingMode === 'own' ? (this.inputs.primary_value !== undefined ? this.getVal('primary_value') : 800000) : 0;
         let primaryMortgage = currentHousingMode === 'own' ? (this.inputs.primary_mortgage !== undefined ? this.getVal('primary_mortgage') : 400000) : 0;
         let primaryRate = this.inputs.primary_rate !== undefined ? this.getVal('primary_rate') : 4.0;
         let primaryPayment = currentHousingMode === 'own' ? (this.inputs.primary_payment !== undefined ? this.getVal('primary_payment') : 2000) : 0;
         let primaryGrowth = (this.inputs.primary_growth !== undefined ? this.getVal('primary_growth') : 3.0) / 100;
-        
-        // If mode is not "rent", mathematically enforce $0 for rental field
         let currentRent = currentHousingMode === 'rent' ? (this.inputs.primary_rent !== undefined ? this.getVal('primary_rent') : 2500) : 0;
         
         const p1StartAge = currentYear - person1.dob.getFullYear();
@@ -578,7 +575,11 @@ export class FinanceEngine {
             const preGrowthNonreg1 = person1.nonreg, preGrowthNonreg2 = person2.nonreg;
             const preGrowthCrypto1 = person1.crypto, preGrowthCrypto2 = person2.crypto;
 
-            this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
+            // PRE-FLOW SNAPSHOT FOR TIMING DELTA
+            const preFlowP1 = { tfsa: person1.tfsa, rrsp: person1.rrsp, nonreg: person1.nonreg, cash: person1.cash, crypto: person1.crypto, fhsa: person1.fhsa || 0, lirf: person1.lirf, lif: person1.lif, rrif_acct: person1.rrif_acct, resp: person1.resp || 0 };
+            const preFlowP2 = { tfsa: person2.tfsa, rrsp: person2.rrsp, nonreg: person2.nonreg, cash: person2.cash, crypto: person2.crypto, fhsa: person2.fhsa || 0, lirf: person2.lirf, lif: person2.lif, rrif_acct: person2.rrif_acct, resp: person2.resp || 0 };
+
+            const { ratesP1, ratesP2 } = this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
 
             let inflows = this.calcInflows(yr, i, person1, person2, age1, age2, alive1, alive2, isRet1, isRet2, consts, baseInflation, detailed ? trackedEvents : null);
             if (detailed && deathEvents.length > 0) inflows.events.push(...deathEvents);
@@ -767,12 +768,28 @@ export class FinanceEngine {
             let transition = housingTransitions.find((t: any) => t.age === age1);
             if (transition) {
                 if (currentHousingMode === 'own') {
-                    let proceeds = primaryValue;
-                    let transCosts = proceeds * 0.05;
-                    let netCash = proceeds - primaryMortgage - transCosts;
-                    if (netCash > 0) inflows.p1.windfallNonTax += netCash;
-                    primaryValue = 0; primaryMortgage = 0; primaryPayment = 0;
-                    if (detailed && !trackedEvents.has('Sold Primary Home')) { trackedEvents.add('Sold Primary Home'); inflows.events.push('Sold Primary Home'); }
+                    if (transition.keepPrevious) {
+                        simProperties.push({
+                            name: `Retained Home (Age ${age1})`,
+                            value: primaryValue,
+                            mortgage: primaryMortgage,
+                            rate: primaryRate,
+                            payment: primaryPayment,
+                            growth: primaryGrowth * 100, 
+                            rentalIncome: 0,
+                            includeInNW: true,
+                            sellEnabled: false
+                        });
+                        primaryValue = 0; primaryMortgage = 0; primaryPayment = 0;
+                        if (detailed && !trackedEvents.has('Kept Previous Home')) { trackedEvents.add('Kept Previous Home'); inflows.events.push('Kept Previous Home'); }
+                    } else {
+                        let proceeds = primaryValue;
+                        let transCosts = proceeds * 0.05;
+                        let netCash = proceeds - primaryMortgage - transCosts;
+                        if (netCash > 0) inflows.p1.windfallNonTax += netCash;
+                        primaryValue = 0; primaryMortgage = 0; primaryPayment = 0;
+                        if (detailed && !trackedEvents.has('Sold Primary Home')) { trackedEvents.add('Sold Primary Home'); inflows.events.push('Sold Primary Home'); }
+                    }
                 }
                 
                 if (transition.action === 'downsize' || transition.action === 'buy') {
@@ -782,13 +799,16 @@ export class FinanceEngine {
                     let downPayment = primaryValue - primaryMortgage;
                     inflows.p1.windfallNonTax -= downPayment;
                     
+                    primaryRate = transition.rate !== undefined ? transition.rate : 4.0;
+                    primaryGrowth = (transition.growth !== undefined ? transition.growth : 3.0) / 100;
+
                     if (primaryMortgage > 0) {
                         let r = primaryRate / 100 / 12;
                         let payment = transition.payment || 0;
                         if (payment === 0) payment = r === 0 ? primaryMortgage / 300 : (primaryMortgage * r) / (1 - Math.pow(1 + r, -300));
                         primaryPayment = payment;
                     } else {
-                        primaryPayment = 0;
+                        primaryPayment = 0; 
                     }
                     currentRent = 0;
                     if (detailed && !trackedEvents.has('Bought New Home')) { trackedEvents.add('Bought New Home'); inflows.events.push('Bought New Home'); }
@@ -881,16 +901,13 @@ export class FinanceEngine {
             });
 
             let unfundedEdu = eduExpense;
-            let timingStr = this.inputs.cashflow_timing || 'end';
-
+            
+            // RESP withdrawals are now evaluated purely on nominal cash need 
+            // since the global timing adjustment handles the exact lost interest.
             if (unfundedEdu > 0 && person1.resp > 0) {
-                let r = this.getVal('p1_resp_ret') / 100;
-                if (this.inputs.use_glide_path) r = Math.max(0.04, r - Math.max(0, age1-50)*0.001);
-                let m1 = timingStr === 'start' ? 1 + r : (timingStr === 'mid' ? 1 + r/2 : 1);
-                
-                let p1Take = Math.min(person1.resp / m1, unfundedEdu);
+                let p1Take = Math.min(person1.resp, unfundedEdu);
                 if (p1Take > 0) {
-                    person1.resp -= (p1Take * m1);
+                    person1.resp -= p1Take;
                     unfundedEdu -= p1Take;
                     if (detailed) {
                         flowLog.withdrawals['P1 RESP'] = (flowLog.withdrawals['P1 RESP'] || 0) + p1Take;
@@ -902,13 +919,9 @@ export class FinanceEngine {
                 }
             }
             if (this.mode === 'Couple' && unfundedEdu > 0 && person2.resp > 0) {
-                let r = this.getVal('p2_resp_ret') / 100;
-                if (this.inputs.use_glide_path) r = Math.max(0.04, r - Math.max(0, age2-50)*0.001);
-                let m2 = timingStr === 'start' ? 1 + r : (timingStr === 'mid' ? 1 + r/2 : 1);
-                
-                let p2Take = Math.min(person2.resp / m2, unfundedEdu);
+                let p2Take = Math.min(person2.resp, unfundedEdu);
                 if (p2Take > 0) {
-                    person2.resp -= (p2Take * m2);
+                    person2.resp -= p2Take;
                     unfundedEdu -= p2Take;
                     if (detailed) {
                         flowLog.withdrawals['P2 RESP'] = (flowLog.withdrawals['P2 RESP'] || 0) + p2Take;
@@ -970,6 +983,27 @@ export class FinanceEngine {
 
             previousAFNI = Math.max(0, (craTaxableIncome1 - actualDeductions.p1) + (craTaxableIncome2 - actualDeductions.p2));
 
+            // --- APPLY GLOBAL TIMING DELTA MATH ---
+            let timingStr = this.inputs.cashflow_timing || 'end';
+            let timingMultiplier = timingStr === 'start' ? 1.0 : (timingStr === 'mid' ? 0.5 : 0.0);
+
+            if (timingMultiplier > 0) {
+                const applyTiming = (person: any, preFlow: any, rates: any) => {
+                    ['tfsa', 'rrsp', 'nonreg', 'cash', 'crypto', 'fhsa', 'lirf', 'lif', 'rrif_acct', 'resp'].forEach(key => {
+                        const delta = (person[key] || 0) - (preFlow[key] || 0);
+                        if (delta !== 0 && rates[key] !== undefined) {
+                            let r = rates[key];
+                            // Non-Reg's yield is paid out as intra-year cash, so we only apply the remaining unrealized growth rate to the net delta
+                            if (key === 'nonreg') r = rates.nonreg - person.nonreg_yield;
+                            person[key] += delta * r * timingMultiplier;
+                        }
+                    });
+                };
+                if (alive1) applyTiming(person1, preFlowP1, ratesP1);
+                if (alive2) applyTiming(person2, preFlowP2, ratesP2);
+            }
+
+            // Floor checks
             person1.tfsa = Math.max(0, person1.tfsa); person1.rrsp = Math.max(0, person1.rrsp); person1.cash = Math.max(0, person1.cash); person1.nonreg = Math.max(0, person1.nonreg); person1.crypto = Math.max(0, person1.crypto);
             person2.tfsa = Math.max(0, person2.tfsa); person2.rrsp = Math.max(0, person2.rrsp); person2.cash = Math.max(0, person2.cash); person2.nonreg = Math.max(0, person2.nonreg); person2.crypto = Math.max(0, person2.crypto);
 
