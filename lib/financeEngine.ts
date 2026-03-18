@@ -983,13 +983,14 @@ export class FinanceEngine {
             previousAFNI = Math.max(0, (craTaxableIncome1 - actualDeductions.p1) + (craTaxableIncome2 - actualDeductions.p2));
 
             // --- APPLY GLOBAL TIMING DELTA MATH ---
-            // Fix: Fallback through possible key names to catch the toggle regardless of UI binding, 
-            // and rigidly enforce lowercasing so the string match doesn't fail.
-            let rawTiming = this.inputs.contribution_timing || this.inputs.cashflow_timing || this.inputs.timing || 'end';
-            let timingStr = String(rawTiming).toLowerCase();
-            let timingMultiplier = timingStr === 'start' ? 1.0 : (timingStr === 'mid' ? 0.5 : 0.0);
+            // Fix: Isolate Contribution vs Withdrawal timing triggers!
+            let contTimingStr = String(this.inputs.contribution_timing || this.inputs.cashflow_timing || 'end').toLowerCase();
+            let wdTimingStr = String(this.inputs.withdrawal_timing || this.inputs.cashflow_timing || 'end').toLowerCase();
+            
+            let contMultiplier = contTimingStr === 'start' ? 1.0 : (contTimingStr === 'mid' ? 0.5 : 0.0);
+            let wdMultiplier = wdTimingStr === 'start' ? 1.0 : (wdTimingStr === 'mid' ? 0.5 : 0.0);
 
-            if (timingMultiplier > 0) {
+            if (contMultiplier > 0 || wdMultiplier > 0) {
                 const applyTiming = (person: any, postGrowth: any, rates: any) => {
                     ['tfsa', 'rrsp', 'nonreg', 'cash', 'crypto', 'fhsa', 'lirf', 'lif', 'rrif_acct', 'resp'].forEach(key => {
                         const delta = (person[key] || 0) - (postGrowth[key] || 0);
@@ -997,8 +998,9 @@ export class FinanceEngine {
                             let r = rates[key];
                             if (key === 'nonreg') r = Math.max(0, rates.nonreg - (person.nonreg_yield || 0));
                             
-                            // The bonus/penalty growth on the delta amount
-                            const timingAdjustment = delta * r * timingMultiplier;
+                            // Apply penalty for withdrawals vs bonus for contributions
+                            const multiplier = delta > 0 ? contMultiplier : wdMultiplier;
+                            const timingAdjustment = delta * r * multiplier;
                             person[key] += timingAdjustment;
                         }
                     });
