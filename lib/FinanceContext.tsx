@@ -5,113 +5,104 @@ import { create } from 'zustand';
 import { FINANCIAL_CONSTANTS } from './config';
 import { calculatePlanScore } from './financeEngine';
 
-// --- EXACT AGE CALCULATOR (MONTH & YEAR) ---
+// --- TYPES & INTERFACES ---
+export interface FinanceData {
+    mode: 'Single' | 'Couple';
+    useRealDollars: boolean;
+    expenseMode: 'Simple' | 'Advanced';
+    inputs: Record<string, any>;
+    properties: any[];
+    windfalls: any[];
+    additionalIncome: any[];
+    customAssets: any[];
+    leaves: any[];
+    dependents: any[];
+    debt: any[];
+    strategies: {
+        accum: string[];
+        decum: string[];
+    };
+    expensesByCategory: Record<string, any>;
+    constants: any;
+}
+
+interface FinanceState {
+    data: FinanceData;
+    results: any;
+    planScore: any;
+    isCalculating: boolean;
+    mcResults: any;
+    setData: (updater: FinanceData | ((prev: FinanceData) => FinanceData)) => void;
+    setResults: (results: any) => void;
+    setIsCalculating: (isCalculating: boolean) => void;
+    setMcResults: (mcResults: any) => void;
+}
+
+// --- HELPER FUNCTIONS ---
 const calculateExactAge = (dobString: string): number => {
-  if (!dobString || typeof dobString !== 'string') return 0;
-  
-  const parts = dobString.split(/[-/T ]/); 
-  if (parts.length < 2) {
-      const year = parseInt(dobString, 10);
-      if (!isNaN(year)) return Math.max(0, new Date().getFullYear() - year);
-      return 0;
-  }
+    if (!dobString || typeof dobString !== 'string') return 0;
+    const parts = dobString.split(/[-/T ]/);
+    if (parts.length < 2) {
+        const year = parseInt(dobString, 10);
+        return isNaN(year) ? 0 : Math.max(0, new Date().getFullYear() - year);
+    }
+    const dobYear = parseInt(parts[0], 10);
+    const dobMonth = parseInt(parts[1], 10);
+    const dobDay = parts.length >= 3 ? parseInt(parts[2], 10) : 1;
+    if (isNaN(dobYear) || isNaN(dobMonth)) return 0;
 
-  const dobYear = parseInt(parts[0], 10);
-  const dobMonth = parseInt(parts[1], 10);
-  const dobDay = parts.length >= 3 ? parseInt(parts[2], 10) : 1; 
-  
-  if (isNaN(dobYear) || isNaN(dobMonth)) return 0;
-
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth() + 1; // JS getMonth() is 0-indexed (Jan=0)
-  const currentDay = today.getDate();
-
-  let age = currentYear - dobYear;
-  
-  // If the current month is before the birth month, OR it's the birth month but the day hasn't arrived
-  if (currentMonth < dobMonth || (currentMonth === dobMonth && currentDay < dobDay)) {
-    age--;
-  }
-  
-  return Math.max(0, age);
+    const today = new Date();
+    let age = today.getFullYear() - dobYear;
+    if (today.getMonth() + 1 < dobMonth || (today.getMonth() + 1 === dobMonth && today.getDate() < dobDay)) {
+        age--;
+    }
+    return Math.max(0, age);
 };
 
-// --- REVERSE DOB CALCULATOR (FOR AGE STEPPER FIX) ---
 const shiftDobYear = (dobString: string, targetAge: number): string => {
     if (!dobString || typeof dobString !== 'string') return `${new Date().getFullYear() - targetAge}-01`;
-    
     const parts = dobString.split('-');
-    const monthStr = parts[1] || '01';
-    const dayStr = parts[2] || '';
-    
-    const month = parseInt(monthStr, 10);
-    const day = dayStr ? parseInt(dayStr, 10) : 1;
-    
+    const month = parseInt(parts[1] || '01', 10);
+    const day = parts[2] ? parseInt(parts[2], 10) : 1;
     const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1;
-    const currentDay = today.getDate();
     
-    let newYear = currentYear - targetAge;
-    
-    // If they haven't had their birthday yet this year, they were actually born a year earlier!
-    if (currentMonth < month || (currentMonth === month && currentDay < day)) {
+    let newYear = today.getFullYear() - targetAge;
+    if (today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)) {
         newYear--;
     }
-    
-    return dayStr ? `${newYear}-${monthStr}-${dayStr}` : `${newYear}-${monthStr}`;
+    return parts[2] ? `${newYear}-${parts[1] || '01'}-${parts[2]}` : `${newYear}-${parts[1] || '01'}`;
 };
 
-// --- STRICT BOUNDARY ENFORCERS ---
-const boundAge = (age: number): number => {
-    if (isNaN(age)) return 30; // Safe fallback
-    return Math.max(1, Math.min(99, age)); // Clamps between 1 and 99
-};
+const boundAge = (age: number): number => Math.max(1, Math.min(99, isNaN(age) ? 30 : age));
 
 const boundDob = (dobString: string): string => {
     if (!dobString || typeof dobString !== 'string') return `${new Date().getFullYear()}-01`;
     const parts = dobString.split('-');
     let year = parseInt(parts[0], 10);
-    if (isNaN(year)) return `${new Date().getFullYear()}-01`;
-    
     const currentYear = new Date().getFullYear();
-    
-    // Enforce 1900 to Current Year boundaries
-    if (year < 1900) year = 1900;
-    if (year > currentYear) year = currentYear;
-    
+    year = Math.max(1900, Math.min(currentYear, isNaN(year) ? currentYear : year));
     return `${year}-${parts[1] || '01'}${parts[2] ? '-' + parts[2] : ''}`;
 };
 
-// --- 2-WAY BINDING SYNC WITH GUARDRAILS ---
 const syncAgeAndDob = (player: string, prevInputs: any, finalInputs: any) => {
-    let oldAge = prevInputs[`${player}_age`];
+    const oldAge = prevInputs[`${player}_age`];
     let newAge = finalInputs[`${player}_age`];
-    let oldDob = prevInputs[`${player}_dob`] || "1990-01";
+    const oldDob = prevInputs[`${player}_dob`] || "1990-01";
     let newDob = finalInputs[`${player}_dob`] || oldDob;
 
     const ageChanged = oldAge !== newAge;
     const dobChanged = oldDob !== newDob;
 
     if (ageChanged && !dobChanged) {
-        // User clicked the Age Stepper. Shift DOB and Enforce Bounds.
         newAge = boundAge(newAge);
         finalInputs[`${player}_age`] = newAge;
         finalInputs[`${player}_dob`] = boundDob(shiftDobYear(oldDob, newAge));
-    } 
-    else if (dobChanged && !ageChanged) {
-        // User used the Month Picker. Recalculate Age and Enforce Bounds.
+    } else if (dobChanged && !ageChanged) {
         newDob = boundDob(newDob);
         finalInputs[`${player}_dob`] = newDob;
         finalInputs[`${player}_age`] = boundAge(calculateExactAge(newDob));
-    }
-    else if (ageChanged && dobChanged) {
-        // UI sent both simultaneously. Determine true intent:
-        const oldMonth = oldDob.split('-')[1];
-        const newMonth = newDob.split('-')[1];
-        
-        if (oldMonth !== newMonth) {
+    } else if (ageChanged && dobChanged) {
+        if (oldDob.split('-')[1] !== newDob.split('-')[1]) {
             newDob = boundDob(newDob);
             finalInputs[`${player}_dob`] = newDob;
             finalInputs[`${player}_age`] = boundAge(calculateExactAge(newDob));
@@ -123,145 +114,61 @@ const syncAgeAndDob = (player: string, prevInputs: any, finalInputs: any) => {
     }
 };
 
-// --- STRICT SANITIZATION ENGINE ---
 const sanitizeValue = (val: any): any => {
-  if (typeof val === 'string') {
-    let cleanStr = val.replace(/<\/?[^>]+(>|$)/g, "");
-    if (cleanStr.length > 100) cleanStr = cleanStr.substring(0, 100);
-    return cleanStr;
-  }
-  if (typeof val === 'number') {
-    if (isNaN(val) || !isFinite(val)) return 0;
-    if (val > 1000000000) return 1000000000; 
-    if (val < -1000000000) return -1000000000;
+    if (typeof val === 'string') return val.replace(/<\/?[^>]+(>|$)/g, "").substring(0, 100);
+    if (typeof val === 'number') return isNaN(val) || !isFinite(val) ? 0 : Math.max(-1000000000, Math.min(1000000000, val));
     return val;
-  }
-  return val; 
 };
 
-export const defaultData = {
-  mode: 'Couple',
-  useRealDollars: false, 
-  expenseMode: 'Simple',
-  inputs: {
-    p1_dob: '1996-01', p1_age: 30, p1_retireAge: 65, p1_lifeExp: 90,
-    p1_income: 85000, p1_income_growth: 2.0, p1_rrsp_match: 3.0, p1_rrsp_match_tier: 100.0,
-    p1_cash: 10000, p1_cash_ret: 2.0,
-    p1_tfsa: 25000, p1_tfsa_ret: 6.0,
-    p1_fhsa: 0, p1_fhsa_ret: 6.0,
-    p1_rrsp: 35000, p1_rrsp_ret: 6.0,
-    p1_resp: 0, p1_resp_ret: 6.0,
-    p1_lirf: 0, p1_lirf_ret: 6.0,
-    p1_lif: 0, p1_lif_ret: 5.0,
-    p1_rrif_acct: 0, p1_rrif_acct_ret: 5.0,
-    p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0,
-    p1_crypto: 0, p1_crypto_acb: 0, p1_crypto_ret: 8.0,
-    p1_cpp_enabled: true, p1_cpp_est_base: 12000, p1_cpp_start: 65,
-    p1_oas_enabled: true, p1_oas_years: 40, p1_oas_start: 65,
+// --- DATA SCHEMAS ---
+export const emptyData: FinanceData = {
+    mode: 'Single',
+    useRealDollars: false,
+    expenseMode: 'Simple',
+    inputs: {
+        p1_dob: '1990-01', p1_age: 35, p1_retireAge: 60, p1_lifeExp: 90,
+        p1_income: 0, p1_income_growth: 2.0, p1_rrsp_match: 0.0, p1_rrsp_match_tier: 0.0,
+        p1_cash: 0, p1_cash_ret: 2.0, p1_tfsa: 0, p1_tfsa_ret: 6.0, p1_fhsa: 0, p1_fhsa_ret: 6.0,
+        p1_rrsp: 0, p1_rrsp_ret: 6.0, p1_resp: 0, p1_resp_ret: 6.0, p1_lirf: 0, p1_lirf_ret: 6.0,
+        p1_lif: 0, p1_lif_ret: 5.0, p1_rrif_acct: 0, p1_rrif_acct_ret: 5.0,
+        p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0,
+        p1_crypto: 0, p1_crypto_acb: 0, p1_crypto_ret: 8.0,
+        p1_cpp_enabled: true, p1_cpp_est_base: 0, p1_cpp_start: 65,
+        p1_oas_enabled: true, p1_oas_years: 0, p1_oas_start: 65,
 
-    p2_dob: '1996-01', p2_age: 30, p2_retireAge: 65, p2_lifeExp: 90,
-    p2_income: 75000, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 100.0,
-    p2_cash: 5000, p2_cash_ret: 2.0,
-    p2_tfsa: 15000, p2_tfsa_ret: 6.0,
-    p2_fhsa: 0, p2_fhsa_ret: 6.0,
-    p2_rrsp: 25000, p2_rrsp_ret: 6.0,
-    p2_resp: 0, p2_resp_ret: 6.0,
-    p2_lirf: 0, p2_lirf_ret: 6.0,
-    p2_lif: 0, p2_lif_ret: 5.0,
-    p2_rrif_acct: 0, p2_rrif_acct_ret: 5.0,
-    p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0,
-    p2_crypto: 0, p2_crypto_acb: 0, p2_crypto_ret: 8.0,
-    p2_cpp_enabled: true, p2_cpp_est_base: 10000, p2_cpp_start: 65,
-    p2_oas_enabled: true, p2_oas_years: 40, p2_oas_start: 65,
+        p2_dob: '1990-01', p2_age: 35, p2_retireAge: 60, p2_lifeExp: 90,
+        p2_income: 0, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 0.0,
+        p2_cash: 0, p2_cash_ret: 2.0, p2_tfsa: 0, p2_tfsa_ret: 6.0, p2_fhsa: 0, p2_fhsa_ret: 6.0,
+        p2_rrsp: 0, p2_rrsp_ret: 6.0, p2_resp: 0, p2_resp_ret: 6.0, p2_lirf: 0, p2_lirf_ret: 6.0,
+        p2_lif: 0, p2_lif_ret: 5.0, p2_rrif_acct: 0, p2_rrif_acct_ret: 5.0,
+        p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0,
+        p2_crypto: 0, p2_crypto_acb: 0, p2_crypto_ret: 8.0,
+        p2_cpp_enabled: true, p2_cpp_est_base: 0, p2_cpp_start: 65,
+        p2_oas_enabled: true, p2_oas_years: 0, p2_oas_start: 65,
 
-    inflation_rate: 2.1, tax_province: 'ON',
-    cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000, 
-    cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
-    
-    portfolio_allocation: 'custom', use_glide_path: false,
-    fully_optimize_tax: false, oas_clawback_optimize: false, rrsp_meltdown_enabled: false, enable_guardrails: false,
-    skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
-    skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
-    exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
-    
-    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
-  },
-  properties: [
-    {
-        name: 'Primary Residence',
-        value: 700000,
-        mortgage: 350000,
-        rate: 4.5,
-        payment: 1945, 
-        growth: 3.0,
-        includeInNW: true,
-        sellEnabled: false
-    }
-  ], 
-  windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
-  strategies: { 
-    accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
-    decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
-  },
-  expensesByCategory: {
-    housing: { items: [{ name: 'Property Tax, Insurance & Utilities', curr: 800, ret: 800, trans: 800, gogo: 800, slow: 800, nogo: 800, freq: 12 }] },
-    transport: { items: [{ name: 'Vehicle / Insurance / Gas', curr: 800, ret: 600, trans: 700, gogo: 600, slow: 400, nogo: 150, freq: 12 }] },
-    lifestyle: { items: [{ name: 'Dining, Travel & Hobbies', curr: 1200, ret: 1800, trans: 1500, gogo: 1800, slow: 800, nogo: 300, freq: 12 }] },
-    essentials: { items: [{ name: 'Groceries / Health', curr: 1000, ret: 1000, trans: 1000, gogo: 1000, slow: 1200, nogo: 1500, freq: 12 }] },
-    other: { items: [{ name: 'Miscellaneous', curr: 500, ret: 300, trans: 400, gogo: 300, slow: 300, nogo: 300, freq: 12 }] }
-  },
-  constants: FINANCIAL_CONSTANTS 
+        inflation_rate: 2.1, tax_province: 'ON',
+        cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000,
+        cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
+        
+        portfolio_allocation: 'custom', use_glide_path: false,
+        fully_optimize_tax: false, oas_clawback_optimize: false, rrsp_meltdown_enabled: false, enable_guardrails: false,
+        skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
+        skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
+        exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
+        emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
+    },
+    properties: [], windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
+    strategies: {
+        accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'],
+        decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto']
+    },
+    expensesByCategory: { housing: { items: [] }, transport: { items: [] }, lifestyle: { items: [] }, essentials: { items: [] }, other: { items: [] } },
+    constants: FINANCIAL_CONSTANTS
 };
 
-export const emptyData = {
-  mode: 'Single',
-  useRealDollars: false, 
-  expenseMode: 'Simple',
-  inputs: {
-    p1_dob: '1990-01', p1_age: 35, p1_retireAge: 60, p1_lifeExp: 90,
-    p1_income: 0, p1_income_growth: 2.0, p1_rrsp_match: 0.0, p1_rrsp_match_tier: 0.0,
-    p1_cash: 0, p1_cash_ret: 2.0, p1_tfsa: 0, p1_tfsa_ret: 6.0, p1_fhsa: 0, p1_fhsa_ret: 6.0,
-    p1_rrsp: 0, p1_rrsp_ret: 6.0, p1_resp: 0, p1_resp_ret: 6.0, p1_lirf: 0, p1_lirf_ret: 6.0,
-    p1_lif: 0, p1_lif_ret: 5.0, p1_rrif_acct: 0, p1_rrif_acct_ret: 5.0,
-    p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0,
-    p1_crypto: 0, p1_crypto_acb: 0, p1_crypto_ret: 8.0,
-    p1_cpp_enabled: true, p1_cpp_est_base: 0, p1_cpp_start: 65,
-    p1_oas_enabled: true, p1_oas_years: 0, p1_oas_start: 65,
+export const defaultData: FinanceData = { ...emptyData, mode: 'Couple' };
 
-    p2_dob: '1990-01', p2_age: 35, p2_retireAge: 60, p2_lifeExp: 90,
-    p2_income: 0, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 0.0,
-    p2_cash: 0, p2_cash_ret: 2.0, p2_tfsa: 0, p2_tfsa_ret: 6.0, p2_fhsa: 0, p2_fhsa_ret: 6.0,
-    p2_rrsp: 0, p2_rrsp_ret: 6.0, p2_resp: 0, p2_resp_ret: 6.0, p2_lirf: 0, p2_lirf_ret: 6.0,
-    p2_lif: 0, p2_lif_ret: 5.0, p2_rrif_acct: 0, p2_rrif_acct_ret: 5.0,
-    p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0,
-    p2_crypto: 0, p2_crypto_acb: 0, p2_crypto_ret: 8.0,
-    p2_cpp_enabled: true, p2_cpp_est_base: 0, p2_cpp_start: 65,
-    p2_oas_enabled: true, p2_oas_years: 0, p2_oas_start: 65,
-
-    inflation_rate: 2.1, tax_province: 'ON',
-    cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000, 
-    cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
-    
-    portfolio_allocation: 'custom', use_glide_path: false,
-    fully_optimize_tax: false, oas_clawback_optimize: false, rrsp_meltdown_enabled: false, enable_guardrails: false,
-    skip_first_tfsa_p1: false, skip_first_rrsp_p1: false,
-    skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
-    exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
-    
-    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
-  },
-  properties: [], windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
-  strategies: { 
-    accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
-    decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
-  },
-  expensesByCategory: {
-    housing: { items: [] }, transport: { items: [] }, lifestyle: { items: [] }, essentials: { items: [] }, other: { items: [] }
-  },
-  constants: FINANCIAL_CONSTANTS 
-};
-
-export const migrateLegacyData = (parsedData: any, baseData: any) => {
+export const migrateLegacyData = (parsedData: any, baseData: FinanceData): FinanceData => {
     const merged = JSON.parse(JSON.stringify(baseData));
     if (!parsedData) return merged;
 
@@ -282,13 +189,11 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
         Object.keys(parsedData.expensesData).forEach(k => {
             const lowerK = k.toLowerCase();
             const items = parsedData.expensesData[k].items || [];
-            
             items.forEach((item: any) => {
                 ['curr', 'ret', 'trans', 'gogo', 'slow', 'nogo'].forEach(f => {
                     if (typeof item[f] === 'string') item[f] = parseFloat(item[f].replace(/,/g, '')) || 0;
                 });
             });
-
             if (lowerK === 'housing') merged.expensesByCategory.housing.items.push(...items);
             else if (lowerK === 'living' || lowerK === 'kids') merged.expensesByCategory.essentials.items.push(...items);
             else if (lowerK === 'lifestyle') merged.expensesByCategory.lifestyle.items.push(...items);
@@ -301,7 +206,6 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
     if (parsedData.inputs) {
         Object.keys(parsedData.inputs).forEach(k => {
             let val = parsedData.inputs[k];
-            
             if (typeof val === 'string' && /^-?[0-9,]+(\.[0-9]+)?$/.test(val)) {
                 const parsedNum = parseFloat(val.replace(/,/g, ''));
                 if (!isNaN(parsedNum)) val = parsedNum;
@@ -316,13 +220,8 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
 
             merged.inputs[newKey] = val;
         });
-        
-        // Ensure new variables exist even on old saved plans
-        merged.inputs.emergency_fund_mode = parsedData.inputs.emergency_fund_mode || 'none';
-        merged.inputs.emergency_fund_custom_amount = parsedData.inputs.emergency_fund_custom_amount || 0;
     }
 
-    // Apply Boundaries to legacy loaded data
     ['p1', 'p2'].forEach(player => {
         let dob = merged.inputs[`${player}_dob`];
         if (dob) {
@@ -336,195 +235,166 @@ export const migrateLegacyData = (parsedData: any, baseData: any) => {
     return merged;
 };
 
-// --- ZUSTAND STATE STORE ---
-export const useFinanceStore = create<any>((set) => ({
-  data: defaultData,
-  results: null,
-  planScore: null,
-  isCalculating: true,
-  mcResults: null, 
-  setMcResults: (mcResults: any) => set({ mcResults }), 
-  setData: (updater: any) => set((state: any) => ({ data: typeof updater === 'function' ? updater(state.data) : updater })),
-  setResults: (results: any) => set((state: any) => ({ 
-      results, 
-      planScore: calculatePlanScore(state.data, results?.timeline), 
-      isCalculating: false 
-  })),
-  setIsCalculating: (isCalculating: boolean) => set({ isCalculating })
+// --- ZUSTAND STORE ---
+export const useFinanceStore = create<FinanceState>((set) => ({
+    data: defaultData,
+    results: null,
+    planScore: null,
+    isCalculating: true,
+    mcResults: null,
+    setMcResults: (mcResults) => set({ mcResults }),
+    setData: (updater) => set((state) => ({ 
+        data: typeof updater === 'function' ? updater(state.data) : updater 
+    })),
+    setResults: (results) => set((state) => ({
+        results,
+        planScore: calculatePlanScore(state.data, results?.timeline),
+        isCalculating: false
+    })),
+    setIsCalculating: (isCalculating) => set({ isCalculating })
 }));
 
-export function FinanceProvider({ children }: { children: ReactNode }) {
-  const data = useFinanceStore(state => state.data);
-  const setResults = useFinanceStore(state => state.setResults);
-  const setIsCalculating = useFinanceStore(state => state.setIsCalculating);
-  const setData = useFinanceStore(state => state.setData);
-  const workerRef = useRef<Worker | null>(null);
+// --- GLOBAL HOOK FOR COMPONENTS ---
+export function useFinance() {
+    const store = useFinanceStore();
 
-  const [hasHydrated, setHasHydrated] = useState(false);
-
-  const dataRef = useRef(data);
-  useEffect(() => {
-    dataRef.current = data;
-  }, [data]);
-
-  useEffect(() => {
-    try {
-      const savedData = localStorage.getItem('retirement_plan_data');
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        if (parsedData && parsedData.inputs) {
-          setData(migrateLegacyData(parsedData, emptyData));
+    return {
+        ...store,
+        updateInput: (key: string, value: any) => store.setData((prev) => {
+            const finalInputs = { ...prev.inputs, [key]: sanitizeValue(value) };
+            syncAgeAndDob('p1', prev.inputs, finalInputs);
+            syncAgeAndDob('p2', prev.inputs, finalInputs);
+            return { ...prev, inputs: finalInputs };
+        }),
+        updateMultipleInputs: (updates: Record<string, any>) => {
+            const cleanUpdates: Record<string, any> = {};
+            Object.keys(updates).forEach(k => cleanUpdates[k] = sanitizeValue(updates[k]));
+            store.setData((prev) => {
+                const finalInputs = { ...prev.inputs, ...cleanUpdates };
+                syncAgeAndDob('p1', prev.inputs, finalInputs);
+                syncAgeAndDob('p2', prev.inputs, finalInputs);
+                return { ...prev, inputs: finalInputs };
+            });
+        },
+        updateMode: (newMode: 'Single' | 'Couple') => store.setData((prev) => ({ ...prev, mode: newMode })),
+        updateUseRealDollars: (val: boolean) => store.setData((prev) => ({ ...prev, useRealDollars: val })),
+        addArrayItem: (listName: keyof FinanceData, defaultObj: any) => store.setData((prev) => ({ 
+            ...prev, [listName]: [...((prev[listName] as any[]) || []), defaultObj] 
+        })),
+        updateArrayItem: (listName: keyof FinanceData, index: number, field: string, value: any) => store.setData((prev) => {
+            const newList = [...((prev[listName] as any[]) || [])];
+            newList[index] = { ...newList[index], [field]: sanitizeValue(value) };
+            return { ...prev, [listName]: newList };
+        }),
+        removeArrayItem: (listName: keyof FinanceData, index: number) => store.setData((prev) => {
+            const newList = [...((prev[listName] as any[]) || [])];
+            newList.splice(index, 1);
+            return { ...prev, [listName]: newList };
+        }),
+        updateStrategy: (type: 'accum' | 'decum', newList: string[]) => store.setData((prev) => ({ 
+            ...prev, strategies: { ...prev.strategies, [type]: newList } 
+        })),
+        loadData: (newPlanData: any) => store.setData(migrateLegacyData(newPlanData, emptyData)),
+        resetData: () => {
+            store.setData(emptyData);
+            localStorage.removeItem('retirement_plan_data');
         }
-      }
-    } catch (e) {
-      console.error("Failed to parse local storage data:", e);
-    }
-    
-    setHasHydrated(true);
-
-    workerRef.current = new Worker(new URL('./financeWorker.ts', import.meta.url));
-    
-    workerRef.current.onmessage = (e) => {
-      if (e.data.status === 'success') {
-        setResults(e.data.results);
-      } else {
-        console.error("Worker Error:", e.data.error);
-        setIsCalculating(false);
-      }
     };
-
-    return () => {
-      workerRef.current?.terminate();
-    };
-  }, []);
-
-  // --- EFFECT 1: FAST CALCULATOR ENGINE (300ms delay) ---
-  useEffect(() => {
-    if (!hasHydrated) return;
-
-    setIsCalculating(true);
-    
-    // Auto-wipe stale Monte Carlo results if any inputs change!
-    useFinanceStore.setState({ mcResults: null });
-
-    const calcTimeoutId = setTimeout(() => {
-      if (workerRef.current) {
-        workerRef.current.postMessage({
-          data: JSON.parse(JSON.stringify(data)),
-          detailed: true
-        });
-      }
-    }, 300);
-
-    return () => clearTimeout(calcTimeoutId);
-  }, [data, hasHydrated]);
-
-  // --- EFFECT 2: DEBOUNCED LOCAL STORAGE SAVER (1500ms delay) ---
-  useEffect(() => {
-    if (!hasHydrated) return;
-
-    const saveTimeoutId = setTimeout(() => {
-      try {
-        localStorage.setItem('retirement_plan_data', JSON.stringify(data));
-      } catch (err) {
-        console.error("Auto-save to local storage failed:", err);
-      }
-    }, 1500);
-
-    return () => clearTimeout(saveTimeoutId);
-  }, [data, hasHydrated]);
-
-  // --- EFFECT 3: 1-MINUTE ROTATING BACKUP ---
-  useEffect(() => {
-    if (!hasHydrated) return;
-
-    const backupIntervalId = setInterval(() => {
-      try {
-        const backupName = "Latest Auto-Backup";
-        localStorage.setItem(`rp_saved_plan_${backupName}`, JSON.stringify(dataRef.current));
-        
-        let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-        if (!plans.includes(backupName)) {
-          plans.unshift(backupName); 
-          localStorage.setItem('rp_plan_list', JSON.stringify(plans));
-        }
-      } catch (err) {
-        console.error("Auto-Backup failed:", err);
-      }
-    }, 60 * 1000); 
-
-    return () => clearInterval(backupIntervalId);
-  }, [hasHydrated]);
-
-  return <>{children}</>;
 }
 
-export function useFinance() {
-  const store = useFinanceStore();
-
-  return {
-    data: store.data,
-    results: store.results,
-    planScore: store.planScore,
-    isCalculating: store.isCalculating,
+// --- SIDE-EFFECT MANAGER (Replaces pure React Context) ---
+export function FinanceProvider({ children }: { children: ReactNode }) {
+    const data = useFinanceStore(state => state.data);
+    const setResults = useFinanceStore(state => state.setResults);
+    const setIsCalculating = useFinanceStore(state => state.setIsCalculating);
+    const setData = useFinanceStore(state => state.setData);
     
-    mcResults: store.mcResults, 
-    setMcResults: store.setMcResults,
+    const workerRef = useRef<Worker | null>(null);
+    const [hasHydrated, setHasHydrated] = useState(false);
+    const dataRef = useRef(data);
 
-    // --- ENFORCED INPUT HANDLERS ---
-    updateInput: (key: string, value: any) => store.setData((prev: any) => {
-      const cleanVal = sanitizeValue(value);
-      const finalInputs = { ...prev.inputs, [key]: cleanVal };
-      
-      syncAgeAndDob('p1', prev.inputs, finalInputs);
-      syncAgeAndDob('p2', prev.inputs, finalInputs);
+    useEffect(() => {
+        dataRef.current = data;
+    }, [data]);
 
-      return { ...prev, inputs: finalInputs };
-    }),
+    // 1. Initialization
+    useEffect(() => {
+        try {
+            const savedData = localStorage.getItem('retirement_plan_data');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                if (parsedData && parsedData.inputs) {
+                    setData(migrateLegacyData(parsedData, emptyData));
+                }
+            }
+        } catch (e) {
+            console.error("Failed to parse local storage data:", e);
+        }
 
-    updateMultipleInputs: (updates: Record<string, any>) => {
-       const cleanUpdates: Record<string, any> = {};
-       Object.keys(updates).forEach(k => cleanUpdates[k] = sanitizeValue(updates[k]));
+        setHasHydrated(true);
 
-       store.setData((prev: any) => {
-           const finalInputs = { ...prev.inputs, ...cleanUpdates };
-           
-           syncAgeAndDob('p1', prev.inputs, finalInputs);
-           syncAgeAndDob('p2', prev.inputs, finalInputs);
+        workerRef.current = new Worker(new URL('./financeWorker.ts', import.meta.url));
+        workerRef.current.onmessage = (e) => {
+            if (e.data.status === 'success') {
+                setResults(e.data.results);
+            } else {
+                console.error("Worker Error:", e.data.error);
+                setIsCalculating(false);
+            }
+        };
 
-           return { ...prev, inputs: finalInputs };
-       });
-    },
-    
-    updateMode: (newMode: 'Single' | 'Couple') => store.setData((prev: any) => ({ ...prev, mode: newMode })),
-    updateUseRealDollars: (val: boolean) => store.setData((prev: any) => ({ ...prev, useRealDollars: val })),
-    addArrayItem: (listName: string, defaultObj: any) => store.setData((prev: any) => ({ ...prev, [listName]: [...(prev[listName] || []), defaultObj] })),
-    updateArrayItem: (listName: string, index: number, field: string, value: any) => store.setData((prev: any) => {
-      const newList = [...(prev[listName] || [])];
-      newList[index] = { ...newList[index], [field]: sanitizeValue(value) };
-      return { ...prev, [listName]: newList };
-    }),
-    removeArrayItem: (listName: string, index: number) => store.setData((prev: any) => {
-      const newList = [...(prev[listName] || [])];
-      newList.splice(index, 1);
-      return { ...prev, [listName]: newList };
-    }),
-    updateStrategy: (type: 'accum' | 'decum', newList: string[]) => store.setData((prev: any) => ({ ...prev, strategies: { ...prev.strategies, [type]: newList } })),
-    updateExpenseCategory: (catKey: string, items: any[]) => store.setData((prev: any) => ({
-      ...prev,
-      expensesByCategory: {
-        ...prev.expensesByCategory,
-        [catKey]: { items: items.map((item: any) => {
-            const cleanItem: any = {};
-            Object.keys(item).forEach(k => cleanItem[k] = sanitizeValue(item[k]));
-            return cleanItem;
-        })}
-      }
-    })),
-    loadData: (newPlanData: any) => store.setData(migrateLegacyData(newPlanData, emptyData)),
-    resetData: () => {
-      store.setData(emptyData);
-      localStorage.removeItem('retirement_plan_data');
-    }
-  };
+        return () => workerRef.current?.terminate();
+    }, []);
+
+    // 2. Calculation Engine Trigger
+    useEffect(() => {
+        if (!hasHydrated) return;
+        setIsCalculating(true);
+        useFinanceStore.setState({ mcResults: null });
+
+        const calcTimeoutId = setTimeout(() => {
+            if (workerRef.current) {
+                workerRef.current.postMessage({ data: JSON.parse(JSON.stringify(data)), detailed: true });
+            }
+        }, 300);
+
+        return () => clearTimeout(calcTimeoutId);
+    }, [data, hasHydrated]);
+
+    // 3. Local Storage Saver
+    useEffect(() => {
+        if (!hasHydrated) return;
+        const saveTimeoutId = setTimeout(() => {
+            try {
+                localStorage.setItem('retirement_plan_data', JSON.stringify(data));
+            } catch (err) {
+                console.error("Auto-save failed:", err);
+            }
+        }, 1500);
+
+        return () => clearTimeout(saveTimeoutId);
+    }, [data, hasHydrated]);
+
+    // 4. Rotating Backup
+    useEffect(() => {
+        if (!hasHydrated) return;
+        const backupIntervalId = setInterval(() => {
+            try {
+                const backupName = "Latest Auto-Backup";
+                localStorage.setItem(`rp_saved_plan_${backupName}`, JSON.stringify(dataRef.current));
+
+                let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
+                if (!plans.includes(backupName)) {
+                    plans.unshift(backupName);
+                    localStorage.setItem('rp_plan_list', JSON.stringify(plans));
+                }
+            } catch (err) {
+                console.error("Auto-Backup failed:", err);
+            }
+        }, 60 * 1000);
+
+        return () => clearInterval(backupIntervalId);
+    }, [hasHydrated]);
+
+    return <>{children}</>;
 }
