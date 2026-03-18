@@ -26,6 +26,21 @@ export default function LivingCostCard() {
   const transitions = data.housingTransitions || [];
   const rentals = data.properties || []; 
 
+  const getPhaseOptions = () => {
+      if (currentMode === 'own') {
+          return [
+              { value: 'downsize', label: 'Buy New' },
+              { value: 'rent', label: 'Rent' },
+              { value: 'ltc', label: 'LTC' }
+          ];
+      } else {
+          return [
+              { value: 'buy', label: 'Buy Home' },
+              { value: 'rent', label: 'Rent / LTC' }
+          ];
+      }
+  };
+
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
       <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
@@ -42,8 +57,9 @@ export default function LivingCostCard() {
         {/* --- SECTION 1: CURRENT SITUATION --- */}
         <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-3"><i className="bi bi-geo-alt-fill text-primary me-2"></i>Current Primary Residence</h6>
         <div className="p-0 border border-secondary rounded-4 mb-5 shadow-sm overflow-hidden">
-            <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex flex-column align-items-center">
-                <div style={{ maxWidth: '400px', width: '100%' }}>
+            
+            <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex flex-wrap justify-content-center align-items-center gap-3">
+                <div style={{ maxWidth: '400px', flexGrow: 1 }}>
                     <SegmentedControl 
                         value={currentMode} 
                         onChange={(val: any) => updateInput('housing_mode', val)} 
@@ -54,6 +70,16 @@ export default function LivingCostCard() {
                         ]} 
                     />
                 </div>
+                {/* DYNAMIC KEEP/SELL PILL FOR CURRENT RESIDENCE */}
+                {currentMode === 'own' && transitions.length > 0 && (
+                    <div className="d-flex align-items-center gap-2 border-start-md border-secondary ps-md-3">
+                        <span className="fw-bold text-muted small text-uppercase me-1">At the end I plan to</span>
+                        <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
+                            <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!transitions[0].keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Sell</button>
+                            <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${transitions[0].keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Keep</button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="p-4 bg-input">
@@ -139,8 +165,7 @@ export default function LivingCostCard() {
             <div className="d-flex flex-column gap-4 mb-5">
                 {transitions.map((phase: any, idx: number) => {
                     const minAge = idx === 0 ? (data.inputs.p1_age || 18) : (transitions[idx - 1].age);
-                    const isOwningPrior = idx === 0 ? (currentMode === 'own') : (transitions[idx - 1].action === 'downsize' || transitions[idx - 1].action === 'buy');
-
+                    
                     return (
                     <div className="p-0 border border-secondary rounded-4 shadow-sm overflow-hidden" key={`phase_${idx}`}>
                         <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
@@ -154,14 +179,14 @@ export default function LivingCostCard() {
                             <div className="row g-3 align-items-center mb-4">
                                 <div className="col-12 col-md-auto d-flex align-items-center gap-2">
                                     <span className="fw-bold text-muted small text-uppercase">At P1 Age</span>
-                                    <div style={{width: '130px'}}>
+                                    <div style={{width: '140px'}}>
                                         <StepperInput min={minAge} max={99} value={phase.age || 65} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'age', val)} />
                                     </div>
                                 </div>
                                 <div className="col-12 col-md-auto d-flex align-items-center gap-2">
                                     <span className="fw-bold text-muted small text-uppercase me-1">I plan to</span>
                                     <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
-                                        {[{value: 'downsize', label: 'Buy New'}, {value: 'rent', label: 'Rent'}, {value: 'ltc', label: 'LTC'}].map(opt => (
+                                        {getPhaseOptions().map(opt => (
                                             <button 
                                                 key={opt.value}
                                                 type="button" 
@@ -173,12 +198,14 @@ export default function LivingCostCard() {
                                         ))}
                                     </div>
                                 </div>
-                                {isOwningPrior && (
+                                
+                                {/* DYNAMIC KEEP/SELL PILL FOR PHASED RESIDENCE */}
+                                {transitions.length > idx + 1 && (phase.action === 'downsize' || phase.action === 'buy') && (
                                     <div className="col-12 col-md-auto d-flex align-items-center gap-2 border-start-md border-secondary ps-md-3 ms-md-1 mt-3 mt-md-0">
-                                        <span className="fw-bold text-muted small text-uppercase me-1">Prev. Home:</span>
+                                        <span className="fw-bold text-muted small text-uppercase me-1">At the end I plan to</span>
                                         <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
-                                            <button type="button" onClick={() => updateArrayItem('housingTransitions', idx, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!phase.keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Sell</button>
-                                            <button type="button" onClick={() => updateArrayItem('housingTransitions', idx, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${phase.keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Keep</button>
+                                            <button type="button" onClick={() => updateArrayItem('housingTransitions', idx + 1, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!transitions[idx + 1].keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Sell</button>
+                                            <button type="button" onClick={() => updateArrayItem('housingTransitions', idx + 1, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${transitions[idx + 1].keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Keep</button>
                                         </div>
                                     </div>
                                 )}
@@ -243,7 +270,7 @@ export default function LivingCostCard() {
                                         <div className="col-12 col-md-6 col-lg-8">
                                             <span className="small text-muted fst-italic">
                                                 <i className="bi bi-info-circle me-1"></i>
-                                                {isOwningPrior && !phase.keepPrevious ? "Net cash from your home sale will be added to your portfolio to help fund this cost." : "This new amount will override your previous rent/housing costs."}
+                                                This rent will automatically replace your previous primary housing costs on the timeline.
                                             </span>
                                         </div>
                                     </div>
