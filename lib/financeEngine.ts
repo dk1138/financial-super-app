@@ -193,6 +193,7 @@ export class FinanceEngine {
         applyGrowthToPerson(person1, ratesP1, isRet1); 
         applyGrowthToPerson(person2, ratesP2, isRet2);
 
+        // RETURN RATES FOR TIMING DELTA CALCULATIONS LATER
         return { ratesP1, ratesP2 };
     }
 
@@ -575,11 +576,11 @@ export class FinanceEngine {
             const preGrowthNonreg1 = person1.nonreg, preGrowthNonreg2 = person2.nonreg;
             const preGrowthCrypto1 = person1.crypto, preGrowthCrypto2 = person2.crypto;
 
-            // PRE-FLOW SNAPSHOT FOR TIMING DELTA
-            const preFlowP1 = { tfsa: person1.tfsa, rrsp: person1.rrsp, nonreg: person1.nonreg, cash: person1.cash, crypto: person1.crypto, fhsa: person1.fhsa || 0, lirf: person1.lirf, lif: person1.lif, rrif_acct: person1.rrif_acct, resp: person1.resp || 0 };
-            const preFlowP2 = { tfsa: person2.tfsa, rrsp: person2.rrsp, nonreg: person2.nonreg, cash: person2.cash, crypto: person2.crypto, fhsa: person2.fhsa || 0, lirf: person2.lirf, lif: person2.lif, rrif_acct: person2.rrif_acct, resp: person2.resp || 0 };
-
+            // SNAPSHOT PORTFOLIO BEFORE CASHFLOWS FOR TIMING DELTA
             const { ratesP1, ratesP2 } = this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
+            
+            const postGrowthP1 = { tfsa: person1.tfsa, rrsp: person1.rrsp, nonreg: person1.nonreg, cash: person1.cash, crypto: person1.crypto, fhsa: person1.fhsa || 0, lirf: person1.lirf, lif: person1.lif, rrif_acct: person1.rrif_acct, resp: person1.resp || 0 };
+            const postGrowthP2 = { tfsa: person2.tfsa, rrsp: person2.rrsp, nonreg: person2.nonreg, cash: person2.cash, crypto: person2.crypto, fhsa: person2.fhsa || 0, lirf: person2.lirf, lif: person2.lif, rrif_acct: person2.rrif_acct, resp: person2.resp || 0 };
 
             let inflows = this.calcInflows(yr, i, person1, person2, age1, age2, alive1, alive2, isRet1, isRet2, consts, baseInflation, detailed ? trackedEvents : null);
             if (detailed && deathEvents.length > 0) inflows.events.push(...deathEvents);
@@ -901,9 +902,7 @@ export class FinanceEngine {
             });
 
             let unfundedEdu = eduExpense;
-            
-            // RESP withdrawals are now evaluated purely on nominal cash need 
-            // since the global timing adjustment handles the exact lost interest.
+
             if (unfundedEdu > 0 && person1.resp > 0) {
                 let p1Take = Math.min(person1.resp, unfundedEdu);
                 if (p1Take > 0) {
@@ -988,19 +987,18 @@ export class FinanceEngine {
             let timingMultiplier = timingStr === 'start' ? 1.0 : (timingStr === 'mid' ? 0.5 : 0.0);
 
             if (timingMultiplier > 0) {
-                const applyTiming = (person: any, preFlow: any, rates: any) => {
+                const applyTiming = (person: any, postGrowth: any, rates: any) => {
                     ['tfsa', 'rrsp', 'nonreg', 'cash', 'crypto', 'fhsa', 'lirf', 'lif', 'rrif_acct', 'resp'].forEach(key => {
-                        const delta = (person[key] || 0) - (preFlow[key] || 0);
-                        if (delta !== 0 && rates[key] !== undefined) {
+                        const delta = (person[key] || 0) - (postGrowth[key] || 0);
+                        if (delta !== 0 && rates && rates[key] !== undefined) {
                             let r = rates[key];
-                            // Non-Reg's yield is paid out as intra-year cash, so we only apply the remaining unrealized growth rate to the net delta
                             if (key === 'nonreg') r = rates.nonreg - person.nonreg_yield;
                             person[key] += delta * r * timingMultiplier;
                         }
                     });
                 };
-                if (alive1) applyTiming(person1, preFlowP1, ratesP1);
-                if (alive2) applyTiming(person2, preFlowP2, ratesP2);
+                if (alive1) applyTiming(person1, postGrowthP1, ratesP1);
+                if (alive2) applyTiming(person2, postGrowthP2, ratesP2);
             }
 
             // Floor checks
