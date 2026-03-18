@@ -58,8 +58,8 @@ export default function LivingCostCard() {
         <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-3"><i className="bi bi-geo-alt-fill text-primary me-2"></i>Current Primary Residence</h6>
         <div className="p-0 border border-secondary rounded-4 mb-5 shadow-sm overflow-hidden">
             
-            <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex flex-wrap justify-content-center align-items-center gap-3">
-                <div style={{ maxWidth: '400px', flexGrow: 1 }}>
+            <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex flex-wrap align-items-center gap-3">
+                <div style={{ width: '100%', maxWidth: '320px' }}>
                     <SegmentedControl 
                         value={currentMode} 
                         onChange={(val: any) => updateInput('housing_mode', val)} 
@@ -73,7 +73,7 @@ export default function LivingCostCard() {
                 {/* DYNAMIC KEEP/SELL PILL FOR CURRENT RESIDENCE */}
                 {currentMode === 'own' && transitions.length > 0 && (
                     <div className="d-flex align-items-center gap-2 border-start-md border-secondary ps-md-3">
-                        <span className="fw-bold text-muted small me-1">Upon Transition:</span>
+                        <span className="fw-bold text-muted small me-1">End of Current Phase</span>
                         <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
                             <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!transitions[0].keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Sell</button>
                             <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${transitions[0].keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Keep</button>
@@ -202,8 +202,8 @@ export default function LivingCostCard() {
                                 
                                 {/* DYNAMIC KEEP/SELL PILL FOR PRIOR PHASED RESIDENCE */}
                                 {isOwningPrior && transitions.length > idx + 1 && (phase.action === 'downsize' || phase.action === 'buy') && (
-                                    <div className="col-12 col-md-auto d-flex align-items-center gap-2 border-start-md border-secondary ps-md-3 ms-md-1">
-                                        <span className="fw-bold text-muted small me-1">Prior Home</span>
+                                    <div className="col-12 col-md-auto d-flex align-items-center gap-2 border-start-md border-secondary ps-md-3 ms-md-1 mt-3 mt-md-0">
+                                        <span className="fw-bold text-muted small me-1">End of Phase {idx + 1}</span>
                                         <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
                                             <button type="button" onClick={() => updateArrayItem('housingTransitions', idx + 1, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!transitions[idx + 1].keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Sell</button>
                                             <button type="button" onClick={() => updateArrayItem('housingTransitions', idx + 1, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${transitions[idx + 1].keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Keep</button>
@@ -360,7 +360,7 @@ export default function LivingCostCard() {
                                     {prop.sellEnabled && (
                                         <div className="d-flex align-items-center gap-2">
                                             <span className="small text-muted fw-bold">Age</span>
-                                            <div style={{width: '80px'}}>
+                                            <div style={{width: '130px'}}>
                                                 <StepperInput min={18} max={120} value={prop.sellAge ?? (data.inputs.p1_retireAge || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'sellAge', val)} />
                                             </div>
                                         </div>
