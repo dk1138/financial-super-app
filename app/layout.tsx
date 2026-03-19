@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import SessionWrapper from "../components/SessionWrapper"; 
+import { FinanceProvider } from "../lib/FinanceContext";
+import GlobalHeader from "../components/GlobalHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Retirement Planner Pro",
-  description: "Advanced retirement forecasting and optimization.",
+  title: "Financial Super App",
+  description: "Advanced retirement forecasting and expense tracking.",
 };
 
 export default function RootLayout({
@@ -21,7 +23,19 @@ export default function RootLayout({
       </head>
       <body>
         <SessionWrapper> 
-          {children}
+          <FinanceProvider>
+            <div className="container-fluid pb-4 min-vh-100 transition-all position-relative d-flex flex-column" style={{ maxWidth: '1700px' }}>
+              
+              {/* This navigation bar will now persist across all routes */}
+              <GlobalHeader />
+              
+              {/* Next.js will swap the Planner and Expense Tracker in here */}
+              <main className="flex-grow-1 d-flex flex-column">
+                {children}
+              </main>
+
+            </div>
+          </FinanceProvider>
           <Analytics />
         </SessionWrapper>
       </body>
