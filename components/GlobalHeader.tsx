@@ -1,18 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link'; // <-- Added for instant pre-fetching
 import { signOut, useSession } from 'next-auth/react';
 import { useFinance } from '../lib/FinanceContext';
 
 export default function GlobalHeader() {
     const { data: session } = useSession();
     const pathname = usePathname();
-    const router = useRouter();
     const financeContext = useFinance() as any;
     const { data, updateUseRealDollars, resetData } = financeContext;
 
-    // --- THEME STATE (Persistent) ---
+    const headerRef = useRef<HTMLDivElement>(null);
+
+    // --- THEME STATE ---
     const [theme, setTheme] = useState('dark');
 
     // --- FILE MANAGEMENT STATE ---
@@ -34,28 +36,36 @@ export default function GlobalHeader() {
 
     const activeModule = pathname.includes('/expenses') ? 'expenses' : 'planner';
 
-    // --- INITIALIZE THEME & SAVED PLANS ---
+    // --- INITIALIZATION & DYNAMIC HEIGHT SYNC ---
     useEffect(() => {
-        // Theme Persistence
         const savedTheme = localStorage.getItem('appTheme') || 'dark';
         setTheme(savedTheme);
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
 
-        // File Management Persistence
         const currentName = localStorage.getItem('active_plan_name') || 'Untitled Plan';
         setActivePlanName(currentName);
         setNewPlanName(currentName === 'Untitled Plan' ? '' : currentName);
-        const plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-        setSavedPlans(plans);
+        setSavedPlans(JSON.parse(localStorage.getItem('rp_plan_list') || '[]'));
 
-        // Listen for Splash Screen events from the Planner page
         const handlePlanChange = (e: Event) => {
-            const customEvent = e as CustomEvent;
-            setActivePlanName(customEvent.detail);
+            setActivePlanName((e as CustomEvent).detail);
         };
         window.addEventListener('updateActivePlan', handlePlanChange);
-        return () => window.removeEventListener('updateActivePlan', handlePlanChange);
-    }, []);
+
+        // Perfectly calculate header height so tabs stick precisely below it
+        const updateHeight = () => {
+            if (headerRef.current) {
+                document.documentElement.style.setProperty('--global-header-height', `${headerRef.current.offsetHeight}px`);
+            }
+        };
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+
+        return () => {
+            window.removeEventListener('updateActivePlan', handlePlanChange);
+            window.removeEventListener('resize', updateHeight);
+        };
+    }, [activeModule]); // Re-calculate if layout shifts between modules
 
     const toggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -73,7 +83,6 @@ export default function GlobalHeader() {
     const executeSave = () => {
         if (!newPlanName.trim()) { alert('Please enter a plan name.'); return; }
         const name = newPlanName.trim();
-
         localStorage.setItem(`rp_saved_plan_${name}`, JSON.stringify(data));
         localStorage.setItem('active_plan_name', name);
         setActivePlanName(name);
@@ -84,7 +93,6 @@ export default function GlobalHeader() {
             localStorage.setItem('rp_plan_list', JSON.stringify(plans));
             setSavedPlans(plans);
         }
-
         showToast(`Plan "${name}" successfully saved!`);
         setShowSaveModal(false);
     };
@@ -92,14 +100,11 @@ export default function GlobalHeader() {
     const confirmLoad = () => {
         if (planToLoad) {
             const planDataStr = localStorage.getItem(`rp_saved_plan_${planToLoad}`);
-            if (planDataStr) {
-                const planData = JSON.parse(planDataStr);
-                if (financeContext.loadData) {
-                    financeContext.loadData(planData); 
-                    localStorage.setItem('active_plan_name', planToLoad);
-                    setActivePlanName(planToLoad);
-                    showToast(`Loaded ${planToLoad}`);
-                }
+            if (planDataStr && financeContext.loadData) {
+                financeContext.loadData(JSON.parse(planDataStr)); 
+                localStorage.setItem('active_plan_name', planToLoad);
+                setActivePlanName(planToLoad);
+                showToast(`Loaded ${planToLoad}`);
             }
             setPlanToLoad(null);
             setShowLoadModal(false);
@@ -112,7 +117,6 @@ export default function GlobalHeader() {
             const newPlans = savedPlans.filter(p => p !== planToDelete);
             localStorage.setItem('rp_plan_list', JSON.stringify(newPlans));
             setSavedPlans(newPlans);
-            
             if (activePlanName === planToDelete) {
                 localStorage.setItem('active_plan_name', 'Untitled Plan');
                 setActivePlanName('Untitled Plan');
@@ -138,14 +142,11 @@ export default function GlobalHeader() {
     const handleLoadJson = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const fileContent = event.target?.result as string;
-                const parsedData = JSON.parse(fileContent);
-                if (!parsedData.inputs) throw new Error("Invalid plan data structure");
-
+                const parsedData = JSON.parse(event.target?.result as string);
+                if (!parsedData.inputs) throw new Error("Invalid format");
                 const importedName = file.name.replace('.json', '');
                 localStorage.setItem(`rp_saved_plan_${importedName}`, JSON.stringify(parsedData));
                 localStorage.setItem('active_plan_name', importedName);
@@ -156,16 +157,12 @@ export default function GlobalHeader() {
                     localStorage.setItem('rp_plan_list', JSON.stringify(plans));
                     setSavedPlans(plans);
                 }
-
                 if (financeContext.loadData) {
                     financeContext.loadData(parsedData);
                     setActivePlanName(importedName);
                     showToast(`Successfully loaded ${importedName}!`);
                 }
-            } catch (err) {
-                console.error("Import Error:", err);
-                alert("Error loading file. Please ensure it is a valid JSON file.");
-            }
+            } catch (err) { alert("Error loading file. Invalid JSON."); }
         };
         reader.readAsText(file);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -176,8 +173,7 @@ export default function GlobalHeader() {
         if (!pastedJsonText.trim()) return;
         try {
             const parsedData = JSON.parse(pastedJsonText);
-            if (!parsedData.inputs) throw new Error("Invalid plan data structure");
-
+            if (!parsedData.inputs) throw new Error("Invalid structure");
             const importedName = "Pasted Plan";
             localStorage.setItem(`rp_saved_plan_${importedName}`, JSON.stringify(parsedData));
             localStorage.setItem('active_plan_name', importedName);
@@ -188,7 +184,6 @@ export default function GlobalHeader() {
                 localStorage.setItem('rp_plan_list', JSON.stringify(plans));
                 setSavedPlans(plans);
             }
-
             if (financeContext.loadData) {
                 financeContext.loadData(parsedData);
                 setActivePlanName(importedName);
@@ -196,10 +191,7 @@ export default function GlobalHeader() {
             }
             setShowPasteJsonModal(false);
             setPastedJsonText('');
-        } catch (err) {
-            console.error("Paste Import Error:", err);
-            alert("Error loading pasted text. Please ensure it is valid JSON data from this app.");
-        }
+        } catch (err) { alert("Error loading pasted text. Invalid JSON."); }
     };
 
     const confirmReset = () => {
@@ -214,7 +206,6 @@ export default function GlobalHeader() {
         <>
             <input type="file" accept=".json" className="d-none" ref={fileInputRef} onChange={handleLoadJson} />
 
-            {/* Global Toasts */}
             {toastMsg && (
                 <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{zIndex: 1060}}>
                     <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
@@ -225,36 +216,38 @@ export default function GlobalHeader() {
             )}
 
             <div 
-                className="position-sticky top-0 pt-2 pb-2 mb-2" 
+                ref={headerRef} // <-- Added reference for dynamic height calculation
+                className="position-sticky top-0 pt-2 pb-2" // <-- Removed mb-2 margin gap
                 style={{ backgroundColor: 'var(--bg-body)', zIndex: 1040, borderBottom: '1px solid var(--border-color)' }}
             >
-                <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-1 rounded-4 p-2 border border-secondary rp-card gap-2 m-0">
+                {/* Notice the mb-0 so the card touches the bottom border padding cleanly */}
+                <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-0 rounded-4 p-2 border border-secondary rp-card gap-2 m-0">
                     
                     <div className="d-flex align-items-center gap-2">
-                        {/* --- MODERN PILL SELECTOR --- */}
+                        {/* --- INSTANT NAVIGATION LINKS --- */}
                         <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm me-1" style={{ width: 'fit-content' }}>
-                            <button 
-                                className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all ${activeModule === 'planner' ? 'bg-primary text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
-                                onClick={() => router.push('/planner')}
+                            <Link 
+                                href="/planner"
+                                className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none ${activeModule === 'planner' ? 'bg-primary text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
                                 style={{ fontSize: '0.85rem' }}
                             >
                                 <i className="bi bi-graph-up-arrow me-2"></i>
                                 <span className="d-none d-sm-inline">Retirement Planner</span>
                                 <span className="d-inline d-sm-none">Planner</span>
-                            </button>
+                            </Link>
                             
-                            <button 
-                                className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all ${activeModule === 'expenses' ? 'bg-success text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
-                                onClick={() => router.push('/expenses')}
+                            <Link 
+                                href="/expenses"
+                                className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none ${activeModule === 'expenses' ? 'bg-success text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
                                 style={{ fontSize: '0.85rem' }}
                             >
                                 <i className="bi bi-receipt me-2"></i>
                                 <span className="d-none d-sm-inline">Expense Tracker</span>
                                 <span className="d-inline d-sm-none">Expenses</span>
-                            </button>
+                            </Link>
                         </div>
                     
-                        {/* --- FILE MANAGER (Only visible in Planner mode) --- */}
+                        {/* --- FILE MANAGER --- */}
                         {activeModule === 'planner' && (
                             <div className="position-relative d-none d-md-block">
                                 <button 
@@ -277,16 +270,8 @@ export default function GlobalHeader() {
                                             <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
                                             <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                                             <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                                            <li>
-                                                <button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}>
-                                                    <i className="bi bi-upload me-2"></i> Load from PC (.json)
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}>
-                                                    <i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan
-                                                </button>
-                                            </li>
+                                            <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
+                                            <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
                                             <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                                             <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
                                         </ul>
@@ -298,42 +283,19 @@ export default function GlobalHeader() {
                     
                     <div className="d-flex align-items-center gap-2">
                         {activeModule === 'planner' && (
-                            <div 
-                                className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" 
-                                style={{ height: '36px' }} 
-                                title="Toggle Real vs Nominal Dollars."
-                            >
+                            <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
                                 <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
-                                    <input 
-                                        className="form-check-input m-0 cursor-pointer shadow-none" 
-                                        type="checkbox" 
-                                        id="useRealDollars" 
-                                        checked={data.useRealDollars ?? false} 
-                                        onChange={(e) => updateUseRealDollars(e.target.checked)} 
-                                    />
-                                    <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block" style={{paddingTop: '2px'}} htmlFor="useRealDollars">
-                                        Today's $
-                                    </label>
+                                    <input className="form-check-input m-0 cursor-pointer shadow-none" type="checkbox" id="useRealDollars" checked={data.useRealDollars ?? false} onChange={(e) => updateUseRealDollars(e.target.checked)} />
+                                    <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block" style={{paddingTop: '2px'}} htmlFor="useRealDollars">Today's $</label>
                                 </div>
                             </div>
                         )}
 
-                        <button 
-                            type="button"
-                            className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" 
-                            style={{ width: '36px', height: '36px' }} 
-                            onClick={toggleTheme} 
-                        >
+                        <button type="button" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" style={{ width: '36px', height: '36px' }} onClick={toggleTheme}>
                             <i className={`fs-6 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
                         </button>
 
-                        <a 
-                            href="https://ko-fi.com/P5P11UYZUD" 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" 
-                            style={{ width: '36px', height: '36px' }}
-                        >
+                        <a href="https://ko-fi.com/P5P11UYZUD" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" style={{ width: '36px', height: '36px' }}>
                             <i className="bi bi-cup-hot-fill fs-6" style={{ color: '#72a4f2' }}></i>
                         </a>
 
@@ -342,27 +304,18 @@ export default function GlobalHeader() {
                                 {session.user?.image ? (
                                     <img src={session.user.image} alt="User" className="rounded-circle shadow-sm border border-secondary" width="36" height="36" />
                                 ) : (
-                                    <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm p-0" style={{ width: '36px', height: '36px' }}>
-                                        <i className="bi bi-person-fill fs-6"></i>
-                                    </button>
+                                    <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm p-0" style={{ width: '36px', height: '36px' }}><i className="bi bi-person-fill fs-6"></i></button>
                                 )}
                             </div>
                         ) : (
-                            <button 
-                                type="button"
-                                className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50 p-0" 
-                                style={{ width: '36px', height: '36px', cursor: 'not-allowed' }} 
-                                title="Google Sync coming soon"
-                                onClick={(e) => e.preventDefault()}
-                            >
-                                <i className="bi bi-google fs-6"></i> 
-                            </button>
+                            <button type="button" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50 p-0" style={{ width: '36px', height: '36px', cursor: 'not-allowed' }} title="Google Sync coming soon" onClick={(e) => e.preventDefault()}><i className="bi bi-google fs-6"></i></button>
                         )}
                     </div>
                 </div>
             </div>
 
             {/* --- GLOBAL FILE MODALS --- */}
+            {/* ... Modal code remains identical ... */}
             {showSaveModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
@@ -381,7 +334,6 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
-
             {showLoadModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowLoadModal(false)}></div>
@@ -415,7 +367,6 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
-
             {showPasteJsonModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowPasteJsonModal(false)}></div>
@@ -436,7 +387,6 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
-
             {planToLoad && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToLoad(null)}></div>
@@ -457,7 +407,6 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
-
             {planToDelete && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToDelete(null)}></div>
@@ -478,7 +427,6 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
-
             {showResetConfirm && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowResetConfirm(false)}></div>

@@ -24,7 +24,6 @@ export default function PlannerPage() {
 
   const isCouple = data.mode === 'Couple';
 
-  // --- SPLASH SCREEN LOGIC ---
   const handleStartBlankPlan = () => {
       if (resetData) resetData();
       localStorage.setItem('active_plan_name', 'Untitled Plan');
@@ -42,13 +41,11 @@ export default function PlannerPage() {
       setActiveTab('dashboard'); 
   };
 
-  // --- QUICK ADJUST LOGIC ---
   const handleRetireAgeChange = (player: 'p1'|'p2', newRetAge: number) => {
       const updates: Record<string, any> = { [`${player}_retireAge`]: newRetAge };
       if (newRetAge > (data.inputs[`${player}_lifeExp`] || 90)) {
           updates[`${player}_lifeExp`] = newRetAge;
       }
-
       if (isCouple && data.inputs.retire_same_time) {
           const playerAge = data.inputs[`${player}_age`] ?? (player === 'p1' ? 38 : 34);
           const yearsToRetire = newRetAge - playerAge;
@@ -98,16 +95,15 @@ export default function PlannerPage() {
     <>
       <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
 
-      {/* --- STICKY NAVIGATION TABS --- */}
-      {/* We apply a top offset (76px) so it sticks perfectly right underneath the Global Header */}
+      {/* --- STICKY NAVIGATION TABS (Docks seamlessly to the Global Header) --- */}
       <div 
         className="position-sticky pt-2 pb-2 mb-3 shadow-sm" 
         style={{ 
-            top: '64px', // Assuming header is around 64px tall
+            top: 'var(--global-header-height, 65px)', 
             backgroundColor: 'var(--bg-body)', 
             zIndex: 1030,
             borderBottom: '1px solid var(--border-color)',
-            margin: '0 -0.5rem', // Offset Bootstrap container padding for a clean full-width line
+            margin: '0 -0.5rem',
             padding: '0 0.5rem'
         }}
       >
@@ -131,7 +127,6 @@ export default function PlannerPage() {
           </div>
       </div>
 
-      {/* --- MAIN CONTENT RENDERING --- */}
       <div className="row g-4 flex-grow-1">
         <div className="col-12">
           <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
@@ -160,7 +155,6 @@ export default function PlannerPage() {
           </div>
       </footer>
 
-      {/* --- QUICK ADJUST FAB --- */}
       {showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
                style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '220px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
@@ -188,12 +182,7 @@ export default function PlannerPage() {
           </div>
       )}
 
-      <button 
-          className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
-          style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }}
-          title="Quick Adjust Variables"
-          onClick={() => setShowQuickAdjust(!showQuickAdjust)}
-      >
+      <button className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }} title="Quick Adjust Variables" onClick={() => setShowQuickAdjust(!showQuickAdjust)}>
           <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
       </button>
     </>
