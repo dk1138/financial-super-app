@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
+import Papa from 'papaparse';
 import { useFinance } from '../lib/FinanceContext';
+import { initDB, saveTransactions, clearTransactions } from '../lib/expenseDb';
 
 export default function GlobalHeader() {
     const { data: session } = useSession();
@@ -12,67 +14,67 @@ export default function GlobalHeader() {
     const financeContext = useFinance() as any;
     const { data, updateUseRealDollars, resetData } = financeContext;
 
+    // --- REFS ---
     const headerRef = useRef<HTMLDivElement>(null);
+    const plannerFileInputRef = useRef<HTMLInputElement>(null);
+    const expenseFileInputRef = useRef<HTMLInputElement>(null);
 
-    // --- THEME STATE ---
+    // --- GENERAL STATE ---
     const [theme, setTheme] = useState('dark');
+    const [toastMsg, setToastMsg] = useState('');
+    const activeModule = pathname.includes('/expenses') ? 'expenses' : 'planner';
 
-    // --- FILE MANAGEMENT STATE ---
+    // --- PLANNER FILE MANAGEMENT STATE ---
     const [fileMenuOpen, setFileMenuOpen] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [activePlanName, setActivePlanName] = useState('Untitled Plan');
     const [savedPlans, setSavedPlans] = useState<string[]>([]);
     const [newPlanName, setNewPlanName] = useState('');
-    const [toastMsg, setToastMsg] = useState('');
+    const [pastedJsonText, setPastedJsonText] = useState('');
+    
+    // --- EXPENSE TRACKER STATE ---
+    const [isParsing, setIsParsing] = useState(false);
 
-    // --- MODAL STATE ---
+    // --- MODAL VISIBILITY STATE ---
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showLoadModal, setShowLoadModal] = useState(false);
     const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
-    const [pastedJsonText, setPastedJsonText] = useState('');
     const [planToLoad, setPlanToLoad] = useState<string | null>(null);
     const [planToDelete, setPlanToDelete] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [showClearExpenseModal, setShowClearExpenseModal] = useState(false);
 
-    const activeModule = pathname.includes('/expenses') ? 'expenses' : 'planner';
-
-    // --- INITIALIZATION & DYNAMIC HEIGHT SYNC ---
+    // --- INITIALIZATION & HEIGHT TRACKING ---
     useEffect(() => {
-        // 1. Initialize Theme from Local Storage
         const savedTheme = localStorage.getItem('appTheme') || 'dark';
         setTheme(savedTheme);
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
-
-        // 2. Initialize File Management
+        
         const currentName = localStorage.getItem('active_plan_name') || 'Untitled Plan';
         setActivePlanName(currentName);
         setNewPlanName(currentName === 'Untitled Plan' ? '' : currentName);
         setSavedPlans(JSON.parse(localStorage.getItem('rp_plan_list') || '[]'));
 
-        // 3. Listen for Plan changes from the Splash Screen
-        const handlePlanChange = (e: Event) => {
-            setActivePlanName((e as CustomEvent).detail);
-        };
+        const handlePlanChange = (e: Event) => setActivePlanName((e as CustomEvent).detail);
         window.addEventListener('updateActivePlan', handlePlanChange);
 
-        // 4. Calculate header height perfectly so planner tabs stick precisely below it
         const updateHeight = () => {
             if (headerRef.current) {
                 document.documentElement.style.setProperty('--global-header-height', `${headerRef.current.offsetHeight}px`);
             }
         };
-        
-        // Use ResizeObserver for ultra-precise height tracking even if fonts load late
         const resizeObserver = new ResizeObserver(() => updateHeight());
-        if (headerRef.current) {
-            resizeObserver.observe(headerRef.current);
-        }
+        if (headerRef.current) resizeObserver.observe(headerRef.current);
 
         return () => {
             window.removeEventListener('updateActivePlan', handlePlanChange);
             resizeObserver.disconnect();
         };
     }, [activeModule]);
+
+    const showToast = (msg: string) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(''), 3000);
+    };
 
     const toggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -81,12 +83,70 @@ export default function GlobalHeader() {
         document.documentElement.setAttribute('data-bs-theme', newTheme);
     };
 
-    const showToast = (msg: string) => {
-        setToastMsg(msg);
-        setTimeout(() => setToastMsg(''), 3000);
+    // ==========================================
+    //        EXPENSE TRACKER OPERATIONS
+    // ==========================================
+    const handleExpenseFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsParsing(true);
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const parsedData = results.data as any[];
+                if (parsedData.length === 0) {
+                    alert("The CSV file appears to be empty.");
+                    setIsParsing(false);
+                    return;
+                }
+
+                const headers = Object.keys(parsedData[0] || {}).map(h => h.toLowerCase());
+                const dateKey = headers.find(h => h.includes('date')) || headers[0];
+                const descKey = headers.find(h => h.includes('description') || h.includes('payee') || h.includes('name')) || headers[1];
+                const amtKey = headers.find(h => h.includes('amount')) || headers.find(h => h.includes('value')) || headers[2];
+
+                const newTransactions = parsedData.map((row, index) => {
+                    const rawAmount = String(row[Object.keys(row).find(k => k.toLowerCase() === amtKey) || amtKey] || '0');
+                    const cleanAmount = parseFloat(rawAmount.replace(/[^0-9.-]+/g, ''));
+                    const dateObj = new Date(row[Object.keys(row).find(k => k.toLowerCase() === dateKey) || dateKey]);
+                    
+                    return {
+                        id: `${Date.now()}-${index}`,
+                        date: dateObj.getTime() || Date.now(),
+                        dateString: isNaN(dateObj.getTime()) ? 'Unknown' : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                        merchant: row[Object.keys(row).find(k => k.toLowerCase() === descKey) || descKey] || 'Unknown',
+                        category: 'Uncategorized',
+                        account: file.name.replace('.csv', ''),
+                        amount: isNaN(cleanAmount) ? 0 : cleanAmount
+                    };
+                });
+
+                await saveTransactions(newTransactions);
+                window.dispatchEvent(new CustomEvent('expensesUpdated'));
+                setIsParsing(false);
+                showToast("CSV Uploaded Successfully!");
+                if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
+            },
+            error: (err) => {
+                console.error("Parse Error:", err);
+                alert("Failed to parse the CSV file.");
+                setIsParsing(false);
+            }
+        });
     };
 
-    // --- FILE OPERATIONS ---
+    const confirmClearExpenses = async () => {
+        await clearTransactions();
+        window.dispatchEvent(new CustomEvent('expensesUpdated'));
+        setShowClearExpenseModal(false);
+        showToast("Expense data cleared.");
+    };
+
+    // ==========================================
+    //        RETIREMENT PLANNER OPERATIONS
+    // ==========================================
     const executeSave = () => {
         if (!newPlanName.trim()) { alert('Please enter a plan name.'); return; }
         const name = newPlanName.trim();
@@ -100,7 +160,7 @@ export default function GlobalHeader() {
             localStorage.setItem('rp_plan_list', JSON.stringify(plans));
             setSavedPlans(plans);
         }
-        showToast(`Plan "${name}" successfully saved!`);
+        showToast(`Plan "${name}" saved!`);
         setShowSaveModal(false);
     };
 
@@ -172,7 +232,7 @@ export default function GlobalHeader() {
             } catch (err) { alert("Error loading file. Invalid JSON."); }
         };
         reader.readAsText(file);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (plannerFileInputRef.current) plannerFileInputRef.current.value = '';
         setFileMenuOpen(false);
     };
 
@@ -201,7 +261,7 @@ export default function GlobalHeader() {
         } catch (err) { alert("Error loading pasted text. Invalid JSON."); }
     };
 
-    const confirmReset = () => {
+    const confirmResetPlanner = () => {
         if (resetData) resetData();
         localStorage.setItem('active_plan_name', 'Untitled Plan');
         setActivePlanName('Untitled Plan');
@@ -211,11 +271,13 @@ export default function GlobalHeader() {
 
     return (
         <>
-            <input type="file" accept=".json" className="d-none" ref={fileInputRef} onChange={handleLoadJson} />
+            {/* HIDDEN FILE INPUTS */}
+            <input type="file" accept=".json" className="d-none" ref={plannerFileInputRef} onChange={handleLoadJson} />
+            <input type="file" accept=".csv" className="d-none" ref={expenseFileInputRef} onChange={handleExpenseFileUpload} />
 
-            {/* Global Toasts */}
+            {/* GLOBAL TOAST */}
             {toastMsg && (
-                <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{zIndex: 1060}}>
+                <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{zIndex: 2000}}>
                     <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
                         <i className="bi bi-check-circle-fill me-3 fs-5"></i>
                         {toastMsg}
@@ -223,6 +285,7 @@ export default function GlobalHeader() {
                 </div>
             )}
 
+            {/* --- STICKY HEADER --- */}
             <div 
                 ref={headerRef} 
                 className="position-sticky top-0 pt-2 pb-2" 
@@ -231,7 +294,7 @@ export default function GlobalHeader() {
                 <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-0 rounded-4 p-2 border border-secondary rp-card gap-2 m-0">
                     
                     <div className="d-flex align-items-center gap-2">
-                        {/* --- INSTANT NAVIGATION LINKS (PREFETCH ENABLED) --- */}
+                        {/* MODULE PILL SELECTOR */}
                         <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm me-1" style={{ width: 'fit-content' }}>
                             <Link 
                                 href="/planner"
@@ -256,7 +319,7 @@ export default function GlobalHeader() {
                             </Link>
                         </div>
                     
-                        {/* --- FILE MANAGER (Only visible in Planner mode) --- */}
+                        {/* PLANNER ACTIONS (File Menu) */}
                         {activeModule === 'planner' && (
                             <div className="position-relative d-none d-md-block">
                                 <button 
@@ -279,7 +342,7 @@ export default function GlobalHeader() {
                                             <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
                                             <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                                             <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                                            <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
+                                            <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
                                             <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
                                             <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                                             <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
@@ -288,9 +351,35 @@ export default function GlobalHeader() {
                                 )}
                             </div>
                         )}
+
+                        {/* EXPENSES ACTIONS (Clear & Upload) */}
+                        {activeModule === 'expenses' && (
+                            <div className="d-flex gap-2">
+                                <button 
+                                    className="btn btn-sm btn-outline-danger bg-input fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
+                                    onClick={() => setShowClearExpenseModal(true)}
+                                    style={{ height: '36px' }}
+                                >
+                                    <i className="bi bi-trash3-fill me-1 d-none d-sm-inline"></i> Clear
+                                </button>
+                                <button 
+                                    className="btn btn-sm btn-success fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
+                                    onClick={() => expenseFileInputRef.current?.click()} 
+                                    disabled={isParsing}
+                                    style={{ height: '36px' }}
+                                >
+                                    {isParsing ? (
+                                        <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Parsing...</>
+                                    ) : (
+                                        <><i className="bi bi-cloud-arrow-up-fill me-1 d-none d-sm-inline"></i> Upload CSV</>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                     
                     <div className="d-flex align-items-center gap-2">
+                        {/* TODAY'S $ TOGGLE (Only in Planner) */}
                         {activeModule === 'planner' && (
                             <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
                                 <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
@@ -300,6 +389,7 @@ export default function GlobalHeader() {
                             </div>
                         )}
 
+                        {/* THEME TOGGLE */}
                         <button type="button" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" style={{ width: '36px', height: '36px' }} onClick={toggleTheme}>
                             <i className={`fs-6 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
                         </button>
@@ -308,6 +398,7 @@ export default function GlobalHeader() {
                             <i className="bi bi-cup-hot-fill fs-6" style={{ color: '#72a4f2' }}></i>
                         </a>
 
+                        {/* PROFILE */}
                         {session ? (
                             <div className="position-relative cursor-pointer" onClick={() => signOut()} title="Sign Out">
                                 {session.user?.image ? (
@@ -323,7 +414,33 @@ export default function GlobalHeader() {
                 </div>
             </div>
 
-            {/* --- GLOBAL FILE MODALS --- */}
+            {/* ========================================== */}
+            {/* ALL MODALS                   */}
+            {/* ========================================== */}
+
+            {/* EXPENSES: CLEAR DATA MODAL */}
+            {showClearExpenseModal && (
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1080 }}>
+                    <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowClearExpenseModal(false)}></div>
+                    <div className="modal-dialog modal-dialog-centered modal-sm position-relative">
+                        <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
+                            <div className="modal-header border-bottom border-secondary p-3">
+                                <h6 className="modal-title fw-bold d-flex align-items-center text-danger"><i className="bi bi-exclamation-octagon-fill me-2"></i> Clear Data</h6>
+                                <button type="button" className="btn-close" onClick={() => setShowClearExpenseModal(false)}></button>
+                            </div>
+                            <div className="modal-body p-4 text-center">
+                                <p className="text-muted small mb-4">Are you sure you want to delete all transaction history? This cannot be undone.</p>
+                                <div className="d-flex gap-2">
+                                    <button className="btn btn-outline-secondary w-50 fw-bold rounded-pill" onClick={() => setShowClearExpenseModal(false)}>Cancel</button>
+                                    <button className="btn btn-danger w-50 fw-bold rounded-pill" onClick={confirmClearExpenses}>Clear All</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PLANNER: SAVE MODAL */}
             {showSaveModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
@@ -343,6 +460,7 @@ export default function GlobalHeader() {
                 </div>
             )}
 
+            {/* PLANNER: LOAD MODAL */}
             {showLoadModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowLoadModal(false)}></div>
@@ -377,6 +495,7 @@ export default function GlobalHeader() {
                 </div>
             )}
 
+            {/* PLANNER: PASTE JSON MODAL */}
             {showPasteJsonModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowPasteJsonModal(false)}></div>
@@ -398,6 +517,7 @@ export default function GlobalHeader() {
                 </div>
             )}
 
+            {/* PLANNER: CONFIRM LOAD MODAL */}
             {planToLoad && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToLoad(null)}></div>
@@ -419,6 +539,7 @@ export default function GlobalHeader() {
                 </div>
             )}
 
+            {/* PLANNER: DELETE PLAN MODAL */}
             {planToDelete && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToDelete(null)}></div>
@@ -440,6 +561,7 @@ export default function GlobalHeader() {
                 </div>
             )}
 
+            {/* PLANNER: RESET CURRENT PLAN MODAL */}
             {showResetConfirm && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowResetConfirm(false)}></div>
@@ -453,7 +575,7 @@ export default function GlobalHeader() {
                                 <p className="text-muted small mb-4">Are you sure you want to completely clear your data and reset the calculator to its default state?</p>
                                 <div className="d-flex gap-2">
                                     <button className="btn btn-outline-secondary w-50 fw-bold rounded-pill" onClick={() => setShowResetConfirm(false)}>Cancel</button>
-                                    <button className="btn btn-danger w-50 fw-bold rounded-pill" onClick={confirmReset}>Reset</button>
+                                    <button className="btn btn-danger w-50 fw-bold rounded-pill" onClick={confirmResetPlanner}>Reset</button>
                                 </div>
                             </div>
                         </div>
