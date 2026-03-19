@@ -8,26 +8,52 @@ import ExpenseTransactionsTab from '../../components/expenses/ExpenseTransaction
 import ExpenseCategoriesTab from '../../components/expenses/ExpenseCategoriesTab';
 import ExpenseReportsTab from '../../components/expenses/ExpenseReportsTab';
 
+export interface Category {
+    name: string;
+    color: string;
+}
+
+const DEFAULT_CATEGORIES: Category[] = [
+    { name: 'Housing', color: '#0d6efd' },
+    { name: 'Grocery', color: '#ffc107' },
+    { name: 'Food & Dining', color: '#0dcaf0' },
+    { name: 'Transport', color: '#6f42c1' },
+    { name: 'Essentials', color: '#d63384' },
+    { name: 'Lifestyle', color: '#fd7e14' },
+    { name: 'Shopping', color: '#20c997' },
+    { name: 'Health', color: '#e83e8c' },
+    { name: 'Utilities', color: '#0a58ca' },
+    { name: 'Income', color: '#198754' }
+];
+
 export default function ExpenseTrackerPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
     const [activeTab, setActiveTab] = useState('dashboard');
 
     useEffect(() => {
-        // Initialize the local database and load any saved transactions
         initDB();
         loadData();
 
-        // Listen for the "expensesUpdated" event broadcasted by the GlobalHeader
-        // when a user uploads a new CSV or clears their data
+        // Load custom categories if they exist
+        const savedCats = localStorage.getItem('expense_categories');
+        if (savedCats) {
+            setCategories(JSON.parse(savedCats));
+        }
+
         const handleUpdate = () => loadData();
         window.addEventListener('expensesUpdated', handleUpdate);
-        
         return () => window.removeEventListener('expensesUpdated', handleUpdate);
     }, []);
 
     const loadData = async () => {
         const data = await getAllTransactions();
         setTransactions(data);
+    };
+
+    const handleUpdateCategories = (newCategories: Category[]) => {
+        setCategories(newCategories);
+        localStorage.setItem('expense_categories', JSON.stringify(newCategories));
     };
 
     const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(val);
@@ -40,12 +66,8 @@ export default function ExpenseTrackerPage() {
         const categoryMap: Record<string, number> = {};
 
         transactions.forEach(t => {
-            // Track uncategorized items
-            if (t.category === 'Uncategorized') {
-                uncategorized.push(t);
-            }
+            if (t.category === 'Uncategorized') uncategorized.push(t);
 
-            // Group by Month and Year for the Bar Chart
             const dateObj = new Date(t.date);
             const monthYear = dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
             
@@ -54,16 +76,12 @@ export default function ExpenseTrackerPage() {
             }
 
             if (t.amount < 0) {
-                // It's an expense
                 spendCount += Math.abs(t.amount);
                 monthlyMap[monthYear].spend += Math.abs(t.amount);
-                
-                // Track category totals for the Donut Chart
                 if (t.category !== 'Uncategorized') {
                     categoryMap[t.category] = (categoryMap[t.category] || 0) + Math.abs(t.amount);
                 }
             } else {
-                // It's income
                 monthlyMap[monthYear].income += t.amount;
             }
         });
@@ -71,7 +89,6 @@ export default function ExpenseTrackerPage() {
         return {
             totalSpend: spendCount,
             uncategorizedTransactions: uncategorized,
-            // Sort arrays so charts render left-to-right (chronological) and largest-to-smallest
             monthlyData: Object.values(monthlyMap).sort((a, b) => a.sortDate - b.sortDate),
             categoryData: Object.keys(categoryMap).map(key => ({ name: key, value: categoryMap[key] })).sort((a, b) => b.value - a.value)
         };
@@ -87,26 +104,11 @@ export default function ExpenseTrackerPage() {
     return (
         <div className="fade-in d-flex flex-column flex-grow-1">
             
-            {/* --- STICKY NAVIGATION TABS --- */}
-            {/* Positioned precisely under the GlobalHeader */}
-            <div 
-                className="position-sticky pt-2 pb-2 mb-3 shadow-sm" 
-                style={{ 
-                    top: 'var(--global-header-height, 65px)', 
-                    backgroundColor: 'var(--bg-body)', 
-                    zIndex: 1030, 
-                    borderBottom: '1px solid var(--border-color)', 
-                    margin: '0 -0.5rem', 
-                    padding: '0 0.5rem' 
-                }}
-            >
+            <div className="position-sticky pt-2 pb-2 mb-3 shadow-sm" style={{ top: 'var(--global-header-height, 65px)', backgroundColor: 'var(--bg-body)', zIndex: 1030, borderBottom: '1px solid var(--border-color)', margin: '0 -0.5rem', padding: '0 0.5rem' }}>
                 <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1">
                     {tabs.map(tab => (
                         <li className="nav-item flex-fill" key={tab.id} onClick={() => setActiveTab(tab.id)}>
-                            <div 
-                                className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border cursor-pointer ${activeTab === tab.id ? 'bg-success text-white border-success shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
-                                style={{ fontSize: '0.85rem' }}
-                            >
+                            <div className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border cursor-pointer ${activeTab === tab.id ? 'bg-success text-white border-success shadow' : 'bg-input text-muted border-secondary opacity-75'}`} style={{ fontSize: '0.85rem' }}>
                                 <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
                                 <span className="text-nowrap">{tab.label}</span>
                             </div>
@@ -115,7 +117,6 @@ export default function ExpenseTrackerPage() {
                 </ul>
             </div>
 
-            {/* --- TAB CONTENT --- */}
             <div className="row g-4 flex-grow-1">
                 <div className="col-12">
                     {transactions.length === 0 ? (
@@ -130,19 +131,14 @@ export default function ExpenseTrackerPage() {
                                 
                                 {activeTab === 'dashboard' && (
                                     <ExpenseDashboardTab 
-                                        totalSpend={totalSpend} 
-                                        transactionCount={transactions.length} 
-                                        uncategorizedTransactions={uncategorizedTransactions} 
-                                        monthlyData={monthlyData} 
-                                        categoryData={categoryData} 
-                                        setActiveTab={setActiveTab} 
-                                        formatCurrency={formatCurrency} 
+                                        totalSpend={totalSpend} transactionCount={transactions.length} uncategorizedTransactions={uncategorizedTransactions} monthlyData={monthlyData} categoryData={categoryData} setActiveTab={setActiveTab} formatCurrency={formatCurrency} 
                                     />
                                 )}
 
                                 {activeTab === 'transactions' && (
                                     <ExpenseTransactionsTab 
                                         transactions={transactions} 
+                                        categories={categories}
                                         formatCurrency={formatCurrency} 
                                     />
                                 )}
@@ -150,6 +146,8 @@ export default function ExpenseTrackerPage() {
                                 {activeTab === 'categories' && (
                                     <ExpenseCategoriesTab 
                                         uncategorizedTransactions={uncategorizedTransactions} 
+                                        categories={categories}
+                                        updateCategories={handleUpdateCategories}
                                         formatCurrency={formatCurrency} 
                                     />
                                 )}
