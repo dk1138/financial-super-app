@@ -1,6 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
-// Define the shape of our database
 interface ExpenseDB extends DBSchema {
   transactions: {
     key: string;
@@ -9,10 +8,9 @@ interface ExpenseDB extends DBSchema {
   };
 }
 
-// Define what a single row looks like
 export interface Transaction {
   id: string;
-  date: number; // Stored as timestamp for easy sorting
+  date: number;
   dateString: string;
   merchant: string;
   category: string;
@@ -22,7 +20,6 @@ export interface Transaction {
 
 let dbPromise: Promise<IDBPDatabase<ExpenseDB>>;
 
-// Initialize the database safely (only runs in the browser)
 export const initDB = () => {
   if (typeof window === 'undefined') return;
   
@@ -42,18 +39,13 @@ export const saveTransactions = async (transactions: Transaction[]) => {
   if (!dbPromise) initDB();
   const db = await dbPromise;
   const tx = db.transaction('transactions', 'readwrite');
-  
-  // Use Promise.all to save thousands of rows in milliseconds
-  await Promise.all(
-    transactions.map((t) => tx.store.put(t))
-  );
+  await Promise.all(transactions.map((t) => tx.store.put(t)));
   await tx.done;
 };
 
 export const getAllTransactions = async (): Promise<Transaction[]> => {
   if (!dbPromise) initDB();
   const db = await dbPromise;
-  // Get all and sort by date descending (newest first)
   const all = await db.getAllFromIndex('transactions', 'by-date');
   return all.reverse(); 
 };
@@ -64,7 +56,6 @@ export const clearTransactions = async () => {
   await db.clear('transactions');
 };
 
-// Add this to the bottom of lib/expenseDb.ts
 export const updateTransactionCategory = async (id: string, newCategory: string) => {
     if (!dbPromise) initDB();
     const db = await dbPromise;
@@ -75,19 +66,45 @@ export const updateTransactionCategory = async (id: string, newCategory: string)
     }
 };
 
-// Add this to the bottom of lib/expenseDb.ts
-export const updateCategoryByMerchant = async (merchant: string, newCategory: string) => {
+// --- NEW SMART NORMALIZATION LOGIC ---
+export const normalizeMerchantName = (merchant: string): string => {
+    let name = merchant.toLowerCase();
+
+    // 1. Known Entity Overrides (Catch the worst offenders instantly)
+    if (name.includes('amazon') || name.includes('amzn')) return 'Amazon';
+    if (name.includes('presto')) return 'Presto';
+    if (name.includes('uber') && name.includes('eats')) return 'Uber Eats';
+    if (name.includes('uber') && !name.includes('eats')) return 'Uber';
+    if (name.includes('tim horton')) return 'Tim Hortons';
+    if (name.includes('mcdonald')) return 'McDonalds';
+    if (name.includes('walmart')) return 'Walmart';
+    if (name.includes('shoppers') && name.includes('drug')) return 'Shoppers Drug Mart';
+    if (name.includes('lcbo')) return 'LCBO';
+    if (name.includes('netflix')) return 'Netflix';
+    if (name.includes('spotify')) return 'Spotify';
+    
+    // 2. Generic Cleanup
+    name = name.replace(/\.com|\.ca|\.net|\.org/g, ''); // Remove web domains
+    name = name.replace(/\b(inc|ltd|corp|corporation|llc)\b/g, ''); // Remove corporate suffixes
+    name = name.replace(/[0-9#*\-/_.,]/g, ' '); // Remove numbers and special characters
+    name = name.replace(/\s+/g, ' ').trim(); // Remove double spaces
+
+    // 3. Title Case formatting
+    if (!name) return merchant; // Fallback
+    return name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+export const updateCategoryByNormalizedMerchant = async (normalizedMerchantName: string, newCategory: string) => {
     if (!dbPromise) initDB();
     const db = await dbPromise;
     const tx = db.transaction('transactions', 'readwrite');
     const store = tx.objectStore('transactions');
     
-    // Get all transactions
     const allTxs = await store.getAll();
 
-    // Find all matching the exact merchant name and update them
+    // Find all transactions where the CLEANED name matches the requested name
     const updates = allTxs
-        .filter(t => t.merchant === merchant)
+        .filter(t => normalizeMerchantName(t.merchant) === normalizedMerchantName)
         .map(t => {
             t.category = newCategory;
             return store.put(t);
