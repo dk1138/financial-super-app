@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Papa from 'papaparse';
 import { saveTransactions, clearTransactions, normalizeMerchantName } from '../../lib/expenseDb';
+import { getSuggestedCategory } from '../../lib/categorySuggestions'; // NEW IMPORT
 
 interface Props {
     showToast: (msg: string) => void;
@@ -18,7 +19,6 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
         if (!file) return;
         setIsParsing(true);
 
-        // Fetch the latest rules from localStorage directly so the header always has them
         const savedRules: Record<string, string> = JSON.parse(localStorage.getItem('expense_rules') || '{}');
 
         Papa.parse(file, {
@@ -54,15 +54,25 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                     const merchantName = row[originalDescKey] || 'Unknown';
                     const cleanMerchantName = normalizeMerchantName(merchantName);
                     
-                    // THE MAGIC: Check the rules dictionary. If found, apply it. Otherwise, Uncategorized.
-                    const autoCategory = savedRules[cleanMerchantName] || 'Uncategorized';
+                    // 1. Check strict user rules
+                    const strictRule = savedRules[cleanMerchantName];
+                    let category = 'Uncategorized';
+                    let suggested = undefined;
+
+                    if (strictRule) {
+                        category = strictRule;
+                    } else {
+                        // 2. If no strict rule, ask the smart engine for a suggestion
+                        suggested = getSuggestedCategory(merchantName, isNaN(cleanAmount) ? 0 : cleanAmount);
+                    }
 
                     return {
                         id: `${Date.now()}-${index}`,
                         date: dateObj.getTime() || Date.now(),
                         dateString: isNaN(dateObj.getTime()) ? 'Unknown' : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                         merchant: merchantName,
-                        category: autoCategory,
+                        category: category,
+                        suggestedCategory: suggested, // SAVE THE SUGGESTION
                         account: file.name.replace('.csv', ''),
                         amount: isNaN(cleanAmount) ? 0 : cleanAmount
                     };
@@ -71,7 +81,7 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                 await saveTransactions(newTransactions);
                 window.dispatchEvent(new CustomEvent('expensesUpdated'));
                 setIsParsing(false);
-                showToast("CSV Uploaded & Rules Applied!");
+                showToast("CSV Uploaded!");
                 if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
             },
             error: (err) => {

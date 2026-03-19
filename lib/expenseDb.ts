@@ -14,6 +14,7 @@ export interface Transaction {
   dateString: string;
   merchant: string;
   category: string;
+  suggestedCategory?: string; // NEW: Holds ghosted suggestions
   account: string;
   amount: number;
 }
@@ -22,7 +23,6 @@ let dbPromise: Promise<IDBPDatabase<ExpenseDB>>;
 
 export const initDB = () => {
   if (typeof window === 'undefined') return;
-  
   if (!dbPromise) {
     dbPromise = openDB<ExpenseDB>('FinancialSuperApp_DB', 1, {
       upgrade(db) {
@@ -62,15 +62,13 @@ export const updateTransactionCategory = async (id: string, newCategory: string)
     const tx = await db.get('transactions', id);
     if (tx) {
         tx.category = newCategory;
+        tx.suggestedCategory = undefined; // Clear suggestion once manually categorized
         await db.put('transactions', tx);
     }
 };
 
-// --- NEW SMART NORMALIZATION LOGIC ---
 export const normalizeMerchantName = (merchant: string): string => {
     let name = merchant.toLowerCase();
-
-    // 1. Known Entity Overrides (Catch the worst offenders instantly)
     if (name.includes('amazon') || name.includes('amzn')) return 'Amazon';
     if (name.includes('presto')) return 'Presto';
     if (name.includes('uber') && name.includes('eats')) return 'Uber Eats';
@@ -83,14 +81,11 @@ export const normalizeMerchantName = (merchant: string): string => {
     if (name.includes('netflix')) return 'Netflix';
     if (name.includes('spotify')) return 'Spotify';
     
-    // 2. Generic Cleanup
-    name = name.replace(/\.com|\.ca|\.net|\.org/g, ''); // Remove web domains
-    name = name.replace(/\b(inc|ltd|corp|corporation|llc)\b/g, ''); // Remove corporate suffixes
-    name = name.replace(/[0-9#*\-/_.,]/g, ' '); // Remove numbers and special characters
-    name = name.replace(/\s+/g, ' ').trim(); // Remove double spaces
-
-    // 3. Title Case formatting
-    if (!name) return merchant; // Fallback
+    name = name.replace(/\.com|\.ca|\.net|\.org/g, '');
+    name = name.replace(/\b(inc|ltd|corp|corporation|llc)\b/g, '');
+    name = name.replace(/[0-9#*\-/_.,]/g, ' ');
+    name = name.replace(/\s+/g, ' ').trim();
+    if (!name) return merchant;
     return name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
@@ -99,17 +94,46 @@ export const updateCategoryByNormalizedMerchant = async (normalizedMerchantName:
     const db = await dbPromise;
     const tx = db.transaction('transactions', 'readwrite');
     const store = tx.objectStore('transactions');
-    
     const allTxs = await store.getAll();
 
-    // Find all transactions where the CLEANED name matches the requested name
     const updates = allTxs
         .filter(t => normalizeMerchantName(t.merchant) === normalizedMerchantName)
         .map(t => {
             t.category = newCategory;
+            t.suggestedCategory = undefined; // Clear suggestion
             return store.put(t);
         });
 
     await Promise.all(updates);
+    await tx.done;
+};
+
+// --- NEW FEATURE: TRANSACTION SPLITTING ---
+export const splitTransaction = async (originalId: string, splits: { amount: number, category: string, merchant: string }[]) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = db.transaction('transactions', 'readwrite');
+    const store = tx.objectStore('transactions');
+
+    const original = await store.get(originalId);
+    if (!original) return;
+
+    // Delete the original master transaction
+    await store.delete(originalId);
+
+    // Insert the new pieces
+    const inserts = splits.map((split, index) => {
+        const newTx: Transaction = {
+            ...original,
+            id: `${originalId}-split-${index}-${Date.now()}`, // Ensure unique ID
+            amount: original.amount < 0 ? -Math.abs(split.amount) : Math.abs(split.amount), // Maintain sign
+            category: split.category,
+            merchant: split.merchant,
+            suggestedCategory: undefined // Sub-transactions are already categorized by the user
+        };
+        return store.put(newTx);
+    });
+
+    await Promise.all(inserts);
     await tx.done;
 };
