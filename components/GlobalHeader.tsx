@@ -102,21 +102,36 @@ export default function GlobalHeader() {
                     return;
                 }
 
+                // Make all headers lowercase for easier searching
                 const headers = Object.keys(parsedData[0] || {}).map(h => h.toLowerCase());
+                
                 const dateKey = headers.find(h => h.includes('date')) || headers[0];
-                const descKey = headers.find(h => h.includes('description') || h.includes('payee') || h.includes('name')) || headers[1];
+                
+                // SMARTER MERCHANT PARSING: Prioritize specific words, heavily ignore anything with "category" in the title
+                const descKey = headers.find(h => (h.includes('merchant') && !h.includes('category'))) || 
+                                headers.find(h => h.includes('payee')) || 
+                                headers.find(h => h.includes('description') && !h.includes('category')) || 
+                                headers.find(h => h.includes('name') && !h.includes('category')) || 
+                                headers.find(h => h.includes('description')) || // Fallback
+                                headers[1];
+
                 const amtKey = headers.find(h => h.includes('amount')) || headers.find(h => h.includes('value')) || headers[2];
 
                 const newTransactions = parsedData.map((row, index) => {
-                    const rawAmount = String(row[Object.keys(row).find(k => k.toLowerCase() === amtKey) || amtKey] || '0');
+                    // Extract data using original casing of the keys we found
+                    const originalAmtKey = Object.keys(row).find(k => k.toLowerCase() === amtKey) || amtKey;
+                    const originalDateKey = Object.keys(row).find(k => k.toLowerCase() === dateKey) || dateKey;
+                    const originalDescKey = Object.keys(row).find(k => k.toLowerCase() === descKey) || descKey;
+
+                    const rawAmount = String(row[originalAmtKey] || '0');
                     const cleanAmount = parseFloat(rawAmount.replace(/[^0-9.-]+/g, ''));
-                    const dateObj = new Date(row[Object.keys(row).find(k => k.toLowerCase() === dateKey) || dateKey]);
+                    const dateObj = new Date(row[originalDateKey]);
                     
                     return {
                         id: `${Date.now()}-${index}`,
-                        date: dateObj.getTime() || Date.now(),
+                        date: dateObj.getTime() || Date.now(), // Timestamp for sorting
                         dateString: isNaN(dateObj.getTime()) ? 'Unknown' : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                        merchant: row[Object.keys(row).find(k => k.toLowerCase() === descKey) || descKey] || 'Unknown',
+                        merchant: row[originalDescKey] || 'Unknown',
                         category: 'Uncategorized',
                         account: file.name.replace('.csv', ''),
                         amount: isNaN(cleanAmount) ? 0 : cleanAmount
