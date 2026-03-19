@@ -127,6 +127,7 @@ export default function ExpenseTrackerPage() {
                     ) : (
                         <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
                             <div className="card-body p-0 fade-in-tab" key={activeTab}>
+                                
                                 {activeTab === 'dashboard' && (
                                     <ExpenseDashboardTab 
                                         totalSpend={totalSpend} 
@@ -138,14 +139,23 @@ export default function ExpenseTrackerPage() {
                                         formatCurrency={formatCurrency} 
                                     />
                                 )}
+
                                 {activeTab === 'transactions' && (
                                     <ExpenseTransactionsTab 
                                         transactions={transactions} 
                                         formatCurrency={formatCurrency} 
                                     />
                                 )}
-                                {activeTab === 'categories' && <ExpenseCategoriesTab />}
+
+                                {activeTab === 'categories' && (
+                                    <ExpenseCategoriesTab 
+                                        uncategorizedTransactions={uncategorizedTransactions} 
+                                        formatCurrency={formatCurrency} 
+                                    />
+                                )}
+
                                 {activeTab === 'reports' && <ExpenseReportsTab />}
+                                
                             </div>
                         </div>
                     )}

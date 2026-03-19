@@ -8,29 +8,6 @@ interface Props {
     showToast: (msg: string) => void;
 }
 
-// --- THE SMART CATEGORY ENGINE ---
-const DEFAULT_RULES: Record<string, string[]> = {
-    'Food': ['loblaws', 'metro', 'sobeys', 'no frills', 'walmart', 'mcdonalds', 'tim hortons', 'starbucks', 'uber eats', 'doordash', 'restaurant', 'cafe', 'lcbo', 'beer', 'whole foods'],
-    'Transport': ['shell', 'esso', 'petro', 'uber', 'lyft', 'ttc', 'go transit', 'presto', 'parking', 'gas', 'honda', 'toyota', 'canadian tire'],
-    'Housing': ['rent', 'mortgage', 'hydro', 'water', 'gas', 'home depot', 'ikea', 'property tax'],
-    'Essentials': ['shoppers', 'rexall', 'pharmacy', 'bell', 'rogers', 'telus', 'koodo', 'fido', 'insurance', 'dental', 'vision', 'barber', 'salon'],
-    'Lifestyle': ['netflix', 'spotify', 'amazon', 'cineplex', 'steam', 'apple', 'gym', 'goodlife', 'fit4less', 'golf', 'ticketmaster'],
-};
-
-const guessCategory = (merchant: string, amount: number): string => {
-    // If it's a positive cash flow, it's likely income or a refund
-    if (amount > 0) return 'Income';
-    
-    const lowerMerchant = merchant.toLowerCase();
-    
-    for (const [category, keywords] of Object.entries(DEFAULT_RULES)) {
-        if (keywords.some(keyword => lowerMerchant.includes(keyword))) {
-            return category;
-        }
-    }
-    return 'Uncategorized';
-};
-
 export default function ExpenseHeaderActions({ showToast }: Props) {
     const [isParsing, setIsParsing] = useState(false);
     const [showClearExpenseModal, setShowClearExpenseModal] = useState(false);
@@ -54,12 +31,14 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
 
                 const headers = Object.keys(parsedData[0] || {}).map(h => h.toLowerCase());
                 const dateKey = headers.find(h => h.includes('date')) || headers[0];
+                
                 const descKey = headers.find(h => (h.includes('merchant') && !h.includes('category'))) || 
                                 headers.find(h => h.includes('payee')) || 
                                 headers.find(h => h.includes('description') && !h.includes('category')) || 
                                 headers.find(h => h.includes('name') && !h.includes('category')) || 
                                 headers.find(h => h.includes('description')) || 
                                 headers[1];
+
                 const amtKey = headers.find(h => h.includes('amount')) || headers.find(h => h.includes('value')) || headers[2];
 
                 const newTransactions = parsedData.map((row, index) => {
@@ -78,7 +57,7 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                         date: dateObj.getTime() || Date.now(),
                         dateString: isNaN(dateObj.getTime()) ? 'Unknown' : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                         merchant: merchantName,
-                        category: guessCategory(merchantName, amountValue), // AUTO-CATEGORIZE HERE
+                        category: 'Uncategorized', // Reverted back to Uncategorized strictly
                         account: file.name.replace('.csv', ''),
                         amount: amountValue
                     };
@@ -87,7 +66,7 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                 await saveTransactions(newTransactions);
                 window.dispatchEvent(new CustomEvent('expensesUpdated'));
                 setIsParsing(false);
-                showToast("CSV Uploaded & Auto-Categorized!");
+                showToast("CSV Uploaded Successfully!");
                 if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
             },
             error: (err) => {
@@ -118,7 +97,6 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                 </button>
             </div>
 
-            {/* CLEAR DATA MODAL */}
             {showClearExpenseModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1080 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowClearExpenseModal(false)}></div>

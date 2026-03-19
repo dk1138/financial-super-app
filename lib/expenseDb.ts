@@ -74,3 +74,25 @@ export const updateTransactionCategory = async (id: string, newCategory: string)
         await db.put('transactions', tx);
     }
 };
+
+// Add this to the bottom of lib/expenseDb.ts
+export const updateCategoryByMerchant = async (merchant: string, newCategory: string) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = db.transaction('transactions', 'readwrite');
+    const store = tx.objectStore('transactions');
+    
+    // Get all transactions
+    const allTxs = await store.getAll();
+
+    // Find all matching the exact merchant name and update them
+    const updates = allTxs
+        .filter(t => t.merchant === merchant)
+        .map(t => {
+            t.category = newCategory;
+            return store.put(t);
+        });
+
+    await Promise.all(updates);
+    await tx.done;
+};
