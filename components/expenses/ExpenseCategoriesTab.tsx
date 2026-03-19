@@ -8,15 +8,19 @@ interface Props {
     formatCurrency: (val: number) => string;
 }
 
+type SortKey = 'cleanName' | 'count' | 'totalAmount';
+
 const CATEGORY_OPTIONS = ['Select Category...', 'Housing', 'Grocery', 'Food & Dining', 'Transport', 'Essentials', 'Lifestyle', 'Shopping', 'Health', 'Utilities', 'Income'];
 
 export default function ExpenseCategoriesTab({ uncategorizedTransactions, formatCurrency }: Props) {
     const [processingMerchant, setProcessingMerchant] = useState<string | null>(null);
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'cleanName', direction: 'asc' });
 
-    // Group the uncategorized transactions using the SMART NORMALIZER
+    // --- 1. GROUP & SORT TRANSACTIONS ---
     const merchantGroups = useMemo(() => {
         const groups: Record<string, { count: number; totalAmount: number; rawNames: Set<string> }> = {};
         
+        // Group by Normalized Name
         uncategorizedTransactions.forEach(tx => {
             const cleanName = normalizeMerchantName(tx.merchant);
             
@@ -26,21 +30,46 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
             
             groups[cleanName].count += 1;
             groups[cleanName].totalAmount += tx.amount;
-            groups[cleanName].rawNames.add(tx.merchant); // Keep track of the actual strings we bundled
+            groups[cleanName].rawNames.add(tx.merchant);
         });
 
-        // Convert to array and sort alphabetically by the clean name
-        return Object.entries(groups)
-            .map(([cleanName, data]) => ({ 
-                cleanName, 
-                count: data.count, 
-                totalAmount: data.totalAmount,
-                // Create a readable list of the raw names bundled in this group
-                bundledNames: Array.from(data.rawNames).slice(0, 3).join(', ') + (data.rawNames.size > 3 ? '...' : '')
-            }))
-            .sort((a, b) => a.cleanName.localeCompare(b.cleanName));
-    }, [uncategorizedTransactions]);
+        // Convert to Sortable Array
+        const sortableGroups = Object.entries(groups).map(([cleanName, data]) => ({ 
+            cleanName, 
+            count: data.count, 
+            totalAmount: data.totalAmount,
+            bundledNames: Array.from(data.rawNames).slice(0, 3).join(', ') + (data.rawNames.size > 3 ? '...' : '')
+        }));
 
+        // Apply Sorting Logic
+        sortableGroups.sort((a, b) => {
+            let aValue: string | number = a[sortConfig.key];
+            let bValue: string | number = b[sortConfig.key];
+            
+            if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+            if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return sortableGroups;
+    }, [uncategorizedTransactions, sortConfig]);
+
+    // --- 2. SORT HANDLERS ---
+    const handleSort = (key: SortKey) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+        setSortConfig({ key, direction });
+    };
+
+    const renderSortIcon = (key: SortKey) => {
+        if (sortConfig.key !== key) return <i className="bi bi-arrow-down-up ms-1 opacity-25" style={{ fontSize: '0.7rem' }}></i>;
+        return <i className={`bi bi-caret-${sortConfig.direction === 'asc' ? 'up' : 'down'}-fill ms-1 text-primary`} style={{ fontSize: '0.7rem' }}></i>;
+    };
+
+    // --- 3. BULK ASSIGN HANDLER ---
     const handleBulkAssign = async (cleanName: string, newCategory: string) => {
         if (newCategory === 'Select Category...') return;
         
@@ -49,7 +78,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
         // Update the database for all matching normalized merchants
         await updateCategoryByNormalizedMerchant(cleanName, newCategory);
         
-        // Tell the app to reload the data (this will remove them from the uncategorized list automatically!)
+        // Fire the global event to instantly update the Transactions and Dashboard tabs
         window.dispatchEvent(new CustomEvent('expensesUpdated'));
         setProcessingMerchant(null);
     };
@@ -80,10 +109,22 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
                         <table className="table table-hover table-borderless align-middle mb-0">
                             <thead className="border-bottom border-secondary position-sticky top-0 bg-input shadow-sm" style={{ zIndex: 10 }}>
                                 <tr>
-                                    <th className="ps-4 text-muted small fw-bold py-3">Merchant Group</th>
-                                    <th className="text-muted small fw-bold py-3 text-center" style={{ width: '15%' }}>Transactions</th>
-                                    <th className="text-muted small fw-bold py-3 text-end" style={{ width: '15%' }}>Total Value</th>
-                                    <th className="pe-4 text-muted small fw-bold py-3 text-end" style={{ width: '25%' }}>Assign Rule</th>
+                                    {/* SORTABLE HEADERS */}
+                                    <th className="ps-4 text-muted small fw-bold py-3 cursor-pointer hover-text-main transition-all" onClick={() => handleSort('cleanName')}>
+                                        <div className="d-flex align-items-center">Merchant Group {renderSortIcon('cleanName')}</div>
+                                    </th>
+                                    
+                                    <th className="text-muted small fw-bold py-3 cursor-pointer hover-text-main transition-all text-center" style={{ width: '15%' }} onClick={() => handleSort('count')}>
+                                        <div className="d-flex align-items-center justify-content-center">Transactions {renderSortIcon('count')}</div>
+                                    </th>
+                                    
+                                    <th className="text-muted small fw-bold py-3 cursor-pointer hover-text-main transition-all text-end" style={{ width: '15%' }} onClick={() => handleSort('totalAmount')}>
+                                        <div className="d-flex align-items-center justify-content-end">Total Value {renderSortIcon('totalAmount')}</div>
+                                    </th>
+                                    
+                                    <th className="pe-4 text-muted small fw-bold py-3 text-end" style={{ width: '25%' }}>
+                                        Assign Rule
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
