@@ -7,13 +7,15 @@ import { Category } from '../../app/expenses/page';
 interface Props {
     uncategorizedTransactions: Transaction[];
     categories: Category[];
+    rules: Record<string, string>;
     updateCategories: (cats: Category[]) => void;
+    updateRules: (rules: Record<string, string>) => void;
     formatCurrency: (val: number) => string;
 }
 
 type SortKey = 'cleanName' | 'count' | 'totalAmount';
 
-export default function ExpenseCategoriesTab({ uncategorizedTransactions, categories, updateCategories, formatCurrency }: Props) {
+export default function ExpenseCategoriesTab({ uncategorizedTransactions, categories, rules, updateCategories, updateRules, formatCurrency }: Props) {
     const [processingMerchant, setProcessingMerchant] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'cleanName', direction: 'asc' });
     const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
@@ -66,7 +68,14 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
     const handleBulkAssign = async (cleanName: string, newCategory: string) => {
         setProcessingMerchant(cleanName);
         setActiveDropdownId(null);
+        
+        // 1. Save this assignment as a persistent rule for future uploads
+        const newRules = { ...rules, [cleanName]: newCategory };
+        updateRules(newRules);
+
+        // 2. Update existing transactions in the database
         await updateCategoryByNormalizedMerchant(cleanName, newCategory);
+        
         window.dispatchEvent(new CustomEvent('expensesUpdated'));
         setProcessingMerchant(null);
     };
@@ -89,21 +98,28 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
         }
     };
 
+    const handleRemoveRule = (merchant: string) => {
+        const newRules = { ...rules };
+        delete newRules[merchant];
+        updateRules(newRules);
+    };
+
     return (
         <div className="fade-in d-flex flex-column gap-4">
             
+            {/* --- SECTION 1: PENDING CATEGORIZATION --- */}
             <div className="card border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
                 <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4 d-flex justify-content-between align-items-center">
                     <div>
                         <h6 className="fw-bold mb-1">Needs Categorization</h6>
-                        <p className="text-muted small mb-0">Assign a category below to instantly update all past and future transactions for that merchant group.</p>
+                        <p className="text-muted small mb-0">Assign a category below to instantly update past transactions AND create an auto-rule for the future.</p>
                     </div>
                     <div className="badge bg-warning text-dark px-3 py-2 rounded-pill shadow-sm">
                         {merchantGroups.length} Groups Pending
                     </div>
                 </div>
 
-                <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                <div className="table-responsive" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                     {merchantGroups.length === 0 ? (
                         <div className="text-center py-5 fade-in">
                             <div className="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center mx-auto mb-3" style={{ width: '60px', height: '60px' }}>
@@ -143,8 +159,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                                         <td className={`py-3 text-end fw-bold ${group.totalAmount > 0 ? 'text-success' : 'text-main'}`}>
                                             {formatCurrency(group.totalAmount)}
                                         </td>
-                                        
-                                        {/* MATCHING CUSTOM DROPDOWN */}
                                         <td className="pe-4 py-3 text-end position-relative">
                                             {processingMerchant === group.cleanName ? (
                                                 <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -188,64 +202,78 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                 </div>
             </div>
 
-            <div className="card border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
-                <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4">
-                    <h6 className="fw-bold mb-0">Manage Categories</h6>
-                </div>
-                <div className="card-body p-4">
-                    <div className="row g-4">
-                        
-                        <div className="col-12 col-md-7 border-end border-secondary">
-                            <div className="d-flex flex-wrap gap-2">
+            {/* --- BOTTOM GRID: CATEGORIES & RULES --- */}
+            <div className="row g-4">
+                
+                {/* CATEGORIES MANAGEMENT */}
+                <div className="col-12 col-xl-6">
+                    <div className="card h-100 border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
+                        <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4 d-flex justify-content-between align-items-center">
+                            <h6 className="fw-bold mb-0">Manage Categories</h6>
+                        </div>
+                        <div className="card-body p-4 d-flex flex-column">
+                            <form onSubmit={handleAddCategory} className="d-flex gap-2 mb-4">
+                                <div className="input-group input-group-sm">
+                                    <span className="input-group-text bg-input border-secondary p-0 px-2">
+                                        <input type="color" className="form-control form-control-color border-0 bg-transparent p-0 m-0 cursor-pointer" style={{ width: '24px', height: '24px' }} value={newCatColor} onChange={(e) => setNewCatColor(e.target.value)} title="Choose Category Color" />
+                                    </span>
+                                    <input type="text" className="form-control bg-input border-secondary text-main" placeholder="New Category Name..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} required />
+                                    <button type="submit" className="btn btn-primary fw-bold px-3">Add</button>
+                                </div>
+                            </form>
+                            
+                            <div className="d-flex flex-wrap gap-2 overflow-auto" style={{ maxHeight: '200px' }}>
                                 {categories.map(cat => (
                                     <div key={cat.name} className="badge border text-main rounded-pill px-3 py-2 d-flex align-items-center shadow-sm" style={{ fontSize: '0.85rem', backgroundColor: `${cat.color}25`, borderColor: cat.color }}>
                                         <i className="bi bi-circle-fill me-2" style={{ fontSize: '0.5rem', color: cat.color }}></i>
                                         {cat.name}
-                                        {/* Don't let them delete Exclude */}
                                         {cat.name !== 'Exclude' && (
-                                            <i 
-                                                className="bi bi-x-circle-fill ms-3 text-muted cursor-pointer hover-text-danger transition-all" 
-                                                onClick={() => handleRemoveCategory(cat.name)}
-                                            ></i>
+                                            <i className="bi bi-x-circle-fill ms-3 text-muted cursor-pointer hover-text-danger transition-all" onClick={() => handleRemoveCategory(cat.name)}></i>
                                         )}
                                     </div>
                                 ))}
                             </div>
                         </div>
-
-                        <div className="col-12 col-md-5">
-                            <form onSubmit={handleAddCategory} className="d-flex gap-2">
-                                <div className="input-group input-group-sm">
-                                    <span className="input-group-text bg-input border-secondary p-0 px-2">
-                                        <input 
-                                            type="color" 
-                                            className="form-control form-control-color border-0 bg-transparent p-0 m-0 cursor-pointer" 
-                                            style={{ width: '24px', height: '24px' }}
-                                            value={newCatColor} 
-                                            onChange={(e) => setNewCatColor(e.target.value)} 
-                                            title="Choose Category Color"
-                                        />
-                                    </span>
-                                    <input 
-                                        type="text" 
-                                        className="form-control bg-input border-secondary text-main" 
-                                        placeholder="New Category Name..." 
-                                        value={newCatName}
-                                        onChange={(e) => setNewCatName(e.target.value)}
-                                        required
-                                    />
-                                    <button type="submit" className="btn btn-primary fw-bold px-3">Add</button>
-                                </div>
-                            </form>
-                            <div className="text-muted small mt-2">
-                                <i className="bi bi-info-circle me-1"></i> Changes save automatically.
-                            </div>
-                        </div>
-
                     </div>
                 </div>
-            </div>
 
+                {/* SAVED RULES */}
+                <div className="col-12 col-xl-6">
+                    <div className="card h-100 border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
+                        <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4 d-flex justify-content-between align-items-center">
+                            <h6 className="fw-bold mb-0">Auto-Categorization Rules</h6>
+                            <span className="badge bg-input border border-secondary text-muted rounded-pill">{Object.keys(rules).length} Active</span>
+                        </div>
+                        <div className="card-body p-0">
+                            {Object.keys(rules).length === 0 ? (
+                                <div className="text-center text-muted small p-4 fst-italic">Categorize a transaction above to create your first rule.</div>
+                            ) : (
+                                <div className="list-group list-group-flush overflow-auto" style={{ maxHeight: '280px' }}>
+                                    {Object.entries(rules).sort(([a], [b]) => a.localeCompare(b)).map(([merchant, category]) => {
+                                        const catData = categories.find(c => c.name === category);
+                                        const catColor = catData ? catData.color : '#6c757d';
+                                        
+                                        return (
+                                            <div key={merchant} className="list-group-item bg-transparent border-secondary py-3 px-4 d-flex justify-content-between align-items-center hover-bg-secondary transition-all">
+                                                <div className="fw-bold text-main text-truncate pe-3" style={{ maxWidth: '60%' }}>{merchant}</div>
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <span className="badge border rounded-pill px-3 py-1 fw-bold text-main" style={{ backgroundColor: `${catColor}25`, borderColor: catColor }}>
+                                                        {category}
+                                                    </span>
+                                                    <button className="btn btn-sm btn-link text-danger p-0 opacity-50 hover-opacity-100 transition-all" onClick={() => handleRemoveRule(merchant)} title="Delete Rule">
+                                                        <i className="bi bi-trash3-fill"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 }

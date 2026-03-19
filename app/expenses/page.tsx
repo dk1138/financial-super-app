@@ -13,7 +13,6 @@ export interface Category {
     color: string;
 }
 
-// Added "Exclude" as a default category
 const DEFAULT_CATEGORIES: Category[] = [
     { name: 'Housing', color: '#0d6efd' },
     { name: 'Grocery', color: '#ffc107' },
@@ -24,13 +23,14 @@ const DEFAULT_CATEGORIES: Category[] = [
     { name: 'Shopping', color: '#20c997' },
     { name: 'Health', color: '#e83e8c' },
     { name: 'Utilities', color: '#0a58ca' },
-    { name: 'Exclude', color: '#6c757d' }, // Gray color for excluded items
+    { name: 'Exclude', color: '#6c757d' },
     { name: 'Income', color: '#198754' }
 ];
 
 export default function ExpenseTrackerPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+    const [rules, setRules] = useState<Record<string, string>>({}); // NEW: Rules State
     const [activeTab, setActiveTab] = useState('dashboard');
 
     useEffect(() => {
@@ -38,9 +38,11 @@ export default function ExpenseTrackerPage() {
         loadData();
 
         const savedCats = localStorage.getItem('expense_categories');
-        if (savedCats) {
-            setCategories(JSON.parse(savedCats));
-        }
+        if (savedCats) setCategories(JSON.parse(savedCats));
+
+        // NEW: Load saved rules on mount
+        const savedRules = localStorage.getItem('expense_rules');
+        if (savedRules) setRules(JSON.parse(savedRules));
 
         const handleUpdate = () => loadData();
         window.addEventListener('expensesUpdated', handleUpdate);
@@ -57,9 +59,14 @@ export default function ExpenseTrackerPage() {
         localStorage.setItem('expense_categories', JSON.stringify(newCategories));
     };
 
+    // NEW: Function to update rules
+    const handleUpdateRules = (newRules: Record<string, string>) => {
+        setRules(newRules);
+        localStorage.setItem('expense_rules', JSON.stringify(newRules));
+    };
+
     const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(val);
 
-    // --- DATA AGGREGATION FOR TABS ---
     const { totalSpend, uncategorizedTransactions, monthlyData, categoryData } = useMemo(() => {
         let spendCount = 0;
         const uncategorized: Transaction[] = [];
@@ -68,8 +75,6 @@ export default function ExpenseTrackerPage() {
 
         transactions.forEach(t => {
             if (t.category === 'Uncategorized') uncategorized.push(t);
-            
-            // MAGIC FIX: Completely ignore Exclude category for KPIs and Charts
             if (t.category === 'Exclude') return;
 
             const dateObj = new Date(t.date);
@@ -115,8 +120,6 @@ export default function ExpenseTrackerPage() {
                             <div className={`position-relative nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border cursor-pointer ${activeTab === tab.id ? 'bg-success text-white border-success shadow' : 'bg-input text-muted border-secondary opacity-75'}`} style={{ fontSize: '0.85rem' }}>
                                 <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
                                 <span className="text-nowrap">{tab.label}</span>
-                                
-                                {/* NOTIFICATION DOT FOR UNCATEGORIZED ITEMS */}
                                 {tab.id === 'categories' && uncategorizedTransactions.length > 0 && (
                                     <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ marginTop: '5px', marginLeft: '-10px' }}>
                                         <span className="visually-hidden">Needs Categorization</span>
@@ -141,31 +144,20 @@ export default function ExpenseTrackerPage() {
                             <div className="card-body p-0 fade-in-tab" key={activeTab}>
                                 
                                 {activeTab === 'dashboard' && (
-                                    <ExpenseDashboardTab 
-                                        totalSpend={totalSpend} 
-                                        transactionCount={transactions.length} 
-                                        transactions={transactions} 
-                                        monthlyData={monthlyData} 
-                                        categoryData={categoryData} 
-                                        categories={categories}
-                                        setActiveTab={setActiveTab} 
-                                        formatCurrency={formatCurrency} 
-                                    />
+                                    <ExpenseDashboardTab totalSpend={totalSpend} transactionCount={transactions.length} transactions={transactions} monthlyData={monthlyData} categoryData={categoryData} categories={categories} setActiveTab={setActiveTab} formatCurrency={formatCurrency} />
                                 )}
 
                                 {activeTab === 'transactions' && (
-                                    <ExpenseTransactionsTab 
-                                        transactions={transactions} 
-                                        categories={categories}
-                                        formatCurrency={formatCurrency} 
-                                    />
+                                    <ExpenseTransactionsTab transactions={transactions} categories={categories} formatCurrency={formatCurrency} />
                                 )}
 
                                 {activeTab === 'categories' && (
                                     <ExpenseCategoriesTab 
                                         uncategorizedTransactions={uncategorizedTransactions} 
                                         categories={categories}
+                                        rules={rules} // Pass rules
                                         updateCategories={handleUpdateCategories}
+                                        updateRules={handleUpdateRules} // Pass updater
                                         formatCurrency={formatCurrency} 
                                     />
                                 )}
@@ -177,7 +169,6 @@ export default function ExpenseTrackerPage() {
                     )}
                 </div>
             </div>
-            
         </div>
     );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Papa from 'papaparse';
-import { saveTransactions, clearTransactions } from '../../lib/expenseDb';
+import { saveTransactions, clearTransactions, normalizeMerchantName } from '../../lib/expenseDb';
 
 interface Props {
     showToast: (msg: string) => void;
@@ -18,6 +18,9 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
         if (!file) return;
         setIsParsing(true);
 
+        // Fetch the latest rules from localStorage directly so the header always has them
+        const savedRules: Record<string, string> = JSON.parse(localStorage.getItem('expense_rules') || '{}');
+
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
@@ -31,14 +34,12 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
 
                 const headers = Object.keys(parsedData[0] || {}).map(h => h.toLowerCase());
                 const dateKey = headers.find(h => h.includes('date')) || headers[0];
-                
                 const descKey = headers.find(h => (h.includes('merchant') && !h.includes('category'))) || 
                                 headers.find(h => h.includes('payee')) || 
                                 headers.find(h => h.includes('description') && !h.includes('category')) || 
                                 headers.find(h => h.includes('name') && !h.includes('category')) || 
                                 headers.find(h => h.includes('description')) || 
                                 headers[1];
-
                 const amtKey = headers.find(h => h.includes('amount')) || headers.find(h => h.includes('value')) || headers[2];
 
                 const newTransactions = parsedData.map((row, index) => {
@@ -49,24 +50,28 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                     const rawAmount = String(row[originalAmtKey] || '0');
                     const cleanAmount = parseFloat(rawAmount.replace(/[^0-9.-]+/g, ''));
                     const dateObj = new Date(row[originalDateKey]);
-                    const merchantName = row[originalDescKey] || 'Unknown';
-                    const amountValue = isNaN(cleanAmount) ? 0 : cleanAmount;
                     
+                    const merchantName = row[originalDescKey] || 'Unknown';
+                    const cleanMerchantName = normalizeMerchantName(merchantName);
+                    
+                    // THE MAGIC: Check the rules dictionary. If found, apply it. Otherwise, Uncategorized.
+                    const autoCategory = savedRules[cleanMerchantName] || 'Uncategorized';
+
                     return {
                         id: `${Date.now()}-${index}`,
                         date: dateObj.getTime() || Date.now(),
                         dateString: isNaN(dateObj.getTime()) ? 'Unknown' : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                         merchant: merchantName,
-                        category: 'Uncategorized', // Reverted back to Uncategorized strictly
+                        category: autoCategory,
                         account: file.name.replace('.csv', ''),
-                        amount: amountValue
+                        amount: isNaN(cleanAmount) ? 0 : cleanAmount
                     };
                 });
 
                 await saveTransactions(newTransactions);
                 window.dispatchEvent(new CustomEvent('expensesUpdated'));
                 setIsParsing(false);
-                showToast("CSV Uploaded Successfully!");
+                showToast("CSV Uploaded & Rules Applied!");
                 if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
             },
             error: (err) => {
