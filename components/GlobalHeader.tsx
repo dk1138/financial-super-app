@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link'; // <-- Added for instant pre-fetching
+import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { useFinance } from '../lib/FinanceContext';
 
@@ -38,34 +38,41 @@ export default function GlobalHeader() {
 
     // --- INITIALIZATION & DYNAMIC HEIGHT SYNC ---
     useEffect(() => {
+        // 1. Initialize Theme from Local Storage
         const savedTheme = localStorage.getItem('appTheme') || 'dark';
         setTheme(savedTheme);
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
 
+        // 2. Initialize File Management
         const currentName = localStorage.getItem('active_plan_name') || 'Untitled Plan';
         setActivePlanName(currentName);
         setNewPlanName(currentName === 'Untitled Plan' ? '' : currentName);
         setSavedPlans(JSON.parse(localStorage.getItem('rp_plan_list') || '[]'));
 
+        // 3. Listen for Plan changes from the Splash Screen
         const handlePlanChange = (e: Event) => {
             setActivePlanName((e as CustomEvent).detail);
         };
         window.addEventListener('updateActivePlan', handlePlanChange);
 
-        // Perfectly calculate header height so tabs stick precisely below it
+        // 4. Calculate header height perfectly so planner tabs stick precisely below it
         const updateHeight = () => {
             if (headerRef.current) {
                 document.documentElement.style.setProperty('--global-header-height', `${headerRef.current.offsetHeight}px`);
             }
         };
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
+        
+        // Use ResizeObserver for ultra-precise height tracking even if fonts load late
+        const resizeObserver = new ResizeObserver(() => updateHeight());
+        if (headerRef.current) {
+            resizeObserver.observe(headerRef.current);
+        }
 
         return () => {
             window.removeEventListener('updateActivePlan', handlePlanChange);
-            window.removeEventListener('resize', updateHeight);
+            resizeObserver.disconnect();
         };
-    }, [activeModule]); // Re-calculate if layout shifts between modules
+    }, [activeModule]);
 
     const toggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -206,6 +213,7 @@ export default function GlobalHeader() {
         <>
             <input type="file" accept=".json" className="d-none" ref={fileInputRef} onChange={handleLoadJson} />
 
+            {/* Global Toasts */}
             {toastMsg && (
                 <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{zIndex: 1060}}>
                     <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
@@ -216,18 +224,18 @@ export default function GlobalHeader() {
             )}
 
             <div 
-                ref={headerRef} // <-- Added reference for dynamic height calculation
-                className="position-sticky top-0 pt-2 pb-2" // <-- Removed mb-2 margin gap
+                ref={headerRef} 
+                className="position-sticky top-0 pt-2 pb-2" 
                 style={{ backgroundColor: 'var(--bg-body)', zIndex: 1040, borderBottom: '1px solid var(--border-color)' }}
             >
-                {/* Notice the mb-0 so the card touches the bottom border padding cleanly */}
                 <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-0 rounded-4 p-2 border border-secondary rp-card gap-2 m-0">
                     
                     <div className="d-flex align-items-center gap-2">
-                        {/* --- INSTANT NAVIGATION LINKS --- */}
+                        {/* --- INSTANT NAVIGATION LINKS (PREFETCH ENABLED) --- */}
                         <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm me-1" style={{ width: 'fit-content' }}>
                             <Link 
                                 href="/planner"
+                                prefetch={true}
                                 className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none ${activeModule === 'planner' ? 'bg-primary text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
                                 style={{ fontSize: '0.85rem' }}
                             >
@@ -238,6 +246,7 @@ export default function GlobalHeader() {
                             
                             <Link 
                                 href="/expenses"
+                                prefetch={true}
                                 className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none ${activeModule === 'expenses' ? 'bg-success text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
                                 style={{ fontSize: '0.85rem' }}
                             >
@@ -247,7 +256,7 @@ export default function GlobalHeader() {
                             </Link>
                         </div>
                     
-                        {/* --- FILE MANAGER --- */}
+                        {/* --- FILE MANAGER (Only visible in Planner mode) --- */}
                         {activeModule === 'planner' && (
                             <div className="position-relative d-none d-md-block">
                                 <button 
@@ -315,7 +324,6 @@ export default function GlobalHeader() {
             </div>
 
             {/* --- GLOBAL FILE MODALS --- */}
-            {/* ... Modal code remains identical ... */}
             {showSaveModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
@@ -334,6 +342,7 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
+
             {showLoadModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowLoadModal(false)}></div>
@@ -367,6 +376,7 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
+
             {showPasteJsonModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowPasteJsonModal(false)}></div>
@@ -387,6 +397,7 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
+
             {planToLoad && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToLoad(null)}></div>
@@ -407,6 +418,7 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
+
             {planToDelete && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToDelete(null)}></div>
@@ -427,6 +439,7 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
+
             {showResetConfirm && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowResetConfirm(false)}></div>
