@@ -351,10 +351,12 @@ export default function GlobalHeader() {
                                 )}
                             </div>
                         )}
-
-                        {/* EXPENSES ACTIONS (Clear & Upload) */}
+                    </div>
+                    
+                    <div className="d-flex align-items-center gap-2">
+                        {/* EXPENSES ACTIONS (Clear & Upload) -> Moved here! */}
                         {activeModule === 'expenses' && (
-                            <div className="d-flex gap-2">
+                            <div className="d-flex gap-2 me-md-2">
                                 <button 
                                     className="btn btn-sm btn-outline-danger bg-input fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
                                     onClick={() => setShowClearExpenseModal(true)}
@@ -376,9 +378,7 @@ export default function GlobalHeader() {
                                 </button>
                             </div>
                         )}
-                    </div>
-                    
-                    <div className="d-flex align-items-center gap-2">
+
                         {/* TODAY'S $ TOGGLE (Only in Planner) */}
                         {activeModule === 'planner' && (
                             <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
@@ -394,7 +394,7 @@ export default function GlobalHeader() {
                             <i className={`fs-6 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
                         </button>
 
-                        <a href="https://ko-fi.com/P5P11UYZUD" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" style={{ width: '36px', height: '36px' }}>
+                        <a href="https://ko-fi.com/P5P11UYZUD" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0 d-none d-sm-flex" style={{ width: '36px', height: '36px' }}>
                             <i className="bi bi-cup-hot-fill fs-6" style={{ color: '#72a4f2' }}></i>
                         </a>
 
