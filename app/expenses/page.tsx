@@ -13,6 +13,7 @@ export interface Category {
     color: string;
 }
 
+// Added "Exclude" as a default category
 const DEFAULT_CATEGORIES: Category[] = [
     { name: 'Housing', color: '#0d6efd' },
     { name: 'Grocery', color: '#ffc107' },
@@ -23,6 +24,7 @@ const DEFAULT_CATEGORIES: Category[] = [
     { name: 'Shopping', color: '#20c997' },
     { name: 'Health', color: '#e83e8c' },
     { name: 'Utilities', color: '#0a58ca' },
+    { name: 'Exclude', color: '#6c757d' }, // Gray color for excluded items
     { name: 'Income', color: '#198754' }
 ];
 
@@ -35,7 +37,6 @@ export default function ExpenseTrackerPage() {
         initDB();
         loadData();
 
-        // Load custom categories if they exist
         const savedCats = localStorage.getItem('expense_categories');
         if (savedCats) {
             setCategories(JSON.parse(savedCats));
@@ -67,6 +68,9 @@ export default function ExpenseTrackerPage() {
 
         transactions.forEach(t => {
             if (t.category === 'Uncategorized') uncategorized.push(t);
+            
+            // MAGIC FIX: Completely ignore Exclude category for KPIs and Charts
+            if (t.category === 'Exclude') return;
 
             const dateObj = new Date(t.date);
             const monthYear = dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -108,9 +112,16 @@ export default function ExpenseTrackerPage() {
                 <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1">
                     {tabs.map(tab => (
                         <li className="nav-item flex-fill" key={tab.id} onClick={() => setActiveTab(tab.id)}>
-                            <div className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border cursor-pointer ${activeTab === tab.id ? 'bg-success text-white border-success shadow' : 'bg-input text-muted border-secondary opacity-75'}`} style={{ fontSize: '0.85rem' }}>
+                            <div className={`position-relative nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border cursor-pointer ${activeTab === tab.id ? 'bg-success text-white border-success shadow' : 'bg-input text-muted border-secondary opacity-75'}`} style={{ fontSize: '0.85rem' }}>
                                 <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
                                 <span className="text-nowrap">{tab.label}</span>
+                                
+                                {/* NOTIFICATION DOT FOR UNCATEGORIZED ITEMS */}
+                                {tab.id === 'categories' && uncategorizedTransactions.length > 0 && (
+                                    <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ marginTop: '5px', marginLeft: '-10px' }}>
+                                        <span className="visually-hidden">Needs Categorization</span>
+                                    </span>
+                                )}
                             </div>
                         </li>
                     ))}
@@ -131,7 +142,14 @@ export default function ExpenseTrackerPage() {
                                 
                                 {activeTab === 'dashboard' && (
                                     <ExpenseDashboardTab 
-                                        totalSpend={totalSpend} transactionCount={transactions.length} uncategorizedTransactions={uncategorizedTransactions} monthlyData={monthlyData} categoryData={categoryData} setActiveTab={setActiveTab} formatCurrency={formatCurrency} 
+                                        totalSpend={totalSpend} 
+                                        transactionCount={transactions.length} 
+                                        transactions={transactions} 
+                                        monthlyData={monthlyData} 
+                                        categoryData={categoryData} 
+                                        categories={categories}
+                                        setActiveTab={setActiveTab} 
+                                        formatCurrency={formatCurrency} 
                                     />
                                 )}
 

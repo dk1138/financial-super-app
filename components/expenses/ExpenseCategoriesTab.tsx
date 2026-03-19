@@ -18,11 +18,9 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'cleanName', direction: 'asc' });
     const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
-    // Form State for Category Management
     const [newCatName, setNewCatName] = useState('');
     const [newCatColor, setNewCatColor] = useState('#0d6efd');
 
-    // --- 1. GROUP & SORT TRANSACTIONS ---
     const merchantGroups = useMemo(() => {
         const groups: Record<string, { count: number; totalAmount: number; rawNames: Set<string> }> = {};
         
@@ -73,7 +71,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
         setProcessingMerchant(null);
     };
 
-    // --- CATEGORY MANAGEMENT HANDLERS ---
     const handleAddCategory = (e: React.FormEvent) => {
         e.preventDefault();
         const cleanName = newCatName.trim();
@@ -95,7 +92,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
     return (
         <div className="fade-in d-flex flex-column gap-4">
             
-            {/* --- TOP SECTION: BULK ASSIGNMENT --- */}
             <div className="card border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
                 <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4 d-flex justify-content-between align-items-center">
                     <div>
@@ -155,7 +151,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                                             ) : (
                                                 <>
                                                     <div 
-                                                        className="border rounded-pill px-3 cursor-pointer transition-all d-inline-flex align-items-center justify-content-between small fw-bold bg-input text-muted border-secondary"
+                                                        className="border rounded-pill px-3 cursor-pointer transition-all d-inline-flex align-items-center justify-content-between small fw-bold bg-input text-muted border-secondary hover-bg-secondary"
                                                         style={{ width: '160px', height: '28px', userSelect: 'none' }}
                                                         onClick={() => setActiveDropdownId(activeDropdownId === group.cleanName ? null : group.cleanName)}
                                                     >
@@ -192,7 +188,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                 </div>
             </div>
 
-            {/* --- BOTTOM SECTION: CATEGORY MANAGEMENT --- */}
             <div className="card border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
                 <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4">
                     <h6 className="fw-bold mb-0">Manage Categories</h6>
@@ -200,23 +195,24 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                 <div className="card-body p-4">
                     <div className="row g-4">
                         
-                        {/* LIST OF CATEGORIES */}
                         <div className="col-12 col-md-7 border-end border-secondary">
                             <div className="d-flex flex-wrap gap-2">
                                 {categories.map(cat => (
-                                    <div key={cat.name} className="badge bg-input border border-secondary text-main rounded-pill px-3 py-2 d-flex align-items-center shadow-sm" style={{ fontSize: '0.85rem' }}>
+                                    <div key={cat.name} className="badge border text-main rounded-pill px-3 py-2 d-flex align-items-center shadow-sm" style={{ fontSize: '0.85rem', backgroundColor: `${cat.color}25`, borderColor: cat.color }}>
                                         <i className="bi bi-circle-fill me-2" style={{ fontSize: '0.5rem', color: cat.color }}></i>
                                         {cat.name}
-                                        <i 
-                                            className="bi bi-x-circle-fill ms-3 text-muted cursor-pointer hover-text-danger transition-all" 
-                                            onClick={() => handleRemoveCategory(cat.name)}
-                                        ></i>
+                                        {/* Don't let them delete Exclude */}
+                                        {cat.name !== 'Exclude' && (
+                                            <i 
+                                                className="bi bi-x-circle-fill ms-3 text-muted cursor-pointer hover-text-danger transition-all" 
+                                                onClick={() => handleRemoveCategory(cat.name)}
+                                            ></i>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* ADD NEW CATEGORY FORM */}
                         <div className="col-12 col-md-5">
                             <form onSubmit={handleAddCategory} className="d-flex gap-2">
                                 <div className="input-group input-group-sm">
@@ -242,7 +238,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                                 </div>
                             </form>
                             <div className="text-muted small mt-2">
-                                <i className="bi bi-info-circle me-1"></i> Changes save automatically to your browser.
+                                <i className="bi bi-info-circle me-1"></i> Changes save automatically.
                             </div>
                         </div>
 

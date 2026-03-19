@@ -1,17 +1,17 @@
 'use client';
 
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import React, { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Transaction } from '../../lib/expenseDb';
-
-const CATEGORY_COLORS = ['#0d6efd', '#ffc107', '#0dcaf0', '#6f42c1', '#d63384', '#fd7e14', '#198754'];
+import { Category } from '../../app/expenses/page';
 
 interface Props {
     totalSpend: number;
     transactionCount: number;
-    uncategorizedTransactions: Transaction[];
+    transactions: Transaction[];
     monthlyData: any[];
     categoryData: any[];
+    categories: Category[];
     setActiveTab: (tab: string) => void;
     formatCurrency: (val: number) => string;
 }
@@ -19,14 +19,22 @@ interface Props {
 export default function ExpenseDashboardTab({ 
     totalSpend, 
     transactionCount, 
-    uncategorizedTransactions, 
+    transactions,
     monthlyData, 
     categoryData, 
+    categories,
     setActiveTab, 
     formatCurrency 
 }: Props) {
     
-    // Custom Tooltip for the Pie Chart
+    // State to track which pie slice is clicked
+    const [selectedPieCategory, setSelectedPieCategory] = useState<string | null>(null);
+
+    const getCategoryColor = (name: string) => {
+        const cat = categories.find(c => c.name === name);
+        return cat ? cat.color : '#6c757d';
+    };
+
     const CustomPieTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
             const value = payload[0].value || 0;
@@ -34,44 +42,41 @@ export default function ExpenseDashboardTab({
                 <div className="bg-input border border-secondary p-2 rounded-3 shadow-sm">
                     <span className="fw-bold d-block text-main">{payload[0].name}</span>
                     <span className="text-muted small">{formatCurrency(Number(value))}</span>
+                    <div className="text-primary small mt-1" style={{fontSize: '0.7rem'}}>Click to view transactions</div>
                 </div>
             );
         }
         return null;
     };
 
+    // Filter transactions for the mini-ledger under the pie chart
+    const activeTransactions = selectedPieCategory 
+        ? transactions.filter(t => t.category === selectedPieCategory).slice(0, 10) // Show top 10 recent
+        : [];
+
     return (
         <div className="fade-in">
-            {/* KPI ROW */}
+            {/* KPI ROW - Simplified to just 2 cards since Categories tab handles the warnings now */}
             <div className="row g-3 mb-4">
-                <div className="col-12 col-md-6 col-xl-4">
+                <div className="col-12 col-md-6">
                     <div className="card h-100 border-secondary shadow-sm rounded-4 bg-input">
                         <div className="card-body p-3 p-xl-4">
                             <div className="text-muted fw-bold small text-uppercase mb-2 ls-1 d-flex justify-content-between">
                                 Total Spend <i className="bi bi-wallet2 text-danger"></i>
                             </div>
                             <h3 className="fw-bold mb-0 text-main">{formatCurrency(totalSpend)}</h3>
+                            <div className="text-muted small mt-1">Excludes hidden categories</div>
                         </div>
                     </div>
                 </div>
-                <div className="col-12 col-md-6 col-xl-4">
+                <div className="col-12 col-md-6">
                     <div className="card h-100 border-secondary shadow-sm rounded-4 bg-input">
                         <div className="card-body p-3 p-xl-4">
                             <div className="text-muted fw-bold small text-uppercase mb-2 ls-1 d-flex justify-content-between">
-                                Transactions <i className="bi bi-receipt-cutoff text-success"></i>
+                                Processed Transactions <i className="bi bi-receipt-cutoff text-success"></i>
                             </div>
                             <h3 className="fw-bold mb-0 text-main">{transactionCount}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-12 col-md-6 col-xl-4">
-                    <div className="card h-100 border-warning shadow-sm rounded-4 bg-warning bg-opacity-10">
-                        <div className="card-body p-3 p-xl-4">
-                            <div className="text-warning text-opacity-75 fw-bold small text-uppercase mb-2 ls-1 d-flex justify-content-between">
-                                Action Required <i className="bi bi-exclamation-triangle-fill text-warning"></i>
-                            </div>
-                            <h3 className="fw-bold mb-0 text-warning">{uncategorizedTransactions.length}</h3>
-                            <div className="text-warning small mt-2 fw-bold">Uncategorized Transactions</div>
+                            <div className="text-muted small mt-1">Total items ingested</div>
                         </div>
                     </div>
                 </div>
@@ -89,13 +94,8 @@ export default function ExpenseDashboardTab({
                                 <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
                                     <XAxis dataKey="name" tick={{fontSize: 12, fill: '#6c757d'}} axisLine={false} tickLine={false} />
-                                    <YAxis 
-                                        tick={{fontSize: 12, fill: '#6c757d'}} 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        tickFormatter={(val: any) => `$${val}`} 
-                                    />
-                                    <Tooltip 
+                                    <YAxis tick={{fontSize: 12, fill: '#6c757d'}} axisLine={false} tickLine={false} tickFormatter={(val: any) => `$${val}`} />
+                                    <RechartsTooltip 
                                         cursor={{fill: 'var(--border-color)', opacity: 0.4}} 
                                         contentStyle={{backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', borderRadius: '8px', color: 'var(--text-main)'}}
                                         formatter={(value: any) => {
@@ -133,24 +133,41 @@ export default function ExpenseDashboardTab({
                                                 innerRadius={60} outerRadius={90} 
                                                 paddingAngle={2} dataKey="value"
                                                 stroke="none"
+                                                onClick={(data) => setSelectedPieCategory(data.name)} // Wire up the click
+                                                style={{ cursor: 'pointer' }}
                                             >
                                                 {categoryData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                                                    <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name)} />
                                                 ))}
                                             </Pie>
-                                            <Tooltip content={<CustomPieTooltip />} />
+                                            <RechartsTooltip content={<CustomPieTooltip />} />
                                         </PieChart>
                                     </ResponsiveContainer>
-                                    <div className="w-100 mt-3" style={{ maxHeight: '100px', overflowY: 'auto' }}>
-                                        {categoryData.slice(0, 4).map((cat, idx) => (
-                                            <div key={cat.name} className="d-flex justify-content-between small mb-2 border-bottom border-secondary border-opacity-25 pb-1">
-                                                <span className="text-muted text-truncate me-2">
-                                                    <i className="bi bi-circle-fill me-2" style={{fontSize: '0.5rem', color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length]}}></i>
-                                                    {cat.name}
-                                                </span> 
-                                                <strong className="text-main">{formatCurrency(cat.value)}</strong>
-                                            </div>
-                                        ))}
+                                    
+                                    {/* The Dynamic Mini-Legend / Transaction List */}
+                                    <div className="w-100 mt-3 bg-input border border-secondary rounded-3 p-2 shadow-sm" style={{ maxHeight: '130px', overflowY: 'auto' }}>
+                                        {!selectedPieCategory ? (
+                                            <div className="text-center text-muted small py-3 fst-italic">Click a pie slice to view its transactions.</div>
+                                        ) : (
+                                            <>
+                                                <div className="fw-bold small mb-2 text-main d-flex justify-content-between align-items-center border-bottom border-secondary pb-1">
+                                                    <span>
+                                                        <i className="bi bi-circle-fill me-2" style={{fontSize: '0.5rem', color: getCategoryColor(selectedPieCategory)}}></i>
+                                                        {selectedPieCategory}
+                                                    </span>
+                                                    <i className="bi bi-x-circle text-muted cursor-pointer" onClick={() => setSelectedPieCategory(null)}></i>
+                                                </div>
+                                                {activeTransactions.map(tx => (
+                                                    <div key={tx.id} className="d-flex justify-content-between small mb-1">
+                                                        <span className="text-muted text-truncate me-2" style={{maxWidth: '150px'}}>{tx.merchant}</span>
+                                                        <strong className="text-main">{formatCurrency(Math.abs(tx.amount))}</strong>
+                                                    </div>
+                                                ))}
+                                                {activeTransactions.length >= 10 && (
+                                                    <div className="text-center small mt-2"><button className="btn btn-sm btn-link p-0 text-muted" onClick={() => setActiveTab('transactions')}>View all...</button></div>
+                                                )}
+                                            </>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -158,40 +175,6 @@ export default function ExpenseDashboardTab({
                     </div>
                 </div>
             </div>
-
-            {/* UNCATEGORIZED TRANSACTIONS TO-DO LIST */}
-            {uncategorizedTransactions.length > 0 && (
-                <div className="row">
-                    <div className="col-12">
-                        <div className="card border-warning border-opacity-50 shadow-sm rounded-4 surface-card overflow-hidden">
-                            <div className="card-header bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-3 px-4 d-flex justify-content-between align-items-center">
-                                <h6 className="fw-bold mb-0 text-warning"><i className="bi bi-tags-fill me-2"></i>Needs Categorization</h6>
-                                <button className="btn btn-sm btn-warning fw-bold rounded-pill px-3 shadow-sm" onClick={() => setActiveTab('transactions')}>
-                                    View All ({uncategorizedTransactions.length})
-                                </button>
-                            </div>
-                            <div className="list-group list-group-flush">
-                                {uncategorizedTransactions.slice(0, 5).map(tx => (
-                                    <div key={tx.id} className="list-group-item bg-transparent border-secondary py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                                        <div>
-                                            <div className="fw-bold text-main text-truncate" style={{ maxWidth: '300px' }}>{tx.merchant}</div>
-                                            <div className="text-muted small">{tx.dateString} • {tx.account}</div>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between gap-3">
-                                            <span className={`fw-bold ${tx.amount > 0 ? 'text-success' : 'text-main'}`}>
-                                                {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
-                                            </span>
-                                            <button className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-sm" onClick={() => setActiveTab('transactions')}>
-                                                Assign
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

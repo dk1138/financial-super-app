@@ -93,9 +93,13 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
                                 </tr>
                             ) : (
                                 sortedTransactions.slice(0, 150).map((tx) => {
-                                    // Find category color if it exists
+                                    
+                                    // Identify Colors for the UI
+                                    const isUncat = tx.category === 'Uncategorized';
                                     const catData = categories.find(c => c.name === tx.category);
-                                    const catColor = catData ? catData.color : 'var(--bs-primary)';
+                                    const baseColor = catData ? catData.color : '#6c757d';
+                                    // Append '25' to hex for 15% opacity background
+                                    const bgColor = isUncat ? 'var(--bs-secondary-bg-subtle)' : `${baseColor}25`;
 
                                     return (
                                         <tr key={tx.id} className="transition-all">
@@ -104,15 +108,16 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
                                             </td>
                                             <td className="py-3 fw-bold text-main">{tx.merchant}</td>
                                             
-                                            {/* MODERN CUSTOM DROPDOWN (Fixed Clipping) */}
                                             <td className="py-3 position-relative">
                                                 <div 
-                                                    className={`border rounded-pill px-3 cursor-pointer transition-all d-inline-flex align-items-center justify-content-between small fw-bold ${tx.category === 'Uncategorized' ? 'bg-secondary bg-opacity-25 text-secondary border-secondary' : 'bg-input border-secondary'}`}
+                                                    className={`border rounded-pill px-3 cursor-pointer transition-all d-inline-flex align-items-center justify-content-between small fw-bold ${isUncat ? 'text-secondary border-secondary' : 'border-transparent'}`}
                                                     style={{ 
                                                         width: '140px', 
-                                                        height: '28px', // Fixed height prevents descender clipping
+                                                        height: '28px', 
                                                         userSelect: 'none',
-                                                        color: tx.category === 'Uncategorized' ? '' : catColor
+                                                        backgroundColor: bgColor,
+                                                        color: isUncat ? '' : baseColor,
+                                                        borderColor: isUncat ? '' : baseColor
                                                     }}
                                                     onClick={() => setActiveDropdownId(activeDropdownId === tx.id ? null : tx.id)}
                                                 >
@@ -135,7 +140,10 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
                                                                 <div 
                                                                     key={cat.name} 
                                                                     className={`px-3 py-2 small fw-bold rounded-2 cursor-pointer transition-all hover-bg-secondary d-flex align-items-center`}
-                                                                    style={{ color: tx.category === cat.name ? cat.color : 'var(--bs-body-color)' }}
+                                                                    style={{ 
+                                                                        color: tx.category === cat.name ? cat.color : 'var(--bs-body-color)',
+                                                                        backgroundColor: tx.category === cat.name ? `${cat.color}20` : 'transparent'
+                                                                    }}
                                                                     onClick={() => handleCategoryChange(tx.id, cat.name)}
                                                                 >
                                                                     <i className="bi bi-circle-fill me-2" style={{ fontSize: '0.5rem', color: cat.color }}></i>
