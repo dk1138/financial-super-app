@@ -10,11 +10,18 @@ interface Props {
 
 type SortKey = 'date' | 'merchant' | 'category' | 'amount';
 
-const CATEGORY_OPTIONS = ['Uncategorized', 'Housing', 'Food', 'Transport', 'Essentials', 'Lifestyle', 'Income'];
+// THE MASTER UNIFIED CATEGORY LIST
+export const MASTER_CATEGORIES = [
+    'Uncategorized', 'Housing', 'Grocery', 'Food & Dining', 'Transport', 
+    'Essentials', 'Lifestyle', 'Shopping', 'Health', 'Utilities', 'Income'
+];
 
 export default function ExpenseTransactionsTab({ transactions, formatCurrency }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+    
+    // Tracks which row's custom dropdown is currently open
+    const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
     // --- 1. FILTER TRANSACTIONS ---
     const filteredTransactions = useMemo(() => {
@@ -60,7 +67,7 @@ export default function ExpenseTransactionsTab({ transactions, formatCurrency }:
     // --- 3. HANDLE CATEGORY CHANGES ---
     const handleCategoryChange = async (id: string, newCategory: string) => {
         await updateTransactionCategory(id, newCategory);
-        // Tell the rest of the app to refresh its data (updates the charts instantly!)
+        setActiveDropdownId(null); // Close the dropdown
         window.dispatchEvent(new CustomEvent('expensesUpdated'));
     };
 
@@ -106,33 +113,53 @@ export default function ExpenseTransactionsTab({ transactions, formatCurrency }:
                             ) : (
                                 sortedTransactions.slice(0, 150).map((tx) => (
                                     <tr key={tx.id} className="transition-all">
-                                        
                                         <td className="ps-4 py-3 text-nowrap">
                                             <span className="text-muted small fw-bold">{tx.dateString}</span>
                                         </td>
-                                        
                                         <td className="py-3 fw-bold text-main">
                                             {tx.merchant}
                                         </td>
                                         
-                                        {/* INLINE EDITABLE CATEGORY DROPDOWN */}
-                                        <td className="py-3">
-                                            <select 
-                                                className={`form-select form-select-sm badge border rounded-pill px-3 py-1 cursor-pointer shadow-none ${tx.category === 'Uncategorized' ? 'bg-secondary bg-opacity-25 text-secondary border-secondary' : 'bg-success bg-opacity-25 text-success border-success'}`}
-                                                style={{ width: 'auto', display: 'inline-block', appearance: 'none' }}
-                                                value={tx.category}
-                                                onChange={(e) => handleCategoryChange(tx.id, e.target.value)}
+                                        {/* THE MODERN CUSTOM DROPDOWN */}
+                                        <td className="py-3 position-relative">
+                                            <div 
+                                                className={`badge border rounded-pill px-3 py-2 cursor-pointer transition-all d-inline-flex align-items-center justify-content-between ${tx.category === 'Uncategorized' ? 'bg-secondary bg-opacity-25 text-secondary border-secondary' : 'bg-success bg-opacity-10 text-success border-success'}`}
+                                                style={{ width: '140px', userSelect: 'none' }}
+                                                onClick={() => setActiveDropdownId(activeDropdownId === tx.id ? null : tx.id)}
                                             >
-                                                {CATEGORY_OPTIONS.map(cat => (
-                                                    <option key={cat} value={cat} className="bg-body text-main">{cat}</option>
-                                                ))}
-                                            </select>
+                                                <span className="text-truncate">{tx.category}</span>
+                                                <i className="bi bi-chevron-down ms-2" style={{ fontSize: '0.65rem' }}></i>
+                                            </div>
+
+                                            {/* DROPDOWN MENU POPOVER */}
+                                            {activeDropdownId === tx.id && (
+                                                <>
+                                                    {/* Invisible full-screen backdrop to detect clicks outside */}
+                                                    <div 
+                                                        className="position-fixed top-0 start-0 w-100 h-100" 
+                                                        style={{ zIndex: 1050 }} 
+                                                        onClick={() => setActiveDropdownId(null)}
+                                                    ></div>
+                                                    
+                                                    {/* The actual menu */}
+                                                    <div className="position-absolute bg-input border border-secondary rounded-3 shadow-lg p-1 mt-1" style={{ zIndex: 1060, width: '180px', maxHeight: '250px', overflowY: 'auto' }}>
+                                                        {MASTER_CATEGORIES.map(cat => (
+                                                            <div 
+                                                                key={cat} 
+                                                                className={`px-3 py-2 small fw-bold rounded-2 cursor-pointer transition-all hover-bg-secondary hover-text-main ${tx.category === cat ? 'bg-primary bg-opacity-10 text-primary' : 'text-muted'}`}
+                                                                onClick={() => handleCategoryChange(tx.id, cat)}
+                                                            >
+                                                                {cat}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            )}
                                         </td>
                                         
                                         <td className={`text-end pe-4 py-3 fw-bold text-nowrap ${tx.amount > 0 ? 'text-success' : 'text-main'}`}>
                                             {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
                                         </td>
-                                        
                                     </tr>
                                 ))
                             )}

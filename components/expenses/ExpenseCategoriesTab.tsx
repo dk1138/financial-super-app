@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Transaction, updateCategoryByNormalizedMerchant, normalizeMerchantName } from '../../lib/expenseDb';
+import { MASTER_CATEGORIES } from './ExpenseTransactionsTab'; // Import the unified list
 
 interface Props {
     uncategorizedTransactions: Transaction[];
@@ -10,17 +11,17 @@ interface Props {
 
 type SortKey = 'cleanName' | 'count' | 'totalAmount';
 
-const CATEGORY_OPTIONS = ['Select Category...', 'Housing', 'Grocery', 'Food & Dining', 'Transport', 'Essentials', 'Lifestyle', 'Shopping', 'Health', 'Utilities', 'Income'];
-
 export default function ExpenseCategoriesTab({ uncategorizedTransactions, formatCurrency }: Props) {
     const [processingMerchant, setProcessingMerchant] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'cleanName', direction: 'asc' });
+
+    // Ensure 'Select Category...' is at the top of the list for the native dropdown
+    const bulkCategoryOptions = ['Select Category...', ...MASTER_CATEGORIES.filter(c => c !== 'Uncategorized')];
 
     // --- 1. GROUP & SORT TRANSACTIONS ---
     const merchantGroups = useMemo(() => {
         const groups: Record<string, { count: number; totalAmount: number; rawNames: Set<string> }> = {};
         
-        // Group by Normalized Name
         uncategorizedTransactions.forEach(tx => {
             const cleanName = normalizeMerchantName(tx.merchant);
             
@@ -33,7 +34,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
             groups[cleanName].rawNames.add(tx.merchant);
         });
 
-        // Convert to Sortable Array
         const sortableGroups = Object.entries(groups).map(([cleanName, data]) => ({ 
             cleanName, 
             count: data.count, 
@@ -41,7 +41,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
             bundledNames: Array.from(data.rawNames).slice(0, 3).join(', ') + (data.rawNames.size > 3 ? '...' : '')
         }));
 
-        // Apply Sorting Logic
         sortableGroups.sort((a, b) => {
             let aValue: string | number = a[sortConfig.key];
             let bValue: string | number = b[sortConfig.key];
@@ -74,11 +73,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
         if (newCategory === 'Select Category...') return;
         
         setProcessingMerchant(cleanName);
-        
-        // Update the database for all matching normalized merchants
         await updateCategoryByNormalizedMerchant(cleanName, newCategory);
-        
-        // Fire the global event to instantly update the Transactions and Dashboard tabs
         window.dispatchEvent(new CustomEvent('expensesUpdated'));
         setProcessingMerchant(null);
     };
@@ -109,45 +104,35 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
                         <table className="table table-hover table-borderless align-middle mb-0">
                             <thead className="border-bottom border-secondary position-sticky top-0 bg-input shadow-sm" style={{ zIndex: 10 }}>
                                 <tr>
-                                    {/* SORTABLE HEADERS */}
                                     <th className="ps-4 text-muted small fw-bold py-3 cursor-pointer hover-text-main transition-all" onClick={() => handleSort('cleanName')}>
                                         <div className="d-flex align-items-center">Merchant Group {renderSortIcon('cleanName')}</div>
                                     </th>
-                                    
                                     <th className="text-muted small fw-bold py-3 cursor-pointer hover-text-main transition-all text-center" style={{ width: '15%' }} onClick={() => handleSort('count')}>
                                         <div className="d-flex align-items-center justify-content-center">Transactions {renderSortIcon('count')}</div>
                                     </th>
-                                    
                                     <th className="text-muted small fw-bold py-3 cursor-pointer hover-text-main transition-all text-end" style={{ width: '15%' }} onClick={() => handleSort('totalAmount')}>
                                         <div className="d-flex align-items-center justify-content-end">Total Value {renderSortIcon('totalAmount')}</div>
                                     </th>
-                                    
-                                    <th className="pe-4 text-muted small fw-bold py-3 text-end" style={{ width: '25%' }}>
-                                        Assign Rule
-                                    </th>
+                                    <th className="pe-4 text-muted small fw-bold py-3 text-end" style={{ width: '25%' }}>Assign Rule</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {merchantGroups.map((group) => (
                                     <tr key={group.cleanName} className="transition-all">
-                                        
                                         <td className="ps-4 py-3">
                                             <div className="fw-bold text-main">{group.cleanName}</div>
                                             <div className="text-muted small text-truncate" style={{ maxWidth: '300px' }} title={group.bundledNames}>
                                                 Includes: <span className="fst-italic">{group.bundledNames}</span>
                                             </div>
                                         </td>
-                                        
                                         <td className="py-3 text-center">
                                             <span className="badge bg-secondary bg-opacity-25 text-secondary rounded-pill px-3">
                                                 {group.count}
                                             </span>
                                         </td>
-                                        
                                         <td className={`py-3 text-end fw-bold ${group.totalAmount > 0 ? 'text-success' : 'text-main'}`}>
                                             {formatCurrency(group.totalAmount)}
                                         </td>
-                                        
                                         <td className="pe-4 py-3 text-end">
                                             {processingMerchant === group.cleanName ? (
                                                 <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -158,7 +143,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
                                                     defaultValue="Select Category..."
                                                     onChange={(e) => handleBulkAssign(group.cleanName, e.target.value)}
                                                 >
-                                                    {CATEGORY_OPTIONS.map(cat => (
+                                                    {bulkCategoryOptions.map(cat => (
                                                         <option key={cat} value={cat} disabled={cat === 'Select Category...'}>
                                                             {cat}
                                                         </option>
@@ -166,7 +151,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, format
                                                 </select>
                                             )}
                                         </td>
-                                        
                                     </tr>
                                 ))}
                             </tbody>
