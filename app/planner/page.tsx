@@ -1,6 +1,6 @@
 'use client'; 
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import PlanTab from '../../components/PlanTab';
 import StrategyTab from '../../components/StrategyTab';
 import DashboardTab from '../../components/DashboardTab';
@@ -19,202 +19,30 @@ export default function PlannerPage() {
   const financeContext = useFinance() as any; 
   const { data, updateInput, updateMultipleInputs, resetData } = financeContext;
   
-  // --- CORE UI STATE ---
   const [activeTab, setActiveTab] = useState('plan');
   const [showQuickAdjust, setShowQuickAdjust] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
-  
-  // --- FILE MANAGEMENT STATE ---
-  const [fileMenuOpen, setFileMenuOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activePlanName, setActivePlanName] = useState('Untitled Plan');
-  const [savedPlans, setSavedPlans] = useState<string[]>([]);
-  const [newPlanName, setNewPlanName] = useState('');
-  
-  // --- MODAL STATE ---
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showLoadModal, setShowLoadModal] = useState(false);
-  const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
-  const [pastedJsonText, setPastedJsonText] = useState('');
-  const [planToLoad, setPlanToLoad] = useState<string | null>(null);
-  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const isCouple = data.mode === 'Couple';
 
-  useEffect(() => {
-      const currentName = localStorage.getItem('active_plan_name') || 'Untitled Plan';
-      setActivePlanName(currentName);
-      setNewPlanName(currentName === 'Untitled Plan' ? '' : currentName);
-      const plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-      setSavedPlans(plans);
-  }, []);
-
-  const showToast = (msg: string) => {
-      setToastMsg(msg);
-      setTimeout(() => setToastMsg(''), 3000);
-  };
-
-  // --- START BLANK PLAN (FROM SPLASH SCREEN) ---
+  // --- SPLASH SCREEN LOGIC ---
   const handleStartBlankPlan = () => {
       if (resetData) resetData();
       localStorage.setItem('active_plan_name', 'Untitled Plan');
-      setActivePlanName('Untitled Plan');
+      window.dispatchEvent(new CustomEvent('updateActivePlan', { detail: 'Untitled Plan' }));
       setActiveTab('plan'); 
   };
 
-  // --- LOAD DUMMY DATA (FROM SPLASH SCREEN) ---
   const handleLoadDummyData = () => {
       if (financeContext.loadData) {
           financeContext.loadData(sampleProfile);
           const sampleName = "Sarah & John (Sample)";
           localStorage.setItem('active_plan_name', sampleName);
-          setActivePlanName(sampleName);
+          window.dispatchEvent(new CustomEvent('updateActivePlan', { detail: sampleName }));
       }
       setActiveTab('dashboard'); 
   };
 
-  // --- FILE OPERATIONS ---
-  const executeSave = () => {
-      if (!newPlanName.trim()) { alert('Please enter a plan name.'); return; }
-      const name = newPlanName.trim();
-
-      localStorage.setItem(`rp_saved_plan_${name}`, JSON.stringify(data));
-      localStorage.setItem('active_plan_name', name);
-      setActivePlanName(name);
-
-      let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-      if (!plans.includes(name)) {
-          plans.push(name);
-          localStorage.setItem('rp_plan_list', JSON.stringify(plans));
-          setSavedPlans(plans);
-      }
-
-      showToast(`Plan "${name}" successfully saved!`);
-      setShowSaveModal(false);
-  };
-
-  const confirmLoad = () => {
-      if (planToLoad) {
-          const planDataStr = localStorage.getItem(`rp_saved_plan_${planToLoad}`);
-          if (planDataStr) {
-              const planData = JSON.parse(planDataStr);
-              if (financeContext.loadData) {
-                  financeContext.loadData(planData); 
-                  localStorage.setItem('active_plan_name', planToLoad);
-                  setActivePlanName(planToLoad);
-                  showToast(`Loaded ${planToLoad}`);
-              }
-          }
-          setPlanToLoad(null);
-          setShowLoadModal(false);
-      }
-  };
-
-  const confirmDelete = () => {
-      if (planToDelete) {
-          localStorage.removeItem(`rp_saved_plan_${planToDelete}`);
-          const newPlans = savedPlans.filter(p => p !== planToDelete);
-          localStorage.setItem('rp_plan_list', JSON.stringify(newPlans));
-          setSavedPlans(newPlans);
-          
-          if (activePlanName === planToDelete) {
-              localStorage.setItem('active_plan_name', 'Untitled Plan');
-              setActivePlanName('Untitled Plan');
-          }
-          showToast(`Deleted "${planToDelete}"`);
-          setPlanToDelete(null);
-      }
-  };
-
-  const handleExportJson = () => {
-      const dataStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([dataStr], {type: "application/json"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activePlanName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("Plan exported to PC!");
-      setFileMenuOpen(false);
-  };
-
-  const handleLoadJson = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = (event) => {
-          try {
-              const fileContent = event.target?.result as string;
-              const parsedData = JSON.parse(fileContent);
-              if (!parsedData.inputs) throw new Error("Invalid plan data structure");
-
-              const importedName = file.name.replace('.json', '');
-              localStorage.setItem(`rp_saved_plan_${importedName}`, JSON.stringify(parsedData));
-              localStorage.setItem('active_plan_name', importedName);
-
-              let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-              if (!plans.includes(importedName)) {
-                  plans.push(importedName);
-                  localStorage.setItem('rp_plan_list', JSON.stringify(plans));
-                  setSavedPlans(plans);
-              }
-
-              if (financeContext.loadData) {
-                  financeContext.loadData(parsedData);
-                  setActivePlanName(importedName);
-                  showToast(`Successfully loaded ${importedName}!`);
-              }
-          } catch (err) {
-              console.error("Import Error:", err);
-              alert("Error loading file. Please ensure it is a valid JSON file.");
-          }
-      };
-      reader.readAsText(file);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      setFileMenuOpen(false);
-  };
-
-  const handleLoadFromPaste = () => {
-      if (!pastedJsonText.trim()) return;
-      try {
-          const parsedData = JSON.parse(pastedJsonText);
-          if (!parsedData.inputs) throw new Error("Invalid plan data structure");
-
-          const importedName = "Pasted Plan";
-          localStorage.setItem(`rp_saved_plan_${importedName}`, JSON.stringify(parsedData));
-          localStorage.setItem('active_plan_name', importedName);
-
-          let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-          if (!plans.includes(importedName)) {
-              plans.push(importedName);
-              localStorage.setItem('rp_plan_list', JSON.stringify(plans));
-              setSavedPlans(plans);
-          }
-
-          if (financeContext.loadData) {
-              financeContext.loadData(parsedData);
-              setActivePlanName(importedName);
-              showToast(`Successfully loaded Pasted Plan!`);
-          }
-          setShowPasteJsonModal(false);
-          setPastedJsonText('');
-      } catch (err) {
-          console.error("Paste Import Error:", err);
-          alert("Error loading pasted text. Please ensure it is valid JSON data from this app.");
-      }
-  };
-
-  const confirmReset = () => {
-      if (resetData) resetData();
-      localStorage.setItem('active_plan_name', 'Untitled Plan');
-      setActivePlanName('Untitled Plan');
-      setShowResetConfirm(false);
-      showToast("Current plan has been reset.");
-  };
-
+  // --- QUICK ADJUST LOGIC ---
   const handleRetireAgeChange = (player: 'p1'|'p2', newRetAge: number) => {
       const updates: Record<string, any> = { [`${player}_retireAge`]: newRetAge };
       if (newRetAge > (data.inputs[`${player}_lifeExp`] || 90)) {
@@ -269,61 +97,20 @@ export default function PlannerPage() {
   return (
     <>
       <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
-      <input type="file" accept=".json" className="d-none" ref={fileInputRef} onChange={handleLoadJson} />
 
-      {toastMsg && (
-          <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{zIndex: 1060}}>
-              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
-                  <i className="bi bi-check-circle-fill me-3 fs-5"></i>
-                  {toastMsg}
-              </div>
-          </div>
-      )}
-
-      {/* PLANNER-SPECIFIC HEADER (File Menu & Tabs) */}
-      <div className="mb-3 d-flex flex-column gap-2">
-          {/* File Manager Dropdown */}
-          <div className="d-flex align-items-center mb-1">
-              <div className="position-relative">
-                  <button 
-                      className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
-                      type="button" 
-                      onClick={() => setFileMenuOpen(!fileMenuOpen)} 
-                      style={{ height: '36px' }}
-                  >
-                      <i className="bi bi-folder2-open text-primary me-2"></i>
-                      <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
-                      <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
-                  </button>
-                  
-                  {fileMenuOpen && (
-                      <>
-                          <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
-                          <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', left: 0, minWidth: '240px'}}>
-                              <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
-                              <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
-                              <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
-                              <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                              <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                              <li>
-                                  <button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}>
-                                      <i className="bi bi-upload me-2"></i> Load from PC (.json)
-                                  </button>
-                              </li>
-                              <li>
-                                  <button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}>
-                                      <i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan
-                                  </button>
-                              </li>
-                              <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                              <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
-                          </ul>
-                      </>
-                  )}
-              </div>
-          </div>
-
-          {/* Navigation Tabs */}
+      {/* --- STICKY NAVIGATION TABS --- */}
+      {/* We apply a top offset (76px) so it sticks perfectly right underneath the Global Header */}
+      <div 
+        className="position-sticky pt-2 pb-2 mb-3 shadow-sm" 
+        style={{ 
+            top: '64px', // Assuming header is around 64px tall
+            backgroundColor: 'var(--bg-body)', 
+            zIndex: 1030,
+            borderBottom: '1px solid var(--border-color)',
+            margin: '0 -0.5rem', // Offset Bootstrap container padding for a clean full-width line
+            padding: '0 0.5rem'
+        }}
+      >
           <div className="row fade-in">
               <div className="col-12">
               <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
@@ -373,144 +160,6 @@ export default function PlannerPage() {
           </div>
       </footer>
 
-      {/* --- FILE MANAGER MODALS --- */}
-      {showSaveModal && (
-          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
-              <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
-              <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{zIndex: 1060}}>
-                  <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
-                      <div className="modal-header border-bottom border-secondary p-3">
-                          <h6 className="modal-title fw-bold d-flex align-items-center"><i className="bi bi-floppy-fill text-primary me-2"></i> Save Plan</h6>
-                          <button type="button" className="btn-close" onClick={() => setShowSaveModal(false)}></button>
-                      </div>
-                      <div className="modal-body p-4">
-                          <label className="form-label small text-muted fw-bold">Plan Name</label>
-                          <input type="text" className="form-control bg-input border-secondary fw-bold text-main mb-3" value={newPlanName} onChange={e => setNewPlanName(e.target.value)} placeholder="e.g. Base Plan" autoFocus onKeyDown={e => e.key === 'Enter' && executeSave()} />
-                          <button className="btn btn-primary w-100 fw-bold shadow-sm rounded-pill" onClick={executeSave}>Save to Browser</button>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {showLoadModal && (
-          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
-              <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowLoadModal(false)}></div>
-              <div className="modal-dialog modal-dialog-centered position-relative" style={{zIndex: 1060}}>
-                  <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
-                      <div className="modal-header border-bottom border-secondary p-3">
-                          <h6 className="modal-title fw-bold d-flex align-items-center"><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</h6>
-                          <button type="button" className="btn-close" onClick={() => setShowLoadModal(false)}></button>
-                      </div>
-                      <div className="modal-body p-4">
-                          {savedPlans.length === 0 ? (
-                              <div className="text-center text-muted small fst-italic py-3">No saved plans found in this browser.</div>
-                          ) : (
-                              <div className="d-flex flex-column gap-2 pe-1" style={{maxHeight: '300px', overflowY: 'auto'}}>
-                                  {savedPlans.map(planName => (
-                                      <div key={planName} className="d-flex justify-content-between align-items-center bg-input border border-secondary rounded-3 p-2 px-3 shadow-sm transition-all hover-opacity-75">
-                                          <span className={`fw-bold text-truncate me-2 ${activePlanName === planName ? 'text-primary' : 'text-main'}`}>
-                                              {planName}
-                                              {activePlanName === planName && <span className="badge bg-primary ms-2 small">ACTIVE</span>}
-                                          </span>
-                                          <div className="d-flex gap-2 align-items-center">
-                                              <button className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3" onClick={() => setPlanToLoad(planName)}>Open</button>
-                                              <button className="btn btn-sm btn-link text-danger p-1 opacity-50 hover-opacity-100" title="Delete Plan" onClick={() => setPlanToDelete(planName)}><i className="bi bi-x-lg fs-5"></i></button>
-                                          </div>
-                                      </div>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {showPasteJsonModal && (
-          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
-              <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowPasteJsonModal(false)}></div>
-              <div className="modal-dialog modal-dialog-centered modal-lg position-relative" style={{zIndex: 1060}}>
-                  <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
-                      <div className="modal-header border-bottom border-secondary p-3">
-                          <h6 className="modal-title fw-bold d-flex align-items-center"><i className="bi bi-clipboard-check text-info me-2"></i> Paste JSON Plan</h6>
-                          <button type="button" className="btn-close" onClick={() => setShowPasteJsonModal(false)}></button>
-                      </div>
-                      <div className="modal-body p-4">
-                          <textarea className="form-control bg-input border-secondary text-main mb-3" rows={10} value={pastedJsonText} onChange={e => setPastedJsonText(e.target.value)} placeholder="Paste your JSON data here..." autoFocus></textarea>
-                          <div className="d-flex gap-2 justify-content-end">
-                              <button className="btn btn-outline-secondary fw-bold rounded-pill px-4" onClick={() => setShowPasteJsonModal(false)}>Cancel</button>
-                              <button className="btn btn-info fw-bold rounded-pill text-dark px-4" onClick={handleLoadFromPaste}>Load Plan</button>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {planToLoad && (
-          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
-              <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToLoad(null)}></div>
-              <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{zIndex: 1080}}>
-                  <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
-                      <div className="modal-header border-bottom border-secondary p-3">
-                          <h6 className="modal-title fw-bold d-flex align-items-center text-warning"><i className="bi bi-exclamation-triangle-fill me-2"></i> Confirm Load</h6>
-                          <button type="button" className="btn-close" onClick={() => setPlanToLoad(null)}></button>
-                      </div>
-                      <div className="modal-body p-4 text-center">
-                          <p className="text-muted small mb-4">Are you sure you want to load <strong>"{planToLoad}"</strong>?<br/><br/>Any unsaved changes in your current plan will be lost.</p>
-                          <div className="d-flex gap-2">
-                              <button className="btn btn-outline-secondary w-50 fw-bold rounded-pill" onClick={() => setPlanToLoad(null)}>Cancel</button>
-                              <button className="btn btn-warning w-50 fw-bold rounded-pill text-dark" onClick={confirmLoad}>Load Plan</button>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {planToDelete && (
-          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
-              <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToDelete(null)}></div>
-              <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{zIndex: 1080}}>
-                  <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
-                      <div className="modal-header border-bottom border-secondary p-3">
-                          <h6 className="modal-title fw-bold d-flex align-items-center text-danger"><i className="bi bi-trash3-fill me-2"></i> Delete Plan</h6>
-                          <button type="button" className="btn-close" onClick={() => setPlanToDelete(null)}></button>
-                      </div>
-                      <div className="modal-body p-4 text-center">
-                          <p className="text-muted small mb-4">Are you sure you want to permanently delete <strong>"{planToDelete}"</strong>? This cannot be undone.</p>
-                          <div className="d-flex gap-2">
-                              <button className="btn btn-outline-secondary w-50 fw-bold rounded-pill" onClick={() => setPlanToDelete(null)}>Cancel</button>
-                              <button className="btn btn-danger w-50 fw-bold rounded-pill" onClick={confirmDelete}>Delete</button>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {showResetConfirm && (
-          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
-              <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowResetConfirm(false)}></div>
-              <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{zIndex: 1080}}>
-                  <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
-                      <div className="modal-header border-bottom border-secondary p-3">
-                          <h6 className="modal-title fw-bold d-flex align-items-center text-danger"><i className="bi bi-exclamation-octagon-fill me-2"></i> Reset Plan</h6>
-                          <button type="button" className="btn-close" onClick={() => setShowResetConfirm(false)}></button>
-                      </div>
-                      <div className="modal-body p-4 text-center">
-                          <p className="text-muted small mb-4">Are you sure you want to completely clear your data and reset the calculator to its default state?</p>
-                          <div className="d-flex gap-2">
-                              <button className="btn btn-outline-secondary w-50 fw-bold rounded-pill" onClick={() => setShowResetConfirm(false)}>Cancel</button>
-                              <button className="btn btn-danger w-50 fw-bold rounded-pill" onClick={confirmReset}>Reset</button>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
       {/* --- QUICK ADJUST FAB --- */}
       {showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
@@ -547,7 +196,6 @@ export default function PlannerPage() {
       >
           <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
       </button>
-
     </>
   );
 }
