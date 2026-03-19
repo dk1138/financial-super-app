@@ -21,18 +21,21 @@ function DashboardLayout() {
   const financeContext = useFinance() as any; 
   const { data, updateUseRealDollars, updateInput, updateMultipleInputs, resetData } = financeContext;
   
+  // --- CORE UI STATE ---
+  const [activeModule, setActiveModule] = useState<'planner' | 'expenses'>('planner');
   const [activeTab, setActiveTab] = useState('plan');
   const [theme, setTheme] = useState('dark');
   const [showQuickAdjust, setShowQuickAdjust] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   
+  // --- FILE MANAGEMENT STATE ---
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const [activePlanName, setActivePlanName] = useState('Untitled Plan');
   const [savedPlans, setSavedPlans] = useState<string[]>([]);
   const [newPlanName, setNewPlanName] = useState('');
   
+  // --- MODAL STATE ---
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
@@ -64,26 +67,24 @@ function DashboardLayout() {
 
   // --- START BLANK PLAN (FROM SPLASH SCREEN) ---
   const handleStartBlankPlan = () => {
-      if (resetData) {
-          resetData();
-      }
+      if (resetData) resetData();
       localStorage.setItem('active_plan_name', 'Untitled Plan');
       setActivePlanName('Untitled Plan');
-      setActiveTab('plan'); // Start them on the inputs tab
+      setActiveTab('plan'); 
   };
 
   // --- LOAD DUMMY DATA (FROM SPLASH SCREEN) ---
   const handleLoadDummyData = () => {
       if (financeContext.loadData) {
           financeContext.loadData(sampleProfile);
-          
           const sampleName = "Sarah & John (Sample)";
           localStorage.setItem('active_plan_name', sampleName);
           setActivePlanName(sampleName);
       }
-      setActiveTab('dashboard'); // Jump straight to the dashboard charts
+      setActiveTab('dashboard'); 
   };
 
+  // --- FILE OPERATIONS ---
   const executeSave = () => {
       if (!newPlanName.trim()) { alert('Please enter a plan name.'); return; }
       const name = newPlanName.trim();
@@ -158,7 +159,6 @@ function DashboardLayout() {
           try {
               const fileContent = event.target?.result as string;
               const parsedData = JSON.parse(fileContent);
-              
               if (!parsedData.inputs) throw new Error("Invalid plan data structure");
 
               const importedName = file.name.replace('.json', '');
@@ -177,17 +177,13 @@ function DashboardLayout() {
                   setActivePlanName(importedName);
                   showToast(`Successfully loaded ${importedName}!`);
               }
-
           } catch (err) {
               console.error("Import Error:", err);
               alert("Error loading file. Please ensure it is a valid JSON file.");
           }
       };
       reader.readAsText(file);
-      
-      if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setFileMenuOpen(false);
   };
 
@@ -222,9 +218,7 @@ function DashboardLayout() {
   };
 
   const confirmReset = () => {
-      if (resetData) {
-          resetData();
-      }
+      if (resetData) resetData();
       localStorage.setItem('active_plan_name', 'Untitled Plan');
       setActivePlanName('Untitled Plan');
       setShowResetConfirm(false);
@@ -240,7 +234,6 @@ function DashboardLayout() {
       if (isCouple && data.inputs.retire_same_time) {
           const playerAge = data.inputs[`${player}_age`] ?? (player === 'p1' ? 38 : 34);
           const yearsToRetire = newRetAge - playerAge;
-          
           const otherPlayer = player === 'p1' ? 'p2' : 'p1';
           const otherAge = data.inputs[`${otherPlayer}_age`] ?? (player === 'p1' ? 34 : 38);
           const otherNewRetAge = Math.max(18, otherAge + yearsToRetire);
@@ -286,19 +279,8 @@ function DashboardLayout() {
   return (
     <div className="container-fluid pb-4 min-vh-100 transition-all position-relative d-flex flex-column" style={{ maxWidth: '1700px' }}>
       
-      {/* 1. MOUNT THE SPLASH SCREEN */}
-      <SplashScreen 
-        onLoadDummyData={handleLoadDummyData} 
-        onStartBlankPlan={handleStartBlankPlan} 
-      />
-
-      <input 
-          type="file" 
-          accept=".json" 
-          className="d-none" 
-          ref={fileInputRef} 
-          onChange={handleLoadJson} 
-      />
+      <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
+      <input type="file" accept=".json" className="d-none" ref={fileInputRef} onChange={handleLoadJson} />
 
       {toastMsg && (
           <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{zIndex: 1060}}>
@@ -312,66 +294,82 @@ function DashboardLayout() {
       {/* --- STICKY TOP WRAPPER --- */}
       <div 
         className="position-sticky top-0 pt-2 pb-2 mb-3" 
-        style={{ 
-            backgroundColor: 'var(--bg-body)', 
-            zIndex: 1030,
-            borderBottom: '1px solid var(--border-color)' 
-        }}
+        style={{ backgroundColor: 'var(--bg-body)', zIndex: 1030, borderBottom: '1px solid var(--border-color)' }}
       >
           {/* TOP HEADER CONTROLS */}
           <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-2 rounded-4 p-2 border border-secondary rp-card gap-2 m-0">
             
             <div className="d-flex align-items-center gap-2">
-              <h5 className="mb-0 text-nowrap fw-bold d-flex align-items-center me-1">
-                <i className="bi bi-graph-up-arrow text-primary me-2 fs-5"></i>
-                <span className="d-none d-lg-inline fs-6">Retirement Planner</span>
-              </h5>
+                {/* --- MODERN PILL SELECTOR (MODULE TOGGLE) --- */}
+                <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm me-1" style={{ width: 'fit-content' }}>
+                    <button 
+                        className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all ${activeModule === 'planner' ? 'bg-primary text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
+                        onClick={() => setActiveModule('planner')}
+                        style={{ fontSize: '0.85rem' }}
+                    >
+                        <i className="bi bi-graph-up-arrow me-2"></i>
+                        <span className="d-none d-sm-inline">Retirement Planner</span>
+                        <span className="d-inline d-sm-none">Planner</span>
+                    </button>
+                    
+                    <button 
+                        className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all ${activeModule === 'expenses' ? 'bg-success text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
+                        onClick={() => setActiveModule('expenses')}
+                        style={{ fontSize: '0.85rem' }}
+                    >
+                        <i className="bi bi-receipt me-2"></i>
+                        <span className="d-none d-sm-inline">Expense Tracker</span>
+                        <span className="d-inline d-sm-none">Expenses</span>
+                    </button>
+                </div>
               
-              <div className="position-relative">
-                <button 
-                    className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
-                    type="button" 
-                    onClick={() => setFileMenuOpen(!fileMenuOpen)} 
-                    style={{ height: '36px' }}
-                >
-                    <i className="bi bi-folder2-open text-primary me-2"></i>
-                    {/* WIDER MAX WIDTH APPLIED HERE: Increased from 150px to 250px */}
-                    <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
-                    <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
-                </button>
-                
-                {fileMenuOpen && (
-                    <>
-                        <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
-                        <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', left: 0, minWidth: '240px'}}>
-                            <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
-                            <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
-                            <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
-                            <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                            <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                            <li>
-                                <button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}>
-                                    <i className="bi bi-upload me-2"></i> Load from PC (.json)
-                                </button>
-                            </li>
-                            <li>
-                                <button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}>
-                                    <i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan
-                                </button>
-                            </li>
-                            <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                            <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
-                        </ul>
-                    </>
-                )}
-              </div>
+              {/* FILE MANAGER (Only show when Planner is active) */}
+              {activeModule === 'planner' && (
+                  <div className="position-relative">
+                    <button 
+                        className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
+                        type="button" 
+                        onClick={() => setFileMenuOpen(!fileMenuOpen)} 
+                        style={{ height: '36px' }}
+                    >
+                        <i className="bi bi-folder2-open text-primary me-2"></i>
+                        <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
+                        <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
+                    </button>
+                    
+                    {fileMenuOpen && (
+                        <>
+                            <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
+                            <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', left: 0, minWidth: '240px'}}>
+                                <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
+                                <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
+                                <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
+                                <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
+                                <li>
+                                    <button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); fileInputRef.current?.click(); }}>
+                                        <i className="bi bi-upload me-2"></i> Load from PC (.json)
+                                    </button>
+                                </li>
+                                <li>
+                                    <button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}>
+                                        <i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan
+                                    </button>
+                                </li>
+                                <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
+                            </ul>
+                        </>
+                    )}
+                  </div>
+              )}
             </div>
             
             <div className="d-flex align-items-center gap-2">
               <div 
                   className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" 
                   style={{ height: '36px' }} 
-                  title="Toggle Real vs Nominal Dollars. When enabled, future values are discounted by inflation to show today's purchasing power."
+                  title="Toggle Real vs Nominal Dollars."
               >
                   <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
                       <input 
@@ -392,7 +390,6 @@ function DashboardLayout() {
                   className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" 
                   style={{ width: '36px', height: '36px' }} 
                   onClick={toggleTheme} 
-                  title="Toggle Light/Dark Mode"
               >
                   <i className={`fs-6 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
               </button>
@@ -403,7 +400,6 @@ function DashboardLayout() {
                   rel="noopener noreferrer" 
                   className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0" 
                   style={{ width: '36px', height: '36px' }}
-                  title="Support me on Ko-fi"
               >
                   <i className="bi bi-cup-hot-fill fs-6" style={{ color: '#72a4f2' }}></i>
               </a>
@@ -432,41 +428,62 @@ function DashboardLayout() {
             </div>
           </div>
 
-          {/* TABS ROW */}
-          <div className="row">
-            <div className="col-12">
-              <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
-                {tabs.map(tab => (
-                  <li className="nav-item flex-fill" key={tab.id}>
-                    <div 
-                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
-                      onClick={() => setActiveTab(tab.id)}
-                      style={{ fontSize: '0.85rem' }}
-                    >
-                      <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
-                      <span className="text-nowrap">{tab.label}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+          {/* PLANNER TABS ROW (Only visible if Planner is active) */}
+          {activeModule === 'planner' && (
+            <div className="row fade-in">
+                <div className="col-12">
+                <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
+                    {tabs.map(tab => (
+                    <li className="nav-item flex-fill" key={tab.id}>
+                        <div 
+                        className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
+                        onClick={() => setActiveTab(tab.id)}
+                        style={{ fontSize: '0.85rem' }}
+                        >
+                        <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
+                        <span className="text-nowrap">{tab.label}</span>
+                        </div>
+                    </li>
+                    ))}
+                </ul>
+                </div>
             </div>
-          </div>
+          )}
       </div>
-      {/* --- END STICKY TOP WRAPPER --- */}
 
-      {/* MAIN CONTENT AREA */}
+      {/* --- MAIN CONTENT RENDERING --- */}
       <div className="row g-4 flex-grow-1">
         <div className="col-12">
           <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
-            <div className="card-body p-0 fade-in-tab" key={activeTab}>
-              {activeTab === 'plan' && <PlanTab />}
-              {activeTab === 'strategy' && <StrategyTab />}
-              {activeTab === 'dashboard' && <DashboardTab />}
-              {activeTab === 'projection' && <ProjectionTab />}
-              {activeTab === 'risk' && <RiskTab />}
-              {activeTab === 'cashflow' && <CashFlowTab />}
-              {activeTab === 'optimizers' && <OptimizersTab />}
-              {activeTab === 'compare' && <CompareTab />}
+            <div className="card-body p-0 fade-in-tab" key={`${activeModule}-${activeTab}`}>
+              
+              {/* PLANNER VIEWS */}
+              {activeModule === 'planner' && activeTab === 'plan' && <PlanTab />}
+              {activeModule === 'planner' && activeTab === 'strategy' && <StrategyTab />}
+              {activeModule === 'planner' && activeTab === 'dashboard' && <DashboardTab />}
+              {activeModule === 'planner' && activeTab === 'projection' && <ProjectionTab />}
+              {activeModule === 'planner' && activeTab === 'risk' && <RiskTab />}
+              {activeModule === 'planner' && activeTab === 'cashflow' && <CashFlowTab />}
+              {activeModule === 'planner' && activeTab === 'optimizers' && <OptimizersTab />}
+              {activeModule === 'planner' && activeTab === 'compare' && <CompareTab />}
+
+              {/* EXPENSE TRACKER PLACEHOLDER */}
+              {activeModule === 'expenses' && (
+                  <div className="d-flex flex-column align-items-center justify-content-center py-5 fade-in">
+                      <div className="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center mb-4" style={{width: '80px', height: '80px'}}>
+                          <i className="bi bi-receipt fs-1 text-success"></i>
+                      </div>
+                      <h3 className="fw-bold mb-3">Expense Tracker</h3>
+                      <p className="text-muted text-center" style={{maxWidth: '500px'}}>
+                          Upload your bank statements to automatically categorize and visualize your spending. 
+                          This data will seamlessly sync with your Retirement Planner.
+                      </p>
+                      <button className="btn btn-success rounded-pill fw-bold px-4 py-2 mt-2 shadow-sm">
+                          <i className="bi bi-file-earmark-arrow-up-fill me-2"></i>
+                          Upload CSV/PDF (Coming Soon)
+                      </button>
+                  </div>
+              )}
             </div>
           </div>
         </div>
@@ -475,10 +492,7 @@ function DashboardLayout() {
       <footer className="mt-auto pt-5 pb-3 border-top border-secondary border-opacity-50 text-center">
           <div className="px-3" style={{ maxWidth: '1200px', margin: '0 auto' }}>
               <p className="text-muted mb-3 text-start text-md-center" style={{ fontSize: '0.75rem', lineHeight: '1.6' }}>
-                  <strong>Disclaimer:</strong> Retirement Planner Pro is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice. While we strive for mathematical accuracy, tax laws and economic variables are complex and subject to change. You must verify all calculations and consult with a certified financial planner or tax professional before making any financial decisions. The developer(s) assume no liability for any actions taken based on this tool.
-              </p>
-              <p className="text-muted mb-3" style={{ fontSize: '0.75rem' }}>
-                  This tool is for <strong>personal use only</strong>. For commercial use, integration, licensing inquiries, or feedback, please contact <a href="mailto:retirementplannerpro@gmail.com" className="text-decoration-none fw-bold">retirementplannerpro@gmail.com</a>.
+                  <strong>Disclaimer:</strong> Retirement Planner Pro is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
               </p>
               <p className="text-muted fw-bold ls-1" style={{ fontSize: '0.8rem' }}>
                   <i className="bi bi-shield-check text-success me-1"></i> Retirement Planner Pro © {new Date().getFullYear()}. Data is processed securely and locally.
@@ -486,7 +500,7 @@ function DashboardLayout() {
           </div>
       </footer>
 
-      {/* --- MODALS --- */}
+      {/* --- ALL FILE MANAGER MODALS --- */}
       {showSaveModal && (
           <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
               <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
@@ -550,14 +564,7 @@ function DashboardLayout() {
                           <button type="button" className="btn-close" onClick={() => setShowPasteJsonModal(false)}></button>
                       </div>
                       <div className="modal-body p-4">
-                          <textarea 
-                              className="form-control bg-input border-secondary text-main mb-3" 
-                              rows={10} 
-                              value={pastedJsonText} 
-                              onChange={e => setPastedJsonText(e.target.value)} 
-                              placeholder="Paste your JSON data here..." 
-                              autoFocus 
-                          ></textarea>
+                          <textarea className="form-control bg-input border-secondary text-main mb-3" rows={10} value={pastedJsonText} onChange={e => setPastedJsonText(e.target.value)} placeholder="Paste your JSON data here..." autoFocus></textarea>
                           <div className="d-flex gap-2 justify-content-end">
                               <button className="btn btn-outline-secondary fw-bold rounded-pill px-4" onClick={() => setShowPasteJsonModal(false)}>Cancel</button>
                               <button className="btn btn-info fw-bold rounded-pill text-dark px-4" onClick={handleLoadFromPaste}>Load Plan</button>
@@ -631,20 +638,12 @@ function DashboardLayout() {
           </div>
       )}
 
-      {showQuickAdjust && (
+      {/* --- QUICK ADJUST FAB (Only show when Planner is active) --- */}
+      {activeModule === 'planner' && showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
-               style={{ 
-                   bottom: '90px', 
-                   right: '30px', 
-                   zIndex: 1040, 
-                   minWidth: '220px', 
-                   backgroundColor: theme === 'dark' ? '#16181d' : '#ffffff', 
-                   boxShadow: '0 10px 40px rgba(0,0,0,0.5)' 
-               }}>
+               style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '220px', backgroundColor: theme === 'dark' ? '#16181d' : '#ffffff', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
               <div className="d-flex justify-content-between align-items-center mb-2 pb-2 mt-1 border-bottom border-secondary">
-                  <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.7rem'}}>
-                      <i className="bi bi-sliders me-2"></i>Quick Adjust
-                  </h6>
+                  <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.7rem'}}><i className="bi bi-sliders me-2"></i>Quick Adjust</h6>
               </div>
               {isCouple && (
                   <div className="form-check form-switch mb-2 pb-2 border-bottom border-secondary border-opacity-50 d-flex align-items-center justify-content-between px-0">
@@ -667,14 +666,16 @@ function DashboardLayout() {
           </div>
       )}
 
-      <button 
-        className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
-        style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }}
-        title="Quick Adjust Variables"
-        onClick={() => setShowQuickAdjust(!showQuickAdjust)}
-      >
-        <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
-      </button>
+      {activeModule === 'planner' && (
+        <button 
+            className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
+            style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }}
+            title="Quick Adjust Variables"
+            onClick={() => setShowQuickAdjust(!showQuickAdjust)}
+        >
+            <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
+        </button>
+      )}
 
     </div>
   );
