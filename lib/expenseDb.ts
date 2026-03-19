@@ -63,3 +63,14 @@ export const clearTransactions = async () => {
   const db = await dbPromise;
   await db.clear('transactions');
 };
+
+// Add this to the bottom of lib/expenseDb.ts
+export const updateTransactionCategory = async (id: string, newCategory: string) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = await db.get('transactions', id);
+    if (tx) {
+        tx.category = newCategory;
+        await db.put('transactions', tx);
+    }
+};

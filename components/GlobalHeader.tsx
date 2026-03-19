@@ -4,9 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
-import Papa from 'papaparse';
 import { useFinance } from '../lib/FinanceContext';
-import { initDB, saveTransactions, clearTransactions } from '../lib/expenseDb';
+import ExpenseHeaderActions from './expenses/ExpenseHeaderActions';
 
 export default function GlobalHeader() {
     const { data: session } = useSession();
@@ -17,7 +16,6 @@ export default function GlobalHeader() {
     // --- REFS ---
     const headerRef = useRef<HTMLDivElement>(null);
     const plannerFileInputRef = useRef<HTMLInputElement>(null);
-    const expenseFileInputRef = useRef<HTMLInputElement>(null);
 
     // --- GENERAL STATE ---
     const [theme, setTheme] = useState('dark');
@@ -30,18 +28,14 @@ export default function GlobalHeader() {
     const [savedPlans, setSavedPlans] = useState<string[]>([]);
     const [newPlanName, setNewPlanName] = useState('');
     const [pastedJsonText, setPastedJsonText] = useState('');
-    
-    // --- EXPENSE TRACKER STATE ---
-    const [isParsing, setIsParsing] = useState(false);
 
-    // --- MODAL VISIBILITY STATE ---
+    // --- MODAL VISIBILITY STATE (Planner Only) ---
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showLoadModal, setShowLoadModal] = useState(false);
     const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
     const [planToLoad, setPlanToLoad] = useState<string | null>(null);
     const [planToDelete, setPlanToDelete] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
-    const [showClearExpenseModal, setShowClearExpenseModal] = useState(false);
 
     // --- INITIALIZATION & HEIGHT TRACKING ---
     useEffect(() => {
@@ -81,82 +75,6 @@ export default function GlobalHeader() {
         setTheme(newTheme);
         localStorage.setItem('appTheme', newTheme);
         document.documentElement.setAttribute('data-bs-theme', newTheme);
-    };
-
-    // ==========================================
-    //        EXPENSE TRACKER OPERATIONS
-    // ==========================================
-    const handleExpenseFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setIsParsing(true);
-
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: async (results) => {
-                const parsedData = results.data as any[];
-                if (parsedData.length === 0) {
-                    alert("The CSV file appears to be empty.");
-                    setIsParsing(false);
-                    return;
-                }
-
-                // Make all headers lowercase for easier searching
-                const headers = Object.keys(parsedData[0] || {}).map(h => h.toLowerCase());
-                
-                const dateKey = headers.find(h => h.includes('date')) || headers[0];
-                
-                // SMARTER MERCHANT PARSING: Prioritize specific words, heavily ignore anything with "category" in the title
-                const descKey = headers.find(h => (h.includes('merchant') && !h.includes('category'))) || 
-                                headers.find(h => h.includes('payee')) || 
-                                headers.find(h => h.includes('description') && !h.includes('category')) || 
-                                headers.find(h => h.includes('name') && !h.includes('category')) || 
-                                headers.find(h => h.includes('description')) || // Fallback
-                                headers[1];
-
-                const amtKey = headers.find(h => h.includes('amount')) || headers.find(h => h.includes('value')) || headers[2];
-
-                const newTransactions = parsedData.map((row, index) => {
-                    // Extract data using original casing of the keys we found
-                    const originalAmtKey = Object.keys(row).find(k => k.toLowerCase() === amtKey) || amtKey;
-                    const originalDateKey = Object.keys(row).find(k => k.toLowerCase() === dateKey) || dateKey;
-                    const originalDescKey = Object.keys(row).find(k => k.toLowerCase() === descKey) || descKey;
-
-                    const rawAmount = String(row[originalAmtKey] || '0');
-                    const cleanAmount = parseFloat(rawAmount.replace(/[^0-9.-]+/g, ''));
-                    const dateObj = new Date(row[originalDateKey]);
-                    
-                    return {
-                        id: `${Date.now()}-${index}`,
-                        date: dateObj.getTime() || Date.now(), // Timestamp for sorting
-                        dateString: isNaN(dateObj.getTime()) ? 'Unknown' : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                        merchant: row[originalDescKey] || 'Unknown',
-                        category: 'Uncategorized',
-                        account: file.name.replace('.csv', ''),
-                        amount: isNaN(cleanAmount) ? 0 : cleanAmount
-                    };
-                });
-
-                await saveTransactions(newTransactions);
-                window.dispatchEvent(new CustomEvent('expensesUpdated'));
-                setIsParsing(false);
-                showToast("CSV Uploaded Successfully!");
-                if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
-            },
-            error: (err) => {
-                console.error("Parse Error:", err);
-                alert("Failed to parse the CSV file.");
-                setIsParsing(false);
-            }
-        });
-    };
-
-    const confirmClearExpenses = async () => {
-        await clearTransactions();
-        window.dispatchEvent(new CustomEvent('expensesUpdated'));
-        setShowClearExpenseModal(false);
-        showToast("Expense data cleared.");
     };
 
     // ==========================================
@@ -286,11 +204,8 @@ export default function GlobalHeader() {
 
     return (
         <>
-            {/* HIDDEN FILE INPUTS */}
             <input type="file" accept=".json" className="d-none" ref={plannerFileInputRef} onChange={handleLoadJson} />
-            <input type="file" accept=".csv" className="d-none" ref={expenseFileInputRef} onChange={handleExpenseFileUpload} />
 
-            {/* GLOBAL TOAST */}
             {toastMsg && (
                 <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{zIndex: 2000}}>
                     <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
@@ -300,7 +215,6 @@ export default function GlobalHeader() {
                 </div>
             )}
 
-            {/* --- STICKY HEADER --- */}
             <div 
                 ref={headerRef} 
                 className="position-sticky top-0 pt-2 pb-2" 
@@ -369,30 +283,9 @@ export default function GlobalHeader() {
                     </div>
                     
                     <div className="d-flex align-items-center gap-2">
-                        {/* EXPENSES ACTIONS (Clear & Upload) -> Moved here! */}
-                        {activeModule === 'expenses' && (
-                            <div className="d-flex gap-2 me-md-2">
-                                <button 
-                                    className="btn btn-sm btn-outline-danger bg-input fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
-                                    onClick={() => setShowClearExpenseModal(true)}
-                                    style={{ height: '36px' }}
-                                >
-                                    <i className="bi bi-trash3-fill me-1 d-none d-sm-inline"></i> Clear
-                                </button>
-                                <button 
-                                    className="btn btn-sm btn-success fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
-                                    onClick={() => expenseFileInputRef.current?.click()} 
-                                    disabled={isParsing}
-                                    style={{ height: '36px' }}
-                                >
-                                    {isParsing ? (
-                                        <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Parsing...</>
-                                    ) : (
-                                        <><i className="bi bi-cloud-arrow-up-fill me-1 d-none d-sm-inline"></i> Upload CSV</>
-                                    )}
-                                </button>
-                            </div>
-                        )}
+                        
+                        {/* DELEGATED EXPENSE ACTIONS (Upload & Clear) */}
+                        {activeModule === 'expenses' && <ExpenseHeaderActions showToast={showToast} />}
 
                         {/* TODAY'S $ TOGGLE (Only in Planner) */}
                         {activeModule === 'planner' && (
@@ -430,32 +323,9 @@ export default function GlobalHeader() {
             </div>
 
             {/* ========================================== */}
-            {/* ALL MODALS                   */}
+            {/* PLANNER MODALS (Expenses Modals are delegated) */}
             {/* ========================================== */}
 
-            {/* EXPENSES: CLEAR DATA MODAL */}
-            {showClearExpenseModal && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1080 }}>
-                    <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowClearExpenseModal(false)}></div>
-                    <div className="modal-dialog modal-dialog-centered modal-sm position-relative">
-                        <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
-                            <div className="modal-header border-bottom border-secondary p-3">
-                                <h6 className="modal-title fw-bold d-flex align-items-center text-danger"><i className="bi bi-exclamation-octagon-fill me-2"></i> Clear Data</h6>
-                                <button type="button" className="btn-close" onClick={() => setShowClearExpenseModal(false)}></button>
-                            </div>
-                            <div className="modal-body p-4 text-center">
-                                <p className="text-muted small mb-4">Are you sure you want to delete all transaction history? This cannot be undone.</p>
-                                <div className="d-flex gap-2">
-                                    <button className="btn btn-outline-secondary w-50 fw-bold rounded-pill" onClick={() => setShowClearExpenseModal(false)}>Cancel</button>
-                                    <button className="btn btn-danger w-50 fw-bold rounded-pill" onClick={confirmClearExpenses}>Clear All</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* PLANNER: SAVE MODAL */}
             {showSaveModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
@@ -475,7 +345,6 @@ export default function GlobalHeader() {
                 </div>
             )}
 
-            {/* PLANNER: LOAD MODAL */}
             {showLoadModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowLoadModal(false)}></div>
@@ -510,7 +379,6 @@ export default function GlobalHeader() {
                 </div>
             )}
 
-            {/* PLANNER: PASTE JSON MODAL */}
             {showPasteJsonModal && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowPasteJsonModal(false)}></div>
@@ -532,7 +400,6 @@ export default function GlobalHeader() {
                 </div>
             )}
 
-            {/* PLANNER: CONFIRM LOAD MODAL */}
             {planToLoad && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToLoad(null)}></div>
@@ -554,7 +421,6 @@ export default function GlobalHeader() {
                 </div>
             )}
 
-            {/* PLANNER: DELETE PLAN MODAL */}
             {planToDelete && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToDelete(null)}></div>
@@ -576,7 +442,6 @@ export default function GlobalHeader() {
                 </div>
             )}
 
-            {/* PLANNER: RESET CURRENT PLAN MODAL */}
             {showResetConfirm && (
                 <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowResetConfirm(false)}></div>
