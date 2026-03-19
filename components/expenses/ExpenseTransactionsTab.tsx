@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Transaction, updateTransactionCategory, splitTransaction } from '../../lib/expenseDb';
+import { Transaction, updateTransactionCategory, splitTransaction, updateTransactionTags, bulkAddTag } from '../../lib/expenseDb';
 import { Category } from '../../app/expenses/page';
 
 interface Props {
@@ -20,17 +20,24 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
     const [dropdownSearch, setDropdownSearch] = useState('');
     const [highlightedIndex, setHighlightedIndex] = useState(0);
 
-    // --- FEATURE: TRANSACTION SPLITTING STATE ---
+    // Split State
     const [txToSplit, setTxToSplit] = useState<Transaction | null>(null);
     const [splitItems, setSplitItems] = useState<{ amount: string; category: string; merchant: string }[]>([]);
 
+    // --- FEATURE: TAGGING STATE ---
+    const [activeTagInputId, setActiveTagInputId] = useState<string | null>(null);
+    const [bulkTagInputOpen, setBulkTagInputOpen] = useState(false);
+
+    // 1. FILTER: Now seamlessly searches through tags as well!
     const filteredTransactions = useMemo(() => {
         if (!searchTerm) return transactions;
-        const lowerSearch = searchTerm.toLowerCase();
+        const lowerSearch = searchTerm.toLowerCase().replace('#', ''); // Allow searching with or without #
+        
         return transactions.filter(tx => 
             tx.merchant.toLowerCase().includes(lowerSearch) || 
             tx.category.toLowerCase().includes(lowerSearch) ||
-            (tx.suggestedCategory && tx.suggestedCategory.toLowerCase().includes(lowerSearch))
+            (tx.suggestedCategory && tx.suggestedCategory.toLowerCase().includes(lowerSearch)) ||
+            (tx.tags && tx.tags.some(tag => tag.toLowerCase().includes(lowerSearch)))
         );
     }, [transactions, searchTerm]);
 
@@ -71,6 +78,7 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
         setSelectedIds(newSet);
     };
 
+    // --- CATEGORY HANDLERS ---
     const allOptions = useMemo(() => ['Uncategorized', ...categories.map(c => c.name)], [categories]);
     const filteredDropdownCategories = useMemo(() => {
         return allOptions.filter(c => c.toLowerCase().includes(dropdownSearch.toLowerCase()));
@@ -135,10 +143,50 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
         </div>
     );
 
-    // --- TRANSACTION SPLITTING LOGIC ---
+    // --- TAGGING HANDLERS ---
+    const handleAddTag = async (id: string, newTag: string) => {
+        // Strip spaces and special chars, convert to lowercase
+        const cleanTag = newTag.trim().toLowerCase().replace(/[^a-z0-9\-_]/g, '');
+        if (!cleanTag) {
+            setActiveTagInputId(null);
+            return;
+        }
+        
+        const tx = transactions.find(t => t.id === id);
+        if (!tx) return;
+        
+        const currentTags = tx.tags || [];
+        if (currentTags.includes(cleanTag)) {
+            setActiveTagInputId(null);
+            return; // Already has tag
+        }
+
+        await updateTransactionTags(id, [...currentTags, cleanTag]);
+        setActiveTagInputId(null);
+        window.dispatchEvent(new CustomEvent('expensesUpdated'));
+    };
+
+    const handleRemoveTag = async (id: string, tagToRemove: string) => {
+        const tx = transactions.find(t => t.id === id);
+        if (!tx) return;
+        const currentTags = tx.tags || [];
+        await updateTransactionTags(id, currentTags.filter(t => t !== tagToRemove));
+        window.dispatchEvent(new CustomEvent('expensesUpdated'));
+    };
+
+    const handleBulkAddTag = async (tag: string) => {
+        const cleanTag = tag.trim().toLowerCase().replace(/[^a-z0-9\-_]/g, '');
+        if (!cleanTag) return;
+        
+        await bulkAddTag(Array.from(selectedIds), cleanTag);
+        setBulkTagInputOpen(false);
+        setSelectedIds(new Set()); // Clear selection after tagging
+        window.dispatchEvent(new CustomEvent('expensesUpdated'));
+    };
+
+    // --- SPLIT LOGIC ---
     const openSplitModal = (tx: Transaction) => {
         setTxToSplit(tx);
-        // Initialize with two empty splits
         setSplitItems([
             { amount: Math.abs(tx.amount).toString(), category: 'Uncategorized', merchant: tx.merchant },
             { amount: '0', category: 'Uncategorized', merchant: tx.merchant }
@@ -146,16 +194,13 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
     };
 
     const handleAddSplitRow = () => {
-        if (txToSplit) {
-            setSplitItems([...splitItems, { amount: '0', category: 'Uncategorized', merchant: txToSplit.merchant }]);
-        }
+        if (txToSplit) setSplitItems([...splitItems, { amount: '0', category: 'Uncategorized', merchant: txToSplit.merchant }]);
     };
 
     const handleExecuteSplit = async () => {
         if (!txToSplit) return;
         const totalSplit = splitItems.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
         
-        // Validation: Must exactly match original amount
         if (Math.abs(totalSplit - Math.abs(txToSplit.amount)) > 0.01) {
             alert(`The splits must exactly equal the original amount of ${formatCurrency(Math.abs(txToSplit.amount))}. Currently: ${formatCurrency(totalSplit)}`);
             return;
@@ -179,7 +224,7 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
                     <h6 className="fw-bold mb-0">Ledger</h6>
                     <div className="input-group input-group-sm" style={{ width: '250px' }}>
                         <span className="input-group-text bg-input border-secondary text-muted"><i className="bi bi-search"></i></span>
-                        <input type="text" className="form-control bg-input border-secondary text-main" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input type="text" className="form-control bg-input border-secondary text-main" placeholder="Search or #tag..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
                 
@@ -217,25 +262,68 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
 
                                     return (
                                         <tr key={tx.id} className={`transition-all ${isRowSelected ? 'bg-primary bg-opacity-10' : ''}`}>
+                                            
                                             <td className="ps-4 py-3">
                                                 <input type="checkbox" className="form-check-input cursor-pointer shadow-none border-secondary" checked={isRowSelected} onChange={() => toggleSelection(tx.id)} />
                                             </td>
-                                            <td className="py-3 text-nowrap"><span className="text-muted small fw-bold">{tx.dateString}</span></td>
                                             
-                                            {/* MERCHANT & GHOST SUGGESTION */}
+                                            <td className="py-3 text-nowrap">
+                                                <span className="text-muted small fw-bold">{tx.dateString}</span>
+                                            </td>
+                                            
                                             <td className="py-3">
                                                 <div className="fw-bold text-main">{tx.merchant}</div>
-                                                {/* If Uncategorized but we have a Ghost Suggestion, show it! */}
-                                                {isUncat && tx.suggestedCategory && (
-                                                    <div 
-                                                        className="d-inline-flex align-items-center mt-1 badge bg-success bg-opacity-10 text-success border border-success cursor-pointer hover-bg-success hover-text-white transition-all"
-                                                        onClick={() => handleCategoryChange(tx.id, tx.suggestedCategory!)}
-                                                        title="Click to approve suggestion"
-                                                    >
-                                                        <i className="bi bi-stars me-1"></i> {tx.suggestedCategory}
-                                                        <i className="bi bi-check-circle-fill ms-2"></i>
-                                                    </div>
-                                                )}
+                                                
+                                                {/* INLINE TAGS CONTAINER */}
+                                                <div className="d-flex flex-wrap gap-1 mt-1 align-items-center">
+                                                    
+                                                    {/* Existing Ghost Suggestion */}
+                                                    {isUncat && tx.suggestedCategory && (
+                                                        <div 
+                                                            className="badge bg-success bg-opacity-10 text-success border border-success cursor-pointer hover-bg-success hover-text-white transition-all py-1"
+                                                            onClick={() => handleCategoryChange(tx.id, tx.suggestedCategory!)}
+                                                            title="Click to approve suggestion"
+                                                        >
+                                                            <i className="bi bi-stars me-1"></i> {tx.suggestedCategory}
+                                                        </div>
+                                                    )}
+
+                                                    {/* RENDER TAGS */}
+                                                    {(tx.tags || []).map(tag => (
+                                                        <span key={tag} className="badge bg-info bg-opacity-10 text-info border border-info rounded-pill d-inline-flex align-items-center py-1 px-2 transition-all hover-bg-info hover-text-body" style={{ fontSize: '0.7rem' }}>
+                                                            #{tag}
+                                                            <i 
+                                                                className="bi bi-x ms-1 cursor-pointer opacity-75" 
+                                                                onClick={(e) => { e.stopPropagation(); handleRemoveTag(tx.id, tag); }}
+                                                                style={{ fontSize: '0.8rem' }}
+                                                            ></i>
+                                                        </span>
+                                                    ))}
+                                                    
+                                                    {/* INLINE TAG INPUT */}
+                                                    {activeTagInputId === tx.id ? (
+                                                        <input
+                                                            type="text"
+                                                            autoFocus
+                                                            className="form-control form-control-sm bg-input border-info text-info rounded-pill px-2 py-0 shadow-none"
+                                                            style={{ width: '90px', fontSize: '0.7rem', height: '22px' }}
+                                                            placeholder="tag..."
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') handleAddTag(tx.id, e.currentTarget.value);
+                                                                else if (e.key === 'Escape') setActiveTagInputId(null);
+                                                            }}
+                                                            onBlur={() => setActiveTagInputId(null)}
+                                                        />
+                                                    ) : (
+                                                        <span
+                                                            className="badge bg-input border border-secondary text-muted rounded-pill cursor-pointer hover-bg-secondary transition-all d-inline-flex align-items-center py-1 px-2"
+                                                            style={{ fontSize: '0.7rem' }}
+                                                            onClick={(e) => { e.stopPropagation(); setActiveTagInputId(tx.id); }}
+                                                        >
+                                                            <i className="bi bi-plus"></i> Tag
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             
                                             <td className="py-3 position-relative">
@@ -257,7 +345,6 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
                                                 )}
                                             </td>
                                             
-                                            {/* AMOUNT & SPLIT BUTTON */}
                                             <td className="text-end pe-4 py-3 text-nowrap">
                                                 <div className="d-flex align-items-center justify-content-end gap-2">
                                                     <span className={`fw-bold ${tx.amount > 0 ? 'text-success' : 'text-main'}`}>
@@ -272,6 +359,7 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
                                                     </button>
                                                 </div>
                                             </td>
+
                                         </tr>
                                     );
                                 })
@@ -286,16 +374,47 @@ export default function ExpenseTransactionsTab({ transactions, categories, forma
             {selectedIds.size > 0 && (
                 <div className="position-fixed bottom-0 start-50 translate-middle-x mb-4 px-4 py-3 surface-card border border-secondary shadow-lg rounded-pill d-flex align-items-center gap-3 fade-in" style={{ zIndex: 1100, animation: 'slideUp 0.3s ease-out forwards' }}>
                     <span className="badge bg-primary rounded-pill px-3 py-2 shadow-sm fs-6">{selectedIds.size} Selected</span>
-                    <span className="text-muted small fw-bold d-none d-sm-block">Assign to:</span>
+                    
+                    <span className="text-muted small fw-bold d-none d-md-block border-end border-secondary pe-3 me-1">Bulk Actions:</span>
+                    
+                    {/* BULK CATEGORY */}
                     <div className="position-relative">
-                        <button className="btn btn-sm btn-outline-secondary bg-input text-main fw-bold rounded-pill px-4 shadow-sm border-secondary" onClick={() => openDropdown('bulk')}>Select Category <i className="bi bi-chevron-up ms-2"></i></button>
+                        <button className="btn btn-sm btn-outline-secondary bg-input text-main fw-bold rounded-pill px-3 shadow-sm border-secondary" onClick={() => {openDropdown('bulk'); setBulkTagInputOpen(false);}}>
+                            Set Category <i className="bi bi-chevron-up ms-1"></i>
+                        </button>
                         {activeDropdownId === 'bulk' && (
                             <>
                                 <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1050 }} onClick={() => setActiveDropdownId(null)}></div>
-                                <div className="position-absolute bg-input border border-secondary rounded-3 shadow-lg mb-2 bottom-100 start-50 translate-middle-x" style={{ zIndex: 1060, width: '220px' }}>{renderFuzzyMenu('bulk')}</div>
+                                <div className="position-absolute bg-input border border-secondary rounded-3 shadow-lg mb-2 bottom-100 start-0" style={{ zIndex: 1060, width: '220px' }}>{renderFuzzyMenu('bulk')}</div>
                             </>
                         )}
                     </div>
+
+                    {/* BULK TAG */}
+                    <div className="position-relative">
+                        <button className="btn btn-sm btn-outline-info bg-input text-info fw-bold rounded-pill px-3 shadow-sm border-info" onClick={() => {setBulkTagInputOpen(!bulkTagInputOpen); setActiveDropdownId(null);}}>
+                            <i className="bi bi-tag-fill me-1"></i> Add Tag
+                        </button>
+                        {bulkTagInputOpen && (
+                            <>
+                                <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1050 }} onClick={() => setBulkTagInputOpen(false)}></div>
+                                <div className="position-absolute bg-input border border-secondary rounded-3 shadow-lg mb-2 bottom-100 start-50 translate-middle-x p-2" style={{ zIndex: 1060, width: '200px' }}>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        className="form-control form-control-sm bg-body border-info text-info mb-1 shadow-none"
+                                        placeholder="Type tag & press Enter..."
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleBulkAddTag(e.currentTarget.value);
+                                            else if (e.key === 'Escape') setBulkTagInputOpen(false);
+                                        }}
+                                    />
+                                    <div className="text-muted text-center" style={{fontSize: '0.65rem'}}>Press Enter to apply to all</div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
                     <button className="btn btn-sm btn-link text-muted ms-1 p-0 text-decoration-none fw-bold hover-text-danger transition-all" onClick={() => setSelectedIds(new Set())}>Cancel</button>
                 </div>
             )}

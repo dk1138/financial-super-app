@@ -14,7 +14,8 @@ export interface Transaction {
   dateString: string;
   merchant: string;
   category: string;
-  suggestedCategory?: string; // NEW: Holds ghosted suggestions
+  suggestedCategory?: string; 
+  tags?: string[]; // NEW: Array of custom tags
   account: string;
   amount: number;
 }
@@ -62,7 +63,7 @@ export const updateTransactionCategory = async (id: string, newCategory: string)
     const tx = await db.get('transactions', id);
     if (tx) {
         tx.category = newCategory;
-        tx.suggestedCategory = undefined; // Clear suggestion once manually categorized
+        tx.suggestedCategory = undefined; 
         await db.put('transactions', tx);
     }
 };
@@ -100,7 +101,7 @@ export const updateCategoryByNormalizedMerchant = async (normalizedMerchantName:
         .filter(t => normalizeMerchantName(t.merchant) === normalizedMerchantName)
         .map(t => {
             t.category = newCategory;
-            t.suggestedCategory = undefined; // Clear suggestion
+            t.suggestedCategory = undefined; 
             return store.put(t);
         });
 
@@ -108,7 +109,6 @@ export const updateCategoryByNormalizedMerchant = async (normalizedMerchantName:
     await tx.done;
 };
 
-// --- NEW FEATURE: TRANSACTION SPLITTING ---
 export const splitTransaction = async (originalId: string, splits: { amount: number, category: string, merchant: string }[]) => {
     if (!dbPromise) initDB();
     const db = await dbPromise;
@@ -118,22 +118,52 @@ export const splitTransaction = async (originalId: string, splits: { amount: num
     const original = await store.get(originalId);
     if (!original) return;
 
-    // Delete the original master transaction
     await store.delete(originalId);
 
-    // Insert the new pieces
     const inserts = splits.map((split, index) => {
         const newTx: Transaction = {
             ...original,
-            id: `${originalId}-split-${index}-${Date.now()}`, // Ensure unique ID
-            amount: original.amount < 0 ? -Math.abs(split.amount) : Math.abs(split.amount), // Maintain sign
+            id: `${originalId}-split-${index}-${Date.now()}`,
+            amount: original.amount < 0 ? -Math.abs(split.amount) : Math.abs(split.amount), 
             category: split.category,
             merchant: split.merchant,
-            suggestedCategory: undefined // Sub-transactions are already categorized by the user
+            suggestedCategory: undefined 
         };
         return store.put(newTx);
     });
 
     await Promise.all(inserts);
+    await tx.done;
+};
+
+// --- NEW TAGGING FUNCTIONS ---
+export const updateTransactionTags = async (id: string, tags: string[]) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = await db.get('transactions', id);
+    if (tx) {
+        tx.tags = tags;
+        await db.put('transactions', tx);
+    }
+};
+
+export const bulkAddTag = async (ids: string[], tag: string) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = db.transaction('transactions', 'readwrite');
+    const store = tx.objectStore('transactions');
+
+    const promises = ids.map(async (id) => {
+        const item = await store.get(id);
+        if (item) {
+            if (!item.tags) item.tags = [];
+            if (!item.tags.includes(tag)) {
+                item.tags.push(tag);
+                await store.put(item);
+            }
+        }
+    });
+
+    await Promise.all(promises);
     await tx.done;
 };
