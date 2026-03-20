@@ -15,8 +15,10 @@ export interface Transaction {
   merchant: string;
   category: string;
   suggestedCategory?: string; 
-  tags?: string[]; // NEW: Array of custom tags
-  account: string;
+  tags?: string[];
+  notes?: string; 
+  workspace?: string; // e.g. 'Personal' or 'Konbinii Shop'
+  account: string; // Used to store the CSV filename
   amount: number;
 }
 
@@ -127,7 +129,8 @@ export const splitTransaction = async (originalId: string, splits: { amount: num
             amount: original.amount < 0 ? -Math.abs(split.amount) : Math.abs(split.amount), 
             category: split.category,
             merchant: split.merchant,
-            suggestedCategory: undefined 
+            suggestedCategory: undefined,
+            workspace: original.workspace || 'Personal'
         };
         return store.put(newTx);
     });
@@ -136,7 +139,6 @@ export const splitTransaction = async (originalId: string, splits: { amount: num
     await tx.done;
 };
 
-// --- NEW TAGGING FUNCTIONS ---
 export const updateTransactionTags = async (id: string, tags: string[]) => {
     if (!dbPromise) initDB();
     const db = await dbPromise;
@@ -161,6 +163,44 @@ export const bulkAddTag = async (ids: string[], tag: string) => {
                 item.tags.push(tag);
                 await store.put(item);
             }
+        }
+    });
+
+    await Promise.all(promises);
+    await tx.done;
+};
+
+export const updateTransactionNote = async (id: string, notes: string) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = await db.get('transactions', id);
+    if (tx) {
+        tx.notes = notes;
+        await db.put('transactions', tx);
+    }
+};
+
+export const updateTransactionWorkspace = async (id: string, newWorkspace: string) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = await db.get('transactions', id);
+    if (tx) {
+        tx.workspace = newWorkspace;
+        await db.put('transactions', tx);
+    }
+};
+
+export const bulkMoveToWorkspace = async (ids: string[], newWorkspace: string) => {
+    if (!dbPromise) initDB();
+    const db = await dbPromise;
+    const tx = db.transaction('transactions', 'readwrite');
+    const store = tx.objectStore('transactions');
+
+    const promises = ids.map(async (id) => {
+        const item = await store.get(id);
+        if (item) {
+            item.workspace = newWorkspace;
+            await store.put(item);
         }
     });
 

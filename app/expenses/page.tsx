@@ -8,30 +8,23 @@ import ExpenseTransactionsTab from '../../components/expenses/ExpenseTransaction
 import ExpenseCategoriesTab from '../../components/expenses/ExpenseCategoriesTab';
 import ExpenseReportsTab from '../../components/expenses/ExpenseReportsTab';
 
-export interface Category {
-    name: string;
-    color: string;
-}
+export interface Category { name: string; color: string; budget?: number; }
 
 const DEFAULT_CATEGORIES: Category[] = [
-    { name: 'Housing', color: '#0d6efd' },
-    { name: 'Grocery', color: '#ffc107' },
-    { name: 'Food & Dining', color: '#0dcaf0' },
-    { name: 'Transport', color: '#6f42c1' },
-    { name: 'Essentials', color: '#d63384' },
-    { name: 'Lifestyle', color: '#fd7e14' },
-    { name: 'Shopping', color: '#20c997' },
-    { name: 'Health', color: '#e83e8c' },
-    { name: 'Utilities', color: '#0a58ca' },
-    { name: 'Exclude', color: '#6c757d' },
-    { name: 'Income', color: '#198754' }
+    { name: 'Housing', color: '#0d6efd' }, { name: 'Grocery', color: '#ffc107' }, { name: 'Food & Dining', color: '#0dcaf0' },
+    { name: 'Transport', color: '#6f42c1' }, { name: 'Essentials', color: '#d63384' }, { name: 'Lifestyle', color: '#fd7e14' },
+    { name: 'Shopping', color: '#20c997' }, { name: 'Health', color: '#e83e8c' }, { name: 'Utilities', color: '#0a58ca' },
+    { name: 'Exclude', color: '#6c757d' }, { name: 'Income', color: '#198754' }
 ];
 
 export default function ExpenseTrackerPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
-    const [rules, setRules] = useState<Record<string, string>>({}); // NEW: Rules State
+    const [rules, setRules] = useState<Record<string, string>>({});
     const [activeTab, setActiveTab] = useState('dashboard');
+
+    const [workspaces, setWorkspaces] = useState<string[]>(['Personal', 'Konbinii Shop']);
+    const [activeWorkspace, setActiveWorkspace] = useState<string>('Personal');
 
     useEffect(() => {
         initDB();
@@ -40,9 +33,12 @@ export default function ExpenseTrackerPage() {
         const savedCats = localStorage.getItem('expense_categories');
         if (savedCats) setCategories(JSON.parse(savedCats));
 
-        // NEW: Load saved rules on mount
         const savedRules = localStorage.getItem('expense_rules');
         if (savedRules) setRules(JSON.parse(savedRules));
+
+        const savedWorkspaces = localStorage.getItem('expense_workspaces');
+        if (savedWorkspaces) setWorkspaces(JSON.parse(savedWorkspaces));
+        else localStorage.setItem('expense_workspaces', JSON.stringify(['Personal', 'Konbinii Shop']));
 
         const handleUpdate = () => loadData();
         window.addEventListener('expensesUpdated', handleUpdate);
@@ -54,18 +50,16 @@ export default function ExpenseTrackerPage() {
         setTransactions(data);
     };
 
-    const handleUpdateCategories = (newCategories: Category[]) => {
-        setCategories(newCategories);
-        localStorage.setItem('expense_categories', JSON.stringify(newCategories));
-    };
-
-    // NEW: Function to update rules
-    const handleUpdateRules = (newRules: Record<string, string>) => {
-        setRules(newRules);
-        localStorage.setItem('expense_rules', JSON.stringify(newRules));
-    };
+    const handleUpdateCategories = (newCategories: Category[]) => { setCategories(newCategories); localStorage.setItem('expense_categories', JSON.stringify(newCategories)); };
+    const handleUpdateRules = (newRules: Record<string, string>) => { setRules(newRules); localStorage.setItem('expense_rules', JSON.stringify(newRules)); };
 
     const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(val);
+
+    // MASTER FILTER: Strips out data from other workspaces
+    const activeData = useMemo(() => {
+        if (activeWorkspace === 'All') return transactions;
+        return transactions.filter(t => (t.workspace || 'Personal') === activeWorkspace);
+    }, [transactions, activeWorkspace]);
 
     const { totalSpend, uncategorizedTransactions, monthlyData, categoryData } = useMemo(() => {
         let spendCount = 0;
@@ -73,7 +67,7 @@ export default function ExpenseTrackerPage() {
         const monthlyMap: Record<string, { name: string, spend: number, income: number, sortDate: number }> = {};
         const categoryMap: Record<string, number> = {};
 
-        transactions.forEach(t => {
+        activeData.forEach(t => {
             if (t.category === 'Uncategorized') uncategorized.push(t);
             if (t.category === 'Exclude') return;
 
@@ -101,7 +95,7 @@ export default function ExpenseTrackerPage() {
             monthlyData: Object.values(monthlyMap).sort((a, b) => a.sortDate - b.sortDate),
             categoryData: Object.keys(categoryMap).map(key => ({ name: key, value: categoryMap[key] })).sort((a, b) => b.value - a.value)
         };
-    }, [transactions]);
+    }, [activeData]);
 
     const tabs = [
         { id: 'dashboard', label: 'Dashboard', icon: 'bi-grid-fill' },
@@ -113,6 +107,24 @@ export default function ExpenseTrackerPage() {
     return (
         <div className="fade-in d-flex flex-column flex-grow-1">
             
+            <div className="d-flex justify-content-between align-items-center mb-2 mt-1 px-2 fade-in">
+                <div className="d-flex align-items-center gap-2">
+                    <i className="bi bi-briefcase-fill text-primary opacity-75"></i>
+                    <h6 className="fw-bold mb-0 text-muted d-none d-md-block">Active Workspace:</h6>
+                </div>
+                <select
+                    className="form-select form-select-sm border-secondary bg-input text-main fw-bold shadow-sm rounded-pill px-3"
+                    style={{ width: 'auto', cursor: 'pointer' }}
+                    value={activeWorkspace}
+                    onChange={(e) => setActiveWorkspace(e.target.value)}
+                >
+                    <option value="All">🌎 All Workspaces</option>
+                    {workspaces.map(w => (
+                        <option key={w} value={w}>{w === 'Personal' ? '🏠 ' : '💼 '}{w}</option>
+                    ))}
+                </select>
+            </div>
+
             <div className="position-sticky pt-2 pb-2 mb-3 shadow-sm" style={{ top: 'var(--global-header-height, 65px)', backgroundColor: 'var(--bg-body)', zIndex: 1030, borderBottom: '1px solid var(--border-color)', margin: '0 -0.5rem', padding: '0 0.5rem' }}>
                 <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1">
                     {tabs.map(tab => (
@@ -144,25 +156,34 @@ export default function ExpenseTrackerPage() {
                             <div className="card-body p-0 fade-in-tab" key={activeTab}>
                                 
                                 {activeTab === 'dashboard' && (
-                                    <ExpenseDashboardTab totalSpend={totalSpend} transactionCount={transactions.length} transactions={transactions} monthlyData={monthlyData} categoryData={categoryData} categories={categories} setActiveTab={setActiveTab} formatCurrency={formatCurrency} />
+                                    <ExpenseDashboardTab totalSpend={totalSpend} transactionCount={activeData.length} transactions={activeData} monthlyData={monthlyData} categoryData={categoryData} categories={categories} setActiveTab={setActiveTab} formatCurrency={formatCurrency} />
                                 )}
 
                                 {activeTab === 'transactions' && (
-                                    <ExpenseTransactionsTab transactions={transactions} categories={categories} formatCurrency={formatCurrency} />
+                                    <ExpenseTransactionsTab 
+                                        transactions={activeData} 
+                                        categories={categories} 
+                                        workspaces={workspaces}
+                                        activeWorkspace={activeWorkspace}
+                                        formatCurrency={formatCurrency} 
+                                    />
                                 )}
 
                                 {activeTab === 'categories' && (
                                     <ExpenseCategoriesTab 
                                         uncategorizedTransactions={uncategorizedTransactions} 
-                                        categories={categories}
-                                        rules={rules} // Pass rules
-                                        updateCategories={handleUpdateCategories}
-                                        updateRules={handleUpdateRules} // Pass updater
-                                        formatCurrency={formatCurrency} 
+                                        categories={categories} rules={rules} 
+                                        updateCategories={handleUpdateCategories} updateRules={handleUpdateRules} formatCurrency={formatCurrency} 
                                     />
                                 )}
 
-                                {activeTab === 'reports' && <ExpenseReportsTab />}
+                                {activeTab === 'reports' && (
+                                    <ExpenseReportsTab 
+                                        transactions={activeData} 
+                                        categories={categories} 
+                                        formatCurrency={formatCurrency} 
+                                    />
+                                )}
                                 
                             </div>
                         </div>

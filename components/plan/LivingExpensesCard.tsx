@@ -33,14 +33,81 @@ export default function LivingExpensesCard() {
       return icons[cat.toLowerCase()] || <i className="bi bi-tag-fill text-muted"></i>;
   };
 
+  // --- SYNC FROM EXPENSE TRACKER ---
+  const handleSyncFromTracker = () => {
+      const val = localStorage.getItem('superapp_shared_annual_spend');
+      const catVal = localStorage.getItem('superapp_shared_category_spend');
+      
+      if (!val || !catVal) {
+          alert("No tracked data found! Head over to your Expense Dashboard and click the 'Sync' button first.");
+          return;
+      }
+
+      const annualSpend = Number(val);
+      const categoryAverages = JSON.parse(catVal);
+
+      const confirmMsg = `Magic Wand Found: ${formatCurrency(annualSpend)} / year from your Expense Tracker.\n\nThis will CLEAR your current working budgets and REPLACE them with your detailed tracked categories. Do you wish to proceed?`;
+      
+      if (window.confirm(confirmMsg)) {
+          // 1. Define the mapping from Expense Tracker to Retirement Planner
+          const mapping: Record<string, string> = {
+              'Housing': 'housing',
+              'Utilities': 'housing',
+              'Transport': 'transport',
+              'Food & Dining': 'lifestyle',
+              'Lifestyle': 'lifestyle',
+              'Grocery': 'essentials',
+              'Essentials': 'essentials',
+              'Shopping': 'essentials',
+              'Health': 'essentials',
+              'Uncategorized': 'other'
+          };
+
+          // 2. Prepare new blank slates for the 5 planner categories
+          const newPlannerItems: Record<string, any[]> = {
+              housing: [], transport: [], lifestyle: [], essentials: [], other: []
+          };
+
+          // 3. Map the data and push into the new arrays
+          Object.entries(categoryAverages).forEach(([expenseCat, avgMonthly]: [string, any]) => {
+              if (avgMonthly > 0) {
+                  const targetCat = mapping[expenseCat] || 'other'; 
+                  newPlannerItems[targetCat].push({
+                      name: `${expenseCat} (Tracked)`,
+                      curr: avgMonthly,
+                      ret: Math.round(avgMonthly * 0.8), // Assume 80% replacement baseline for retirement
+                      trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12
+                  });
+              }
+          });
+
+          // 4. Overwrite context (If a category is empty, give it one blank row)
+          Object.keys(newPlannerItems).forEach(cat => {
+              const finalItems = newPlannerItems[cat].length > 0 
+                  ? newPlannerItems[cat] 
+                  : [{ name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12 }];
+              
+              updateExpenseCategory(cat, finalItems);
+          });
+      }
+  };
+
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
-      <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
+      <div className="card-header d-flex flex-wrap align-items-center justify-content-between border-bottom border-secondary p-3 surface-card gap-2">
         <div className="d-flex align-items-center">
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
                 <i className="bi bi-cart4 text-main me-3"></i>6. Living Expenses
                 <InfoBtn align="left" title="Budgeting" text="Enter your current monthly or annual spending. <br><br><b>Simple Mode:</b> Set one budget for working years and one for retirement.<br><b>Advanced Mode:</b> Define spending for 3 phases of retirement: Go-Go (Active), Slow-Go (Less active), and No-Go (Late stage)." />
             </h5>
+            
+            <button 
+                className="btn btn-sm btn-outline-success rounded-pill fw-bold ms-3 d-flex align-items-center shadow-sm"
+                onClick={handleSyncFromTracker}
+                title="Pull your average spend from the Expense Tracker"
+            >
+                <i className="bi bi-magic me-1"></i> Auto-Fill
+            </button>
         </div>
         <div className="form-check form-switch mb-0">
             <input className="form-check-input mt-1 cursor-pointer" type="checkbox" checked={expenseAdvancedMode} onChange={(e) => setExpenseAdvancedMode(e.target.checked)} />
@@ -49,7 +116,7 @@ export default function LivingExpensesCard() {
       </div>
       <div className="card-body p-3 p-md-4">
         
-        {/* --- NEW PHASED EXPENSES SECTION FOR RENT/LTC --- */}
+        {/* --- PHASED EXPENSES SECTION FOR RENT/LTC --- */}
         <div className="card border-info border-opacity-50 surface-card shadow-sm rounded-4 mb-5">
             <div className="card-header bg-info bg-opacity-10 border-bottom border-info border-opacity-50 p-3 d-flex justify-content-between align-items-center">
                 <h6 className="mb-0 fw-bold text-info text-uppercase ls-1 d-flex align-items-center gap-2">
@@ -103,7 +170,6 @@ export default function LivingExpensesCard() {
                 </div>
             )}
         </div>
-        {/* --- END PHASED EXPENSES SECTION --- */}
 
         {expenseAdvancedMode && (
           <div className="card border-secondary surface-card shadow-sm rounded-4 mb-4">

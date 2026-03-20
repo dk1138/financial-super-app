@@ -34,7 +34,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
             groups[cleanName].count += 1;
             groups[cleanName].totalAmount += tx.amount;
             groups[cleanName].rawNames.add(tx.merchant);
-            // If we found a suggestion later in the loop, attach it
             if (!groups[cleanName].suggestedCategory && tx.suggestedCategory) groups[cleanName].suggestedCategory = tx.suggestedCategory;
         });
 
@@ -172,18 +171,28 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
         updateRules(newRules);
     };
 
+    // --- NEW BUDGET UPDATER ---
+    const handleUpdateBudget = (name: string, budgetStr: string) => {
+        const val = parseFloat(budgetStr);
+        const newCats = categories.map(c => c.name === name ? { ...c, budget: isNaN(val) ? undefined : val } : c);
+        updateCategories(newCats);
+    };
+
     return (
-        <div className="fade-in d-flex flex-column gap-4 position-relative">
+        <div className="fade-in d-flex flex-column gap-4 position-relative pb-5">
             
+            {/* INBOX */}
             <div className="card border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
                 <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4 d-flex justify-content-between align-items-center">
                     <div>
                         <h6 className="fw-bold mb-1">Needs Categorization</h6>
                         <p className="text-muted small mb-0">Assign a category below to instantly update past transactions AND create an auto-rule for the future.</p>
                     </div>
-                    <div className="badge bg-warning text-dark px-3 py-2 rounded-pill shadow-sm">
-                        {merchantGroups.length} Groups Pending
-                    </div>
+                    {merchantGroups.length > 0 && (
+                        <div className="badge bg-warning text-dark px-3 py-2 rounded-pill shadow-sm">
+                            {merchantGroups.length} Groups Pending
+                        </div>
+                    )}
                 </div>
 
                 <div className="table-responsive" style={{ maxHeight: '400px', overflowY: 'auto' }}>
@@ -214,8 +223,6 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                                             <td className="ps-4 py-3"><input type="checkbox" className="form-check-input cursor-pointer shadow-none border-secondary" checked={isRowSelected} onChange={() => toggleSelection(group.cleanName)} /></td>
                                             <td className="py-3">
                                                 <div className="fw-bold text-main">{group.cleanName}</div>
-                                                
-                                                {/* GHOST SUGGESTION IN CATEGORIES TAB */}
                                                 {group.suggestedCategory ? (
                                                     <div className="d-inline-flex align-items-center mt-1 badge bg-success bg-opacity-10 text-success border border-success cursor-pointer hover-bg-success hover-text-white transition-all" onClick={() => handleSingleAssign(group.cleanName, group.suggestedCategory!)} title="Click to approve suggestion">
                                                         <i className="bi bi-stars me-1"></i> {group.suggestedCategory}
@@ -250,45 +257,89 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                 </div>
             </div>
 
-            {/* --- BOTTOM GRID: CATEGORIES & RULES --- */}
+            {/* --- BOTTOM GRID: BUDGETS & RULES --- */}
             <div className="row g-4 pb-5">
-                <div className="col-12 col-xl-6">
+                
+                {/* NEW BUDGET TABLE */}
+                <div className="col-12 col-xl-7">
                     <div className="card h-100 border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
-                        <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4 d-flex justify-content-between align-items-center">
-                            <h6 className="fw-bold mb-0">Manage Categories</h6>
+                        <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4">
+                            <h6 className="fw-bold mb-0"><i className="bi bi-tags-fill text-primary me-2"></i>Categories & Budgets</h6>
+                            <div className="text-muted small mt-1">Set monthly limits to track pacing on your dashboard.</div>
                         </div>
-                        <div className="card-body p-4 d-flex flex-column">
-                            <form onSubmit={handleAddCategory} className="d-flex gap-2 mb-4">
-                                <div className="input-group input-group-sm">
-                                    <span className="input-group-text bg-input border-secondary p-0 px-2"><input type="color" className="form-control form-control-color border-0 bg-transparent p-0 m-0 cursor-pointer" style={{ width: '24px', height: '24px' }} value={newCatColor} onChange={(e) => setNewCatColor(e.target.value)} title="Choose Category Color" /></span>
-                                    <input type="text" className="form-control bg-input border-secondary text-main" placeholder="New Category Name..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} required />
-                                    <button type="submit" className="btn btn-primary fw-bold px-3">Add</button>
-                                </div>
-                            </form>
-                            <div className="d-flex flex-wrap gap-2 overflow-auto" style={{ maxHeight: '200px' }}>
-                                {categories.map(cat => (
-                                    <div key={cat.name} className="badge border text-main rounded-pill px-3 py-2 d-flex align-items-center shadow-sm" style={{ fontSize: '0.85rem', backgroundColor: `${cat.color}25`, borderColor: cat.color }}>
-                                        <i className="bi bi-circle-fill me-2" style={{ fontSize: '0.5rem', color: cat.color }}></i>
-                                        {cat.name}
-                                        {cat.name !== 'Exclude' && <i className="bi bi-x-circle-fill ms-3 text-muted cursor-pointer hover-text-danger transition-all" onClick={() => handleRemoveCategory(cat.name)}></i>}
-                                    </div>
-                                ))}
+                        <div className="card-body p-0 d-flex flex-column h-100">
+                            <div className="table-responsive flex-grow-1" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                                <table className="table table-hover table-borderless align-middle mb-0">
+                                    <thead className="bg-input position-sticky top-0 shadow-sm" style={{zIndex: 5}}>
+                                        <tr>
+                                            <th className="ps-4 py-2 text-muted small">Category</th>
+                                            <th className="py-2 text-muted small text-center">Monthly Target</th>
+                                            <th className="pe-4 py-2 text-end text-muted small">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {categories.map(cat => (
+                                            <tr key={cat.name} className="border-bottom border-secondary border-opacity-25">
+                                                <td className="ps-4 py-3">
+                                                    <div className="d-flex align-items-center">
+                                                        <input type="color" className="form-control form-control-color form-control-sm p-0 border-0 me-3 rounded-circle shadow-sm" style={{ width: '24px', height: '24px' }} value={cat.color} onChange={(e) => {
+                                                            updateCategories(categories.map(c => c.name === cat.name ? { ...c, color: e.target.value } : c));
+                                                        }} title="Change Color" />
+                                                        <span className="fw-bold text-main">{cat.name}</span>
+                                                    </div>
+                                                </td>
+                                                
+                                                <td className="py-3 text-center">
+                                                    {['Income', 'Exclude'].includes(cat.name) ? (
+                                                        <span className="text-muted small fst-italic">—</span>
+                                                    ) : (
+                                                        <div className="input-group input-group-sm mx-auto shadow-sm" style={{ maxWidth: '140px' }}>
+                                                            <span className="input-group-text bg-input border-secondary text-muted">$</span>
+                                                            <input 
+                                                                type="number" 
+                                                                className="form-control bg-body border-secondary text-main fw-bold" 
+                                                                placeholder="No Limit" 
+                                                                value={cat.budget || ''} 
+                                                                onChange={(e) => handleUpdateBudget(cat.name, e.target.value)}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                <td className="text-end pe-4 py-3">
+                                                    {!['Income', 'Exclude', 'Housing', 'Grocery'].includes(cat.name) && (
+                                                        <button className="btn btn-sm btn-link text-danger p-0 opacity-50 hover-opacity-100 transition-all" onClick={() => handleRemoveCategory(cat.name)} title="Delete Category"><i className="bi bi-trash3-fill"></i></button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div className="p-3 border-top border-secondary bg-input">
+                                <form onSubmit={handleAddCategory} className="d-flex gap-2">
+                                    <input type="color" className="form-control form-control-color p-0 border-secondary rounded-3 shadow-sm" style={{ width: '38px', height: '38px' }} value={newCatColor} onChange={(e) => setNewCatColor(e.target.value)} title="Choose Color" />
+                                    <input type="text" className="form-control bg-body border-secondary text-main shadow-sm" placeholder="New Category Name..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
+                                    <button type="submit" className="btn btn-primary fw-bold shadow-sm px-4">Add</button>
+                                </form>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="col-12 col-xl-6">
+                {/* RULES TAB */}
+                <div className="col-12 col-xl-5">
                     <div className="card h-100 border-secondary shadow-sm rounded-4 surface-card overflow-hidden">
                         <div className="card-header border-bottom border-secondary bg-transparent py-3 px-4 d-flex justify-content-between align-items-center">
-                            <h6 className="fw-bold mb-0">Auto-Categorization Rules</h6>
+                            <h6 className="fw-bold mb-0"><i className="bi bi-robot text-info me-2"></i>Auto Rules</h6>
                             <span className="badge bg-input border border-secondary text-muted rounded-pill">{Object.keys(rules).length} Active</span>
                         </div>
                         <div className="card-body p-0">
                             {Object.keys(rules).length === 0 ? (
                                 <div className="text-center text-muted small p-4 fst-italic">Categorize a transaction above to create your first rule.</div>
                             ) : (
-                                <div className="list-group list-group-flush overflow-auto" style={{ maxHeight: '280px' }}>
+                                <div className="list-group list-group-flush overflow-auto" style={{ maxHeight: '400px' }}>
                                     {Object.entries(rules).sort(([a], [b]) => a.localeCompare(b)).map(([merchant, category]) => {
                                         const catData = categories.find(c => c.name === category);
                                         const catColor = catData ? catData.color : '#6c757d';
