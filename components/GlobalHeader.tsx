@@ -225,6 +225,7 @@ export default function GlobalHeader() {
                     <div className="d-flex align-items-center gap-2">
                         {/* MODULE PILL SELECTOR */}
                         <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm me-1" style={{ width: 'fit-content' }}>
+                            {/* 1. Retirement Planner (Active) */}
                             <Link 
                                 href="/planner"
                                 prefetch={true}
@@ -236,16 +237,27 @@ export default function GlobalHeader() {
                                 <span className="d-inline d-sm-none">Planner</span>
                             </Link>
                             
-                            <Link 
-                                href="/expenses"
-                                prefetch={true}
-                                className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none ${activeModule === 'expenses' ? 'bg-success text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
-                                style={{ fontSize: '0.85rem' }}
+                            {/* 2. Expense Tracker (Disabled / Coming Soon) */}
+                            <span 
+                                className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
+                                style={{ fontSize: '0.85rem', cursor: 'not-allowed' }}
+                                title="Coming soon"
                             >
                                 <i className="bi bi-receipt me-2"></i>
                                 <span className="d-none d-sm-inline">Expense Tracker</span>
                                 <span className="d-inline d-sm-none">Expenses</span>
-                            </Link>
+                            </span>
+
+                            {/* 3. Portfolio Tracker (Disabled / Coming Soon) */}
+                            <span 
+                                className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
+                                style={{ fontSize: '0.85rem', cursor: 'not-allowed' }}
+                                title="Coming soon"
+                            >
+                                <i className="bi bi-pie-chart-fill me-2"></i>
+                                <span className="d-none d-sm-inline">Portfolio Tracker</span>
+                                <span className="d-inline d-sm-none">Portfolio</span>
+                            </span>
                         </div>
                     
                         {/* PLANNER ACTIONS (File Menu) */}

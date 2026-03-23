@@ -41,20 +41,11 @@ export default function ProjectionTab() {
     );
   }
 
-  const rawInf = data.inputs?.inflation_rate;
-  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
-  
-  const useRealDollars = Boolean(
-      data.useRealDollars === true || 
-      data.inputs?.todays_dollars === true || 
-      data.inputs?.use_real_dollars === true ||
-      data.inputs?.useRealDollars === true
-  );
-
   const baseYear = results.timeline[0]?.year || new Date().getFullYear();
+  const inflation = (data.inputs.inflation_rate || 2.1) / 100;
 
   const getRealValue = (nominalValue: number, year?: number) => {
-      if (!useRealDollars || year === undefined) return nominalValue;
+      if (!data.useRealDollars || year === undefined) return nominalValue;
       const yearsOut = Math.max(0, year - baseYear);
       return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
@@ -73,7 +64,7 @@ export default function ProjectionTab() {
 
       const headers = [
           "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
-          "Living Expenses", "Housing & Debt", "Education Costs", "Contributions", "Withdrawals",
+          "Living Expenses", "Mortgage & Debt", "Education Costs", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
 
@@ -119,7 +110,7 @@ export default function ProjectionTab() {
               Math.round(getRealValue((y.grossInflow || 0) - totalClawback, y.year)),
               Math.round(getRealValue(totalTaxes, y.year)),
               Math.round(getRealValue(y.expenses || 0, y.year)),
-              Math.round(getRealValue((y.mortgagePay || 0) + (y.rentPay || 0) + baseDebtRepayment, y.year)),
+              Math.round(getRealValue((y.mortgagePay || 0) + baseDebtRepayment, y.year)),
               Math.round(getRealValue(y.eduExpense || 0, y.year)),
               Math.round(getRealValue(engineContributions, y.year)),
               Math.round(getRealValue(totalWithdrawals as number, y.year)),
@@ -219,7 +210,7 @@ export default function ProjectionTab() {
 
       const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
       const totalSourced = y.grossInflow || 0;
-      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.rentPay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
+      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
       
       if (totalSourced < totalSpent - 1) {
           hasShortfall = true;
@@ -238,14 +229,11 @@ export default function ProjectionTab() {
     setExpandedYear(expandedYear === year ? null : year);
   };
 
-  const getEventIcons = (events: string[], y: any) => {
+  const getEventIcons = (events: string[]) => {
       if (!events || events.length === 0) return null;
       return events.map((ev, i) => {
           let colorClass = "text-secondary";
           let icon = "bi-info-circle-fill";
-          let tooltip = ev;
-          let warning = false;
-
           if (ev.includes('Retires')) { colorClass = "text-primary"; icon = "bi-cup-hot-fill"; }
           else if (ev.includes('Windfall')) { colorClass = "text-success"; icon = "bi-cash-coin"; }
           else if (ev.includes('Mortgage Paid')) { colorClass = "text-primary"; icon = "bi-house-check-fill"; }
@@ -253,30 +241,9 @@ export default function ProjectionTab() {
           else if (ev.includes('Leave')) { colorClass = "text-info"; icon = "bi-person-hearts"; }
           else if (ev.includes('Downsize')) { colorClass = "text-danger"; icon = "bi-house-down-fill"; }
           else if (ev.includes('RRSP')) { colorClass = "text-secondary"; icon = "bi-arrow-left-right"; }
-          else if (ev.includes('Sold Primary') || ev.includes('Sold:')) { colorClass = "text-success"; icon = "bi-house-dash-fill"; }
-          else if (ev.includes('Bought New Home') || ev.includes('Purchased:')) { 
-              colorClass = "text-primary"; icon = "bi-house-add-fill"; 
-              
-              // Check if investments were sold to fund this!
-              const totalWd = y.flows?.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number : 0;
-              if (totalWd > 1000) {
-                  warning = true;
-                  tooltip = `${ev} (Warning: Liquidated $${Math.round(totalWd).toLocaleString()} from portfolio. May trigger taxes/deplete assets.)`;
-              }
-          }
-          else if (ev.includes('Transitioned')) { colorClass = "text-info"; icon = "bi-arrow-right-circle-fill"; }
           
-          if (warning) {
-              return (
-                  <span key={i} className="ms-2 position-relative d-inline-block" title={tooltip} style={{cursor: 'help'}}>
-                      <i className={`bi ${icon} ${colorClass} fs-5`}></i>
-                      <i className="bi bi-exclamation-triangle-fill text-warning position-absolute top-0 start-100 translate-middle" style={{fontSize: '0.65rem'}}></i>
-                  </span>
-              );
-          }
-
           return (
-              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={tooltip} style={{cursor: 'help'}}></i>
+              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={ev} style={{cursor: 'help'}}></i>
           );
       });
   };
@@ -335,7 +302,7 @@ export default function ProjectionTab() {
           wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[`${pUpper} ${k}`] || 0));
       }
       let net = added - withdrawn;
-      if (Math.abs(net) < 1) return <span className="me-2 flex-shrink-0" style={{minWidth: '60px', display: 'inline-block'}}></span>; 
+      if (Math.abs(net) < 1) return <span style={{width: '45px', display: 'inline-block'}}></span>; 
       
       net = getRealValue(net, year);
       const isPos = net > 0;
@@ -343,7 +310,7 @@ export default function ProjectionTab() {
       const formatted = absNet >= 1000 ? `${(absNet/1000).toFixed(1).replace('.0', '')}k` : Math.round(absNet);
       
       return (
-          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2 text-nowrap flex-shrink-0`} style={{fontSize: '0.65rem', minWidth: '60px', display: 'inline-block'}}>
+          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2`} style={{fontSize: '0.65rem', width: '45px', display: 'inline-block'}}>
               ({isPos ? '+' : '-'}{formatted})
           </span>
       );
@@ -355,11 +322,9 @@ export default function ProjectionTab() {
       const isP1 = player === 'p1';
       const pUpper = player.toUpperCase();
 
-      const rental = isP1 ? (y.rentalP1 || 0) : (y.rentalP2 || 0);
-      const other = isP1 ? (y.otherP1 || 0) : (y.otherP2 || 0);
-      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0) - rental - other) : (y.incomeP2 - (y.rrspMatchP2 || 0) - rental - other);
-      
+      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
+      
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
       const db = isP1 ? y.dbP1 : y.dbP2;
@@ -369,8 +334,6 @@ export default function ProjectionTab() {
       let sum = 0;
       
       if (salary > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Salary:</span> <span>$${formatStr(salary, year)}</span></div>`; sum += salary; }
-      if (rental > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Rental Income:</span> <span>$${formatStr(rental, year)}</span></div>`; sum += rental; }
-      if (other > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Side Hustle/Other:</span> <span>$${formatStr(other, year)}</span></div>`; sum += other; }
       if (match > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Employer Match:</span> <span>$${formatStr(match, year)}</span></div>`; sum += match; }
       if (cpp > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>CPP:</span> <span>$${formatStr(cpp, year)}</span></div>`; sum += cpp; }
       if (oas > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>OAS:</span> <span>$${formatStr(oas, year)}</span></div>`; sum += oas; }
@@ -386,8 +349,12 @@ export default function ProjectionTab() {
               const amt = y.flows.withdrawals[k];
               breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} W/D:</span> <span>$${formatStr(amt, year)}</span></div>`;
               sum += amt;
-          } else if (k.includes('Non-Reg') || k.includes('Crypto')) {
-              const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
+          } else if (k.match(/Non-?Reg/i) || k.match(/Crypto/i) || k.match(/NONREG/i)) {
+              // Resilient breakdown getter catching variations
+              const breakdown = y.wdBreakdown || y.withdrawalBreakdown;
+              const targetKey = k.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
+              const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
+              
               if (mathObj && mathObj.tax > 0) {
                   breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} Taxable:</span> <span>$${formatStr(mathObj.tax, year)}</span></div>`;
                   sum += mathObj.tax;
@@ -395,9 +362,11 @@ export default function ProjectionTab() {
           }
       });
 
-      let incStr = `<div class="d-flex justify-content-between fw-bold text-main"><span>Gross Income:</span><span>$${formatStr(sum, year)}</span></div>`;
+      let actualGross = sum; 
+      
+      let incStr = `<b>Gross Income:</b> $${formatStr(actualGross, year)}<br>`;
       if (breakdownStr) {
-           incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
+           incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
 
       const rrspCont = y.flows?.contributions?.[player]?.rrsp || 0;
@@ -405,7 +374,7 @@ export default function ProjectionTab() {
       const totalDeductions = rrspCont + fhsaCont;
 
       if (totalDeductions > 0) {
-          incStr += `<div class="d-flex justify-content-between fw-bold text-info mt-1"><span>Total Deductions:</span><span>-$${formatStr(totalDeductions, year)}</span></div>`;
+          incStr += `<b>Total Deductions:</b> -$${formatStr(totalDeductions, year)}<br>`;
           let dedStr = '';
           
           if (rrspCont > 0) {
@@ -426,73 +395,26 @@ export default function ProjectionTab() {
               dedStr += `<div class="d-flex justify-content-between"><span>FHSA Contributions:</span> <span>-$${formatStr(fhsaCont, year)}</span></div>`;
           }
 
-          incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">${dedStr}</div>`;
+          incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${dedStr}</div>`;
       }
 
       if (Math.abs(taxIncAfter - taxIncBefore) > 1) {
           let splitAmt = taxIncAfter - taxIncBefore;
-          incStr += `<div class="d-flex justify-content-between small text-muted fw-medium mt-1"><span>Pension Split:</span><span>${splitAmt > 0 ? '+' : '-'}$${formatStr(Math.abs(splitAmt), year)}</span></div>`;
+          incStr += `<b>Pension Split:</b> ${splitAmt > 0 ? '+' : '-'}$${formatStr(Math.abs(splitAmt), year)}<br>`;
       }
-      incStr += `<div class="d-flex justify-content-between fw-bold text-main mt-1"><span>Net Taxable Income:</span><span>$${formatStr(taxIncAfter, year)}</span></div><hr class="my-1 border-secondary">`;
+      incStr += `<b>Net Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
 
-      // Taxes
-      let taxStr = '';
-      taxStr += `<div class="d-flex justify-content-between fw-bold"><span>Federal Tax:</span><span>$${formatStr(taxData.fed, year)}</span></div>`;
-      
-      let provBase = Math.max(0, taxData.prov - (taxData.surtax || 0) - (taxData.ohp || 0));
-      taxStr += `<div class="d-flex justify-content-between fw-bold mt-1"><span>Provincial Tax:</span><span>$${formatStr(taxData.prov, year)}</span></div>`;
-      
-      taxStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">`;
-      taxStr += `<div class="d-flex justify-content-between"><span>Base Prov Tax:</span> <span>$${formatStr(provBase, year)}</span></div>`;
-      if (taxData.surtax > 0) taxStr += `<div class="d-flex justify-content-between"><span>Ontario Surtax:</span> <span class="text-danger">+$${formatStr(taxData.surtax, year)}</span></div>`;
-      if (taxData.ohp > 0) taxStr += `<div class="d-flex justify-content-between"><span>Ontario Health Premium:</span> <span class="text-danger">+$${formatStr(taxData.ohp, year)}</span></div>`;
-      taxStr += `</div>`;
+      let clawbackStr = taxData.oas_clawback > 0 ? `<br><b>OAS Clawback:</b> $${formatStr(taxData.oas_clawback, year)}` : '';
 
-      taxStr += `<div class="d-flex justify-content-between fw-bold mt-1"><span>CPP / EI Premiums:</span><span>$${formatStr(taxData.cpp_ei, year)}</span></div>`;
-      if (taxData.cppPremium > 0 || taxData.cpp2Premium > 0 || taxData.eiPremium > 0) {
-          taxStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">`;
-          if (taxData.cppPremium > 0) taxStr += `<div class="d-flex justify-content-between"><span>Base CPP (Tier 1):</span> <span>$${formatStr(taxData.cppPremium, year)}</span></div>`;
-          if (taxData.cpp2Premium > 0) taxStr += `<div class="d-flex justify-content-between"><span>CPP2 (Tier 2):</span> <span class="text-warning">+$${formatStr(taxData.cpp2Premium, year)}</span></div>`;
-          if (taxData.eiPremium > 0) taxStr += `<div class="d-flex justify-content-between"><span>EI Premiums:</span> <span>$${formatStr(taxData.eiPremium, year)}</span></div>`;
-          taxStr += `</div>`;
-      }
-
-      if (taxData.oas_clawback > 0) {
-          taxStr += `<div class="d-flex justify-content-between fw-bold text-danger mt-1"><span>OAS Clawback:</span><span>$${formatStr(taxData.oas_clawback, year)}</span></div>`;
-      }
-
-      // Credits
-      const hasNrtc = taxData.nrtc && Object.values(taxData.nrtc).some((v: any) => v > 0);
-      const nrtcTotal = hasNrtc ? Object.values(taxData.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
-      if (nrtcTotal > 0) {
-          taxStr += `<hr class="my-1 border-secondary"><div class="d-flex justify-content-between fw-bold text-info"><span>Applied NRTCs:</span><span>-$${formatStr(nrtcTotal, year)}</span></div>`;
-          taxStr += `<div class="text-muted border-start border-2 border-info border-opacity-50 ms-1 ps-2 my-1" style="font-size: 0.75rem; line-height: 1.4;">`;
-          if (taxData.nrtc.disability > 0) taxStr += `<div class="d-flex justify-content-between"><span>Disability Amount:</span> <span>-$${formatStr(taxData.nrtc.disability, year)}</span></div>`;
-          if (taxData.nrtc.caregiver > 0) taxStr += `<div class="d-flex justify-content-between"><span>Caregiver Amount:</span> <span>-$${formatStr(taxData.nrtc.caregiver, year)}</span></div>`;
-          if (taxData.nrtc.medical > 0) taxStr += `<div class="d-flex justify-content-between"><span>Medical Expenses:</span> <span>-$${formatStr(taxData.nrtc.medical, year)}</span></div>`;
-          if (taxData.nrtc.homeBuyer > 0) taxStr += `<div class="d-flex justify-content-between"><span>First-Time Home Buyer:</span> <span>-$${formatStr(taxData.nrtc.homeBuyer, year)}</span></div>`;
-          if (taxData.nrtc.donations > 0) taxStr += `<div class="d-flex justify-content-between"><span>Charitable Donations:</span> <span>-$${formatStr(taxData.nrtc.donations, year)}</span></div>`;
-          taxStr += `</div>`;
-      }
-
-      if (taxData.rtc && taxData.rtc.transit > 0) {
-          taxStr += `<div class="d-flex justify-content-between fw-bold text-success mt-1"><span>Transit Refund:</span><span>+$${formatStr(taxData.rtc.transit, year)}</span></div>`;
-      }
-
-      taxStr += `<hr class="my-1 border-secondary"><div class="d-flex justify-content-between fw-bold text-danger"><span>Total Tax Generated:</span><span>$${formatStr(taxData.totalTax, year)}</span></div>`;
-      
-      if (refund > 0) {
-          taxStr += `<div class="d-flex justify-content-between fw-bold text-success mt-1"><span>Est. Tax Savings/Refund:</span><span>+$${formatStr(refund, year)}</span></div>`;
-      }
-      
-      taxStr += `<div class="d-flex justify-content-between text-muted fw-medium small mt-1"><span>Marginal Rate:</span><span>${(taxData.margRate * 100).toFixed(1)}%</span></div>`;
-
-      return incStr + taxStr;
+      return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
   };
 
-  const buildYieldTooltip = (math: any, year: number) => {
+  const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
       if (!math) return "No yield.";
-      return `<div class="d-flex justify-content-between text-muted small"><span>Prior Balance:</span><span>$${formatStr(math.bal, year - 1)}</span></div><div class="d-flex justify-content-between text-muted small"><span>Yield Rate:</span><span>${(math.rate * 100).toFixed(2)}%</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small fw-bold"><span>Yield Generated:</span><span class="text-success">+$${formatStr(math.amt, year)}</span></div>`;
+      if (useRealDollars) {
+          return `<b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>In Today's $:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+      }
+      return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
   };
 
   const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number, threshold: number) => {
@@ -519,10 +441,7 @@ export default function ProjectionTab() {
       const pUpper = player.toUpperCase();
       const age = isP1 ? (y.p1Age || y.ageP1) : (y.p2Age || y.ageP2);
       
-      const rental = isP1 ? (y.rentalP1 || 0) : (y.rentalP2 || 0);
-      const other = isP1 ? (y.otherP1 || 0) : (y.otherP2 || 0);
-      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0) - rental - other) : (y.incomeP2 - (y.rrspMatchP2 || 0) - rental - other);
-
+      const salary = isP1 ? y.incomeP1 - (y.rrspMatchP1 || 0) : y.incomeP2 - (y.rrspMatchP2 || 0);
       const match = isP1 ? y.rrspMatchP1 : y.rrspMatchP2;
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
@@ -557,20 +476,8 @@ export default function ProjectionTab() {
               
               {salary > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment income." align="left" /></span>
+                      <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment/other income." align="left" /></span>
                       <span className="fw-medium">{formatCurrency(salary, year)}</span>
-                  </div>
-              )}
-              {rental > 0 && (
-                  <div className="d-flex justify-content-between small mb-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">Rental Income <InfoBtn title="Rental Income" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Gross rental income from investment properties." align="left" /></span>
-                      <span className="text-success">+{formatCurrency(rental, year)}</span>
-                  </div>
-              )}
-              {other > 0 && (
-                  <div className="d-flex justify-content-between small mb-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">Other Income <InfoBtn title="Other Income" text="<span class='text-info fw-bold'>Taxable.</span><br>Additional income streams and side hustles." align="left" /></span>
-                      <span className="text-success">+{formatCurrency(other, year)}</span>
                   </div>
               )}
               {match > 0 && (
@@ -605,7 +512,7 @@ export default function ProjectionTab() {
               )}
               {invInc > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year)}`} align="left" /></span>
+                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, data.useRealDollars)}`} align="left" /></span>
                       <span className="text-success">+{formatCurrency(invInc, year)}</span>
                   </div>
               )}
@@ -618,7 +525,11 @@ export default function ProjectionTab() {
                   if (k.includes('RRIF')) {
                       const factor = getRrifFactor(age - 1);
                       const minAmount = priorRrifBal * factor;
-                      info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor.<hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Prior Balance:</span><span>$${formatStr(priorRrifBal, year - 1)}</span></div><div class="d-flex justify-content-between text-muted small"><span>Withdrawal Rate:</span><span>${(factor * 100).toFixed(2)}%</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small fw-bold"><span>Withdrawn:</span><span class="text-primary">+$${formatStr(minAmount, year)}</span></div>`;
+                      if (data.useRealDollars) {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorRrifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>In Today's $:</b> $${formatStr(minAmount, year)}`;
+                      } else {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
+                      }
                   }
                   else if (k.includes('LIF')) {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>LIF withdrawal bound by provincial limits.`;
@@ -626,10 +537,18 @@ export default function ProjectionTab() {
                   else if (k.includes('RRSP')) {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Added directly to taxable income.`;
                   }
-                  else if (k.includes('Non-Reg') || k.includes('Crypto')) {
-                      const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
+                  else if (k.match(/Non-?Reg/i) || k.match(/Crypto/i) || k.match(/NONREG/i)) {
+                      // Resilient lookup
+                      const breakdown = y.wdBreakdown || y.withdrawalBreakdown;
+                      const targetKey = k.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
+                      const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
+                      
                       if (mathObj) {
-                          info = `<span class='text-info fw-bold'>Partially Taxable.</span><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Gross W/D:</span><span>$${formatStr(mathObj.wd, year)}</span></div><div class="d-flex justify-content-between text-muted small"><span>ACB Disposed:</span><span>-$${formatStr(mathObj.acb, year)}</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Capital Gain:</span><span>$${formatStr(mathObj.gain, year)}</span></div><div class="d-flex justify-content-between text-muted small fw-bold mb-1"><span>Taxable (50%):</span><span class="text-danger">+$${formatStr(mathObj.tax, year)}</span></div>`;
+                          if (data.useRealDollars) {
+                              info = `<span class='text-info fw-bold'>Partially Taxable.</span><br><span class='text-muted small'>Nominal Math:</span><br><div class="d-flex justify-content-between text-muted small"><span>Gross W/D:</span><span>$${Math.round(mathObj.wd).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small"><span>ACB Disposed:</span><span>-$${Math.round(mathObj.acb).toLocaleString()}</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Nominal Gain:</span><span>$${Math.round(mathObj.gain).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small mb-1"><span>Nominal Taxable (50%):</span><span>$${Math.round(mathObj.tax).toLocaleString()}</span></div><hr class="my-1 border-secondary"><b>Taxable in Today's $:</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          } else {
+                              info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
+                          }
                       } else {
                           info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Withdrawal includes principal and capital gains. Only 50% of the capital gain is added to taxable income.`;
                       }
@@ -792,7 +711,7 @@ export default function ProjectionTab() {
                 const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
-                const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + (y.rentPay || 0) + baseDebtRepayment + (y.eduExpense || 0);
+                const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + baseDebtRepayment + (y.eduExpense || 0);
 
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
                 const totalNW = y.liquidNW + (y.reIncludedEq || 0); 
@@ -827,8 +746,7 @@ export default function ProjectionTab() {
                       <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
                         <div className="d-flex align-items-center">
                             <span className="fs-6">{y.year}</span>
-                            {/* PASSED y HERE TO EVALUATE WITHDRAWALS */}
-                            {getEventIcons(y.events, y)}
+                            {getEventIcons(y.events)}
                         </div>
                       </td>
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
@@ -888,28 +806,18 @@ export default function ProjectionTab() {
                                     
                                     <div className="flex-grow-1">
                                         <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Living Expenses</span><span className="fw-medium">{formatCurrency(y.expenses, y.year)}</span></div>
-                                        
                                         {y.mortgagePay > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="d-flex align-items-center text-muted ms-2">Mortgage Payments <InfoBtn align="right" title="Mortgage" text="Principal and interest payments for the year based on your amortization schedule."/></span>
                                                 <span>{formatCurrency(y.mortgagePay, y.year)}</span>
                                             </div>
                                         )}
-                                        
-                                        {y.rentPay > 0 && (
-                                            <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                <span className="d-flex align-items-center text-muted ms-2">Rent / LTC Payments <InfoBtn align="right" title="Rent" text="Monthly rent or Long-Term Care costs based on your housing setup."/></span>
-                                                <span>{formatCurrency(y.rentPay, y.year)}</span>
-                                            </div>
-                                        )}
-                                        
                                         {y.eduExpense > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold text-info">Education Costs</span>
                                                 <span className="fw-medium text-info">{formatCurrency(y.eduExpense, y.year)}</span>
                                             </div>
                                         )}
-                                        
                                         {baseDebtRepayment > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold" style={{ color: '#d97706' }}>Large Purchases/Debt</span>
@@ -957,13 +865,13 @@ export default function ProjectionTab() {
                                     <div className="flex-grow-1">
                                         {y.p1Alive && (
                                             <div className="mb-3">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold">{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['tfsa'], ['TFSA', 'TFSA (Successor)'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency((y.assetsP1?.tfsa||0) + (y.assetsP1?.tfsa_successor||0), y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency((y.assetsP1?.tfsa||0) + (y.assetsP1?.tfsa_successor||0), y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -972,7 +880,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">FHSA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['fhsa'], ['FHSA'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.fhsa||0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.fhsa||0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -982,7 +890,7 @@ export default function ProjectionTab() {
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['rrsp'], ['RRSP'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -992,7 +900,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2 d-flex align-items-center">RRIF <InfoBtn title="RRIF" text="Registered Retirement Income Fund.<br>Converted from RRSP at age 71." align="left" /></span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['RRIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.rrif_acct || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.rrif_acct || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1002,7 +910,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIRA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['LIRF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.lirf || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.lirf || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1012,7 +920,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['LIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.lif || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.lif || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1021,7 +929,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['nonreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1029,7 +937,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['cash'], ['Cash'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1038,7 +946,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">Crypto</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['crypto'], ['Crypto'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP1?.crypto || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.crypto || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1047,13 +955,13 @@ export default function ProjectionTab() {
 
                                         {isCouple && y.p2Alive && (
                                             <div className="mb-2 border-top border-secondary border-opacity-25 pt-2">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold text-end text-nowrap flex-shrink-0" style={{color: 'var(--bs-purple)', minWidth: '85px'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold" style={{color: 'var(--bs-purple)'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['tfsa'], ['TFSA', 'TFSA (Successor)'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency((y.assetsP2?.tfsa||0) + (y.assetsP2?.tfsa_successor||0), y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency((y.assetsP2?.tfsa||0) + (y.assetsP2?.tfsa_successor||0), y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1062,7 +970,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">FHSA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['fhsa'], ['FHSA'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.fhsa||0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.fhsa||0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1072,7 +980,7 @@ export default function ProjectionTab() {
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['rrsp'], ['RRSP'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.rrsp || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.rrsp || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1082,7 +990,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2 d-flex align-items-center">RRIF <InfoBtn title="RRIF" text="Registered Retirement Income Fund.<br>Converted from RRSP at age 71." align="left" /></span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['RRIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.rrif_acct || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.rrif_acct || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1092,7 +1000,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIRA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['LIRF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.lirf || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.lirf || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1102,7 +1010,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['LIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.lif || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.lif || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1111,7 +1019,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['nonreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1119,7 +1027,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['cash'], ['Cash'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1128,7 +1036,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">Crypto</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['crypto'], ['Crypto'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.assetsP2?.crypto || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.crypto || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1141,7 +1049,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted fw-bold d-flex align-items-center">Family RESP</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year)}
-                                                        <span className="text-info fw-bold text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(respBal, y.year)}</span>
+                                                        <span className="text-info fw-bold text-end" style={{width: '75px'}}>{formatCurrency(respBal, y.year)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1149,15 +1057,15 @@ export default function ProjectionTab() {
 
                                         <div className="d-flex justify-content-between small mb-1 mt-3">
                                             <span className="text-muted fw-bold">Liquid Portfolio Assets</span>
-                                            <span className="fw-medium text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency(y.liquidNW, y.year)}</span>
+                                            <span className="fw-medium">{formatCurrency(y.liquidNW, y.year)}</span>
                                         </div>
                                         
                                         <div className="d-flex justify-content-between small mb-1">
                                             <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
-                                            <div className="d-flex align-items-center justify-content-end">
+                                            <span className="d-flex align-items-center">
                                                 {y.reIncludedEq > 0 && <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-1 me-2" style={{fontSize: '0.6rem'}}>INCLUDED</span>}
-                                                <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '85px'}}>{formatCurrency((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)}</span>
-                                            </div>
+                                                {formatCurrency((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)}
+                                            </span>
                                         </div>
                                     </div>
                                     <div className="mt-3"></div>
