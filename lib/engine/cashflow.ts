@@ -134,18 +134,26 @@ export function handleDeficit(
         p[acct] -= pullAmount;
         if (acct === 'cash') availableHouseholdCash -= pullAmount;
 
+        // Map account names for UI compatibility
+        let logKey = acct;
+        if (acct === 'nonreg') logKey = 'Non-Reg';
+        else if (acct === 'crypto') logKey = 'Crypto';
+        else if (acct === 'cash') logKey = 'Cash';
+        else if (acct === 'rrif_acct') logKey = 'RRIF';
+        else logKey = acct.toUpperCase();
+
         // Handle Logging and ACB / Tax Math
         if (flowLog) {
-            flowLog.withdrawals[`${prefix.toUpperCase()} ${acct.toUpperCase()}`] = (flowLog.withdrawals[`${prefix.toUpperCase()} ${acct.toUpperCase()}`] || 0) + pullAmount;
+            flowLog.withdrawals[`${prefix.toUpperCase()} ${logKey}`] = (flowLog.withdrawals[`${prefix.toUpperCase()} ${logKey}`] || 0) + pullAmount;
         }
         
         if (wdBreakdown) {
             if (!wdBreakdown[prefix]) wdBreakdown[prefix] = {};
-            if (!wdBreakdown[prefix][acct.toUpperCase() + '_math']) {
-                wdBreakdown[prefix][acct.toUpperCase() + '_math'] = { wd: 0, tax: 0, acb: 0, gain: 0 };
+            if (!wdBreakdown[prefix][logKey + '_math']) {
+                wdBreakdown[prefix][logKey + '_math'] = { wd: 0, tax: 0, acb: 0, gain: 0 };
             }
             
-            wdBreakdown[prefix][acct.toUpperCase() + '_math'].wd += pullAmount;
+            wdBreakdown[prefix][logKey + '_math'].wd += pullAmount;
 
             if (isCapitalGain) {
                 let acbKey = acct === 'crypto' ? 'crypto_acb' : 'acb';
@@ -157,16 +165,16 @@ export function handleDeficit(
                 let gain = pullAmount * gainRatio;
 
                 p[acbKey] = Math.max(0, currentAcb - acbDisposed);
-                wdBreakdown[prefix][acct.toUpperCase() + '_math'].acb += acbDisposed;
-                wdBreakdown[prefix][acct.toUpperCase() + '_math'].gain += gain;
+                wdBreakdown[prefix][logKey + '_math'].acb += acbDisposed;
+                wdBreakdown[prefix][logKey + '_math'].gain += gain;
                 
                 // Actual Taxable Gain (50% Inclusion)
                 let taxableGain = gain * 0.5;
-                wdBreakdown[prefix][acct.toUpperCase() + '_math'].tax += taxableGain;
+                wdBreakdown[prefix][logKey + '_math'].tax += taxableGain;
                 addTaxFn(prefix, taxableGain, pullAmount); // Add taxable gain to income, add full pull to cash flow
 
             } else if (isTaxable) {
-                wdBreakdown[prefix][acct.toUpperCase() + '_math'].tax += pullAmount;
+                wdBreakdown[prefix][logKey + '_math'].tax += pullAmount;
                 addTaxFn(prefix, pullAmount, pullAmount); // Full amount is taxable, full amount is cash flow
             } else {
                 addTaxFn(prefix, 0, pullAmount); // $0 taxable, full amount is cash flow
