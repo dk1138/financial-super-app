@@ -84,8 +84,8 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
         }}
       >
         
-        {/* NEW PLANFOLIO LAYERS ICON */}
-        <div style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "center" }}>
+        {/* BRAND HEADER: Icon + Planfolio */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem", marginBottom: "1rem" }}>
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             viewBox="0 0 24 24" 
@@ -94,18 +94,17 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
             strokeWidth="2.5" 
             strokeLinecap="round" 
             strokeLinejoin="round" 
-            style={{ width: "72px", height: "72px" }}
+            style={{ width: "48px", height: "48px" }}
           >
             {/* The Bottom/Back Layer */}
             <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             {/* The Top/Front Layer */}
             <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
           </svg>
+          <h2 style={{ fontSize: "2.25rem", fontWeight: "bold", margin: 0, letterSpacing: "-0.02em" }}>
+            Planfolio
+          </h2>
         </div>
-
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
-          Welcome to Planfolio
-        </h2>
         
         <div style={{ display: "inline-block", backgroundColor: "#e9ecef", color: "#495057", padding: "0.25rem 0.75rem", borderRadius: "50px", fontSize: "0.85rem", fontWeight: "600", marginBottom: "1.25rem" }}>
           🔒 Local Data Only - Your data never leaves your browser

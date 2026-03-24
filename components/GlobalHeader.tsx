@@ -217,16 +217,19 @@ export default function GlobalHeader() {
 
             <div 
                 ref={headerRef} 
-                className="position-sticky top-0 pt-2 pb-2" 
+                className="position-sticky top-0 pt-2 pb-2 px-2" 
                 style={{ backgroundColor: 'var(--bg-body)', zIndex: 1040, borderBottom: '1px solid var(--border-color)' }}
             >
-                <div className="d-flex flex-wrap align-items-center shadow-sm mb-0 rounded-4 p-2 border border-secondary rp-card m-0 position-relative w-100">
+                {/* flex-nowrap forces exactly 1 row. 
+                    overflow-x-auto allows small mobile screens to scroll it instead of breaking layout.
+                */}
+                <div className="d-flex flex-nowrap align-items-center justify-content-between shadow-sm mb-0 rounded-4 p-2 border border-secondary rp-card m-0 position-relative w-100 gap-2 overflow-visible">
                     
-                    {/* 1. LEFT COLUMN: Branding & Navigation */}
-                    <div className="d-flex align-items-center justify-content-start flex-grow-1" style={{ flexBasis: 0 }}>
+                    {/* 1. LEFT: Branding & Navigation */}
+                    <div className="d-flex align-items-center gap-2">
                         
                         {/* BRAND ICON: Folio Layers */}
-                        <div className="d-flex align-items-center justify-content-center text-primary me-2 ms-1 transition-all" title="Planfolio">
+                        <div className="d-flex align-items-center justify-content-center text-primary ms-1" title="Planfolio" style={{ flexShrink: 0 }}>
                             <svg 
                                 xmlns="http://www.w3.org/2000/svg" 
                                 viewBox="0 0 24 24" 
@@ -243,7 +246,7 @@ export default function GlobalHeader() {
                         </div>
 
                         {/* MODULE PILL SELECTOR */}
-                        <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm" style={{ width: 'fit-content' }}>
+                        <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm" style={{ width: 'fit-content', whiteSpace: 'nowrap' }}>
                             <Link 
                                 href="/planner"
                                 prefetch={true}
@@ -251,8 +254,8 @@ export default function GlobalHeader() {
                                 style={{ fontSize: '0.85rem' }}
                             >
                                 <i className="bi bi-graph-up-arrow me-2 d-none d-sm-inline"></i>
-                                <span className="d-none d-sm-inline">Retirement Planner</span>
-                                <span className="d-inline d-sm-none">Planner</span>
+                                <span className="d-none d-md-inline">Retirement Planner</span>
+                                <span className="d-inline d-md-none">Planner</span>
                             </Link>
                             
                             <span 
@@ -261,70 +264,57 @@ export default function GlobalHeader() {
                                 title="Coming soon"
                             >
                                 <i className="bi bi-receipt me-2 d-none d-sm-inline"></i>
-                                <span className="d-none d-sm-inline">Expense Tracker</span>
-                                <span className="d-inline d-sm-none">Expenses</span>
-                            </span>
-
-                            <span 
-                                className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
-                                style={{ fontSize: '0.85rem', cursor: 'not-allowed' }}
-                                title="Coming soon"
-                            >
-                                <i className="bi bi-pie-chart-fill me-2 d-none d-xl-inline"></i>
-                                <span className="d-none d-xl-inline">Portfolio Tracker</span>
-                                <span className="d-inline d-xl-none">Portfolio</span>
+                                <span className="d-none d-md-inline">Expense Tracker</span>
+                                <span className="d-inline d-md-none">Expenses</span>
                             </span>
                         </div>
                     </div>
                     
-                    {/* 2. CENTER COLUMN: File Menu (Perfectly Centered) */}
-                    <div className="d-none d-lg-flex align-items-center justify-content-center flex-grow-1" style={{ flexBasis: 0 }}>
-                        {activeModule === 'planner' && (
-                            <div className="position-relative">
-                                <button 
-                                    className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-4 shadow-sm transition-all" 
-                                    type="button" 
-                                    onClick={() => setFileMenuOpen(!fileMenuOpen)} 
-                                    style={{ height: '36px' }}
-                                >
-                                    <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
-                                    <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
-                                    <i className="bi bi-chevron-down ms-3 text-muted" style={{ fontSize: '0.7rem' }}></i>
-                                </button>
-                                
-                                {fileMenuOpen && (
-                                    <>
-                                        <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
-                                        {/* Dropdown carefully positioned to drop straight down from center */}
-                                        <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 start-50 translate-middle-x" style={{zIndex: 1060, top: '100%', minWidth: '260px'}}>
-                                            <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
-                                            <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
-                                            <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
-                                            <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                                            <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                                            <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
-                                            <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
-                                            <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                                            <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
-                                        </ul>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    {/* 2. CENTER: File Menu (Absolutely Positioned to prevent layout breaking) */}
+                    {activeModule === 'planner' && (
+                        <div className="d-none d-lg-block position-absolute start-50 translate-middle-x" style={{ zIndex: 1050 }}>
+                            <button 
+                                className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-4 shadow-sm transition-all" 
+                                type="button" 
+                                onClick={() => setFileMenuOpen(!fileMenuOpen)} 
+                                style={{ height: '36px' }}
+                            >
+                                <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
+                                <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
+                                <i className="bi bi-chevron-down ms-3 text-muted" style={{ fontSize: '0.7rem' }}></i>
+                            </button>
+                            
+                            {fileMenuOpen && (
+                                <>
+                                    <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
+                                    <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 start-50 translate-middle-x" style={{zIndex: 1060, top: '100%', minWidth: '260px'}}>
+                                        <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
+                                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
+                                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
+                                    </ul>
+                                </>
+                            )}
+                        </div>
+                    )}
 
-                    {/* 3. RIGHT COLUMN: Tools & Profile */}
-                    <div className="d-flex align-items-center justify-content-end gap-2 flex-grow-1" style={{ flexBasis: 0 }}>
+                    {/* 3. RIGHT: Tools & Profile */}
+                    <div className="d-flex align-items-center gap-2 justify-content-end" style={{ flexShrink: 0 }}>
                         
                         {/* DELEGATED EXPENSE ACTIONS (Upload & Clear) */}
                         {activeModule === 'expenses' && <ExpenseHeaderActions showToast={showToast} />}
 
                         {/* TODAY'S $ TOGGLE (Only in Planner) */}
                         {activeModule === 'planner' && (
-                            <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
+                            <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all d-none d-sm-flex" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
                                 <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
                                     <input className="form-check-input m-0 cursor-pointer shadow-none" type="checkbox" id="useRealDollars" checked={data.useRealDollars ?? false} onChange={(e) => updateUseRealDollars(e.target.checked)} />
-                                    <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-md-block" style={{paddingTop: '2px'}} htmlFor="useRealDollars">Today's $</label>
+                                    <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-xl-block" style={{paddingTop: '2px'}} htmlFor="useRealDollars">Today's $</label>
                                 </div>
                             </div>
                         )}
@@ -334,7 +324,7 @@ export default function GlobalHeader() {
                             <i className={`fs-6 ${theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi-moon-fill text-primary'}`}></i>
                         </button>
 
-                        <a href="https://ko-fi.com/P5P11UYZUD" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0 d-none d-sm-flex" style={{ width: '36px', height: '36px' }}>
+                        <a href="https://ko-fi.com/P5P11UYZUD" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm transition-all p-0 d-none d-md-flex" style={{ width: '36px', height: '36px' }}>
                             <i className="bi bi-cup-hot-fill fs-6" style={{ color: '#72a4f2' }}></i>
                         </a>
 
