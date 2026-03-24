@@ -2,67 +2,115 @@ import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper } from '../SharedUI';
 
-// --- CUSTOM SURTAX TOOLTIP COMPONENT ---
+// --- CUSTOM TAX TOOLTIP COMPONENTS ---
+
 const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvincialTax: number, calculatedSurtax: number }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const SURTAX_THRESHOLD_1 = 5818;
   const SURTAX_THRESHOLD_2 = 7446;
 
-  return (
-    <div className="position-relative d-inline-flex align-items-center ms-1">
-      <i
-        className="bi bi-info-circle text-muted cursor-pointer transition-all"
-        style={{ fontSize: '0.85em' }}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onClick={() => setIsOpen(!isOpen)}
-      ></i>
+  const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
 
-      {isOpen && (
-        <div 
-          className="position-absolute bottom-100 start-50 translate-middle-x mb-2 p-3 bg-white border border-secondary border-opacity-50 rounded-3 shadow-lg pointer-events-none" 
-          style={{ width: '280px', fontSize: '0.8rem', zIndex: 1050 }}
-        >
-          <p className="fw-bold text-dark border-bottom pb-1 mb-2">2026 Ontario Surtax Math</p>
-          <div className="d-flex flex-column gap-2 text-dark">
-            <p className="mb-0"><strong>Basic Prov. Tax:</strong> ${basicProvincialTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-            <ul className="ps-3 mb-0 d-flex flex-column gap-1" style={{ listStyleType: 'disc' }}>
-              <li>
-                <span className={basicProvincialTax > SURTAX_THRESHOLD_1 ? 'text-primary fw-bold' : ''}>
-                  <strong>Tier 1:</strong> 20% on tax over $5,818
-                </span>
-                {basicProvincialTax > SURTAX_THRESHOLD_1 && (
-                  <span className="d-block text-primary mt-1">
-                    (${basicProvincialTax.toFixed(2)} - $5,818) × 20% = ${((basicProvincialTax - SURTAX_THRESHOLD_1) * 0.2).toFixed(2)}
-                  </span>
-                )}
-              </li>
-              <li>
-                <span className={basicProvincialTax > SURTAX_THRESHOLD_2 ? 'text-primary fw-bold' : ''}>
-                  <strong>Tier 2:</strong> Additional 36% on tax over $7,446
-                </span>
-                {basicProvincialTax > SURTAX_THRESHOLD_2 && (
-                  <span className="d-block text-primary mt-1">
-                    (${basicProvincialTax.toFixed(2)} - $7,446) × 36% = ${((basicProvincialTax - SURTAX_THRESHOLD_2) * 0.36).toFixed(2)}
-                  </span>
-                )}
-              </li>
-            </ul>
-            <div className="pt-2 mt-1 border-top d-flex justify-content-between fw-bold">
-              <span>Total Surtax:</span>
-              <span>${calculatedSurtax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+  return (
+    <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+        <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+            <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+        </button>
+        {open && (
+            <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>2026 Ontario Surtax Math</h6>
+                <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal'}}>
+                    <p className="mb-2"><strong>Basic Prov. Tax:</strong> ${basicProvincialTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    <ul className="ps-3 mb-2 d-flex flex-column gap-1" style={{ listStyleType: 'disc' }}>
+                        <li>
+                            <span className={basicProvincialTax > SURTAX_THRESHOLD_1 ? 'text-primary fw-bold' : ''}><strong>Tier 1:</strong> 20% on tax over $5,818</span>
+                            {basicProvincialTax > SURTAX_THRESHOLD_1 && (
+                                <span className="d-block text-primary mt-1">(${basicProvincialTax.toFixed(2)} - $5,818) × 20% = ${((basicProvincialTax - SURTAX_THRESHOLD_1) * 0.2).toFixed(2)}</span>
+                            )}
+                        </li>
+                        <li>
+                            <span className={basicProvincialTax > SURTAX_THRESHOLD_2 ? 'text-primary fw-bold' : ''}><strong>Tier 2:</strong> Additional 36% on tax over $7,446</span>
+                            {basicProvincialTax > SURTAX_THRESHOLD_2 && (
+                                <span className="d-block text-primary mt-1">(${basicProvincialTax.toFixed(2)} - $7,446) × 36% = ${((basicProvincialTax - SURTAX_THRESHOLD_2) * 0.36).toFixed(2)}</span>
+                            )}
+                        </li>
+                    </ul>
+                    <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                        <span>Total Surtax:</span><span>${calculatedSurtax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                </div>
             </div>
-          </div>
-          {/* Tooltip Arrow pointing down */}
-          <div 
-            className="position-absolute top-100 start-50 translate-middle-x" 
-            style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid white' }}
-          ></div>
-        </div>
-      )}
+        )}
     </div>
   );
 };
+
+const OHPInfoButton = ({ taxableIncome, ohpAmount }: { taxableIncome: number, ohpAmount: number }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+  
+    let explanation = "";
+    if (taxableIncome <= 20000) explanation = "Income ≤ $20,000: $0 premium.";
+    else if (taxableIncome <= 25000) explanation = `Income between $20,000 and $25,000:\n($${taxableIncome.toFixed(2)} - $20,000) × 6% = $${ohpAmount.toFixed(2)}`;
+    else if (taxableIncome <= 36000) explanation = "Income between $25,000 and $36,000: Flat $300 premium.";
+    else if (taxableIncome <= 38500) explanation = `Income between $36,000 and $38,500:\n$300 + (($${taxableIncome.toFixed(2)} - $36,000) × 6%) = $${ohpAmount.toFixed(2)}`;
+    else if (taxableIncome <= 48000) explanation = "Income between $38,500 and $48,000: Flat $450 premium.";
+    else if (taxableIncome <= 48600) explanation = `Income between $48,000 and $48,600:\n$450 + (($${taxableIncome.toFixed(2)} - $48,000) × 25%) = $${ohpAmount.toFixed(2)}`;
+    else if (taxableIncome <= 72000) explanation = "Income between $48,600 and $72,000: Flat $600 premium.";
+    else if (taxableIncome <= 72600) explanation = `Income between $72,000 and $72,600:\n$600 + (($${taxableIncome.toFixed(2)} - $72,000) × 25%) = $${ohpAmount.toFixed(2)}`;
+    else if (taxableIncome <= 200000) explanation = "Income between $72,600 and $200,000: Flat $750 premium.";
+    else if (taxableIncome <= 200600) explanation = `Income between $200,000 and $200,600:\n$750 + (($${taxableIncome.toFixed(2)} - $200,000) × 25%) = $${ohpAmount.toFixed(2)}`;
+    else explanation = "Income > $200,600: Maximum flat $900 premium.";
+  
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>ON Health Premium Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <p className="mb-2"><strong>Taxable Income:</strong> ${taxableIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                      <p className="mb-2 text-primary fw-medium" style={{ whiteSpace: 'pre-wrap' }}>{explanation}</p>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                          <span>Total Premium:</span>
+                          <span>${ohpAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
+const ProvTaxInfoButton = ({ taxableIncome, provBase, province }: { taxableIncome: number, provBase: number, province: string }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+  
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Base {province} Tax Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <p className="mb-2"><strong>Taxable Income:</strong> ${taxableIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                      <p className="mb-2">Your net taxable income is run through the progressive tax brackets for {province} to determine your gross provincial tax.</p>
+                      <p className="mb-2">Then, your <strong>Non-Refundable Tax Credits</strong> (such as the Basic Personal Amount, CPP/EI premiums, Caregiver amounts, etc.) are converted at the lowest provincial tax rate and subtracted to reduce your tax owed.</p>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                          <span>Base Provincial Tax:</span>
+                          <span>${provBase.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
 // ---------------------------------------
 
 export default function IncomeTaxCard() {
@@ -259,7 +307,10 @@ export default function IncomeTaxCard() {
                   {showProvTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
                           <div className="d-flex justify-content-between align-items-center">
-                              <span className="text-muted small fst-italic">Base Provincial Tax</span>
+                              <span className="text-muted small fst-italic d-flex align-items-center">
+                                  Base Provincial Tax
+                                  <ProvTaxInfoButton taxableIncome={taxIncAfter} provBase={provBase} province={data.inputs.tax_province || 'ON'} />
+                              </span>
                               <span className="small text-muted fw-bold">(${Math.round(provBase).toLocaleString()})</span>
                           </div>
                           {(taxDetails.surtax > 0) && (
@@ -273,7 +324,10 @@ export default function IncomeTaxCard() {
                           )}
                           {(taxDetails.ohp > 0) && (
                               <div className="d-flex justify-content-between align-items-center">
-                                  <span className="text-muted small fst-italic">Ontario Health Premium</span>
+                                  <span className="text-muted small fst-italic d-flex align-items-center">
+                                      Ontario Health Premium
+                                      <OHPInfoButton taxableIncome={taxIncAfter} ohpAmount={taxDetails.ohp} />
+                                  </span>
                                   <span className="small text-danger fw-bold opacity-75">(${Math.round(taxDetails.ohp).toLocaleString()})</span>
                               </div>
                           )}
