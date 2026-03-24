@@ -284,9 +284,9 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         // DTC is applied to Basic Ontario Tax BEFORE Surtax
         provTax = Math.max(0, provTax - provDividendCredit);
         
-        // 1. ONTARIO SURTAX (Strict Additive Formula)
-        let s1 = (constants.ON_SURTAX_1 || 5554) * baseInflation;
-        let s2 = (constants.ON_SURTAX_2 || 7108) * baseInflation;
+        // 1. ONTARIO SURTAX (Strict Additive Formula)// Replace lines 270-271 in tax.ts with:
+        let s1 = (taxData.ON?.surtaxes?.[0]?.threshold || 5818) * baseInflation;
+        let s2 = (taxData.ON?.surtaxes?.[1]?.threshold || 7446) * baseInflation;
         let surtaxMultiplier = 1;
         
         if (provTax > s1) {
