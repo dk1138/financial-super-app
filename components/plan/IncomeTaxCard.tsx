@@ -2,6 +2,69 @@ import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper } from '../SharedUI';
 
+// --- CUSTOM SURTAX TOOLTIP COMPONENT ---
+const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvincialTax: number, calculatedSurtax: number }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const SURTAX_THRESHOLD_1 = 5818;
+  const SURTAX_THRESHOLD_2 = 7446;
+
+  return (
+    <div className="position-relative d-inline-flex align-items-center ms-1">
+      <i
+        className="bi bi-info-circle text-muted cursor-pointer transition-all"
+        style={{ fontSize: '0.85em' }}
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        onClick={() => setIsOpen(!isOpen)}
+      ></i>
+
+      {isOpen && (
+        <div 
+          className="position-absolute bottom-100 start-50 translate-middle-x mb-2 p-3 bg-white border border-secondary border-opacity-50 rounded-3 shadow-lg pointer-events-none" 
+          style={{ width: '280px', fontSize: '0.8rem', zIndex: 1050 }}
+        >
+          <p className="fw-bold text-dark border-bottom pb-1 mb-2">2026 Ontario Surtax Math</p>
+          <div className="d-flex flex-column gap-2 text-dark">
+            <p className="mb-0"><strong>Basic Prov. Tax:</strong> ${basicProvincialTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+            <ul className="ps-3 mb-0 d-flex flex-column gap-1" style={{ listStyleType: 'disc' }}>
+              <li>
+                <span className={basicProvincialTax > SURTAX_THRESHOLD_1 ? 'text-primary fw-bold' : ''}>
+                  <strong>Tier 1:</strong> 20% on tax over $5,818
+                </span>
+                {basicProvincialTax > SURTAX_THRESHOLD_1 && (
+                  <span className="d-block text-primary mt-1">
+                    (${basicProvincialTax.toFixed(2)} - $5,818) × 20% = ${((basicProvincialTax - SURTAX_THRESHOLD_1) * 0.2).toFixed(2)}
+                  </span>
+                )}
+              </li>
+              <li>
+                <span className={basicProvincialTax > SURTAX_THRESHOLD_2 ? 'text-primary fw-bold' : ''}>
+                  <strong>Tier 2:</strong> Additional 36% on tax over $7,446
+                </span>
+                {basicProvincialTax > SURTAX_THRESHOLD_2 && (
+                  <span className="d-block text-primary mt-1">
+                    (${basicProvincialTax.toFixed(2)} - $7,446) × 36% = ${((basicProvincialTax - SURTAX_THRESHOLD_2) * 0.36).toFixed(2)}
+                  </span>
+                )}
+              </li>
+            </ul>
+            <div className="pt-2 mt-1 border-top d-flex justify-content-between fw-bold">
+              <span>Total Surtax:</span>
+              <span>${calculatedSurtax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+          </div>
+          {/* Tooltip Arrow pointing down */}
+          <div 
+            className="position-absolute top-100 start-50 translate-middle-x" 
+            style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid white' }}
+          ></div>
+        </div>
+      )}
+    </div>
+  );
+};
+// ---------------------------------------
+
 export default function IncomeTaxCard() {
   const { data, results, updateInput, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   const isCouple = data.mode === 'Couple';
@@ -201,7 +264,10 @@ export default function IncomeTaxCard() {
                           </div>
                           {(taxDetails.surtax > 0) && (
                               <div className="d-flex justify-content-between align-items-center">
-                                  <span className="text-muted small fst-italic">Ontario Surtax</span>
+                                  <span className="text-muted small fst-italic d-flex align-items-center">
+                                      Ontario Surtax
+                                      <SurtaxInfoButton basicProvincialTax={provBase} calculatedSurtax={taxDetails.surtax} />
+                                  </span>
                                   <span className="small text-danger fw-bold opacity-75">(${Math.round(taxDetails.surtax).toLocaleString()})</span>
                               </div>
                           )}
