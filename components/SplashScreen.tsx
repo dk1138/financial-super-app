@@ -90,7 +90,7 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
         </div>
 
         <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
-          Welcome to Retirement Planner Pro
+          Welcome to Planfolio
         </h2>
         
         <div style={{ display: "inline-block", backgroundColor: "#e9ecef", color: "#495057", padding: "0.25rem 0.75rem", borderRadius: "50px", fontSize: "0.85rem", fontWeight: "600", marginBottom: "1.25rem" }}>
