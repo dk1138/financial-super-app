@@ -267,6 +267,17 @@ export default function GlobalHeader() {
                                 <span className="d-none d-md-inline">Expense Tracker</span>
                                 <span className="d-inline d-md-none">Expenses</span>
                             </span>
+
+                            {/* PORTFOLIO TRACKER PLACEHOLDER RESTORED */}
+                            <span 
+                                className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
+                                style={{ fontSize: '0.85rem', cursor: 'not-allowed' }}
+                                title="Coming soon"
+                            >
+                                <i className="bi bi-pie-chart-fill me-2 d-none d-sm-inline"></i>
+                                <span className="d-none d-lg-inline">Portfolio Tracker</span>
+                                <span className="d-inline d-lg-none">Portfolio</span>
+                            </span>
                         </div>
                     </div>
                     
