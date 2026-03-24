@@ -83,9 +83,23 @@ export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: Spla
           overflowY: "auto"
         }}
       >
-        <div style={{ marginBottom: "1rem", color: "#0d6efd" }}>
-          <svg width="56" height="56" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ margin: "0 auto" }}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        
+        {/* NEW PLANFOLIO LAYERS ICON */}
+        <div style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "center" }}>
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="#0d6efd" 
+            strokeWidth="2.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            style={{ width: "72px", height: "72px" }}
+          >
+            {/* The Bottom/Back Layer */}
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+            {/* The Top/Front Layer */}
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
           </svg>
         </div>
 

@@ -220,64 +220,83 @@ export default function GlobalHeader() {
                 className="position-sticky top-0 pt-2 pb-2" 
                 style={{ backgroundColor: 'var(--bg-body)', zIndex: 1040, borderBottom: '1px solid var(--border-color)' }}
             >
-                <div className="d-flex flex-wrap justify-content-between align-items-center shadow-sm mb-0 rounded-4 p-2 border border-secondary rp-card gap-2 m-0">
+                <div className="d-flex flex-wrap align-items-center shadow-sm mb-0 rounded-4 p-2 border border-secondary rp-card m-0 position-relative w-100">
                     
-                    <div className="d-flex align-items-center gap-2">
+                    {/* 1. LEFT COLUMN: Branding & Navigation */}
+                    <div className="d-flex align-items-center justify-content-start flex-grow-1" style={{ flexBasis: 0 }}>
+                        
+                        {/* BRAND ICON: Folio Layers */}
+                        <div className="d-flex align-items-center justify-content-center text-primary me-2 ms-1 transition-all" title="Planfolio">
+                            <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="2.5" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                style={{ width: '28px', height: '28px' }}
+                            >
+                                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                            </svg>
+                        </div>
+
                         {/* MODULE PILL SELECTOR */}
-                        <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm me-1" style={{ width: 'fit-content' }}>
-                            {/* 1. Retirement Planner (Active) */}
+                        <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm" style={{ width: 'fit-content' }}>
                             <Link 
                                 href="/planner"
                                 prefetch={true}
                                 className={`btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none ${activeModule === 'planner' ? 'bg-primary text-white shadow' : 'text-muted opacity-75 hover-opacity-100'}`} 
                                 style={{ fontSize: '0.85rem' }}
                             >
-                                <i className="bi bi-graph-up-arrow me-2"></i>
+                                <i className="bi bi-graph-up-arrow me-2 d-none d-sm-inline"></i>
                                 <span className="d-none d-sm-inline">Retirement Planner</span>
                                 <span className="d-inline d-sm-none">Planner</span>
                             </Link>
                             
-                            {/* 2. Expense Tracker (Disabled / Coming Soon) */}
                             <span 
                                 className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
                                 style={{ fontSize: '0.85rem', cursor: 'not-allowed' }}
                                 title="Coming soon"
                             >
-                                <i className="bi bi-receipt me-2"></i>
+                                <i className="bi bi-receipt me-2 d-none d-sm-inline"></i>
                                 <span className="d-none d-sm-inline">Expense Tracker</span>
                                 <span className="d-inline d-sm-none">Expenses</span>
                             </span>
 
-                            {/* 3. Portfolio Tracker (Disabled / Coming Soon) */}
                             <span 
                                 className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
                                 style={{ fontSize: '0.85rem', cursor: 'not-allowed' }}
                                 title="Coming soon"
                             >
-                                <i className="bi bi-pie-chart-fill me-2"></i>
-                                <span className="d-none d-sm-inline">Portfolio Tracker</span>
-                                <span className="d-inline d-sm-none">Portfolio</span>
+                                <i className="bi bi-pie-chart-fill me-2 d-none d-xl-inline"></i>
+                                <span className="d-none d-xl-inline">Portfolio Tracker</span>
+                                <span className="d-inline d-xl-none">Portfolio</span>
                             </span>
                         </div>
+                    </div>
                     
-                        {/* PLANNER ACTIONS (File Menu) */}
+                    {/* 2. CENTER COLUMN: File Menu (Perfectly Centered) */}
+                    <div className="d-none d-lg-flex align-items-center justify-content-center flex-grow-1" style={{ flexBasis: 0 }}>
                         {activeModule === 'planner' && (
-                            <div className="position-relative d-none d-md-block">
+                            <div className="position-relative">
                                 <button 
-                                    className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all" 
+                                    className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-4 shadow-sm transition-all" 
                                     type="button" 
                                     onClick={() => setFileMenuOpen(!fileMenuOpen)} 
                                     style={{ height: '36px' }}
                                 >
-                                    <i className="bi bi-folder2-open text-primary me-2"></i>
+                                    <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
                                     <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
-                                    <i className="bi bi-chevron-down ms-2 text-muted" style={{ fontSize: '0.7rem' }}></i>
+                                    <i className="bi bi-chevron-down ms-3 text-muted" style={{ fontSize: '0.7rem' }}></i>
                                 </button>
                                 
                                 {fileMenuOpen && (
                                     <>
                                         <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
-                                        <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', left: 0, minWidth: '240px'}}>
+                                        {/* Dropdown carefully positioned to drop straight down from center */}
+                                        <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 start-50 translate-middle-x" style={{zIndex: 1060, top: '100%', minWidth: '260px'}}>
                                             <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
                                             <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
                                             <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
@@ -293,8 +312,9 @@ export default function GlobalHeader() {
                             </div>
                         )}
                     </div>
-                    
-                    <div className="d-flex align-items-center gap-2">
+
+                    {/* 3. RIGHT COLUMN: Tools & Profile */}
+                    <div className="d-flex align-items-center justify-content-end gap-2 flex-grow-1" style={{ flexBasis: 0 }}>
                         
                         {/* DELEGATED EXPENSE ACTIONS (Upload & Clear) */}
                         {activeModule === 'expenses' && <ExpenseHeaderActions showToast={showToast} />}
