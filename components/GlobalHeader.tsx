@@ -285,14 +285,18 @@ export default function GlobalHeader() {
                     {activeModule === 'planner' && (
                         <div className="d-none d-lg-block position-absolute start-50 translate-middle-x" style={{ zIndex: 1050 }}>
                             <button 
-                                className="btn btn-sm btn-outline-secondary bg-input d-flex align-items-center fw-bold rounded-pill px-4 shadow-sm transition-all" 
+                                className="btn btn-sm d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all border border-primary border-opacity-25" 
                                 type="button" 
                                 onClick={() => setFileMenuOpen(!fileMenuOpen)} 
-                                style={{ height: '36px' }}
+                                style={{ height: '40px', backgroundColor: 'rgba(13, 110, 253, 0.08)' }}
                             >
-                                <i className="bi bi-folder2-open text-primary me-2 fs-6"></i>
-                                <span className="text-truncate d-inline-block" style={{ maxWidth: '250px' }}>{activePlanName}</span>
-                                <i className="bi bi-chevron-down ms-3 text-muted" style={{ fontSize: '0.7rem' }}></i>
+                                <i className="bi bi-folder2-open text-primary me-2 fs-5"></i>
+                                <span className="text-truncate d-inline-block text-primary" style={{ maxWidth: '250px', fontSize: '0.95rem', letterSpacing: '0.3px' }}>
+                                    {activePlanName}
+                                </span>
+                                <span className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center ms-3 shadow-sm" style={{ width: '24px', height: '24px' }}>
+                                    <i className={`bi bi-chevron-${fileMenuOpen ? 'up' : 'down'}`} style={{ fontSize: '0.8rem', strokeWidth: '2px' }}></i>
+                                </span>
                             </button>
                             
                             {fileMenuOpen && (
