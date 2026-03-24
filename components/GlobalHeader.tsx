@@ -16,6 +16,7 @@ export default function GlobalHeader() {
     // --- REFS ---
     const headerRef = useRef<HTMLDivElement>(null);
     const plannerFileInputRef = useRef<HTMLInputElement>(null);
+    const fileMenuRef = useRef<HTMLDivElement>(null); // NEW: Ref for detecting outside clicks
 
     // --- GENERAL STATE ---
     const [theme, setTheme] = useState('dark');
@@ -64,6 +65,25 @@ export default function GlobalHeader() {
             resizeObserver.disconnect();
         };
     }, [activeModule]);
+
+    // NEW: Handle clicking outside of the file menu to close it
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (fileMenuRef.current && !fileMenuRef.current.contains(event.target as Node)) {
+                setFileMenuOpen(false);
+            }
+        };
+
+        if (fileMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [fileMenuOpen]);
 
     const showToast = (msg: string) => {
         setToastMsg(msg);
@@ -283,7 +303,7 @@ export default function GlobalHeader() {
                     
                     {/* 2. CENTER: File Menu (Absolutely Positioned to prevent layout breaking) */}
                     {activeModule === 'planner' && (
-                        <div className="d-none d-lg-block position-absolute start-50 translate-middle-x" style={{ zIndex: 1050 }}>
+                        <div ref={fileMenuRef} className="d-none d-lg-block position-absolute start-50 translate-middle-x" style={{ zIndex: 1050 }}>
                             <button 
                                 className="btn btn-sm d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all border border-primary border-opacity-25" 
                                 type="button" 
@@ -300,20 +320,17 @@ export default function GlobalHeader() {
                             </button>
                             
                             {fileMenuOpen && (
-                                <>
-                                    <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setFileMenuOpen(false)}></div>
-                                    <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 start-50 translate-middle-x" style={{zIndex: 1060, top: '100%', minWidth: '260px'}}>
-                                        <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
-                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
-                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
-                                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                                        <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                                        <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
-                                        <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
-                                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                                        <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
-                                    </ul>
-                                </>
+                                <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 start-50 translate-middle-x" style={{zIndex: 1060, top: '100%', minWidth: '260px'}}>
+                                    <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
+                                    <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
+                                    <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
+                                    <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                    <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
+                                    <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
+                                    <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
+                                    <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                    <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
+                                </ul>
                             )}
                         </div>
                     )}
