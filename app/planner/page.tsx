@@ -1,6 +1,6 @@
 'use client'; 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PlanTab from '../../components/PlanTab';
 import StrategyTab from '../../components/StrategyTab';
 import DashboardTab from '../../components/DashboardTab';
@@ -23,6 +23,11 @@ export default function PlannerPage() {
   const [showQuickAdjust, setShowQuickAdjust] = useState(false);
 
   const isCouple = data.mode === 'Couple';
+
+  // --- SET PAGE TITLE DYNAMICALLY ---
+  useEffect(() => {
+      document.title = "Planfolio - Planner";
+  }, []);
 
   const handleStartBlankPlan = () => {
       if (resetData) resetData();
@@ -147,10 +152,10 @@ export default function PlannerPage() {
       <footer className="mt-auto pt-5 pb-3 border-top border-secondary border-opacity-50 text-center">
           <div className="px-3" style={{ maxWidth: '1200px', margin: '0 auto' }}>
               <p className="text-muted mb-3 text-start text-md-center" style={{ fontSize: '0.75rem', lineHeight: '1.6' }}>
-                  <strong>Disclaimer:</strong> Retirement Planner Pro is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
+                  <strong>Disclaimer:</strong> Planfolio - Planner is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
               </p>
               <p className="text-muted fw-bold ls-1" style={{ fontSize: '0.8rem' }}>
-                  <i className="bi bi-shield-check text-success me-1"></i> Retirement Planner Pro © {new Date().getFullYear()}. Data is processed securely and locally.
+                  <i className="bi bi-shield-check text-success me-1"></i> Planfolio - Planner © {new Date().getFullYear()}. Data is processed securely and locally.
               </p>
           </div>
       </footer>

@@ -6,7 +6,7 @@ import GlobalHeader from "../components/GlobalHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Financial Super App",
+  title: "Planfolio",
   description: "Advanced retirement forecasting and expense tracking.",
 };
 
