@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper } from '../SharedUI';
+import { FINANCIAL_CONSTANTS } from '../../lib/config'; // Pulling dynamically so we don't hardcode
 
 // --- CUSTOM TAX TOOLTIP COMPONENTS ---
 
@@ -54,8 +55,11 @@ const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, displa
 
 const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvincialTax: number, calculatedSurtax: number }) => {
   const [open, setOpen] = useState(false);
-  const SURTAX_THRESHOLD_1 = 5818;
-  const SURTAX_THRESHOLD_2 = 7446;
+  
+  // Pulling dynamically from config
+  const thresholds = FINANCIAL_CONSTANTS.TAX_DATA.ON.surtaxes || [{ threshold: 5818, rate: 0.2 }, { threshold: 7446, rate: 0.36 }];
+  const SURTAX_THRESHOLD_1 = thresholds[0].threshold;
+  const SURTAX_THRESHOLD_2 = thresholds[1].threshold;
 
   const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
 
@@ -66,20 +70,20 @@ const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvi
         </button>
         {open && (
             <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
-                <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>2026 Ontario Surtax Math</h6>
+                <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Ontario Surtax Math</h6>
                 <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal'}}>
                     <p className="mb-2"><strong>Basic Prov. Tax:</strong> ${basicProvincialTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     <ul className="ps-3 mb-2 d-flex flex-column gap-1" style={{ listStyleType: 'disc' }}>
                         <li>
-                            <span className={basicProvincialTax > SURTAX_THRESHOLD_1 ? 'text-primary fw-bold' : ''}><strong>Tier 1:</strong> 20% on tax over $5,818</span>
+                            <span className={basicProvincialTax > SURTAX_THRESHOLD_1 ? 'text-primary fw-bold' : ''}><strong>Tier 1:</strong> {(thresholds[0].rate * 100)}% on tax over ${SURTAX_THRESHOLD_1.toLocaleString()}</span>
                             {basicProvincialTax > SURTAX_THRESHOLD_1 && (
-                                <span className="d-block text-primary mt-1">(${basicProvincialTax.toFixed(2)} - $5,818) × 20% = ${((basicProvincialTax - SURTAX_THRESHOLD_1) * 0.2).toFixed(2)}</span>
+                                <span className="d-block text-primary mt-1">(${basicProvincialTax.toFixed(2)} - ${SURTAX_THRESHOLD_1.toLocaleString()}) × {(thresholds[0].rate * 100)}% = ${((basicProvincialTax - SURTAX_THRESHOLD_1) * thresholds[0].rate).toFixed(2)}</span>
                             )}
                         </li>
                         <li>
-                            <span className={basicProvincialTax > SURTAX_THRESHOLD_2 ? 'text-primary fw-bold' : ''}><strong>Tier 2:</strong> Additional 36% on tax over $7,446</span>
+                            <span className={basicProvincialTax > SURTAX_THRESHOLD_2 ? 'text-primary fw-bold' : ''}><strong>Tier 2:</strong> Additional {(thresholds[1].rate * 100)}% on tax over ${SURTAX_THRESHOLD_2.toLocaleString()}</span>
                             {basicProvincialTax > SURTAX_THRESHOLD_2 && (
-                                <span className="d-block text-primary mt-1">(${basicProvincialTax.toFixed(2)} - $7,446) × 36% = ${((basicProvincialTax - SURTAX_THRESHOLD_2) * 0.36).toFixed(2)}</span>
+                                <span className="d-block text-primary mt-1">(${basicProvincialTax.toFixed(2)} - ${SURTAX_THRESHOLD_2.toLocaleString()}) × {(thresholds[1].rate * 100)}% = ${((basicProvincialTax - SURTAX_THRESHOLD_2) * thresholds[1].rate).toFixed(2)}</span>
                             )}
                         </li>
                     </ul>
@@ -172,7 +176,7 @@ const CPPTier1InfoButton = ({ premium }: { premium: number }) => {
               <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
                   <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Base CPP Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
-                      <p className="mb-2">Calculated as <strong>5.95%</strong> on eligible earned income above the $3,500 basic exemption, up to the Yearly Maximum Pensionable Earnings (YMPE).</p>
+                      <p className="mb-2">Calculated as <strong>{(FINANCIAL_CONSTANTS.CPP_RATE * 100).toFixed(2)}%</strong> on eligible earned income above the $3,500 basic exemption, up to the Yearly Maximum Pensionable Earnings (YMPE).</p>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
                           <span>Total Premium:</span>
                           <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -197,7 +201,7 @@ const CPPTier2InfoButton = ({ premium }: { premium: number }) => {
               <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
                   <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>CPP2 (Tier 2) Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
-                      <p className="mb-2">Calculated as <strong>4.00%</strong> on eligible earned income between the YMPE and the Yearly Additional Maximum (YAMPE).</p>
+                      <p className="mb-2">Calculated as <strong>{(FINANCIAL_CONSTANTS.CPP_ENHANCED_TIER2_RATE * 100).toFixed(2)}%</strong> on eligible earned income between the YMPE and the Yearly Additional Maximum (YAMPE).</p>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-warning">
                           <span>Total Premium:</span>
                           <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -222,7 +226,7 @@ const EIInfoButton = ({ premium }: { premium: number }) => {
               <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
                   <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>EI Premium Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
-                      <p className="mb-2">Calculated as <strong>1.66%</strong> on eligible earned income up to the Maximum Insurable Earnings limit.</p>
+                      <p className="mb-2">Calculated as <strong>{(FINANCIAL_CONSTANTS.EI_RATE * 100).toFixed(2)}%</strong> on eligible earned income up to the Maximum Insurable Earnings limit.</p>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
                           <span>Total Premium:</span>
                           <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -293,25 +297,23 @@ const MarginalTaxRateInfoButton = ({ margRate }: { margRate: number }) => {
     );
 };
 
-const FederalTaxBracketVisual = ({ taxableIncome }: { taxableIncome: number }) => {
-    // 2026 Approximate Base Federal Brackets
-    const brackets = [
-        { min: 0, max: 55867, rate: 15 },
-        { min: 55867, max: 111733, rate: 20.5 },
-        { min: 111733, max: 173205, rate: 26 },
-        { min: 173205, max: 246752, rate: 29 },
-        { min: 246752, max: Infinity, rate: 33 }
-    ];
+// NEW: Generic Dynamic Bracket Visualizer
+const TaxBracketVisual = ({ taxableIncome, brackets, rates, title }: { taxableIncome: number, brackets: number[], rates: number[], title: string }) => {
+    const bracketObjects = rates.map((rate, idx) => {
+        const min = idx === 0 ? 0 : brackets[idx - 1];
+        const max = idx === brackets.length ? Infinity : brackets[idx];
+        return { min, max, rate: rate * 100 };
+    });
 
     return (
-        <div className="border border-secondary border-opacity-25 rounded-3 p-3 bg-secondary bg-opacity-10 mt-3 mb-2 shadow-sm">
-            <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="border border-secondary border-opacity-25 rounded-3 p-3 bg-secondary bg-opacity-10 mt-2 mb-2 shadow-sm">
+            <div className="d-flex justify-content-between align-items-center mb-2">
                 <span className="small fw-bold text-main d-flex align-items-center gap-2">
-                    <i className="bi bi-bar-chart-steps text-danger"></i> Federal Bracket Utilization
+                    <i className="bi bi-bar-chart-steps text-danger"></i> {title}
                 </span>
             </div>
             <div className="d-flex flex-column gap-2">
-                {brackets.map((b, idx) => {
+                {bracketObjects.map((b, idx) => {
                     const bracketSize = b.max === Infinity ? Math.max(taxableIncome - b.min, 0) : (b.max - b.min);
                     const incomeInThisBracket = Math.max(0, Math.min(taxableIncome - b.min, b.max === Infinity ? Infinity : bracketSize));
                     
@@ -324,8 +326,8 @@ const FederalTaxBracketVisual = ({ taxableIncome }: { taxableIncome: number }) =
 
                     return (
                         <div key={idx} className="d-flex align-items-center gap-2" style={{ fontSize: '0.75rem' }}>
-                            <div className={`fw-bold ${isActive ? 'text-danger' : 'text-muted opacity-50'}`} style={{ width: '40px' }}>
-                                {b.rate}%
+                            <div className={`fw-bold ${isActive ? 'text-danger' : 'text-muted opacity-50'}`} style={{ width: '45px' }}>
+                                {b.rate.toFixed(2).replace(/\.00$/, '')}%
                             </div>
                             <div className="flex-grow-1 bg-input rounded-pill overflow-hidden border border-secondary border-opacity-25" style={{ height: '10px' }}>
                                 <div 
@@ -358,7 +360,7 @@ export default function IncomeTaxCard() {
   const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showCppEi, setShowCppEi] = useState<Record<string, boolean>>({ p1: false, p2: false });
-  const [showTaxBreakdown, setShowTaxBreakdown] = useState<Record<string, boolean>>({ p1: false, p2: false }); // NEW: Collapsible Breakdown State
+  const [showTaxBreakdown, setShowTaxBreakdown] = useState<Record<string, boolean>>({ p1: false, p2: false });
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -403,7 +405,7 @@ export default function IncomeTaxCard() {
   const toggleFedTax = (p: string) => setShowFedTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleProvTax = (p: string) => setShowProvTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleCppEi = (p: string) => setShowCppEi(prev => ({ ...prev, [p]: !prev[p] }));
-  const toggleTaxBreakdown = (p: string) => setShowTaxBreakdown(prev => ({ ...prev, [p]: !prev[p] })); // NEW: Toggle Function
+  const toggleTaxBreakdown = (p: string) => setShowTaxBreakdown(prev => ({ ...prev, [p]: !prev[p] }));
 
   const renderTaxBox = (taxDetails: any, p: string) => {
       const yData = results?.timeline?.[0];
@@ -452,6 +454,10 @@ export default function IncomeTaxCard() {
       const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
       const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
       const provBase = Math.max(0, taxDetails.prov - (taxDetails.surtax || 0) - (taxDetails.ohp || 0));
+
+      const selectedProvince = data.inputs.tax_province || 'ON';
+      const provBrackets = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.brackets || FINANCIAL_CONSTANTS.TAX_DATA.ON.brackets;
+      const provRates = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.rates || FINANCIAL_CONSTANTS.TAX_DATA.ON.rates;
 
       return (
           <div className="border border-secondary rounded-4 mt-4 shadow-sm transition-all">
@@ -538,9 +544,6 @@ export default function IncomeTaxCard() {
                   <span className="small fw-bold">${Math.round(displayTaxableIncome).toLocaleString()}</span>
               </div>
 
-              {/* Visual Tax Brackets Component */}
-              <FederalTaxBracketVisual taxableIncome={displayTaxableIncome} />
-
               {/* Federal Tax Breakdown */}
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleFedTax(p)}>
@@ -551,10 +554,17 @@ export default function IncomeTaxCard() {
                   </div>
                   {showFedTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
-                          <div className="d-flex justify-content-between align-items-center">
+                          <div className="d-flex justify-content-between align-items-center mb-1">
                               <span className="text-muted small fst-italic">Federal Income Tax</span>
                               <span className="small text-muted fw-bold">(${Math.round(taxDetails.fed).toLocaleString()})</span>
                           </div>
+                          
+                          <TaxBracketVisual 
+                              taxableIncome={displayTaxableIncome} 
+                              brackets={FINANCIAL_CONSTANTS.TAX_DATA.FED.brackets} 
+                              rates={FINANCIAL_CONSTANTS.TAX_DATA.FED.rates} 
+                              title="Federal Bracket Utilization" 
+                          />
                       </div>
                   )}
               </div>
@@ -569,15 +579,23 @@ export default function IncomeTaxCard() {
                   </div>
                   {showProvTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
-                          <div className="d-flex justify-content-between align-items-center">
+                          <div className="d-flex justify-content-between align-items-center mb-1">
                               <span className="text-muted small fst-italic d-flex align-items-center">
                                   Base Provincial Tax
-                                  <ProvTaxInfoButton taxableIncome={displayTaxableIncome} provBase={provBase} province={data.inputs.tax_province || 'ON'} />
+                                  <ProvTaxInfoButton taxableIncome={displayTaxableIncome} provBase={provBase} province={selectedProvince} />
                               </span>
                               <span className="small text-muted fw-bold">(${Math.round(provBase).toLocaleString()})</span>
                           </div>
+
+                          <TaxBracketVisual 
+                              taxableIncome={displayTaxableIncome} 
+                              brackets={provBrackets} 
+                              rates={provRates} 
+                              title={`${selectedProvince} Bracket Utilization`} 
+                          />
+
                           {(taxDetails.surtax > 0) && (
-                              <div className="d-flex justify-content-between align-items-center">
+                              <div className="d-flex justify-content-between align-items-center mt-2">
                                   <span className="text-muted small fst-italic d-flex align-items-center">
                                       Ontario Surtax
                                       <SurtaxInfoButton basicProvincialTax={provBase} calculatedSurtax={taxDetails.surtax} />
