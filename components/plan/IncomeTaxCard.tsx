@@ -293,6 +293,57 @@ const MarginalTaxRateInfoButton = ({ margRate }: { margRate: number }) => {
     );
 };
 
+const FederalTaxBracketVisual = ({ taxableIncome }: { taxableIncome: number }) => {
+    // 2026 Approximate Base Federal Brackets
+    const brackets = [
+        { min: 0, max: 55867, rate: 15 },
+        { min: 55867, max: 111733, rate: 20.5 },
+        { min: 111733, max: 173205, rate: 26 },
+        { min: 173205, max: 246752, rate: 29 },
+        { min: 246752, max: Infinity, rate: 33 }
+    ];
+
+    return (
+        <div className="border border-secondary border-opacity-25 rounded-3 p-3 bg-secondary bg-opacity-10 mt-3 mb-2 shadow-sm">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <span className="small fw-bold text-main d-flex align-items-center gap-2">
+                    <i className="bi bi-bar-chart-steps text-danger"></i> Federal Bracket Utilization
+                </span>
+            </div>
+            <div className="d-flex flex-column gap-2">
+                {brackets.map((b, idx) => {
+                    const bracketSize = b.max === Infinity ? Math.max(taxableIncome - b.min, 0) : (b.max - b.min);
+                    const incomeInThisBracket = Math.max(0, Math.min(taxableIncome - b.min, b.max === Infinity ? Infinity : bracketSize));
+                    
+                    const fillPercent = b.max === Infinity 
+                        ? (incomeInThisBracket > 0 ? 100 : 0) 
+                        : (incomeInThisBracket / bracketSize) * 100;
+                        
+                    const isActive = incomeInThisBracket > 0;
+                    const isFull = fillPercent >= 100 && b.max !== Infinity;
+
+                    return (
+                        <div key={idx} className="d-flex align-items-center gap-2" style={{ fontSize: '0.75rem' }}>
+                            <div className={`fw-bold ${isActive ? 'text-danger' : 'text-muted opacity-50'}`} style={{ width: '40px' }}>
+                                {b.rate}%
+                            </div>
+                            <div className="flex-grow-1 bg-input rounded-pill overflow-hidden border border-secondary border-opacity-25" style={{ height: '10px' }}>
+                                <div 
+                                    className={`h-100 ${isFull ? 'bg-danger opacity-50' : isActive ? 'bg-danger' : 'bg-transparent'}`} 
+                                    style={{ width: `${fillPercent}%`, transition: 'width 1s ease-in-out' }}
+                                ></div>
+                            </div>
+                            <div className={`text-end fw-medium ${isActive ? 'text-main' : 'text-muted opacity-50'}`} style={{ width: '60px' }}>
+                                {incomeInThisBracket > 0 ? `$${Math.round(incomeInThisBracket).toLocaleString()}` : '-'}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 // ---------------------------------------
 
 export default function IncomeTaxCard() {
@@ -307,6 +358,7 @@ export default function IncomeTaxCard() {
   const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showCppEi, setShowCppEi] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  const [showTaxBreakdown, setShowTaxBreakdown] = useState<Record<string, boolean>>({ p1: false, p2: false }); // NEW: Collapsible Breakdown State
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -351,6 +403,7 @@ export default function IncomeTaxCard() {
   const toggleFedTax = (p: string) => setShowFedTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleProvTax = (p: string) => setShowProvTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleCppEi = (p: string) => setShowCppEi(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleTaxBreakdown = (p: string) => setShowTaxBreakdown(prev => ({ ...prev, [p]: !prev[p] })); // NEW: Toggle Function
 
   const renderTaxBox = (taxDetails: any, p: string) => {
       const yData = results?.timeline?.[0];
@@ -392,7 +445,6 @@ export default function IncomeTaxCard() {
       const personalDeductions = isP1 ? (yData.actualDeductionsP1 || 0) : (yData.actualDeductionsP2 || 0);
       const totalPaycheckRrspDeduction = isP1 ? (yData.rrspTotalMatch1 || match) : (yData.rrspTotalMatch2 || match);
       
-      // FIX: Add simulated background deductions back so the UI math matches the tax engine output perfectly
       const displayTaxableIncome = taxIncAfter + personalDeductions;
       const grossTaxable = displayTaxableIncome + totalPaycheckRrspDeduction - splitAmt;
 
@@ -402,13 +454,24 @@ export default function IncomeTaxCard() {
       const provBase = Math.max(0, taxDetails.prov - (taxDetails.surtax || 0) - (taxDetails.ohp || 0));
 
       return (
-          <div className="border border-secondary rounded-4 mt-4 shadow-sm">
-            <div className="bg-danger bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center justify-content-between rounded-top-4">
+          <div className="border border-secondary rounded-4 mt-4 shadow-sm transition-all">
+            <div 
+                className={`bg-danger bg-opacity-10 border-secondary p-2 px-3 d-flex align-items-center justify-content-between cursor-pointer hover-opacity-75 transition-all ${showTaxBreakdown[p] ? 'border-bottom rounded-top-4' : 'rounded-4'}`}
+                onClick={() => toggleTaxBreakdown(p)}
+            >
                 <div className="d-flex align-items-center gap-3">
                     <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-receipt"></i></div>
                     <span className="fw-bold text-danger small text-uppercase ls-1">Estimated Tax Breakdown</span>
                 </div>
+                <div className="d-flex align-items-center gap-2">
+                    {!showTaxBreakdown[p] && (
+                        <span className="fw-bold text-danger small">${Math.round(taxDetails.totalTax).toLocaleString()}</span>
+                    )}
+                    <i className={`bi bi-chevron-${showTaxBreakdown[p] ? 'up' : 'down'} text-danger`}></i>
+                </div>
             </div>
+            
+            {showTaxBreakdown[p] && (
             <div className="p-3 bg-input d-flex flex-column gap-2 rounded-bottom-4">
               
               {/* Gross Income Breakdown */}
@@ -462,7 +525,7 @@ export default function IncomeTaxCard() {
               )}
 
               {/* Net Taxable Income */}
-              <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-3">
+              <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-1">
                   <span className="text-main small fw-bold d-flex align-items-center gap-1">
                       Net Taxable Income 
                       <TaxableIncomeInfoButton 
@@ -474,6 +537,9 @@ export default function IncomeTaxCard() {
                   </span>
                   <span className="small fw-bold">${Math.round(displayTaxableIncome).toLocaleString()}</span>
               </div>
+
+              {/* Visual Tax Brackets Component */}
+              <FederalTaxBracketVisual taxableIncome={displayTaxableIncome} />
 
               {/* Federal Tax Breakdown */}
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
@@ -689,6 +755,7 @@ export default function IncomeTaxCard() {
                   <span className="text-success fw-bold fs-5">${Math.round(actualGross - match - taxDetails.totalTax).toLocaleString()}</span>
               </div>
             </div>
+            )}
           </div>
       );
   };
