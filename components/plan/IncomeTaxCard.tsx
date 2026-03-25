@@ -10,7 +10,7 @@ const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, displa
   
     return (
       <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
-          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
               <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
           </button>
           {open && (
@@ -61,7 +61,7 @@ const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvi
 
   return (
     <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
-        <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+        <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
             <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
         </button>
         {open && (
@@ -112,7 +112,7 @@ const OHPInfoButton = ({ taxableIncome, ohpAmount }: { taxableIncome: number, oh
   
     return (
       <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
-          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
               <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
           </button>
           {open && (
@@ -138,7 +138,7 @@ const ProvTaxInfoButton = ({ taxableIncome, provBase, province }: { taxableIncom
   
     return (
       <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
-          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
               <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
           </button>
           {open && (
@@ -159,10 +159,10 @@ const ProvTaxInfoButton = ({ taxableIncome, provBase, province }: { taxableIncom
     );
 };
 
-const CPPEIInfoButton = ({ cppPremium, cpp2Premium, eiPremium }: { cppPremium: number, cpp2Premium: number, eiPremium: number }) => {
+const CPPTier1InfoButton = ({ premium }: { premium: number }) => {
     const [open, setOpen] = useState(false);
-    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '320px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
-  
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '260px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+
     return (
       <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
           <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
@@ -170,30 +170,62 @@ const CPPEIInfoButton = ({ cppPremium, cpp2Premium, eiPremium }: { cppPremium: n
           </button>
           {open && (
               <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
-                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>CPP & EI Payroll Math</h6>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Base CPP Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
-                      <p className="mb-2">Premiums are calculated strictly against your <strong>Eligible Earned Income</strong> (excluding pensions, yields, and withdrawals).</p>
-                      
-                      <ul className="ps-3 mb-2 d-flex flex-column gap-2" style={{ listStyleType: 'disc' }}>
-                          <li>
-                              <span className="fw-bold text-main">CPP Tier 1:</span> 5.95% on earnings above the $3,500 basic exemption, up to the Yearly Maximum Pensionable Earnings (YMPE).
-                              <span className="d-block text-muted mt-1">Premium: ${cppPremium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                          </li>
-                          {cpp2Premium > 0 && (
-                              <li>
-                                  <span className="fw-bold text-warning">CPP Tier 2 (CPP2):</span> 4.00% on earnings between the YMPE and the Yearly Additional Maximum (YAMPE).
-                                  <span className="d-block text-warning mt-1">Premium: ${cpp2Premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                              </li>
-                          )}
-                          <li>
-                              <span className="fw-bold text-main">EI Premiums:</span> 1.66% on earnings up to the Maximum Insurable Earnings limit.
-                              <span className="d-block text-muted mt-1">Premium: ${eiPremium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                          </li>
-                      </ul>
-                      
-                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main" style={{fontSize: '0.8rem'}}>
-                          <span>Total Deductions:</span>
-                          <span>${(cppPremium + cpp2Premium + eiPremium).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      <p className="mb-2">Calculated as <strong>5.95%</strong> on eligible earned income above the $3,500 basic exemption, up to the Yearly Maximum Pensionable Earnings (YMPE).</p>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                          <span>Total Premium:</span>
+                          <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
+const CPPTier2InfoButton = ({ premium }: { premium: number }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '260px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>CPP2 (Tier 2) Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <p className="mb-2">Calculated as <strong>4.00%</strong> on eligible earned income between the YMPE and the Yearly Additional Maximum (YAMPE).</p>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-warning">
+                          <span>Total Premium:</span>
+                          <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
+const EIInfoButton = ({ premium }: { premium: number }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '260px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>EI Premium Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <p className="mb-2">Calculated as <strong>1.66%</strong> on eligible earned income up to the Maximum Insurable Earnings limit.</p>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                          <span>Total Premium:</span>
+                          <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                       </div>
                   </div>
               </div>
@@ -447,28 +479,32 @@ export default function IncomeTaxCard() {
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showCppEi[p] ? 'text-main' : 'text-muted'}`}>
                           <i className={`bi bi-chevron-${showCppEi[p] ? 'up' : 'down'} small`}></i> 
                           CPP / EI Premiums
-                          <CPPEIInfoButton 
-                              cppPremium={taxDetails.cppPremium || 0} 
-                              cpp2Premium={taxDetails.cpp2Premium || 0} 
-                              eiPremium={taxDetails.eiPremium || 0} 
-                          />
                       </span>
                       <span className="small fw-bold text-danger">(${Math.round(taxDetails.cpp_ei).toLocaleString()})</span>
                   </div>
                   {showCppEi[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
                           <div className="d-flex justify-content-between align-items-center">
-                              <span className="text-muted small fst-italic">Base CPP (Tier 1)</span>
+                              <span className="text-muted small fst-italic d-flex align-items-center">
+                                  Base CPP (Tier 1)
+                                  <CPPTier1InfoButton premium={taxDetails.cppPremium || 0} />
+                              </span>
                               <span className="small text-muted fw-bold">(${Math.round(taxDetails.cppPremium || 0).toLocaleString()})</span>
                           </div>
                           {(taxDetails.cpp2Premium > 0) && (
                               <div className="d-flex justify-content-between align-items-center">
-                                  <span className="text-muted small fst-italic">CPP2 (Tier 2)</span>
+                                  <span className="text-muted small fst-italic d-flex align-items-center">
+                                      CPP2 (Tier 2)
+                                      <CPPTier2InfoButton premium={taxDetails.cpp2Premium} />
+                                  </span>
                                   <span className="small text-warning fw-bold opacity-75">(${Math.round(taxDetails.cpp2Premium).toLocaleString()})</span>
                           </div>
                           )}
                           <div className="d-flex justify-content-between align-items-center">
-                              <span className="text-muted small fst-italic">EI Premiums</span>
+                              <span className="text-muted small fst-italic d-flex align-items-center">
+                                  EI Premiums
+                                  <EIInfoButton premium={taxDetails.eiPremium || 0} />
+                              </span>
                               <span className="small text-muted fw-bold">(${Math.round(taxDetails.eiPremium || 0).toLocaleString()})</span>
                           </div>
                       </div>
