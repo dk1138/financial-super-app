@@ -234,6 +234,65 @@ const EIInfoButton = ({ premium }: { premium: number }) => {
     );
 };
 
+const AvgTaxRateInfoButton = ({ totalIncomeTax, grossIncome }: { totalIncomeTax: number, grossIncome: number }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Average Tax Rate Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <p className="mb-2">Your Average Tax Rate represents the actual percentage of your gross income that goes towards pure income tax.</p>
+                      <div className="d-flex justify-content-between mb-1">
+                          <span>Total Income Tax:</span>
+                          <span>${totalIncomeTax.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                          <span>÷ Gross Paycheck:</span>
+                          <span>${grossIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                      </div>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                          <span>Average Rate:</span>
+                          <span>{grossIncome > 0 ? ((totalIncomeTax / grossIncome) * 100).toFixed(1) : 0}%</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
+const MarginalTaxRateInfoButton = ({ margRate }: { margRate: number }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Marginal Tax Rate Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <p className="mb-2">This is the combined Federal and Provincial tax rate applied to your <strong>highest dollar of income</strong>.</p>
+                      <p className="mb-2">If you were to earn $1 more, {(margRate * 100).toFixed(1)}¢ of it would go to income taxes. This includes your top bracket rates plus any applicable surtaxes or clawbacks.</p>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                          <span>Combined Marginal Rate:</span>
+                          <span>{(margRate * 100).toFixed(1)}%</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
 // ---------------------------------------
 
 export default function IncomeTaxCard() {
@@ -530,9 +589,23 @@ export default function IncomeTaxCard() {
                   <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span>
               </div>
 
-              <div className="d-flex justify-content-between mt-1 border-bottom border-secondary pb-2 mb-2">
-                  <span className="text-muted small fw-medium">Marginal Rate</span> 
-                  <span className="small fw-bold">{(taxDetails.margRate*100).toFixed(1)}%</span>
+              <div className="d-flex flex-column gap-1 mt-1 border-bottom border-secondary pb-2 mb-2">
+                  <div className="d-flex justify-content-between">
+                      <span className="text-muted small fw-medium d-flex align-items-center gap-1">
+                          Average Tax Rate
+                          <AvgTaxRateInfoButton totalIncomeTax={taxDetails.fed + taxDetails.prov} grossIncome={actualGross} />
+                      </span> 
+                      <span className="small fw-bold">
+                          {actualGross > 0 ? (((taxDetails.fed + taxDetails.prov) / actualGross) * 100).toFixed(1) : 0}%
+                      </span>
+                  </div>
+                  <div className="d-flex justify-content-between mt-1">
+                      <span className="text-muted small fw-medium d-flex align-items-center gap-1">
+                          Marginal Tax Rate
+                          <MarginalTaxRateInfoButton margRate={taxDetails.margRate} />
+                      </span> 
+                      <span className="small fw-bold">{(taxDetails.margRate * 100).toFixed(1)}%</span>
+                  </div>
               </div>
 
               {/* Collapsible Applied Non-Refundable Tax Credits */}
