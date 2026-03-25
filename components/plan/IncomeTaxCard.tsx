@@ -472,9 +472,15 @@ export default function IncomeTaxCard() {
                       </div>
                   )}
               </div>
+              
+              {/* Total Income Tax Subtotal */}
+              <div className="d-flex justify-content-between mt-2 pt-2 pb-3">
+                  <span className="text-muted fw-bold small ms-1">Total Income Tax (Fed + Prov)</span> 
+                  <span className="text-muted fw-bold small">(${Math.round(taxDetails.fed + taxDetails.prov).toLocaleString()})</span>
+              </div>
 
               {/* CPP / EI Breakdown */}
-              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
+              <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1 border-top pt-2">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleCppEi(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showCppEi[p] ? 'text-main' : 'text-muted'}`}>
                           <i className={`bi bi-chevron-${showCppEi[p] ? 'up' : 'down'} small`}></i> 
@@ -520,7 +526,7 @@ export default function IncomeTaxCard() {
               )}
               
               <div className="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-50">
-                  <span className="text-danger fw-bold small">Total Tax Generated</span> 
+                  <span className="text-danger fw-bold small">Total taxes, clawbacks, CPP/EI premiums</span> 
                   <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span>
               </div>
 
