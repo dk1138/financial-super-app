@@ -4,7 +4,7 @@ import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle
 
 // --- CUSTOM TAX TOOLTIP COMPONENTS ---
 
-const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, personalDeductions, netTaxable }: { grossTaxable: number, splitAmt: number, employerMatch: number, personalDeductions: number, netTaxable: number }) => {
+const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, displayTaxable }: { grossTaxable: number, splitAmt: number, employerMatch: number, displayTaxable: number }) => {
     const [open, setOpen] = useState(false);
     const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '320px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
   
@@ -41,16 +41,9 @@ const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, person
                           </div>
                       )}
                       
-                      {personalDeductions > 0 && (
-                          <div className="d-flex justify-content-between mb-1">
-                              <span>Personal RRSP/FHSA Deductions:</span>
-                              <span className="text-danger fw-medium">-${personalDeductions.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                          </div>
-                      )}
-                      
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main" style={{fontSize: '0.8rem'}}>
                           <span>Net Taxable Income:</span>
-                          <span>${netTaxable.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                          <span>${displayTaxable.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                       </div>
                   </div>
               </div>
@@ -264,7 +257,10 @@ export default function IncomeTaxCard() {
 
       const personalDeductions = isP1 ? (yData.actualDeductionsP1 || 0) : (yData.actualDeductionsP2 || 0);
       const totalPaycheckRrspDeduction = isP1 ? (yData.rrspTotalMatch1 || match) : (yData.rrspTotalMatch2 || match);
-      const grossTaxable = taxIncAfter + personalDeductions + totalPaycheckRrspDeduction - splitAmt;
+      
+      // FIX: Add simulated background deductions back so the UI math matches the tax engine output perfectly
+      const displayTaxableIncome = taxIncAfter + personalDeductions;
+      const grossTaxable = displayTaxableIncome + totalPaycheckRrspDeduction - splitAmt;
 
       // Tax Details Logic
       const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
@@ -339,11 +335,10 @@ export default function IncomeTaxCard() {
                           grossTaxable={grossTaxable} 
                           splitAmt={splitAmt} 
                           employerMatch={totalPaycheckRrspDeduction} 
-                          personalDeductions={personalDeductions} 
-                          netTaxable={taxIncAfter} 
+                          displayTaxable={displayTaxableIncome} 
                       />
                   </span>
-                  <span className="small fw-bold">${Math.round(taxIncAfter).toLocaleString()}</span>
+                  <span className="small fw-bold">${Math.round(displayTaxableIncome).toLocaleString()}</span>
               </div>
 
               {/* Federal Tax Breakdown */}
@@ -377,7 +372,7 @@ export default function IncomeTaxCard() {
                           <div className="d-flex justify-content-between align-items-center">
                               <span className="text-muted small fst-italic d-flex align-items-center">
                                   Base Provincial Tax
-                                  <ProvTaxInfoButton taxableIncome={taxIncAfter} provBase={provBase} province={data.inputs.tax_province || 'ON'} />
+                                  <ProvTaxInfoButton taxableIncome={displayTaxableIncome} provBase={provBase} province={data.inputs.tax_province || 'ON'} />
                               </span>
                               <span className="small text-muted fw-bold">(${Math.round(provBase).toLocaleString()})</span>
                           </div>
@@ -394,7 +389,7 @@ export default function IncomeTaxCard() {
                               <div className="d-flex justify-content-between align-items-center">
                                   <span className="text-muted small fst-italic d-flex align-items-center">
                                       Ontario Health Premium
-                                      <OHPInfoButton taxableIncome={taxIncAfter} ohpAmount={taxDetails.ohp} />
+                                      <OHPInfoButton taxableIncome={displayTaxableIncome} ohpAmount={taxDetails.ohp} />
                                   </span>
                                   <span className="small text-danger fw-bold opacity-75">(${Math.round(taxDetails.ohp).toLocaleString()})</span>
                               </div>
