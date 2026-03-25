@@ -4,6 +4,61 @@ import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle
 
 // --- CUSTOM TAX TOOLTIP COMPONENTS ---
 
+const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, personalDeductions, netTaxable }: { grossTaxable: number, splitAmt: number, employerMatch: number, personalDeductions: number, netTaxable: number }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '320px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+  
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Net Taxable Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <div className="d-flex justify-content-between mb-1">
+                          <span>Gross Taxable Inflows:</span>
+                          <span>${grossTaxable.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                      </div>
+                      <div className="text-muted fst-italic mb-2 pb-1 border-bottom border-secondary border-opacity-25" style={{ fontSize: '0.65rem', marginTop: '-2px' }}>
+                          (Includes salary, benefits, side hustles, taxable withdrawals, and grossed-up yields)
+                      </div>
+                      
+                      {Math.abs(splitAmt) > 0 && (
+                          <div className="d-flex justify-content-between mb-1">
+                              <span>Pension Split Adjustment:</span>
+                              <span className={splitAmt > 0 ? "text-success fw-medium" : "text-danger fw-medium"}>
+                                  {splitAmt > 0 ? '+' : '-'}${Math.abs(splitAmt).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </span>
+                          </div>
+                      )}
+                      
+                      {employerMatch > 0 && (
+                          <div className="d-flex justify-content-between mb-1">
+                              <span>Paycheck RRSP Deductions:</span>
+                              <span className="text-danger fw-medium">-${employerMatch.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                          </div>
+                      )}
+                      
+                      {personalDeductions > 0 && (
+                          <div className="d-flex justify-content-between mb-1">
+                              <span>Personal RRSP/FHSA Deductions:</span>
+                              <span className="text-danger fw-medium">-${personalDeductions.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                          </div>
+                      )}
+                      
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main" style={{fontSize: '0.8rem'}}>
+                          <span>Net Taxable Income:</span>
+                          <span>${netTaxable.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
 const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvincialTax: number, calculatedSurtax: number }) => {
   const [open, setOpen] = useState(false);
   const SURTAX_THRESHOLD_1 = 5818;
@@ -207,6 +262,10 @@ export default function IncomeTaxCard() {
       const taxIncBefore = isP1 ? (yData.taxIncP1 + (yData.pensionSplit?.p1ToP2 || 0) - (yData.pensionSplit?.p2ToP1 || 0)) : (yData.taxIncP2 + (yData.pensionSplit?.p2ToP1 || 0) - (yData.pensionSplit?.p1ToP2 || 0));
       const splitAmt = taxIncAfter - taxIncBefore;
 
+      const personalDeductions = isP1 ? (yData.actualDeductionsP1 || 0) : (yData.actualDeductionsP2 || 0);
+      const totalPaycheckRrspDeduction = isP1 ? (yData.rrspTotalMatch1 || match) : (yData.rrspTotalMatch2 || match);
+      const grossTaxable = taxIncAfter + personalDeductions + totalPaycheckRrspDeduction - splitAmt;
+
       // Tax Details Logic
       const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
       const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
@@ -274,7 +333,16 @@ export default function IncomeTaxCard() {
 
               {/* Net Taxable Income */}
               <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-3">
-                  <span className="text-main small fw-bold d-flex align-items-center gap-1">Net Taxable Income <InfoBtn title="Taxable Income" text="This is the final income number sent to the tax engine. It accounts for your personal RRSP contributions, FHSA contributions, investment yields, and taxable withdrawals happening in the background."/></span>
+                  <span className="text-main small fw-bold d-flex align-items-center gap-1">
+                      Net Taxable Income 
+                      <TaxableIncomeInfoButton 
+                          grossTaxable={grossTaxable} 
+                          splitAmt={splitAmt} 
+                          employerMatch={totalPaycheckRrspDeduction} 
+                          personalDeductions={personalDeductions} 
+                          netTaxable={taxIncAfter} 
+                      />
+                  </span>
                   <span className="small fw-bold">${Math.round(taxIncAfter).toLocaleString()}</span>
               </div>
 
