@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper } from '../SharedUI';
-import { FINANCIAL_CONSTANTS } from '../../lib/config'; // Pulling dynamically so we don't hardcode
+import { FINANCIAL_CONSTANTS } from '../../lib/config';
 
 // --- CUSTOM TAX TOOLTIP COMPONENTS ---
 
@@ -455,7 +455,7 @@ export default function IncomeTaxCard() {
       const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
       const provBase = Math.max(0, taxDetails.prov - (taxDetails.surtax || 0) - (taxDetails.ohp || 0));
 
-      const selectedProvince = data.inputs.tax_province || 'ON';
+      const selectedProvince = (data.inputs.tax_province || 'ON') as keyof typeof FINANCIAL_CONSTANTS.TAX_DATA;
       const provBrackets = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.brackets || FINANCIAL_CONSTANTS.TAX_DATA.ON.brackets;
       const provRates = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.rates || FINANCIAL_CONSTANTS.TAX_DATA.ON.rates;
 
