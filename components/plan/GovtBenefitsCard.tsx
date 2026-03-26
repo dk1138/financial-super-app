@@ -44,9 +44,9 @@ export default function GovtBenefitsCard() {
                     <InfoBtn 
                         align="left" 
                         title="CPP / OAS / Pension" 
-                        text={`<b>CPP:</b> Enter the estimate from your Service Canada account. The app will automatically adjust it if you take it early (age 60) or late (age 70).<br><br>
-                            <b>OAS:</b> Max OAS requires 40 years of residency in Canada between ages 18 and 65. If you have less, it is prorated.<br><br>
-                            <b>OAS Clawback (2026):</b> If your Net Income exceeds <b>$95,323</b>, your OAS is reduced by 15 cents for every dollar above the threshold. It is fully eliminated at <b>$154,708</b> (or <b>$160,647</b> for ages 75+).`} 
+                        text={`<b>CPP:</b> Enter the estimate from your Service Canada account. The app will automatically adjust it if you take it early (age 60) or late (age 70). <a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp.html' target='_blank' class='text-primary'>Learn more</a><br><br>
+                            <b>OAS:</b> Max OAS requires 40 years of residency in Canada between ages 18 and 65. If you have less, it is prorated. <a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/eligibility.html' target='_blank' class='text-primary'>Learn more</a><br><br>
+                            <b>OAS Clawback (2026):</b> If your Net Income exceeds <b>$95,323</b>, your OAS is reduced by 15 cents for every dollar above the threshold. It is fully eliminated at <b>$154,708</b> (or <b>$160,647</b> for ages 75+). <a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/recovery-tax.html' target='_blank' class='text-primary'>Learn more</a>`} 
                     />
                 </div>
               {isCouple && (
@@ -134,7 +134,7 @@ export default function GovtBenefitsCard() {
                             {(data.inputs[`${p}_oas_enabled`] ?? true) && (
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <label className="form-label small text-muted mb-0">Years in Canada <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65."/></label>
+                                        <label className="form-label small text-muted mb-0">Years in Canada <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65.<br><br><a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/eligibility.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>"/></label>
                                         <div style={{width: '170px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
@@ -172,7 +172,7 @@ export default function GovtBenefitsCard() {
                                     <div className="d-flex justify-content-between align-items-center">
                                         <div className="d-flex align-items-center">
                                             <label className="form-label small fw-bold text-muted mb-0">Index to Inflation</label>
-                                            <InfoBtn title="Index to Inflation" text="If checked, the pension amount will grow with inflation. If unchecked, the payout remains flat for life." />
+                                            <InfoBtn title="Index to Inflation" text="If checked, the pension amount will grow with inflation. If unchecked, the payout remains flat for life.<br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/pension-adjustment.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
                                         </div>
                                         <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_db_indexed`] ?? true} onChange={(e) => updateInput(`${p}_db_indexed`, e.target.checked)} /></div>
                                     </div>
