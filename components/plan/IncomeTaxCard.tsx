@@ -296,7 +296,6 @@ const MarginalTaxRateInfoButton = ({ margRate }: { margRate: number }) => {
     );
 };
 
-// Generic Dynamic Bracket Visualizer
 const TaxBracketVisual = ({ taxableIncome, brackets, rates, title }: { taxableIncome: number, brackets: number[], rates: number[], title: string }) => {
     const bracketObjects = rates.map((rate, idx) => {
         const min = idx === 0 ? 0 : brackets[idx - 1];
@@ -345,6 +344,32 @@ const TaxBracketVisual = ({ taxableIncome, brackets, rates, title }: { taxableIn
     );
 };
 
+// NEW REUSABLE CREDIT INFO BUTTON
+const CreditInfoButton = ({ title, text, amount }: { title: string, text: string, amount: number }) => {
+    const [open, setOpen] = useState(false);
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+
+    return (
+      <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
+          <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+              <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
+          </button>
+          {open && (
+              <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+                  <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title} Math</h6>
+                  <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
+                      <p className="mb-2" dangerouslySetInnerHTML={{ __html: text }}></p>
+                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                          <span>Total Credit Value:</span>
+                          <span>${Math.round(amount).toLocaleString()}</span>
+                      </div>
+                  </div>
+              </div>
+          )}
+      </div>
+    );
+};
+
 // ---------------------------------------
 
 export default function IncomeTaxCard() {
@@ -355,11 +380,11 @@ export default function IncomeTaxCard() {
   const [showCredits, setShowCredits] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showGross, setShowGross] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showDeductions, setShowDeductions] = useState<Record<string, boolean>>({ p1: false, p2: false });
-  const [showNrtc, setShowNrtc] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showCppEi, setShowCppEi] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showTaxBreakdown, setShowTaxBreakdown] = useState<Record<string, boolean>>({ p1: false, p2: false });
+  const [showRefund, setShowRefund] = useState<Record<string, boolean>>({ p1: false, p2: false }); // NEW: Refund Breakdown Dropdown
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -379,13 +404,9 @@ export default function IncomeTaxCard() {
       const oas = p === 'p1' ? (yData.oasP1 || 0) : (yData.oasP2 || 0);
       const db = p === 'p1' ? (yData.dbP1 || 0) : (yData.dbP2 || 0);
 
-      // Gross strictly limited to active paycheck/pension income sources (No yields, no withdrawals)
       let actualGross = salary + match + cpp + oas + db;
-
       const taxDetails = p === 'p1' ? yData.taxDetailsP1 : yData.taxDetailsP2;
       const totalTax = taxDetails?.totalTax || 0;
-
-      // Take-home pay strips out the employer match (since it goes straight to RRSP) and Taxes
       const takeHome = actualGross - match - totalTax;
 
       return { actualGross, takeHome };
@@ -400,11 +421,11 @@ export default function IncomeTaxCard() {
   const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleGross = (p: string) => setShowGross(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleDeductions = (p: string) => setShowDeductions(prev => ({ ...prev, [p]: !prev[p] }));
-  const toggleNrtc = (p: string) => setShowNrtc(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleFedTax = (p: string) => setShowFedTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleProvTax = (p: string) => setShowProvTax(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleCppEi = (p: string) => setShowCppEi(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleTaxBreakdown = (p: string) => setShowTaxBreakdown(prev => ({ ...prev, [p]: !prev[p] }));
+  const toggleRefund = (p: string) => setShowRefund(prev => ({ ...prev, [p]: !prev[p] }));
 
   const renderTaxBox = (taxDetails: any, p: string) => {
       const yData = results?.timeline?.[0];
@@ -430,13 +451,10 @@ export default function IncomeTaxCard() {
 
       const actualGross = sumGross;
 
-      // Deductions Logic (Strictly Paycheck Deductions)
+      // Deductions Logic
       const totalDeductions = match;
-
       let dedBreakdown: {label: string, val: number}[] = [];
-      if (match > 0) {
-          dedBreakdown.push({label: 'RRSP (Employer Match)', val: match});
-      }
+      if (match > 0) { dedBreakdown.push({label: 'RRSP (Employer Match)', val: match}); }
 
       // Net Taxable Logic
       const taxIncAfter = isP1 ? yData.taxIncP1 : yData.taxIncP2;
@@ -458,7 +476,7 @@ export default function IncomeTaxCard() {
       const provBrackets = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.brackets || FINANCIAL_CONSTANTS.TAX_DATA.ON.brackets;
       const provRates = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.rates || FINANCIAL_CONSTANTS.TAX_DATA.ON.rates;
 
-      // New Refund Math (Combines Non-Refundable Credits value + Refundable Transit Credit)
+      // Combine Non-Refundable Credits value + Refundable Transit Credit
       const totalRefundFromCredits = nrtcTotal + (taxDetails.rtc?.transit || 0);
 
       return (
@@ -694,79 +712,7 @@ export default function IncomeTaxCard() {
                   </div>
               </div>
 
-              {/* Collapsible Applied Non-Refundable Tax Credits */}
-              {hasNrtc && (
-                  <div className="mt-2 pt-2 border-top border-secondary border-opacity-50">
-                      <div 
-                          className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75"
-                          onClick={() => toggleNrtc(p)}
-                      >
-                          <span className="text-info small fw-bold d-flex align-items-center gap-1">
-                              <i className={`bi bi-chevron-${showNrtc[p] ? 'up' : 'down'} small`}></i> Applied Non-Refundable Credits
-                          </span>
-                          <span className="small fw-bold text-info">
-                              -${Math.round(nrtcTotal).toLocaleString()}
-                          </span>
-                      </div>
-                      
-                      {showNrtc[p] && (
-                          <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-info ms-1 border-opacity-25">
-                              {taxDetails.nrtc.disability > 0 && (
-                                  <div className="d-flex justify-content-between align-items-center">
-                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
-                                          Disability Tax Credit
-                                      </span>
-                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.disability).toLocaleString()}</span>
-                                  </div>
-                              )}
-                              {taxDetails.nrtc.caregiver > 0 && (
-                                  <div className="d-flex justify-content-between align-items-center">
-                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
-                                          Caregiver Amount
-                                      </span>
-                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
-                                  </div>
-                              )}
-                              {taxDetails.nrtc.medical > 0 && (
-                                  <div className="d-flex justify-content-between align-items-center">
-                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
-                                          Medical Expenses
-                                      </span>
-                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
-                                  </div>
-                              )}
-                              {taxDetails.nrtc.homeBuyer > 0 && (
-                                  <div className="d-flex justify-content-between align-items-center">
-                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
-                                          First-Time Home Buyer
-                                      </span>
-                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.homeBuyer).toLocaleString()}</span>
-                                  </div>
-                              )}
-                              {taxDetails.nrtc.donations > 0 && (
-                                  <div className="d-flex justify-content-between align-items-center">
-                                      <span className="text-muted small fst-italic d-flex align-items-center gap-1">
-                                          Charitable Donations
-                                      </span>
-                                      <span className="small text-info fw-bold opacity-75">-${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
-                                  </div>
-                              )}
-                          </div>
-                      )}
-                  </div>
-              )}
-
-              {/* Refundable Tax Credits (Applied Directly to reduce Total Tax) */}
-              {taxDetails.rtc && taxDetails.rtc.transit > 0 && (
-                  <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary border-opacity-50">
-                      <span className="text-success small fw-bold d-flex align-items-center gap-1">
-                          <i className="bi bi-arrow-return-left"></i> Transit Refund
-                      </span>
-                      <span className="small fw-bold text-success">+${Math.round(taxDetails.rtc.transit).toLocaleString()}</span>
-                  </div>
-              )}
-
-              {/* --- THE FIX: SPLITTING PAYCHECK VS TAX REFUND --- */}
+              {/* --- STANDARD PAYCHECK VS TAX REFUND --- */}
               <div className="mt-3 pt-3 border-top border-secondary">
                   
                   {/* Standard Payroll Take-Home */}
@@ -780,16 +726,99 @@ export default function IncomeTaxCard() {
                       </span>
                   </div>
 
-                  {/* Estimated Tax Refund */}
+                  {/* Collapsible Estimated Tax Refund */}
                   {totalRefundFromCredits > 0 && (
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                          <span className="text-success fw-bold d-flex align-items-center">
-                              Estimated Tax Refund 
-                              <InfoBtn align="right" title="Spring Tax Refund" text="The estimated lump-sum refund you will receive when you file your taxes, generated by your extra Tax Credits (Disability, Medical, Donations, Transit, etc.).<br><br><i>Note: You can apply to have this added directly to your paycheck using CRA Form T1213.</i>" />
-                          </span> 
-                          <span className="text-success fw-bold fs-6">
-                              +${Math.round(totalRefundFromCredits).toLocaleString()}
-                          </span>
+                      <div className="mt-1 pt-1">
+                          <div 
+                              className="d-flex justify-content-between align-items-center mb-2 cursor-pointer transition-all user-select-none hover-opacity-75"
+                              onClick={() => toggleRefund(p)}
+                          >
+                              <span className="text-success fw-bold d-flex align-items-center gap-1">
+                                  <i className={`bi bi-chevron-${showRefund[p] ? 'up' : 'down'} small`}></i> 
+                                  Estimated Tax Refund
+                                  <InfoBtn align="right" title="Spring Tax Refund" text="The estimated lump-sum refund you will receive when you file your taxes, generated by your extra Tax Credits (Age Amount, Disability, Donations, etc.).<br><br><i>Note: You can apply to have these added directly to your paycheck using CRA Form T1213.</i>" />
+                              </span> 
+                              <span className="text-success fw-bold fs-6">
+                                  +${Math.round(totalRefundFromCredits).toLocaleString()}
+                              </span>
+                          </div>
+
+                          {showRefund[p] && (
+                              <div className="ps-3 pt-1 mt-1 mb-3 d-flex flex-column gap-2 border-start border-success ms-1 border-opacity-25">
+                                  {taxDetails.nrtc.age > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Age Amount
+                                              <CreditInfoButton title="Age Amount" text="A non-refundable credit for individuals aged 65 and older. The base amount is reduced by 15% of your net income exceeding the phase-out threshold." amount={taxDetails.nrtc.age} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.age).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {taxDetails.nrtc.pension > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Pension Amount
+                                              <CreditInfoButton title="Pension Amount" text="A non-refundable credit applied on up to $2,000 of your eligible pension income." amount={taxDetails.nrtc.pension} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.pension).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {taxDetails.nrtc.disability > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Disability Tax Credit
+                                              <CreditInfoButton title="Disability Tax Credit" text="Provides a non-refundable credit for individuals with severe and prolonged impairments. Combines federal and provincial base amounts." amount={taxDetails.nrtc.disability} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.disability).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {taxDetails.nrtc.caregiver > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Caregiver Amount
+                                              <CreditInfoButton title="Caregiver Amount" text="Provides a credit for supporting a spouse or dependent with a physical or mental impairment." amount={taxDetails.nrtc.caregiver} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {taxDetails.nrtc.medical > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Medical Expenses
+                                              <CreditInfoButton title="Medical Expenses" text="Calculated on eligible medical expenses exceeding 3% of your net income or the maximum threshold (e.g., $2,900 for federal)." amount={taxDetails.nrtc.medical} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {taxDetails.nrtc.homeBuyer > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              First-Time Home Buyer
+                                              <CreditInfoButton title="Home Buyer" text="A $10,000 base amount multiplied by the lowest tax rate for first-time home buyers." amount={taxDetails.nrtc.homeBuyer} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.homeBuyer).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {taxDetails.nrtc.donations > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Charitable Donations
+                                              <CreditInfoButton title="Charitable Donations" text="Calculated using a two-tiered system: a lower rate for the first $200, and a higher rate for amounts above $200." amount={taxDetails.nrtc.donations} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {taxDetails.rtc?.transit > 0 && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Seniors' Transit Refund
+                                              <CreditInfoButton title="Transit Refund" text="A 15% refundable credit on up to $3,000 of eligible public transit expenses for Ontario seniors aged 65+." amount={taxDetails.rtc.transit} />
+                                          </span>
+                                          <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.rtc.transit).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                              </div>
+                          )}
                       </div>
                   )}
 
