@@ -45,7 +45,12 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
 
 export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
     if (craTaxableIncome <= 0) {
-        return { fed: 0, prov: 0, cppPremium: 0, cpp2Premium: 0, eiPremium: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0, age: 0, pension: 0 }, rtc: { transit: 0 }, surtax: 0, ohp: 0 };
+        return { 
+            fed: 0, prov: 0, cppPremium: 0, cpp2Premium: 0, eiPremium: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, 
+            nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0, age: 0, pension: 0 }, 
+            rtc: { transit: 0 }, surtax: 0, ohp: 0,
+            nrtcDetails: {}, rtcDetails: {}
+        };
     }
     
     // Strict CRA Base Rates & Brackets
@@ -148,17 +153,21 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         fedEmploymentCredit = Math.min(earnedIncome, (constants.FED_EMPLOYMENT_AMOUNT || 1433) * baseInflation) * lowestFedRate;
     }
 
+    // --- ADDITIONAL NON-REFUNDABLE TAX CREDITS (DETAILED TRACKING) ---
+    
+    let ageAmt = 0;
+    let provAgeAmt = 0;
     let fedAgeCredit = 0;
     let provAgeCredit = 0;
     if (age >= 65) {
-        let fedAgeBase = constants.FED_AGE_AMOUNT || 8790;
-        let fedAgePhase = constants.FED_AGE_PHASE_START || 44325;
-        let ageAmt = Math.max(0, fedAgeBase * baseInflation - Math.max(0, craTaxableIncome - fedAgePhase * baseInflation) * 0.15);
+        let fedAgeBase = constants.FED_AGE_AMOUNT || 9028;
+        let fedAgePhase = constants.FED_AGE_PHASE_START || 45522;
+        ageAmt = Math.max(0, fedAgeBase * baseInflation - Math.max(0, craTaxableIncome - fedAgePhase * baseInflation) * 0.15);
         fedAgeCredit = ageAmt * lowestFedRate; 
         
-        let provAgeBase = constants.PROV_AGE_AMOUNT?.[province] || 6054;
-        let provAgePhase = constants.PROV_AGE_PHASE_START?.[province] || 45068;
-        let provAgeAmt = Math.max(0, provAgeBase * baseInflation - Math.max(0, craTaxableIncome - provAgePhase * baseInflation) * 0.15);
+        let provAgeBase = constants.PROV_AGE_AMOUNT?.[province] || 6223;
+        let provAgePhase = constants.PROV_AGE_PHASE_START?.[province] || 46330;
+        provAgeAmt = Math.max(0, provAgeBase * baseInflation - Math.max(0, craTaxableIncome - provAgePhase * baseInflation) * 0.15);
         provAgeCredit = provAgeAmt * provRateLowest; 
     }
     
@@ -173,45 +182,48 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
     let fedCppEiCredit = (cppBasePremium + eiPremium) * lowestFedRate;
     let provCppEiCredit = (cppBasePremium + eiPremium) * provRateLowest; 
 
-    // --- ADDITIONAL NON-REFUNDABLE TAX CREDITS ---
     let fedDisabilityCredit = 0;
     let provDisabilityCredit = 0;
     if (credits.disability) {
-        fedDisabilityCredit = (constants.FED_DISABILITY_AMOUNT || 9872) * baseInflation * lowestFedRate;
+        fedDisabilityCredit = (constants.FED_DISABILITY_AMOUNT || 10138) * baseInflation * lowestFedRate;
         provDisabilityCredit = (constants.PROV_DISABILITY_AMOUNT?.[province] || 9800) * baseInflation * provRateLowest;
     }
 
+    let fedCaregiverBase = 0;
+    let provCaregiverBase = 0;
     let fedCaregiverCredit = 0;
     let provCaregiverCredit = 0;
-    
     let under18Share = credits.caregiver_under_18_share || 0;
     let over18Share = credits.caregiver_over_18_share || 0;
 
     if (under18Share > 0) {
-        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_UNDER_18 || 2616) * baseInflation * lowestFedRate * under18Share;
-        provCaregiverCredit += (constants.PROV_CAREGIVER_AMOUNT_UNDER_18?.[province] || 0) * baseInflation * provRateLowest * under18Share;
+        fedCaregiverBase += (constants.FED_CAREGIVER_AMOUNT_UNDER_18 || 2687) * baseInflation * under18Share;
+        provCaregiverBase += (constants.PROV_CAREGIVER_AMOUNT_UNDER_18?.[province] || 0) * baseInflation * under18Share;
     }
-    
     if (over18Share > 0) {
-        fedCaregiverCredit += (constants.FED_CAREGIVER_AMOUNT_OVER_18 || 8375) * baseInflation * lowestFedRate * over18Share;
-        provCaregiverCredit += (constants.PROV_CAREGIVER_AMOUNT_OVER_18?.[province] || 5700) * baseInflation * provRateLowest * over18Share;
+        fedCaregiverBase += (constants.FED_CAREGIVER_AMOUNT_OVER_18 || 8601) * baseInflation * over18Share;
+        provCaregiverBase += (constants.PROV_CAREGIVER_AMOUNT_OVER_18?.[province] || 5700) * baseInflation * over18Share;
     }
+    fedCaregiverCredit = fedCaregiverBase * lowestFedRate;
+    provCaregiverCredit = provCaregiverBase * provRateLowest;
 
+    let fedEligibleMed = 0;
+    let provEligibleMed = 0;
     let fedMedicalCredit = 0;
     let provMedicalCredit = 0;
     if (credits.medicalExpenses > 0) {
         let medExp = credits.medicalExpenses * baseInflation;
         let medRate = constants.FED_MEDICAL_EXPENSE_THRESHOLD_RATE || 0.03;
         
-        let fedMedMax = (constants.FED_MEDICAL_EXPENSE_THRESHOLD_MAX || 2759) * baseInflation;
+        let fedMedMax = (constants.FED_MEDICAL_EXPENSE_THRESHOLD_MAX || 2900) * baseInflation;
         let fedMedThreshold = Math.min(fedMedMax, craTaxableIncome * medRate);
-        let fedEligibleMed = Math.max(0, medExp - fedMedThreshold);
+        fedEligibleMed = Math.max(0, medExp - fedMedThreshold);
         fedMedicalCredit = fedEligibleMed * lowestFedRate;
 
         let provMedMaxBase = constants.PROV_MEDICAL_EXPENSE_THRESHOLD_MAX?.[province];
         let provMedMax = (provMedMaxBase !== undefined && provMedMaxBase > 0) ? (provMedMaxBase * baseInflation) : Infinity; 
         let provMedThreshold = Math.min(provMedMax, craTaxableIncome * medRate);
-        let provEligibleMed = Math.max(0, medExp - provMedThreshold);
+        provEligibleMed = Math.max(0, medExp - provMedThreshold);
         provMedicalCredit = provEligibleMed * provRateLowest;
     }
 
@@ -401,11 +413,23 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
             medical: fedMedicalCredit + provMedicalCredit,
             homeBuyer: fedHomeBuyerCredit + provHomeBuyerCredit,
             disability: fedDisabilityCredit + provDisabilityCredit,
-            age: fedAgeCredit + provAgeCredit,           // NOW EXPORTED
-            pension: fedPensionCredit + provPensionCredit // NOW EXPORTED
+            age: fedAgeCredit + provAgeCredit,
+            pension: fedPensionCredit + provPensionCredit
+        },
+        nrtcDetails: {
+            donations: { fedAmt: fedDonationCredit, provAmt: provDonationCredit, amount: credits.donations || 0 },
+            caregiver: { fedAmt: fedCaregiverCredit, provAmt: provCaregiverCredit, fedBase: fedCaregiverBase, provBase: provCaregiverBase, fedRate: lowestFedRate, provRate: provRateLowest },
+            medical: { fedAmt: fedMedicalCredit, provAmt: provMedicalCredit, fedBase: (credits.medicalExpenses > 0 ? fedEligibleMed : 0), provBase: (credits.medicalExpenses > 0 ? provEligibleMed : 0), fedRate: lowestFedRate, provRate: provRateLowest },
+            homeBuyer: { fedAmt: fedHomeBuyerCredit, provAmt: provHomeBuyerCredit, fedBase: (credits.firstTimeHomeBuyer ? (constants.FED_HOME_BUYERS_AMOUNT || 10000) : 0), provBase: (credits.firstTimeHomeBuyer && (province === 'QC' || province === 'SK') ? (constants.PROV_HOME_BUYERS_AMOUNT?.[province] || 10000) : 0), fedRate: lowestFedRate, provRate: provRateLowest },
+            disability: { fedAmt: fedDisabilityCredit, provAmt: provDisabilityCredit, fedBase: (credits.disability ? (constants.FED_DISABILITY_AMOUNT || 10138) * baseInflation : 0), provBase: (credits.disability ? (constants.PROV_DISABILITY_AMOUNT?.[province] || 9800) * baseInflation : 0), fedRate: lowestFedRate, provRate: provRateLowest },
+            age: { fedAmt: fedAgeCredit, provAmt: provAgeCredit, fedBase: ageAmt, provBase: provAgeAmt, fedRate: lowestFedRate, provRate: provRateLowest },
+            pension: { fedAmt: fedPensionCredit, provAmt: provPensionCredit, fedBase: (eligiblePension > 0 ? Math.min(eligiblePension, constants.FED_PENSION_AMOUNT || 2000) : 0), provBase: (eligiblePension > 0 ? Math.min(eligiblePension, constants.PROV_PENSION_AMOUNT?.[province] || 1681) : 0), fedRate: lowestFedRate, provRate: provRateLowest }
         },
         rtc: {
             transit: provTransitCredit
+        },
+        rtcDetails: {
+            transit: { amt: provTransitCredit, base: (province === 'ON' && age >= (constants.ON_SENIORS_TRANSIT_ELIGIBLE_AGE || 65) && credits.transit > 0 ? Math.min(credits.transit * baseInflation, (constants.ON_SENIORS_TRANSIT_MAX_EXPENSE || 3000) * baseInflation) : 0), rate: constants.ON_SENIORS_TRANSIT_RATE || 0.15 }
         }
     };
 }

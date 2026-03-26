@@ -344,10 +344,12 @@ const TaxBracketVisual = ({ taxableIncome, brackets, rates, title }: { taxableIn
     );
 };
 
-// NEW REUSABLE CREDIT INFO BUTTON
-const CreditInfoButton = ({ title, text, amount }: { title: string, text: string, amount: number }) => {
+// NEW DETAILED CREDIT INFO BUTTON
+const DetailedCreditInfoButton = ({ title, desc, link, details }: { title: string, desc: string, link: string, details: any }) => {
     const [open, setOpen] = useState(false);
-    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+    const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '340px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
+
+    if (!details) return null;
 
     return (
       <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
@@ -358,10 +360,55 @@ const CreditInfoButton = ({ title, text, amount }: { title: string, text: string
               <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
                   <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title} Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
-                      <p className="mb-2" dangerouslySetInnerHTML={{ __html: text }}></p>
-                      <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
+                      <p className="mb-2">{desc} <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none fw-medium text-nowrap">Learn more <i className="bi bi-box-arrow-up-right" style={{fontSize:'0.65rem'}}></i></a></p>
+                      
+                      {details.fedBase !== undefined && (
+                          <div className="mb-2 pb-2 border-bottom border-secondary border-opacity-25">
+                              <div className="fw-bold text-main mb-1" style={{fontSize: '0.65rem'}}>FEDERAL CREDIT</div>
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span>${Math.round(details.fedBase).toLocaleString()} × {(details.fedRate * 100).toFixed(2).replace(/\.00$/, '')}% = </span>
+                                  <span className="fw-bold text-info">${Math.round(details.fedAmt).toLocaleString()}</span>
+                              </div>
+                          </div>
+                      )}
+                      
+                      {details.provBase !== undefined && details.provAmt > 0 && (
+                          <div className="mb-2 pb-2 border-bottom border-secondary border-opacity-25">
+                              <div className="fw-bold text-main mb-1" style={{fontSize: '0.65rem'}}>PROVINCIAL CREDIT</div>
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span>${Math.round(details.provBase).toLocaleString()} × {(details.provRate * 100).toFixed(2).replace(/\.00$/, '')}% = </span>
+                                  <span className="fw-bold text-info">${Math.round(details.provAmt).toLocaleString()}</span>
+                              </div>
+                          </div>
+                      )}
+
+                      {/* For Donations which are tiered */}
+                      {title === "Charitable Donations" && (
+                          <div className="mb-2 pb-2 border-bottom border-secondary border-opacity-25">
+                              <div className="d-flex justify-content-between align-items-center mb-1">
+                                  <span>Federal Credit (Tiered):</span>
+                                  <span className="fw-bold text-info">${Math.round(details.fedAmt).toLocaleString()}</span>
+                              </div>
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span>Provincial Credit (Tiered):</span>
+                                  <span className="fw-bold text-info">${Math.round(details.provAmt).toLocaleString()}</span>
+                              </div>
+                          </div>
+                      )}
+
+                      {/* For Transit */}
+                      {title === "Transit Refund" && (
+                          <div className="mb-2 pb-2 border-bottom border-secondary border-opacity-25">
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span>${Math.round(details.base).toLocaleString()} × {(details.rate * 100).toFixed(2).replace(/\.00$/, '')}% = </span>
+                                  <span className="fw-bold text-success">${Math.round(details.amt).toLocaleString()}</span>
+                              </div>
+                          </div>
+                      )}
+
+                      <div className="pt-1 mt-1 d-flex justify-content-between fw-bold text-main" style={{fontSize: '0.8rem'}}>
                           <span>Total Credit Value:</span>
-                          <span>${Math.round(amount).toLocaleString()}</span>
+                          <span className={title === "Transit Refund" ? "text-success" : "text-info"}>${Math.round((details.fedAmt || 0) + (details.provAmt || 0) + (details.amt || 0)).toLocaleString()}</span>
                       </div>
                   </div>
               </div>
@@ -384,7 +431,7 @@ export default function IncomeTaxCard() {
   const [showProvTax, setShowProvTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showCppEi, setShowCppEi] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showTaxBreakdown, setShowTaxBreakdown] = useState<Record<string, boolean>>({ p1: false, p2: false });
-  const [showRefund, setShowRefund] = useState<Record<string, boolean>>({ p1: false, p2: false }); // NEW: Refund Breakdown Dropdown
+  const [showRefund, setShowRefund] = useState<Record<string, boolean>>({ p1: false, p2: false });
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -404,9 +451,13 @@ export default function IncomeTaxCard() {
       const oas = p === 'p1' ? (yData.oasP1 || 0) : (yData.oasP2 || 0);
       const db = p === 'p1' ? (yData.dbP1 || 0) : (yData.dbP2 || 0);
 
+      // Gross strictly limited to active paycheck/pension income sources (No yields, no withdrawals)
       let actualGross = salary + match + cpp + oas + db;
+
       const taxDetails = p === 'p1' ? yData.taxDetailsP1 : yData.taxDetailsP2;
       const totalTax = taxDetails?.totalTax || 0;
+
+      // Take-home pay strips out the employer match (since it goes straight to RRSP) and Taxes
       const takeHome = actualGross - match - totalTax;
 
       return { actualGross, takeHome };
@@ -451,10 +502,13 @@ export default function IncomeTaxCard() {
 
       const actualGross = sumGross;
 
-      // Deductions Logic
+      // Deductions Logic (Strictly Paycheck Deductions)
       const totalDeductions = match;
+
       let dedBreakdown: {label: string, val: number}[] = [];
-      if (match > 0) { dedBreakdown.push({label: 'RRSP (Employer Match)', val: match}); }
+      if (match > 0) {
+          dedBreakdown.push({label: 'RRSP (Employer Match)', val: match});
+      }
 
       // Net Taxable Logic
       const taxIncAfter = isP1 ? yData.taxIncP1 : yData.taxIncP2;
@@ -749,7 +803,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               Age Amount
-                                              <CreditInfoButton title="Age Amount" text="A non-refundable credit for individuals aged 65 and older. The base amount is reduced by 15% of your net income exceeding the phase-out threshold." amount={taxDetails.nrtc.age} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Age Amount" 
+                                                  desc="A non-refundable credit for individuals aged 65 and older. The base amount is reduced by 15% of your net income exceeding the phase-out threshold." 
+                                                  link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-30100-amount.html"
+                                                  details={taxDetails.nrtcDetails?.age} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.age).toLocaleString()}</span>
                                       </div>
@@ -758,7 +817,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               Pension Amount
-                                              <CreditInfoButton title="Pension Amount" text="A non-refundable credit applied on up to $2,000 of your eligible pension income." amount={taxDetails.nrtc.pension} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Pension Amount" 
+                                                  desc="A non-refundable credit applied on up to $2,000 of your eligible pension income." 
+                                                  link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31400-pension-income-amount.html"
+                                                  details={taxDetails.nrtcDetails?.pension} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.pension).toLocaleString()}</span>
                                       </div>
@@ -767,7 +831,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               Disability Tax Credit
-                                              <CreditInfoButton title="Disability Tax Credit" text="Provides a non-refundable credit for individuals with severe and prolonged impairments. Combines federal and provincial base amounts." amount={taxDetails.nrtc.disability} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Disability Tax Credit" 
+                                                  desc="Provides a non-refundable credit for individuals with severe and prolonged impairments. Combines federal and provincial base amounts." 
+                                                  link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html"
+                                                  details={taxDetails.nrtcDetails?.disability} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.disability).toLocaleString()}</span>
                                       </div>
@@ -776,7 +845,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               Caregiver Amount
-                                              <CreditInfoButton title="Caregiver Amount" text="Provides a credit for supporting a spouse or dependent with a physical or mental impairment." amount={taxDetails.nrtc.caregiver} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Caregiver Amount" 
+                                                  desc="Provides a credit for supporting a spouse or dependent with a physical or mental impairment." 
+                                                  link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html"
+                                                  details={taxDetails.nrtcDetails?.caregiver} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.caregiver).toLocaleString()}</span>
                                       </div>
@@ -785,7 +859,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               Medical Expenses
-                                              <CreditInfoButton title="Medical Expenses" text="Calculated on eligible medical expenses exceeding 3% of your net income or the maximum threshold (e.g., $2,900 for federal)." amount={taxDetails.nrtc.medical} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Medical Expenses" 
+                                                  desc="Calculated on eligible medical expenses exceeding 3% of your net income or the maximum threshold (e.g., $2,900 for federal)." 
+                                                  link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/lines-33099-33199-eligible-medical-expenses-you-claim-on-your-tax-return.html"
+                                                  details={taxDetails.nrtcDetails?.medical} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.medical).toLocaleString()}</span>
                                       </div>
@@ -794,7 +873,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               First-Time Home Buyer
-                                              <CreditInfoButton title="Home Buyer" text="A $10,000 base amount multiplied by the lowest tax rate for first-time home buyers." amount={taxDetails.nrtc.homeBuyer} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Home Buyer" 
+                                                  desc="A $10,000 base amount multiplied by the lowest tax rate for first-time home buyers." 
+                                                  link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html"
+                                                  details={taxDetails.nrtcDetails?.homeBuyer} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.homeBuyer).toLocaleString()}</span>
                                       </div>
@@ -803,7 +887,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               Charitable Donations
-                                              <CreditInfoButton title="Charitable Donations" text="Calculated using a two-tiered system: a lower rate for the first $200, and a higher rate for amounts above $200." amount={taxDetails.nrtc.donations} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Charitable Donations" 
+                                                  desc="Calculated using a two-tiered system: a lower rate for the first $200, and a higher rate for amounts above $200." 
+                                                  link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-34900-donations-gifts.html"
+                                                  details={taxDetails.nrtcDetails?.donations} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.nrtc.donations).toLocaleString()}</span>
                                       </div>
@@ -812,7 +901,12 @@ export default function IncomeTaxCard() {
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
                                               Seniors' Transit Refund
-                                              <CreditInfoButton title="Transit Refund" text="A 15% refundable credit on up to $3,000 of eligible public transit expenses for Ontario seniors aged 65+." amount={taxDetails.rtc.transit} />
+                                              <DetailedCreditInfoButton 
+                                                  title="Transit Refund" 
+                                                  desc="A 15% refundable credit on up to $3,000 of eligible public transit expenses for Ontario seniors aged 65+." 
+                                                  link="https://www.ontario.ca/page/ontario-seniors-public-transit-tax-credit"
+                                                  details={taxDetails.rtcDetails?.transit} 
+                                              />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+${Math.round(taxDetails.rtc.transit).toLocaleString()}</span>
                                       </div>
