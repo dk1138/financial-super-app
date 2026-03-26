@@ -316,7 +316,9 @@ export default function ProjectionTab() {
       );
   };
 
-  const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxIncAfter: number, taxIncBefore: number, refund: number, year: number) => {
+  // FIX: buildTaxTooltip no longer takes `refund` as a parameter.
+  // It only reads the CURRENT year's utilized Non-Refundable/Refundable Credits exported from the engine.
+  const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxIncAfter: number, taxIncBefore: number, year: number) => {
       if (!taxData) return "No tax generated.";
       
       const isP1 = player === 'p1';
@@ -350,7 +352,6 @@ export default function ProjectionTab() {
               breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} W/D:</span> <span>$${formatStr(amt, year)}</span></div>`;
               sum += amt;
           } else if (k.match(/Non-?Reg/i) || k.match(/Crypto/i) || k.match(/NONREG/i)) {
-              // Resilient breakdown getter catching variations
               const breakdown = y.wdBreakdown || y.withdrawalBreakdown;
               const targetKey = k.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
               const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
@@ -405,8 +406,27 @@ export default function ProjectionTab() {
       incStr += `<b>Net Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
 
       let clawbackStr = taxData.oas_clawback > 0 ? `<br><b>OAS Clawback:</b> $${formatStr(taxData.oas_clawback, year)}` : '';
+      
+      // Calculate CURRENT utilized credits (from the engine)
+      const utilizedNrtcTotal = taxData.utilizedNrtcTotal || 0;
+      const transitRefund = taxData.rtc?.transit || 0;
+      const rrspMatchSavings = isP1 ? (y.matchTaxSavingsP1 || 0) : (y.matchTaxSavingsP2 || 0);
+      const totalCurrentReductions = utilizedNrtcTotal + transitRefund + rrspMatchSavings;
+      
+      // Calculate pre-credit base tax to show accurate math
+      const baseFedTax = taxData.fed + (taxData.utilizedFedNrtc || 0);
+      const baseProvTax = taxData.prov + (taxData.utilizedProvNrtc || 0);
+      const preCreditTaxTotal = baseFedTax + baseProvTax + taxData.cpp_ei + (taxData.oas_clawback || 0);
 
-      return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
+      let mathStr = `${incStr}<b>Federal Tax:</b> $${formatStr(baseFedTax, year)}<br><b>Provincial Tax:</b> $${formatStr(baseProvTax, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Gross Tax Generated:</b> $${formatStr(preCreditTaxTotal, year)}<br>`;
+
+      if (totalCurrentReductions > 0) {
+          mathStr += `<b>Tax Reductions Applied:</b> <span class="text-success">-$${formatStr(totalCurrentReductions, year)}</span><hr class="my-1 border-secondary">`;
+      }
+
+      mathStr += `<b>Net Tax Paid:</b> <span class="text-danger">$${formatStr(taxData.totalTax, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
+
+      return mathStr;
   };
 
   const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
@@ -449,7 +469,6 @@ export default function ProjectionTab() {
       const ccb = isP1 ? (y.ccbP1 || 0) : 0;
       const invInc = isP1 ? y.invIncP1 : y.invIncP2;
       const taxInc = isP1 ? y.taxIncP1 : y.taxIncP2;
-      const taxDetails = isP1 ? y.taxDetailsP1 : y.taxDetailsP2;
       const invYieldMath = isP1 ? y.invYieldMathP1 : y.invYieldMathP2;
       const cppStart = isP1 ? data.inputs.p1_cpp_start : data.inputs.p2_cpp_start;
       const refund = isP1 ? y.rrspRefundP1 : y.rrspRefundP2;
@@ -458,9 +477,9 @@ export default function ProjectionTab() {
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
       const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash') || k.includes('RESP'));
 
+      const taxDetails = isP1 ? y.taxDetailsP1 : y.taxDetailsP2;
       const oasClawback = taxDetails?.oas_clawback || 0;
-      const oasGross = oas;
-      const netOas = Math.max(0, oasGross - oasClawback);
+      const netOas = Math.max(0, oas - oasClawback);
 
       let priorRrifBal = 0;
       const prevYear = index > 0 ? timeline[index - 1] : null;
@@ -492,9 +511,9 @@ export default function ProjectionTab() {
                       <span>{formatCurrency(cpp, year)}</span>
                   </div>
               )}
-              {oasGross > 0 && (
+              {oas > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">OAS <InfoBtn title="OAS Math" text={buildOasTooltip(oasGross, oasClawback, taxInc, year, y.oasThreshold)} align="left" /></span>
+                      <span className="text-muted ms-2 d-flex align-items-center">OAS <InfoBtn title="OAS Math" text={buildOasTooltip(oas, oasClawback, taxInc, year, y.oasThreshold)} align="left" /></span>
                       <span>{formatCurrency(netOas, year)}</span>
                   </div>
               )}
@@ -538,7 +557,6 @@ export default function ProjectionTab() {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Added directly to taxable income.`;
                   }
                   else if (k.match(/Non-?Reg/i) || k.match(/Crypto/i) || k.match(/NONREG/i)) {
-                      // Resilient lookup
                       const breakdown = y.wdBreakdown || y.withdrawalBreakdown;
                       const targetKey = k.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
                       const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
@@ -568,7 +586,7 @@ export default function ProjectionTab() {
                       
                       {refund > 0 && (
                           <div className="d-flex justify-content-between small mb-1 align-items-center">
-                              <span className="text-muted ms-2 d-flex align-items-center">Tax Refund <InfoBtn align="left" title="Tax Refund" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Refund generated from prior year RRSP contributions." /></span>
+                              <span className="text-muted ms-2 d-flex align-items-center">Tax Refund <InfoBtn align="left" title="Tax Refund" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Refund generated from prior year RRSP/FHSA contributions." /></span>
                               <span className="text-success">+{formatCurrency(refund, year)}</span>
                           </div>
                       )}
@@ -596,8 +614,8 @@ export default function ProjectionTab() {
   };
 
   return (
-    <div className="p-3 p-md-4">
-      
+    <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
+        
       {toastMsg && (
           <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
               <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
@@ -607,73 +625,26 @@ export default function ProjectionTab() {
           </div>
       )}
 
-      <div className="row g-2 g-md-3 mb-4">
-          <div className="col-12 col-md-4 col-xl">
-              <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
-                  <span className="small fw-bold text-uppercase ls-1 me-2" style={{color: planSuccess ? 'var(--bs-success)' : 'var(--bs-danger)'}}>Status</span>
-                  <span className={`fw-bold text-nowrap ${planSuccess ? 'text-success' : 'text-danger'}`}>
-                      {planSuccess ? <><i className="bi bi-check-circle-fill me-1"></i> SUCCESS</> : <><i className="bi bi-exclamation-triangle-fill me-1"></i> FAILED</>}
-                  </span>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-4 col-xl">
-              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100" title={`Reached at Age ${peakAge}`}>
-                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Peak NW <span className="d-none d-xxl-inline text-opacity-50">({peakAge})</span></span>
-                  <span className="fs-6 fw-bold text-info text-nowrap">{formatCurrency(peakNW)}</span>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-4 col-xl">
-              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
-                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Ret. Years</span>
-                  <span className="fs-6 fw-bold text-primary text-nowrap">{retYears} Yrs</span>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-4 col-xl">
-              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
-                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Tax Paid</span>
-                  <span className="fs-6 fw-bold text-danger text-nowrap">{formatCurrency(totalTaxPaid)}</span>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-4 col-xl">
-              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
-                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2 d-flex align-items-center">
-                      Estate <InfoBtn title="After-Tax Estate" text="The final value of your portfolio after applying terminal taxes to remaining RRSPs and Capital Gains." />
-                  </span>
-                  <span className="fs-6 fw-bold text-success text-nowrap">{formatCurrency(finalEstate, finalYear.year)}</span>
-              </div>
-          </div>
-
-          <div className="col-12 col-md-4 col-xl position-relative">
-              <div 
-                  className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75 cursor-pointer"
-                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+          <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
+              <i className="bi bi-table me-2"></i> Timeline Projection
+          </h5>
+          
+          <div className="d-flex gap-2" data-html2canvas-ignore>
+              <button 
+                  className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  onClick={exportToCSV}
+                  disabled={isExporting}
               >
-                  <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap">
-                      {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download fs-5 me-2"></i>}
-                      Export
-                  </span>
-              </div>
-              {exportMenuOpen && (
-                  <>
-                      <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
-                      <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '150px'}}>
-                          <li>
-                              <button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
-                                  <i className="bi bi-filetype-csv me-2"></i> Export to CSV
-                              </button>
-                          </li>
-                          <li>
-                              <button className="dropdown-item py-2 fw-bold text-success" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
-                                  <i className="bi bi-image me-2"></i> Export to PNG
-                              </button>
-                          </li>
-                      </ul>
-                  </>
-              )}
+                  <i className="bi bi-filetype-csv me-2"></i> Export CSV
+              </button>
+              <button 
+                  className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  onClick={exportToPNG}
+                  disabled={isExporting}
+              >
+                  <i className="bi bi-image me-2"></i> Export PNG
+              </button>
           </div>
       </div>
 
@@ -827,12 +798,12 @@ export default function ProjectionTab() {
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, (y.discTaxSavingsP1||0) + (y.matchTaxSavingsP1||0), y.year)} /></span>
+                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, y.year)} /></span>
                                                 <span className="text-danger fw-medium">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
                                             </div>
                                             {isCouple && (
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, (y.discTaxSavingsP2||0) + (y.matchTaxSavingsP2||0), y.year)} /></span>
+                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, y.year)} /></span>
                                                     <span className="text-danger fw-medium">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
                                                 </div>
                                             )}
