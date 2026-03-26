@@ -46,11 +46,9 @@ export default function CashFlowTab() {
 
   const baseYear = startYear;
   
-  // --- BUGFIX: Safe falsy check for 0% inflation ---
   const rawInf = data.inputs?.inflation_rate;
   const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
   
-  // --- BUGFIX: Robust check for the "Today's Dollars" toggle state across possible keys ---
   const useRealDollars = Boolean(
       data.useRealDollars === true || 
       data.inputs?.todays_dollars === true || 
@@ -140,6 +138,42 @@ export default function CashFlowTab() {
   if (totalSourcedRaw < totalSpentRaw) shortfallRaw = totalSpentRaw - totalSourcedRaw;
   else if (totalSourcedRaw > totalSpentRaw) unallocatedRaw = totalSourcedRaw - totalSpentRaw;
 
+  // --- DYNAMIC TAX SAVINGS BREAKDOWN ---
+  const getCreditVal = (taxDetails: any, key: string) => {
+      if (!taxDetails || !taxDetails.nrtcDetails || !taxDetails.nrtcDetails[key]) return 0;
+      return (taxDetails.nrtcDetails[key].fedAmt || 0) + (taxDetails.nrtcDetails[key].provAmt || 0);
+  };
+
+  let taxItems: any[] = [
+      { label: 'Federal Tax Paid', val: (yData.taxDetailsP1?.fed || 0) + (yData.taxDetailsP2?.fed || 0) },
+      { label: 'Provincial Tax Paid', val: (yData.taxDetailsP1?.prov || 0) + (yData.taxDetailsP2?.prov || 0) },
+      { label: 'CPP / EI Premiums', val: (yData.taxDetailsP1?.cpp_ei || 0) + (yData.taxDetailsP2?.cpp_ei || 0) },
+  ];
+  
+  const clawback = (yData.taxDetailsP1?.oas_clawback || 0) + (yData.taxDetailsP2?.oas_clawback || 0);
+  if (clawback > 0) taxItems.push({ label: 'OAS Clawback', val: clawback });
+
+  let savingsItems: any[] = [];
+  const creditsList = ['age', 'pension', 'disability', 'caregiver', 'medical', 'homeBuyer', 'donations'];
+  const creditLabels: any = { age: 'Age Amount', pension: 'Pension Amount', disability: 'Disability Credit', caregiver: 'Caregiver Amount', medical: 'Medical Expenses', homeBuyer: 'First-Time Home Buyer', donations: 'Charitable Donations' };
+  
+  creditsList.forEach(key => {
+      const val = getCreditVal(yData.taxDetailsP1, key) + getCreditVal(yData.taxDetailsP2, key);
+      if (val > 0) savingsItems.push({ label: creditLabels[key], val: val, isSavings: true });
+  });
+
+  const transit = (yData.taxDetailsP1?.rtc?.transit || 0) + (yData.taxDetailsP2?.rtc?.transit || 0);
+  if (transit > 0) savingsItems.push({ label: 'Transit Refund', val: transit, isSavings: true });
+
+  const matchSavings = (yData.matchTaxSavingsP1 || 0) + (yData.matchTaxSavingsP2 || 0);
+  if (matchSavings > 0) savingsItems.push({ label: 'RRSP Match Savings', val: matchSavings, isSavings: true });
+
+  if (savingsItems.length > 0) {
+      taxItems.push({ isDivider: true });
+      taxItems.push({ label: 'Tax Reductions Applied', isHeader: true });
+      taxItems = taxItems.concat(savingsItems);
+  }
+
   const nodeBreakdowns: any = {
       'salary': [
           { label: 'P1 Employment', val: p1BaseSalary },
@@ -162,9 +196,9 @@ export default function CashFlowTab() {
       ],
       'wds': Object.entries(yData.flows?.withdrawals || {}).map(([key, val]) => ({ label: key, val: val as number })),
       'other': [
-          { label: 'Non-Reg Yield', val: otherYield },
-          { label: 'Tax Refunds', val: otherRefund },
-          { label: 'Windfalls/Sales', val: otherWindfall }
+          { label: 'Non-Reg / Crypto Yield', val: otherYield },
+          { label: 'Simulated RRSP/FHSA Refund', val: otherRefund },
+          { label: 'Windfalls & Prop. Sales', val: otherWindfall }
       ],
       'shortfall': [
           { label: 'Unfunded Deficit', val: shortfallRaw }
@@ -176,14 +210,7 @@ export default function CashFlowTab() {
           { label: 'Mortgage Payments', val: yData.mortgagePay || 0 },
           { label: 'Other Debt/Purchases', val: yData.debtRepayment || 0 }
       ],
-      'tax': [
-          { label: 'P1 Total Tax', val: p1Tax },
-          { label: 'P2 Total Tax', val: p2Tax },
-          { label: 'Fed Tax Portion', val: (yData.taxDetailsP1?.fed || 0) + (yData.taxDetailsP2?.fed || 0) },
-          { label: 'Prov Tax Portion', val: (yData.taxDetailsP1?.prov || 0) + (yData.taxDetailsP2?.prov || 0) },
-          { label: 'CPP/EI Premiums', val: (yData.taxDetailsP1?.cpp_ei || 0) + (yData.taxDetailsP2?.cpp_ei || 0) },
-          { label: 'OAS Clawback', val: (yData.taxDetailsP1?.oas_clawback || 0) + (yData.taxDetailsP2?.oas_clawback || 0) }
-      ],
+      'tax': taxItems, // Dynamic Tax Items Generated Above
       'sav': [
           { label: 'P1 Contributions', val: p1Conts },
           { label: 'P2 Contributions', val: p2Conts },
@@ -328,7 +355,7 @@ export default function CashFlowTab() {
           border: '1px solid var(--bs-secondary)'
       };
 
-      const items = nodeBreakdowns[tooltip.id]?.filter((b: any) => Math.abs(b.val) > 1) || [];
+      const items = nodeBreakdowns[tooltip.id]?.filter((b: any) => b.isDivider || b.isHeader || Math.abs(b.val) > 1) || [];
 
       return (
           <div className="rounded-1 p-3 transition-none" style={style}>
@@ -340,12 +367,21 @@ export default function CashFlowTab() {
                   <span className="fw-bolder text-main ms-3">{formatCurrency(meta.value)}</span>
               </div>
               <div className="d-flex flex-column gap-1">
-                  {items.map((b: any, i: number) => (
-                      <div className="d-flex justify-content-between align-items-center small" key={i}>
-                          <span className="text-muted fw-medium">{b.label}</span>
-                          <span className="fw-bold text-main ms-3">{formatCurrency(getRealValue(b.val))}</span>
-                      </div>
-                  ))}
+                  {items.map((b: any, i: number) => {
+                      if (b.isDivider) return <div key={i} className="border-bottom border-secondary border-opacity-50 my-1"></div>;
+                      if (b.isHeader) return <div key={i} className="fw-bold text-main small text-uppercase ls-1 mt-1" style={{fontSize: '0.7rem'}}>{b.label}</div>;
+                      return (
+                          <div className="d-flex justify-content-between align-items-center small" key={i}>
+                              <span className={`fw-medium ${b.isSavings ? 'text-success' : 'text-muted'}`}>
+                                  {b.isSavings && <i className="bi bi-arrow-down-short me-1"></i>}
+                                  {b.label}
+                              </span>
+                              <span className={`fw-bold ms-3 ${b.isSavings ? 'text-success' : 'text-main'}`}>
+                                  {b.isSavings ? '-' : ''}{formatCurrency(getRealValue(b.val))}
+                              </span>
+                          </div>
+                      );
+                  })}
                   {items.length === 0 && (
                       <span className="text-muted small fst-italic">No sub-items this year.</span>
                   )}
