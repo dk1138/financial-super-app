@@ -1,16 +1,34 @@
 export function applyPensionSplitting(ti1: number, ti2: number, inflows: any, regMins: any, age1: number, age2: number, applyFn: Function) {
+    // 1. Calculate how much eligible pension income each person already has
     let p1Eligible = inflows.p1.pension + (age1 >= 65 ? regMins.p1 + regMins.lifTaken1 : 0);
     let p2Eligible = inflows.p2.pension + (age2 >= 65 ? regMins.p2 + regMins.lifTaken2 : 0);
 
-    if (ti1 > ti2 && p1Eligible > 0) {
-        let maxTransfer = p1Eligible * 0.50;
+    // If P1 makes more (or exactly the same) and has eligible pension to share
+    if (ti1 >= ti2 && p1Eligible > 0) {
+        let maxTransfer = p1Eligible * 0.50; // CRA limit is 50%
         let diff = ti1 - ti2;
-        let transfer = Math.min(maxTransfer, diff / 2);
+        let transferToEqualize = diff / 2; // Mathematical optimal for marginal rates
+        
+        // TAX CREDIT OPTIMIZATION: If P2 has less than $2,000 in eligible pension, 
+        // force a transfer to max out their Non-Refundable Pension Tax Credit!
+        let p2Shortfall = Math.max(0, 2000 - p2Eligible);
+        let optimalTransfer = Math.max(transferToEqualize, p2Shortfall);
+        
+        let transfer = Math.min(maxTransfer, optimalTransfer);
         if (transfer > 0) applyFn(ti1 - transfer, ti2 + transfer, transfer, 'p1_to_p2');
-    } else if (ti2 > ti1 && p2Eligible > 0) {
-        let maxTransfer = p2Eligible * 0.50;
+        
+    // If P2 makes more (or exactly the same) and has eligible pension to share
+    } else if (ti2 >= ti1 && p2Eligible > 0) {
+        let maxTransfer = p2Eligible * 0.50; // CRA limit is 50%
         let diff = ti2 - ti1;
-        let transfer = Math.min(maxTransfer, diff / 2);
+        let transferToEqualize = diff / 2; // Mathematical optimal for marginal rates
+        
+        // TAX CREDIT OPTIMIZATION: If P1 has less than $2,000 in eligible pension, 
+        // force a transfer to max out their Non-Refundable Pension Tax Credit!
+        let p1Shortfall = Math.max(0, 2000 - p1Eligible);
+        let optimalTransfer = Math.max(transferToEqualize, p1Shortfall);
+
+        let transfer = Math.min(maxTransfer, optimalTransfer);
         if (transfer > 0) applyFn(ti1 + transfer, ti2 - transfer, transfer, 'p2_to_p1');
     }
 }

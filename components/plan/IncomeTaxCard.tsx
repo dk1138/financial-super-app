@@ -407,7 +407,7 @@ const DetailedCreditInfoButton = ({ title, desc, link, details }: { title: strin
                       )}
 
                       <div className="pt-1 mt-1 d-flex justify-content-between fw-bold text-main" style={{fontSize: '0.8rem'}}>
-                          <span>Total Credit Value:</span>
+                          <span>Utilized Value:</span>
                           <span className={title === "Transit Refund" ? "text-success" : "text-info"}>${Math.round((details.fedAmt || 0) + (details.provAmt || 0) + (details.amt || 0)).toLocaleString()}</span>
                       </div>
                   </div>
@@ -521,17 +521,24 @@ export default function IncomeTaxCard() {
       const displayTaxableIncome = taxIncAfter + personalDeductions;
       const grossTaxable = displayTaxableIncome + totalPaycheckRrspDeduction - splitAmt;
 
-      // Tax Details Logic
-      const hasNrtc = taxDetails.nrtc && Object.values(taxDetails.nrtc).some((v: any) => v > 0);
-      const nrtcTotal = hasNrtc ? Object.values(taxDetails.nrtc).reduce((a: any, b: any) => a + b, 0) as number : 0;
-      const provBase = Math.max(0, taxDetails.prov - (taxDetails.surtax || 0) - (taxDetails.ohp || 0));
+      // --- EXPORTED UTILIZED CREDITS FROM TAX ENGINE ---
+      const utilizedFedNrtc = taxDetails.utilizedFedNrtc || 0;
+      const utilizedProvNrtc = taxDetails.utilizedProvNrtc || 0;
+      const utilizedNrtcTotal = taxDetails.utilizedNrtcTotal || 0;
 
+      // Add the utilized credits BACK into the displayed tax so the UI matches their paycheck!
+      const displayFedTax = taxDetails.fed + utilizedFedNrtc;
+      const displayProvTax = taxDetails.prov + utilizedProvNrtc;
+      
       const selectedProvince = (data.inputs.tax_province || 'ON') as keyof typeof FINANCIAL_CONSTANTS.TAX_DATA;
       const provBrackets = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.brackets || FINANCIAL_CONSTANTS.TAX_DATA.ON.brackets;
       const provRates = FINANCIAL_CONSTANTS.TAX_DATA[selectedProvince]?.rates || FINANCIAL_CONSTANTS.TAX_DATA.ON.rates;
 
+      // We calculate the Base Provincial Tax WITHOUT the extra credits so the info button looks right
+      const provBase = Math.max(0, displayProvTax - (taxDetails.surtax || 0) - (taxDetails.ohp || 0));
+
       // Combine Non-Refundable Credits value + Refundable Transit Credit
-      const totalRefundFromCredits = nrtcTotal + (taxDetails.rtc?.transit || 0);
+      const totalRefundFromCredits = utilizedNrtcTotal + (taxDetails.rtc?.transit || 0);
 
       return (
           <div className="border border-secondary rounded-4 mt-4 shadow-sm transition-all">
@@ -545,7 +552,7 @@ export default function IncomeTaxCard() {
                 </div>
                 <div className="d-flex align-items-center gap-2">
                     {!showTaxBreakdown[p] && (
-                        <span className="fw-bold text-danger small">${Math.round(taxDetails.totalTax).toLocaleString()}</span>
+                        <span className="fw-bold text-danger small">${Math.round(taxDetails.totalTax + utilizedNrtcTotal).toLocaleString()}</span>
                     )}
                     <i className={`bi bi-chevron-${showTaxBreakdown[p] ? 'up' : 'down'} text-danger`}></i>
                 </div>
@@ -622,15 +629,15 @@ export default function IncomeTaxCard() {
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleFedTax(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showFedTax[p] ? 'text-main' : 'text-muted'}`}>
-                          <i className={`bi bi-chevron-${showFedTax[p] ? 'up' : 'down'} small`}></i> Federal Tax
+                          <i className={`bi bi-chevron-${showFedTax[p] ? 'up' : 'down'} small`}></i> Federal Tax Generated
                       </span>
-                      <span className="small fw-bold text-danger">(${Math.round(taxDetails.fed).toLocaleString()})</span>
+                      <span className="small fw-bold text-danger">(${Math.round(displayFedTax).toLocaleString()})</span>
                   </div>
                   {showFedTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
                           <div className="d-flex justify-content-between align-items-center mb-1">
                               <span className="text-muted small fst-italic">Federal Income Tax</span>
-                              <span className="small text-muted fw-bold">(${Math.round(taxDetails.fed).toLocaleString()})</span>
+                              <span className="small text-muted fw-bold">(${Math.round(displayFedTax).toLocaleString()})</span>
                           </div>
                           
                           <TaxBracketVisual 
@@ -647,9 +654,9 @@ export default function IncomeTaxCard() {
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleProvTax(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showProvTax[p] ? 'text-main' : 'text-muted'}`}>
-                          <i className={`bi bi-chevron-${showProvTax[p] ? 'up' : 'down'} small`}></i> Provincial Tax
+                          <i className={`bi bi-chevron-${showProvTax[p] ? 'up' : 'down'} small`}></i> Provincial Tax Generated
                       </span>
-                      <span className="small fw-bold text-danger">(${Math.round(taxDetails.prov).toLocaleString()})</span>
+                      <span className="small fw-bold text-danger">(${Math.round(displayProvTax).toLocaleString()})</span>
                   </div>
                   {showProvTax[p] && (
                       <div className="ps-3 pt-2 mt-1 mb-1 d-flex flex-column gap-1 border-start border-secondary ms-1 border-opacity-25">
@@ -693,7 +700,7 @@ export default function IncomeTaxCard() {
               {/* Total Income Tax Subtotal */}
               <div className="d-flex justify-content-between mt-2 pt-2 pb-3">
                   <span className="text-muted fw-bold small ms-1">Total Income Tax (Fed + Prov)</span> 
-                  <span className="text-muted fw-bold small">(${Math.round(taxDetails.fed + taxDetails.prov).toLocaleString()})</span>
+                  <span className="text-muted fw-bold small">(${Math.round(displayFedTax + displayProvTax).toLocaleString()})</span>
               </div>
 
               {/* CPP / EI Breakdown */}
@@ -744,7 +751,7 @@ export default function IncomeTaxCard() {
               
               <div className="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-50">
                   <span className="text-danger fw-bold small">Total taxes, clawbacks, CPP/EI premiums</span> 
-                  <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax).toLocaleString()})</span>
+                  <span className="text-danger fw-bold small">(${Math.round(taxDetails.totalTax + utilizedNrtcTotal).toLocaleString()})</span>
               </div>
 
               <div className="d-flex flex-column gap-1 mt-1 border-bottom border-secondary pb-2 mb-2">
