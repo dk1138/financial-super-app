@@ -42,10 +42,21 @@ export default function ProjectionTab() {
   }
 
   const baseYear = results.timeline[0]?.year || new Date().getFullYear();
-  const inflation = (data.inputs.inflation_rate || 2.1) / 100;
+  
+  // Safe parsing for inflation rate
+  const rawInf = data.inputs?.inflation_rate;
+  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
+
+  // Safe parsing for Today's Dollars toggle
+  const useRealDollars = Boolean(
+      data.useRealDollars === true || 
+      data.inputs?.todays_dollars === true || 
+      data.inputs?.use_real_dollars === true ||
+      data.inputs?.useRealDollars === true
+  );
 
   const getRealValue = (nominalValue: number, year?: number) => {
-      if (!data.useRealDollars || year === undefined) return nominalValue;
+      if (!useRealDollars || year === undefined) return nominalValue;
       const yearsOut = Math.max(0, year - baseYear);
       return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
@@ -316,8 +327,6 @@ export default function ProjectionTab() {
       );
   };
 
-  // FIX: buildTaxTooltip no longer takes `refund` as a parameter.
-  // It only reads the CURRENT year's utilized Non-Refundable/Refundable Credits exported from the engine.
   const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxIncAfter: number, taxIncBefore: number, year: number) => {
       if (!taxData) return "No tax generated.";
       
@@ -407,13 +416,11 @@ export default function ProjectionTab() {
 
       let clawbackStr = taxData.oas_clawback > 0 ? `<br><b>OAS Clawback:</b> $${formatStr(taxData.oas_clawback, year)}` : '';
       
-      // Calculate CURRENT utilized credits (from the engine)
       const utilizedNrtcTotal = taxData.utilizedNrtcTotal || 0;
       const transitRefund = taxData.rtc?.transit || 0;
       const rrspMatchSavings = isP1 ? (y.matchTaxSavingsP1 || 0) : (y.matchTaxSavingsP2 || 0);
       const totalCurrentReductions = utilizedNrtcTotal + transitRefund + rrspMatchSavings;
       
-      // Calculate pre-credit base tax to show accurate math
       const baseFedTax = taxData.fed + (taxData.utilizedFedNrtc || 0);
       const baseProvTax = taxData.prov + (taxData.utilizedProvNrtc || 0);
       const preCreditTaxTotal = baseFedTax + baseProvTax + taxData.cpp_ei + (taxData.oas_clawback || 0);
@@ -432,7 +439,7 @@ export default function ProjectionTab() {
   const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
       if (!math) return "No yield.";
       if (useRealDollars) {
-          return `<b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>In Today's $:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+          return `<span class="text-muted small">Nominal Math:</span><br><b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>Balance (Today's $):</b> $${formatStr(math.bal, year)}<br><b>Cash (Today's $):</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
       }
       return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
   };
@@ -531,7 +538,7 @@ export default function ProjectionTab() {
               )}
               {invInc > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, data.useRealDollars)}`} align="left" /></span>
+                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, useRealDollars)}`} align="left" /></span>
                       <span className="text-success">+{formatCurrency(invInc, year)}</span>
                   </div>
               )}
@@ -544,8 +551,8 @@ export default function ProjectionTab() {
                   if (k.includes('RRIF')) {
                       const factor = getRrifFactor(age - 1);
                       const minAmount = priorRrifBal * factor;
-                      if (data.useRealDollars) {
-                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorRrifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>In Today's $:</b> $${formatStr(minAmount, year)}`;
+                      if (useRealDollars) {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorRrifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>Balance (Today's $):</b> $${formatStr(priorRrifBal, year)}<br><b>Withdrawal (Today's $):</b> $${formatStr(minAmount, year)}`;
                       } else {
                           info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
                       }
@@ -562,7 +569,7 @@ export default function ProjectionTab() {
                       const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
                       
                       if (mathObj) {
-                          if (data.useRealDollars) {
+                          if (useRealDollars) {
                               info = `<span class='text-info fw-bold'>Partially Taxable.</span><br><span class='text-muted small'>Nominal Math:</span><br><div class="d-flex justify-content-between text-muted small"><span>Gross W/D:</span><span>$${Math.round(mathObj.wd).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small"><span>ACB Disposed:</span><span>-$${Math.round(mathObj.acb).toLocaleString()}</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Nominal Gain:</span><span>$${Math.round(mathObj.gain).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small mb-1"><span>Nominal Taxable (50%):</span><span>$${Math.round(mathObj.tax).toLocaleString()}</span></div><hr class="my-1 border-secondary"><b>Taxable in Today's $:</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
                           } else {
                               info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
