@@ -124,6 +124,7 @@ const OHPInfoButton = ({ taxableIncome, ohpAmount }: { taxableIncome: number, oh
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
                       <p className="mb-2"><strong>Taxable Income:</strong> ${taxableIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
                       <p className="mb-2 text-primary fw-medium" style={{ whiteSpace: 'pre-wrap' }}>{explanation}</p>
+                      <p className="mb-2"><a href='https://www.ontario.ca/page/health-premium' target='_blank' rel="noopener noreferrer" className="text-primary text-decoration-none fw-medium text-nowrap">Learn more at Ontario.ca <i className="bi bi-box-arrow-up-right" style={{fontSize:'0.65rem'}}></i></a></p>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
                           <span>Total Premium:</span>
                           <span>${ohpAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -176,6 +177,7 @@ const CPPTier1InfoButton = ({ premium }: { premium: number }) => {
                   <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>Base CPP Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
                       <p className="mb-2">Calculated as <strong>{(FINANCIAL_CONSTANTS.CPP_RATE * 100).toFixed(2)}%</strong> on eligible earned income above the $3,500 basic exemption, up to the Yearly Maximum Pensionable Earnings (YMPE).</p>
+                      <p className="mb-2"><a href='https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/canada-pension-plan-cpp.html' target='_blank' rel="noopener noreferrer" className="text-primary text-decoration-none fw-medium text-nowrap">Learn more at Canada.ca <i className="bi bi-box-arrow-up-right" style={{fontSize:'0.65rem'}}></i></a></p>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
                           <span>Total Premium:</span>
                           <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -201,6 +203,7 @@ const CPPTier2InfoButton = ({ premium }: { premium: number }) => {
                   <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>CPP2 (Tier 2) Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
                       <p className="mb-2">Calculated as <strong>{(FINANCIAL_CONSTANTS.CPP_ENHANCED_TIER2_RATE * 100).toFixed(2)}%</strong> on eligible earned income between the YMPE and the Yearly Additional Maximum (YAMPE).</p>
+                      <p className="mb-2"><a href='https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/canada-pension-plan-cpp/cpp-enhancement.html' target='_blank' rel="noopener noreferrer" className="text-primary text-decoration-none fw-medium text-nowrap">Learn more at Canada.ca <i className="bi bi-box-arrow-up-right" style={{fontSize:'0.65rem'}}></i></a></p>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-warning">
                           <span>Total Premium:</span>
                           <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -226,6 +229,7 @@ const EIInfoButton = ({ premium }: { premium: number }) => {
                   <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>EI Premium Math</h6>
                   <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5'}}>
                       <p className="mb-2">Calculated as <strong>{(FINANCIAL_CONSTANTS.EI_RATE * 100).toFixed(2)}%</strong> on eligible earned income up to the Maximum Insurable Earnings limit.</p>
+                      <p className="mb-2"><a href='https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/employment-insurance-ei.html' target='_blank' rel="noopener noreferrer" className="text-primary text-decoration-none fw-medium text-nowrap">Learn more at Canada.ca <i className="bi bi-box-arrow-up-right" style={{fontSize:'0.65rem'}}></i></a></p>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
                           <span>Total Premium:</span>
                           <span>${premium.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -797,7 +801,7 @@ export default function IncomeTaxCard() {
                               <span className="text-success fw-bold d-flex align-items-center gap-1">
                                   <i className={`bi bi-chevron-${showRefund[p] ? 'up' : 'down'} small`}></i> 
                                   Estimated Tax Refund
-                                  <InfoBtn align="right" title="Spring Tax Refund" text="The estimated lump-sum refund you will receive when you file your taxes, generated by your extra Tax Credits (Age Amount, Disability, Donations, etc.).<br><br><i>Note: You can apply to have these added directly to your paycheck using CRA Form T1213.</i>" />
+                                  <InfoBtn align="right" title="Spring Tax Refund" text="The estimated lump-sum refund you will receive when you file your taxes, generated by your extra Tax Credits (Age Amount, Disability, Donations, etc.).<br><br><i>Note: You can apply to have these added directly to your paycheck using CRA Form T1213.</i> <a href='https://www.canada.ca/en/revenue-agency/services/forms-publications/forms/t1213.html' target='_blank' class='text-primary'>Learn more</a>" />
                               </span> 
                               <span className="text-success fw-bold fs-6">
                                   +${Math.round(totalRefundFromCredits).toLocaleString()}

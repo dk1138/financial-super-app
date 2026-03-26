@@ -23,7 +23,7 @@ export default function EconomicAssumptionsCard() {
                           </div>
                           <div className="d-flex align-items-center gap-2">
                               <span className="fw-bold text-main small text-uppercase ls-1">Inflation Rate</span>
-                              <InfoBtn align="right" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%."/>
+                              <InfoBtn align="right" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%.<br><br><a href='https://www.bankofcanada.ca/core-functions/monetary-policy/inflation/' target='_blank' class='text-primary'>Learn more at Bank of Canada</a>"/>
                           </div>
                       </div>
                       <div className="p-3 bg-input rounded-bottom-4 flex-grow-1 d-flex flex-column justify-content-center">

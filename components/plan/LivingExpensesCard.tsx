@@ -109,9 +109,12 @@ export default function LivingExpensesCard() {
                 <i className="bi bi-magic me-1"></i> Auto-Fill
             </button>
         </div>
-        <div className="form-check form-switch mb-0">
-            <input className="form-check-input mt-1 cursor-pointer" type="checkbox" checked={expenseAdvancedMode} onChange={(e) => setExpenseAdvancedMode(e.target.checked)} />
-            <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-1 cursor-pointer">Adv. Mode</label>
+        <div className="form-check form-switch mb-0 d-flex align-items-center">
+            <input className="form-check-input m-0 mt-1 cursor-pointer" type="checkbox" id="advancedModeToggle" checked={expenseAdvancedMode} onChange={(e) => setExpenseAdvancedMode(e.target.checked)} />
+            <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-2 cursor-pointer d-flex align-items-center" htmlFor="advancedModeToggle">
+                Adv. Mode
+                <InfoBtn align="right" title="Advanced Mode" text="Enables detailed phased spending. Instead of a single retirement budget, you can set specific budgets for Transition, Go-Go (Active), Slow-Go (Less Active), and No-Go (Late Stage) retirement phases." />
+            </label>
         </div>
       </div>
       <div className="card-body p-3 p-md-4">

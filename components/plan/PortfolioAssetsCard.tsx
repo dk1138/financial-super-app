@@ -3,14 +3,14 @@ import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput, SegmentedControl, ModernDropdown } from '../SharedUI';
 
 const ACCOUNT_TYPES = [
-  { id: 'cash', label: 'Cash', icon: 'bi-cash-stack', color: 'text-success', tooltip: 'Interest income is 100% taxable at your marginal rate. No tax sheltering.' },
-  { id: 'tfsa', label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', tooltip: 'Tax-Free Savings Account. Growth and withdrawals are 100% tax-free.' },
-  { id: 'fhsa', label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', tooltip: 'First Home Savings Account. Tax-deductible contributions, tax-free withdrawals for a qualifying first home.' },
-  { id: 'rrsp', label: 'RRSP', icon: 'bi-bank2', color: 'text-danger', tooltip: 'Registered Retirement Savings Plan. Tax-deductible contributions. Tax-deferred growth. 100% taxable withdrawals.' },
-  { id: 'resp', label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', tooltip: 'Registered Education Savings Plan. 20% CESG match on first $2,500/yr.' },
-  { id: 'lirf', label: 'LIRA', icon: 'bi-lock-fill', color: 'text-secondary', tooltip: 'Locked-in Retirement Account (LIRA). Pension funds locked until retirement. Tax-deferred.' },
-  { id: 'lif', label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', tooltip: 'Life Income Fund. Payout vehicle for LIRA. Has min/max annual limits. 100% taxable.' },
-  { id: 'rrif_acct', label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', tooltip: 'Registered Retirement Income Fund. Payout vehicle for RRSP. Mandatory minimum withdrawals. 100% taxable.' }
+  { id: 'cash', label: 'Cash', icon: 'bi-cash-stack', color: 'text-success', tooltip: 'Interest income is 100% taxable at your marginal rate. No tax sheltering.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12100-interest-other-investment-income.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' },
+  { id: 'tfsa', label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', tooltip: 'Tax-Free Savings Account. Growth and withdrawals are 100% tax-free.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' },
+  { id: 'fhsa', label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', tooltip: 'First Home Savings Account. Tax-deductible contributions, tax-free withdrawals for a qualifying first home.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' },
+  { id: 'rrsp', label: 'RRSP', icon: 'bi-bank2', color: 'text-danger', tooltip: 'Registered Retirement Savings Plan. Tax-deductible contributions. Tax-deferred growth. 100% taxable withdrawals.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/registered-retirement-savings-plan-rrsp.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' },
+  { id: 'resp', label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', tooltip: 'Registered Education Savings Plan. 20% CESG match on first $2,500/yr.<br><br><a href=\'https://www.canada.ca/en/services/benefits/education/education-savings/resp.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' },
+  { id: 'lirf', label: 'LIRA', icon: 'bi-lock-fill', color: 'text-secondary', tooltip: 'Locked-in Retirement Account (LIRA). Pension funds locked until retirement. Tax-deferred.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/transferring.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' },
+  { id: 'lif', label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', tooltip: 'Life Income Fund. Payout vehicle for LIRA. Has min/max annual limits. 100% taxable.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/transferring/registered-retirement-income-funds-rrifs.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' },
+  { id: 'rrif_acct', label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', tooltip: 'Registered Retirement Income Fund. Payout vehicle for RRSP. Mandatory minimum withdrawals. 100% taxable.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/registered-retirement-income-fund-rrif.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' }
 ];
 
 const EXTENDED_ACCOUNT_TYPES = [
@@ -215,7 +215,7 @@ export default function PortfolioAssetsCard() {
                                               <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-6`}></i>
                                               <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct === 'crypto' ? 'Crypto' : 'Non-Reg'}</span>
                                           </div>
-                                          <InfoBtn direction="up" title={acct === 'crypto' ? 'Crypto' : 'Non-Reg'} text={acct === 'nonreg' ? 'Taxable Account. Capital gains taxed at 50% inclusion.' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.'} />
+                                          <InfoBtn direction="up" title={acct === 'crypto' ? 'Crypto' : 'Non-Reg'} text={acct === 'nonreg' ? 'Taxable Account. Capital gains taxed at 50% inclusion.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12700-capital-gains.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/programs/about-canada-revenue-agency-cra/compliance/digital-currency/cryptocurrency-guide.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>'} />
                                       </div>
                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                           <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}`, val)} placeholder="$0" />
@@ -232,7 +232,7 @@ export default function PortfolioAssetsCard() {
                                   <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
                                       <div className="d-flex justify-content-end align-items-center pe-1" style={{flex: '0 0 135px'}}>
                                           <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
-                                          <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
+                                          <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account.<br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12700-capital-gains/calculating-your-capital-gain-loss/adjusted-cost-base.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
                                       </div>
                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                           <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} placeholder="$0" />
@@ -314,7 +314,7 @@ export default function PortfolioAssetsCard() {
                                                           <div style={{flex: '0 0 130px'}}></div>
                                                           <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-flex justify-content-end align-items-center pe-1">
                                                               <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>ACB</span>
-                                                              <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account." />
+                                                              <InfoBtn direction="up" title="Adjusted Cost Base (ACB)" text="The total capital you've contributed to this account.<br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12700-capital-gains/calculating-your-capital-gain-loss/adjusted-cost-base.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
                                                           </div>
                                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                                               <CurrencyInput className="form-control form-control-sm" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
