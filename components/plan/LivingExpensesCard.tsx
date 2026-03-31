@@ -40,7 +40,7 @@ export default function LivingExpensesCard() {
 
   // --- SYNC FROM EXPENSE TRACKER ---
   const handleSyncFromTracker = (e: React.MouseEvent) => {
-      e.preventDefault(); // Explicitly prevent any side effects or bubbling
+      e.preventDefault(); 
       
       const val = localStorage.getItem('superapp_shared_annual_spend');
       const catVal = localStorage.getItem('superapp_shared_category_spend');
@@ -111,17 +111,20 @@ export default function LivingExpensesCard() {
             </h5>
             
             <button 
-                type="button" // Set type to button to prevent accidental form triggers
-                className="btn btn-sm btn-outline-success rounded-pill fw-bold ms-3 d-flex align-items-center shadow-sm"
-                onClick={handleSyncFromTracker}
-                title="Pull your average spend from the Expense Tracker"
+                type="button" 
+                className="btn btn-sm btn-outline-secondary rounded-pill fw-bold ms-3 d-flex align-items-center shadow-sm opacity-50"
+                disabled
+                style={{ cursor: 'not-allowed' }}
+                title="Auto-Fill is currently unavailable"
             >
                 <i className="bi bi-magic me-1"></i> Auto-Fill
             </button>
         </div>
         <div className="form-check form-switch mb-0 d-flex align-items-center">
             <input className="form-check-input m-0 mt-1 cursor-pointer" type="checkbox" id="advancedModeToggle" checked={expenseAdvancedMode} onChange={(e) => setExpenseAdvancedMode(e.target.checked)} />
-            <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-2 cursor-pointer" htmlFor="advancedModeToggle">Adv. Mode</label>
+            <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-2 cursor-pointer d-flex align-items-center" htmlFor="advancedModeToggle">
+                Adv. Mode
+            </label>
         </div>
       </div>
 
@@ -202,7 +205,7 @@ export default function LivingExpensesCard() {
                                 {data.expensesByCategory[cat].items.map((exp: any, idx: number) => (
                                     <tr key={`${cat}_${idx}`} className="border-bottom border-secondary border-opacity-25">
                                         <td className="ps-4 py-2">
-                                            <input type="text" className="form-control form-control-sm bg-input border border-secondary fw-bold text-main rounded-3" value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
+                                            <input type="text" className="form-control form-control-sm bg-input border border-secondary fw-bold text-main rounded-3 shadow-none" value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
                                         </td>
                                         <td className="py-2"><CurrencyInput className="form-control form-control-sm" value={exp.curr ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'curr', val)} /></td>
                                         {expenseAdvancedMode && <td className="py-2"><CurrencyInput className="form-control form-control-sm text-primary" value={exp.trans ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'trans', val)} /></td>}
@@ -248,7 +251,7 @@ export default function LivingExpensesCard() {
         </div>
       </div>
 
-      {/* --- THEMED POPUPS (Replaces alert/confirm) --- */}
+      {/* --- THEMED POPUPS (Currently Hidden via disabled button) --- */}
       {(showSyncError || showSyncConfirm) && (
           <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center z-3" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
               <div className="card border-secondary shadow-lg p-4 fade-in-tab" style={{ maxWidth: '400px', width: '90%' }}>
