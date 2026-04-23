@@ -19,16 +19,24 @@ export default function PlannerPage() {
   const financeContext = useFinance() as any; 
   const { data, updateInput, updateMultipleInputs, resetData } = financeContext;
   
+  // --- UI STATE ---
   const [activeTab, setActiveTab] = useState('plan');
   const [showQuickAdjust, setShowQuickAdjust] = useState(false);
+  
+  // --- FEEDBACK STATE ---
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
 
   const isCouple = data.mode === 'Couple';
 
-  // --- SET PAGE TITLE DYNAMICALLY ---
+  // --- SET PAGE TITLE ---
   useEffect(() => {
       document.title = "Planfolio - Planner";
   }, []);
 
+  // --- HANDLERS ---
   const handleStartBlankPlan = () => {
       if (resetData) resetData();
       localStorage.setItem('active_plan_name', 'Untitled Plan');
@@ -85,6 +93,26 @@ export default function PlannerPage() {
       }
   };
 
+  const handleSendFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackText.trim()) return;
+    
+    setIsSending(true);
+    // Simulate API Call
+    setTimeout(() => {
+      console.log("Feedback Submitted:", feedbackText);
+      setIsSending(false);
+      setSendSuccess(true);
+      setFeedbackText('');
+      
+      // Auto-close modal after success message
+      setTimeout(() => {
+        setShowFeedbackModal(false);
+        setSendSuccess(false);
+      }, 2000);
+    }, 1500);
+  };
+
   const tabs = [
     { id: 'plan', label: 'Inputs', icon: 'bi-pencil-square' },
     { id: 'strategy', label: 'Strategy', icon: 'bi-sliders' },
@@ -103,7 +131,7 @@ export default function PlannerPage() {
     >
       <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
 
-      {/* --- STICKY NAVIGATION TABS (Docks seamlessly to the Global Header) --- */}
+      {/* --- STICKY NAVIGATION TABS --- */}
       <div 
         className="position-sticky pt-2 pb-2 mb-3 shadow-sm" 
         style={{ 
@@ -135,6 +163,7 @@ export default function PlannerPage() {
           </div>
       </div>
 
+      {/* --- TAB CONTENT --- */}
       <div className="row g-4 flex-grow-1">
         <div className="col-12">
           <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
@@ -152,17 +181,64 @@ export default function PlannerPage() {
         </div>
       </div>
 
+      {/* --- FOOTER --- */}
       <footer className="mt-auto pt-5 pb-3 border-top border-secondary border-opacity-50 text-center">
           <div className="px-3" style={{ maxWidth: '1200px', margin: '0 auto' }}>
               <p className="text-muted mb-3 text-start text-md-center" style={{ fontSize: '0.75rem', lineHeight: '1.6' }}>
-                  <strong>Disclaimer:</strong> Planfolio - Planner is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
+                  <strong>Disclaimer:</strong> Planfolio is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
               </p>
               <p className="text-muted fw-bold ls-1" style={{ fontSize: '0.8rem' }}>
-                  <i className="bi bi-shield-check text-success me-1"></i> Planfolio - Planner © {new Date().getFullYear()}. Data is processed securely and locally.
+                  <i className="bi bi-shield-check text-success me-1"></i> Planfolio © {new Date().getFullYear()}. Data is processed securely and locally.
               </p>
           </div>
       </footer>
 
+      {/* --- FEEDBACK MODAL POPUP --- */}
+      {showFeedbackModal && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center px-3" style={{ zIndex: 2000, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-body border border-secondary shadow-lg rounded-4 overflow-hidden fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+            <div className="p-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h6 className="mb-0 fw-bold text-uppercase ls-1"><i className="bi bi-chat-left-heart text-primary me-2"></i>Send Feedback</h6>
+                <button className="btn-close" onClick={() => setShowFeedbackModal(false)}></button>
+              </div>
+
+              {sendSuccess ? (
+                <div className="text-center py-4">
+                  <div className="text-success fs-1 mb-2"><i className="bi bi-check-circle-fill"></i></div>
+                  <h6 className="fw-bold">Feedback Sent!</h6>
+                  <p className="text-muted small">Thanks for helping us improve Planfolio.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSendFeedback}>
+                  <textarea 
+                    className="form-control bg-input border-secondary mb-3 rounded-3 text-sm" 
+                    rows={5} 
+                    placeholder="Found a bug? Have a feature request? Let us know..."
+                    required
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    style={{ resize: 'none', fontSize: '0.9rem' }}
+                  ></textarea>
+                  <button 
+                    type="submit" 
+                    disabled={isSending || !feedbackText.trim()}
+                    className="btn btn-primary w-100 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
+                  >
+                    {isSending ? (
+                      <><span className="spinner-border spinner-border-sm"></span> Sending...</>
+                    ) : (
+                      <><i className="bi bi-send"></i> Submit Feedback</>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- QUICK ADJUST POPUP --- */}
       {showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
                style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '260px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
@@ -191,8 +267,8 @@ export default function PlannerPage() {
       )}
 
       {/* --- FEEDBACK BUTTON (Bottom Left) --- */}
-      <a 
-          href="mailto:feedback@planfolio.ca?subject=Planfolio%20Feedback&body=Hi%20Planfolio%20Team,%0D%0A%0D%0AMy%20feedback/issue:%0D%0A"
+      <button 
+          onClick={() => setShowFeedbackModal(true)}
           className="btn btn-outline-secondary rounded-circle shadow-sm position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
           style={{ 
               width: '48px', 
@@ -206,7 +282,7 @@ export default function PlannerPage() {
           title="Send Feedback"
       >
           <i className="bi bi-chat-left-dots fs-5"></i>
-      </a>
+      </button>
 
       {/* --- QUICK ADJUST BUTTON (Bottom Right) --- */}
       <button className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }} title="Quick Adjust Variables" onClick={() => setShowQuickAdjust(!showQuickAdjust)}>
