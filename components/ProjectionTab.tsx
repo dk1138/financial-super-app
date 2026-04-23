@@ -1094,4 +1094,3 @@ export default function ProjectionTab() {
     </div>
   );
 }
-```
