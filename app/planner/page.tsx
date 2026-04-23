@@ -97,7 +97,7 @@ export default function PlannerPage() {
   ];
 
   return (
-    <div className="container-xxl d-flex flex-column min-vh-100">
+    <div className="container-fluid px-3 px-xxl-5 d-flex flex-column min-vh-100">
       <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
 
       {/* --- STICKY NAVIGATION TABS (Docks seamlessly to the Global Header) --- */}
@@ -150,7 +150,7 @@ export default function PlannerPage() {
       </div>
 
       <footer className="mt-auto pt-5 pb-3 border-top border-secondary border-opacity-50 text-center">
-          <div className="px-3" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div className="px-3" style={{ maxWidth: '1200px', margin: '0 auto' }}>
               <p className="text-muted mb-3 text-start text-md-center" style={{ fontSize: '0.75rem', lineHeight: '1.6' }}>
                   <strong>Disclaimer:</strong> Planfolio - Planner is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
               </p>
@@ -162,25 +162,25 @@ export default function PlannerPage() {
 
       {showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
-               style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '240px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+               style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '260px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
               <div className="d-flex justify-content-between align-items-center mb-2 pb-2 mt-1 border-bottom border-secondary">
                   <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.7rem'}}><i className="bi bi-sliders me-2"></i>Quick Adjust</h6>
               </div>
               {isCouple && (
                   <div className="form-check form-switch mb-2 pb-2 border-bottom border-secondary border-opacity-50 d-flex align-items-center justify-content-between px-0">
-                      <label className="form-check-label fw-bold text-muted cursor-pointer" style={{fontSize: '0.75rem'}} htmlFor="syncRetireFAB">Retire at same time</label>
-                      <input className="form-check-input ms-0 mt-0 cursor-pointer" style={{transform: 'scale(0.8)'}} type="checkbox" id="syncRetireFAB" checked={data.inputs.retire_same_time ?? false} onChange={e => handleSyncToggle(e.target.checked)} />
+                      <label className="form-check-label fw-bold text-muted cursor-pointer text-nowrap" style={{fontSize: '0.75rem'}} htmlFor="syncRetireFAB">Retire at same time</label>
+                      <input className="form-check-input ms-0 mt-0 cursor-pointer flex-shrink-0" style={{transform: 'scale(0.8)'}} type="checkbox" id="syncRetireFAB" checked={data.inputs.retire_same_time ?? false} onChange={e => handleSyncToggle(e.target.checked)} />
                   </div>
               )}
               <div className="d-flex flex-column gap-2">
-                  <div className="d-flex justify-content-between align-items-center">
-                      <span className="fw-bold text-muted" style={{fontSize: '0.75rem'}}>P1 Retire Age</span>
-                      <div style={{width: '100px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={data.inputs.p1_lifeExp ?? 90} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p1', val)} /></div>
+                  <div className="d-flex justify-content-between align-items-center gap-2">
+                      <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>P1 Retire Age</span>
+                      <div style={{width: '120px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={data.inputs.p1_lifeExp ?? 90} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p1', val)} /></div>
                   </div>
                   {isCouple && (
-                      <div className="d-flex justify-content-between align-items-center">
-                          <span className="fw-bold text-muted" style={{fontSize: '0.75rem'}}>P2 Retire Age</span>
-                          <div style={{width: '100px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={data.inputs.p2_lifeExp ?? 90} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p2', val)} /></div>
+                      <div className="d-flex justify-content-between align-items-center gap-2">
+                          <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>P2 Retire Age</span>
+                          <div style={{width: '120px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={data.inputs.p2_lifeExp ?? 90} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p2', val)} /></div>
                       </div>
                   )}
               </div>
