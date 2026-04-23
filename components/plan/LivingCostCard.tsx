@@ -86,7 +86,14 @@ export default function LivingCostCard() {
                 {currentMode === 'own' && (
                     <div className="row g-4">
                         <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4">
-                            <h6 className="fw-bold text-success small text-uppercase ls-1 mb-3">Property Value</h6>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h6 className="fw-bold text-success small text-uppercase ls-1 mb-0">Property Value</h6>
+                                {/* NEW TOGGLE: Current Primary Residence NW Inclusion */}
+                                <div className="form-check form-switch mb-0 d-flex align-items-center" title="Include primary residence equity in total Net Worth">
+                                    <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs.include_primary_in_nw ?? true} onChange={(e) => updateInput('include_primary_in_nw', e.target.checked)} />
+                                    <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer">Include in NW</label>
+                                </div>
+                            </div>
                             <div className="row g-3">
                                 <div className="col-sm-7">
                                     <label className="form-label small text-muted mb-1">Current Value ($)</label>
@@ -152,7 +159,7 @@ export default function LivingCostCard() {
         {/* --- SECTION 2: FUTURE HOUSING PHASES --- */}
         <div className="d-flex justify-content-between align-items-center mb-3">
             <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0"><i className="bi bi-fast-forward-circle-fill text-info me-2"></i>Future Housing Phases</h6>
-            <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('housingTransitions', { age: data.inputs.p1_retireAge || 65, action: currentMode === 'own' ? 'downsize' : 'buy', price: 500000, mortgage: 0, rate: 4.0, payment: 0, growth: 3.0, rent: 0, keepPrevious: false })}>
+            <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('housingTransitions', { age: data.inputs.p1_retireAge || 65, action: currentMode === 'own' ? 'downsize' : 'buy', price: 500000, mortgage: 0, rate: 4.0, payment: 0, growth: 3.0, rent: 0, keepPrevious: false, includeInNW: true })}>
                 <i className="bi bi-plus-lg me-1"></i> Add Phase
             </button>
         </div>
@@ -218,7 +225,14 @@ export default function LivingCostCard() {
                                 {(phase.action === 'downsize' || phase.action === 'buy') && (
                                     <div className="row g-4 mt-1">
                                         <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4">
-                                            <h6 className="fw-bold text-success small text-uppercase ls-1 mb-3">Property Value</h6>
+                                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                                <h6 className="fw-bold text-success small text-uppercase ls-1 mb-0">Property Value</h6>
+                                                {/* NEW TOGGLE: Phase Specific NW Inclusion */}
+                                                <div className="form-check form-switch mb-0 d-flex align-items-center" title="Include this phase's property equity in total Net Worth">
+                                                    <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={phase.includeInNW ?? true} onChange={(e) => updateArrayItem('housingTransitions', idx, 'includeInNW', e.target.checked)} />
+                                                    <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer">Include in NW</label>
+                                                </div>
+                                            </div>
                                             <div className="row g-3">
                                                 <div className="col-sm-7">
                                                     <label className="form-label small text-muted mb-1">Target Price (Today's $)</label>
