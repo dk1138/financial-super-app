@@ -1,7 +1,26 @@
-import React from 'react';
+'use client';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function LandingPage() {
+  // State for the sliding gallery
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  const slides = [
+    { id: 1, name: "Dashboard & Summary", icon: "bi-clipboard2-data", color: "text-blue-500", bg: "bg-blue-500" },
+    { id: 2, name: "Timeline Projection", icon: "bi-table", color: "text-emerald-500", bg: "bg-emerald-500" },
+    { id: 3, name: "Strategy & Optimization", icon: "bi-sliders", color: "text-purple-500", bg: "bg-purple-500" },
+    { id: 4, name: "Cash Flow Analysis", icon: "bi-diagram-3", color: "text-amber-500", bg: "bg-amber-500" }
+  ];
+
+  // Auto-slide every 3 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-blue-500/30 font-sans">
       
@@ -12,13 +31,13 @@ export default function LandingPage() {
             <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-500/20">
               <i className="bi bi-graph-up-arrow text-white text-lg"></i>
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">SuperApp</span>
+            <span className="text-xl font-bold tracking-tight text-white">Planfolio</span>
           </div>
           
           {/* Main Links */}
           <div className="hidden md:flex items-center gap-10 text-sm font-semibold">
             <a href="#about" className="text-slate-400 hover:text-white transition-colors">About</a>
-            <a href="#features" className="text-slate-400 hover:text-white transition-colors">Features</a>
+            <Link href="/features" className="text-slate-400 hover:text-white transition-colors">Features</Link>
             <a href="#pricing" className="text-slate-400 hover:text-white transition-colors">Pricing</a>
           </div>
 
@@ -34,9 +53,6 @@ export default function LandingPage() {
       {/* HERO SECTION */}
       <header className="relative pt-40 pb-24 overflow-hidden">
         <div className="container mx-auto px-6 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-4 py-1.5 mb-8">
-            <span className="text-xs font-bold text-blue-400 tracking-widest uppercase">The Future of Canadian Planning</span>
-          </div>
           
           <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight tracking-tighter">
             Master Your Financial Future,<br/>
@@ -51,9 +67,9 @@ export default function LandingPage() {
             <Link href="/planner" className="bg-white text-slate-900 px-10 py-4 rounded-full font-bold hover:bg-slate-100 transition-all text-lg shadow-xl">
               Start Your Plan
             </Link>
-            <a href="#features" className="bg-slate-800/50 text-white px-10 py-4 rounded-full font-bold border border-slate-700 hover:bg-slate-800 transition-all text-lg">
+            <Link href="/features" className="bg-slate-800/50 text-white px-10 py-4 rounded-full font-bold border border-slate-700 hover:bg-slate-800 transition-all text-lg">
               Explore Features
-            </a>
+            </Link>
           </div>
         </div>
         {/* Background Glow */}
@@ -67,7 +83,7 @@ export default function LandingPage() {
             <div>
               <h2 className="text-3xl font-bold text-white mb-6">Built for Accuracy. <br/>Built for Canadians.</h2>
               <p className="text-slate-400 mb-6 leading-relaxed text-lg">
-                Generic retirement tools don't understand the complexities of Canadian taxation. SuperApp is built from the ground up to handle <b>RRSP vs TFSA</b> optimizations, <b>OAS Clawbacks</b>, and the <b>Smith Maneuver</b>.
+                Generic retirement tools don't understand the complexities of Canadian taxation. Planfolio is built from the ground up to handle <b>RRSP vs TFSA</b> optimizations, <b>OAS Clawbacks</b>, and the <b>Smith Maneuver</b>.
               </p>
               <ul className="space-y-4">
                 {['Hyper-accurate 2026 CRA Tax Engine', 'CPP & OAS Benefit Estimators', 'Institutional-grade Risk Modeling'].map((item, i) => (
@@ -78,14 +94,41 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
+            
+            {/* Sliding Gallery Preview */}
             <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-3xl shadow-2xl">
-              <div className="bg-[#0f172a] rounded-2xl p-6 border border-slate-700">
-                 {/* Placeholder for your UI Screenshot */}
-                 <div className="aspect-video bg-slate-800 rounded-lg flex items-center justify-center text-slate-600 italic">
-                    [App Interface Preview]
+              <div className="bg-[#0f172a] rounded-2xl p-6 border border-slate-700 relative overflow-hidden aspect-video flex flex-col">
+                 <div className="flex-1 w-full h-full relative">
+                    {slides.map((slide, i) => (
+                      <div
+                        key={slide.id}
+                        className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-700 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                      >
+                        <div className={`p-4 rounded-full bg-slate-800/50 mb-4 border border-slate-700`}>
+                          <i className={`bi ${slide.icon} ${slide.color} text-5xl`}></i>
+                        </div>
+                        <h3 className="text-2xl font-bold text-white tracking-wide">{slide.name}</h3>
+                        
+                        {/* Mock UI lines to make it look like an app dashboard */}
+                        <div className="mt-8 w-3/4 h-3 bg-slate-800/80 rounded-full overflow-hidden">
+                           <div className={`h-full ${slide.bg} w-2/3 rounded-full opacity-60`}></div>
+                        </div>
+                        <div className="mt-3 w-1/2 h-3 bg-slate-800/80 rounded-full overflow-hidden">
+                           <div className={`h-full ${slide.bg} w-1/3 rounded-full opacity-60`}></div>
+                        </div>
+                      </div>
+                    ))}
+                 </div>
+                 
+                 {/* Slider Indicators */}
+                 <div className="flex justify-center gap-2 mt-4 z-20">
+                   {slides.map((_, i) => (
+                      <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-6 bg-blue-500' : 'w-2 bg-slate-700'}`}></div>
+                   ))}
                  </div>
               </div>
             </div>
+
           </div>
         </div>
       </section>
@@ -99,11 +142,8 @@ export default function LandingPage() {
           <div className="max-w-md mx-auto bg-blue-600 rounded-[2.5rem] p-1 shadow-2xl shadow-blue-500/20 transform hover:scale-[1.02] transition-transform">
             <div className="bg-[#0f172a] rounded-[2.3rem] p-10">
               <span className="text-blue-500 font-bold uppercase tracking-widest text-xs">Full Access</span>
-              <div className="text-5xl font-black text-white my-4">$0 <span className="text-lg font-medium text-slate-500">/ forever</span></div>
-              <p className="text-slate-400 mb-8 text-sm">We are currently in Early Access. All features are free for our first 1,000 users.</p>
-              <Link href="/planner" className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all">
-                Claim Free Access
-              </Link>
+              <div className="text-5xl font-black text-white my-4">$0 <span className="text-lg font-medium text-slate-500">/ while in development</span></div>
+              <p className="text-slate-400 text-sm mt-4">We are currently in Early Access. All features are completely free to use while we are actively building and improving the platform.</p>
             </div>
           </div>
         </div>
@@ -112,17 +152,10 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer className="py-12 border-t border-slate-800">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-2">
-            <div className="bg-slate-800 p-1.5 rounded-lg">
-              <i className="bi bi-graph-up-arrow text-slate-400"></i>
-            </div>
-            <span className="font-bold text-white">SuperApp</span>
-          </div>
-          <p className="text-slate-500 text-xs">© 2026 SuperApp. Data sourced from CRA and Bank of Canada.</p>
-          <div className="flex gap-6 text-sm font-medium text-slate-400">
-            <Link href="/privacy" className="hover:text-white">Privacy</Link>
-            <Link href="/terms" className="hover:text-white">Terms</Link>
-            <Link href="/methodology" className="hover:text-white">Methodology</Link>
+          <p className="text-slate-500 text-xs">© 2026 Planfolio. Data sourced from CRA and Bank of Canada.</p>
+          <div className="flex gap-6 text-sm font-medium text-slate-500">
+            <span>Privacy</span>
+            <span>Terms</span>
           </div>
         </div>
       </footer>
