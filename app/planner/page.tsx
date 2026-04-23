@@ -190,6 +190,25 @@ export default function PlannerPage() {
           </div>
       )}
 
+      {/* --- FEEDBACK BUTTON (Bottom Left) --- */}
+      <a 
+          href="mailto:feedback@planfolio.ca?subject=Planfolio%20Feedback&body=Hi%20Planfolio%20Team,%0D%0A%0D%0AMy%20feedback/issue:%0D%0A"
+          className="btn btn-outline-secondary rounded-circle shadow-sm position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
+          style={{ 
+              width: '48px', 
+              height: '48px', 
+              bottom: '30px', 
+              left: '30px', 
+              zIndex: 1050,
+              backgroundColor: 'var(--bg-body)',
+              borderColor: 'var(--border-color)'
+          }} 
+          title="Send Feedback"
+      >
+          <i className="bi bi-chat-left-dots fs-5"></i>
+      </a>
+
+      {/* --- QUICK ADJUST BUTTON (Bottom Right) --- */}
       <button className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }} title="Quick Adjust Variables" onClick={() => setShowQuickAdjust(!showQuickAdjust)}>
           <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
       </button>
