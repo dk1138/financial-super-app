@@ -7,10 +7,12 @@ export default function LandingPage() {
   
   // Real screenshots placed in your /public folder
   const slides = [
-    { id: 1, name: "Dashboard Summary", icon: "bi-clipboard2-data", img: "/preview-dashboard.png" },
-    { id: 2, name: "Timeline Projection", icon: "bi-table", img: "/preview-projection.png" },
-    { id: 3, name: "Strategy & Optimization", icon: "bi-sliders", img: "/preview-strategy.png" },
-    { id: 4, name: "Cash Flow Analysis", icon: "bi-diagram-3", img: "/preview-cashflow.png" }
+    { id: 1, name: "Strategy & Optimization", icon: "bi-sliders", img: "/preview-strategy.png" },
+    { id: 2, name: "Financial Summary", icon: "bi-diagram-3", img: "/preview-summary.png" },
+    { id: 3, name: "Timeline Projection", icon: "bi-table", img: "/preview-projection.png" },
+    { id: 4, name: "Risk Analysis", icon: "bi-diagram-3", img: "/preview-risk.png" },
+    { id: 5, name: "Cash Flow Analysis", icon: "bi-diagram-3", img: "/preview-cashflow.png" },
+    { id: 6, name: "Tools & Calculators", icon: "bi-diagram-3", img: "/preview-tools.png" }
   ];
 
   // Auto-slide every 4 seconds
