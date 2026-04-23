@@ -17,16 +17,16 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   
-  // Define the pages where we DON'T want the app header (e.g., the landing page)
-  const isLandingPage = pathname === "/";
+  // ADD THIS: Exclude both the landing page AND the features page
+  const isMarketingPage = pathname === "/" || pathname === "/features";
 
   return (
     <html lang="en">
       <body className={inter.className}>
         <SessionWrapper>
           <FinanceProvider>
-            {/* Only show the Global App Header if we are NOT on the landing page */}
-            {!isLandingPage && <GlobalHeader />}
+            {/* Change this to use the new isMarketingPage variable */}
+            {!isMarketingPage && <GlobalHeader />}
             
             <main>
               {children}
