@@ -93,25 +93,27 @@ export default function PlannerPage() {
       }
   };
 
-  const handleSendFeedback = async (e: React.FormEvent) => {
+    const handleSendFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!feedbackText.trim()) return;
-    
     setIsSending(true);
-    // Simulate API Call
-    setTimeout(() => {
-      console.log("Feedback Submitted:", feedbackText);
-      setIsSending(false);
-      setSendSuccess(true);
-      setFeedbackText('');
-      
-      // Auto-close modal after success message
-      setTimeout(() => {
+
+    const response = await fetch('/api/auth/feedback', { // Make sure this path is correct!
+        method: 'POST',
+        body: JSON.stringify({ message: feedbackText }),
+    });
+
+    if (response.ok) {
+        // If the POST was successful, the email was sent!
+        // No need to GET or check any IDs.
+        setSendSuccess(true);
+        setFeedbackText('');
+        setTimeout(() => {
         setShowFeedbackModal(false);
         setSendSuccess(false);
-      }, 2000);
-    }, 1500);
-  };
+        }, 2000);
+    }
+    setIsSending(false);
+    };
 
   const tabs = [
     { id: 'plan', label: 'Inputs', icon: 'bi-pencil-square' },
