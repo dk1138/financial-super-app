@@ -1,3 +1,8 @@
+By adding the `text-nowrap` Bootstrap class to the `<td>` tags containing your currency values, we can force the browser to keep those numbers safely on one line, preventing the negative sign or comma segments from wrapping to the next row.
+
+Here is the fully updated code for **`components/ProjectionTab.tsx`**:
+
+```tsx
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
@@ -733,10 +738,11 @@ export default function ProjectionTab() {
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25">
                         {renderAges(y)}
                       </td>
-                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
-                      <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
-                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
-                      <td className="py-3 pe-4 text-center text-success fw-bold fs-6 border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
+                      {/* ADDED text-nowrap TO THE 4 COLUMNS BELOW */}
+                      <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
+                      <td className="py-3 text-center text-danger fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
+                      <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
+                      <td className="py-3 pe-4 text-center text-success fw-bold fs-6 text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
                     </tr>
 
                     {isExpanded && (
@@ -1064,15 +1070,18 @@ export default function ProjectionTab() {
                             <div className="row g-0 bg-black bg-opacity-25 border-top border-secondary mt-auto" style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Sourced</span>
-                                    <span className="text-main fw-bold">{formatCurrency(finalBalancedTotal, y.year)}</span>
+                                    {/* Added text-nowrap here as well just in case! */}
+                                    <span className="text-main fw-bold text-nowrap">{formatCurrency(finalBalancedTotal, y.year)}</span>
                                 </div>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Spent/Saved</span>
-                                    <span className="text-main fw-bold">{formatCurrency(finalBalancedTotal, y.year)}</span>
+                                    {/* Added text-nowrap here as well just in case! */}
+                                    <span className="text-main fw-bold text-nowrap">{formatCurrency(finalBalancedTotal, y.year)}</span>
                                 </div>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center">
                                     <span className="text-main fw-bold small">Total Net Worth</span>
-                                    <span className="text-success fw-bold fs-6">{formatCurrency(totalNW, y.year)}</span>
+                                    {/* Added text-nowrap here as well just in case! */}
+                                    <span className="text-success fw-bold fs-6 text-nowrap">{formatCurrency(totalNW, y.year)}</span>
                                 </div>
                             </div>
 
@@ -1090,3 +1099,4 @@ export default function ProjectionTab() {
     </div>
   );
 }
+```
