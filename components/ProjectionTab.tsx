@@ -1,8 +1,3 @@
-By adding the `text-nowrap` Bootstrap class to the `<td>` tags containing your currency values, we can force the browser to keep those numbers safely on one line, preventing the negative sign or comma segments from wrapping to the next row.
-
-Here is the fully updated code for **`components/ProjectionTab.tsx`**:
-
-```tsx
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
