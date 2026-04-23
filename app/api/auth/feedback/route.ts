@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     await resend.emails.send({
       from: 'Planfolio <onboarding@resend.dev>', // You can change this once you verify your domain
-      to: 'your-email@example.com',
+      to: 'retirementplannerpro@gmail.com',
       subject: 'New Planfolio Feedback',
       text: message,
     });
