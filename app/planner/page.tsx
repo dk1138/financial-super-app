@@ -97,7 +97,7 @@ export default function PlannerPage() {
   ];
 
   return (
-    <>
+    <div className="container-xxl d-flex flex-column min-vh-100">
       <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
 
       {/* --- STICKY NAVIGATION TABS (Docks seamlessly to the Global Header) --- */}
@@ -190,6 +190,6 @@ export default function PlannerPage() {
       <button className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }} title="Quick Adjust Variables" onClick={() => setShowQuickAdjust(!showQuickAdjust)}>
           <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
       </button>
-    </>
+    </div>
   );
 }

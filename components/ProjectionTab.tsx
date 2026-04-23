@@ -1038,13 +1038,24 @@ export default function ProjectionTab() {
                                             <span className="fw-medium">{formatCurrency(y.liquidNW, y.year)}</span>
                                         </div>
                                         
-                                        <div className="d-flex justify-content-between small mb-1">
-                                            <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
-                                            <span className="d-flex align-items-center">
-                                                {y.reIncludedEq > 0 && <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-1 me-2" style={{fontSize: '0.6rem'}}>INCLUDED</span>}
-                                                {formatCurrency((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)}
-                                            </span>
-                                        </div>
+                                        {y.reIncludedEq > 0 && (
+                                            <div className="d-flex justify-content-between small mb-1">
+                                                <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
+                                                <span className="d-flex align-items-center">
+                                                    <span className="badge bg-success bg-opacity-25 text-success border border-success fw-normal py-0 px-1 me-2" style={{fontSize: '0.55rem'}}>IN NW</span>
+                                                    {formatCurrency(y.reIncludedEq, y.year)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {y.reExcludedEq > 0 && (
+                                            <div className="d-flex justify-content-between small mb-1">
+                                                <span className="text-muted d-flex align-items-center">Excluded RE Equity <InfoBtn align="right" title="Excluded Equity" text="Property equity that is tracked but explicitly toggled off from being included in your liquid/total Net Worth."/></span>
+                                                <span className="d-flex align-items-center opacity-75">
+                                                    <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-0 px-1 me-2" style={{fontSize: '0.55rem'}}>HIDDEN</span>
+                                                    {formatCurrency(y.reExcludedEq, y.year)}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="mt-3"></div>
                                 </div>

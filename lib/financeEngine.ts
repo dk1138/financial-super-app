@@ -533,6 +533,7 @@ export class FinanceEngine {
         let fhsaLifetimeRooms = { p1: Math.max(0, 40000 - (this.getVal('p1_fhsa') || 0)), p2: Math.max(0, 40000 - (this.getVal('p2_fhsa') || 0)) };
 
         let initialWithdrawalRate = 0, currentExpenseHaircut = 1.0;
+        let currentPrimaryIncludeInNW = this.inputs.include_primary_in_nw !== false;
 
         for (let i = 0; i <= yearsToRun; i++) {
             const yr = currentYear + i, age1 = p1StartAge + i, age2 = p2StartAge + i;
@@ -795,6 +796,7 @@ export class FinanceEngine {
                 
                 if (transition.action === 'downsize' || transition.action === 'buy') {
                     currentHousingMode = 'own';
+                    currentPrimaryIncludeInNW = transition.includeInNW !== false;
                     primaryValue = (transition.price || 0) * baseInflation;
                     primaryMortgage = (transition.mortgage || 0) * baseInflation;
                     let downPayment = primaryValue - primaryMortgage;
@@ -834,8 +836,13 @@ export class FinanceEngine {
                     primaryMortgage = Math.max(0, primaryMortgage - principal);
                     mortgagePayment += annualPayment;
                 }
-                realEstateValue += primaryValue;
-                realEstateDebt += primaryMortgage;
+                if (currentPrimaryIncludeInNW) {
+                    realEstateValue += primaryValue;
+                    realEstateDebt += primaryMortgage;
+                } else {
+                    reExcludedValue += primaryValue;
+                    reExcludedDebt += primaryMortgage;
+                }
                 primaryValue *= (1 + primaryGrowth);
             } else if (currentHousingMode === 'rent' || currentHousingMode === 'ltc') {
                 rentPayment = currentRent * 12 * baseInflation;
