@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     // 2. We do NOT call .get() or fetch details by ID here
     const data = await resend.emails.send({
       from: 'Planfolio <onboarding@resend.dev>',
-      to: 'your-real-email@gmail.com', // <--- Use your signup email
+      to: 'donaldkwok88@gmail.com', // <--- Use your signup email
       subject: 'New Planfolio Feedback',
       text: message,
     });
