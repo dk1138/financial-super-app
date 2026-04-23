@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { CurrencyInput, PercentInput } from '../SharedUI';
 
 export default function ReverseMortgage() {
   const [homeValue, setHomeValue] = useState(800000);
@@ -16,79 +17,90 @@ export default function ReverseMortgage() {
   const debtPercentage = (futureDebt / futureHomeValue) * 100;
 
   const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
+    new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
   return (
-    <div className="card shadow-sm border-secondary bg-body rounded-4 h-100">
-      <div className="card-header bg-transparent border-bottom border-secondary p-4 pb-3">
-        <h6 className="fw-bold mb-0 text-white d-flex align-items-center">
-          <i className="bi bi-house-dash text-info me-2 fs-5"></i>Reverse Mortgage Modeler
-        </h6>
-        <p className="text-muted small mt-2 mb-0" style={{fontSize: '0.75rem'}}>
-          Model how compound interest impacts home equity over time without monthly payments.
-        </p>
-      </div>
+    <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
       
-      <div className="card-body p-4 d-flex flex-column gap-3">
-        <div>
-          <label className="form-label text-muted fw-bold mb-1" style={{fontSize: '0.75rem'}}>Current Home Value</label>
-          <div className="input-group input-group-sm">
-            <span className="input-group-text bg-input border-secondary text-muted">$</span>
-            <input type="number" className="form-control bg-input border-secondary text-white" value={homeValue} onChange={e => setHomeValue(Number(e.target.value))} />
-          </div>
+      {/* Header */}
+      <div className="d-flex align-items-center mb-3">
+        <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+          <i className="bi bi-house-dash-fill fs-4"></i>
+        </div>
+        <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">Reverse Mortgage</h5>
+      </div>
+      <p className="text-muted small mb-4">
+        Model how compound interest erodes home equity over time when monthly payments are deferred.
+      </p>
+      
+      {/* Inputs */}
+      <div className="row g-3 mb-4">
+        <div className="col-6">
+          <label className="form-label small fw-bold text-muted mb-1">Current Home Value</label>
+          <CurrencyInput className="form-control form-control-sm" value={homeValue} onChange={setHomeValue} />
+        </div>
+        <div className="col-6">
+          <label className="form-label small fw-bold text-muted mb-1">Borrowed Amount</label>
+          <CurrencyInput className="form-control form-control-sm border-warning text-warning" value={borrowAmount} onChange={setBorrowAmount} />
+        </div>
+        
+        <div className="col-6">
+          <label className="form-label small fw-bold text-muted mb-1">Mortgage Rate</label>
+          <PercentInput className="form-control form-control-sm text-danger" value={interestRate} onChange={setInterestRate} />
+        </div>
+        <div className="col-6">
+          <label className="form-label small fw-bold text-muted mb-1">Appreciation Rate</label>
+          <PercentInput className="form-control form-control-sm text-success" value={homeAppreciation} onChange={setHomeAppreciation} />
         </div>
 
-        <div>
-          <label className="form-label text-muted fw-bold mb-1 d-flex justify-content-between" style={{fontSize: '0.75rem'}}>
-            <span>Initial Borrowed Amount</span>
-            <span className="text-warning">Max {formatCurrency(homeValue * 0.55)}</span>
-          </label>
-          <div className="input-group input-group-sm">
-            <span className="input-group-text bg-input border-secondary text-muted">$</span>
-            <input type="number" className="form-control bg-input border-secondary text-white" value={borrowAmount} onChange={e => setBorrowAmount(Number(e.target.value))} />
-          </div>
-        </div>
-
-        <div className="row g-2">
-          <div className="col-6">
-            <label className="form-label text-muted fw-bold mb-1" style={{fontSize: '0.75rem'}}>Mortgage Rate (%)</label>
-            <input type="number" step="0.1" className="form-control form-control-sm bg-input border-secondary text-white" value={interestRate} onChange={e => setInterestRate(Number(e.target.value))} />
-          </div>
-          <div className="col-6">
-            <label className="form-label text-muted fw-bold mb-1" style={{fontSize: '0.75rem'}}>Appreciation (%)</label>
-            <input type="number" step="0.1" className="form-control form-control-sm bg-input border-secondary text-white" value={homeAppreciation} onChange={e => setHomeAppreciation(Number(e.target.value))} />
-          </div>
-        </div>
-
-        <div className="mt-2">
-          <label className="form-label text-muted fw-bold mb-1 d-flex justify-content-between" style={{fontSize: '0.75rem'}}>
+        <div className="col-12 mt-3 pt-2 border-top border-secondary">
+          <label className="form-label small fw-bold text-info mb-1 d-flex justify-content-between">
             <span>Projection Timeline</span>
-            <span className="text-info">{years} Years</span>
+            <span>{years} Years</span>
           </label>
-          <input type="range" className="form-range" min="1" max="30" step="1" value={years} onChange={e => setYears(Number(e.target.value))} />
+          <input 
+            type="range" 
+            className="form-range" 
+            min="1" 
+            max="30" 
+            step="1" 
+            value={years} 
+            onChange={e => setYears(Number(e.target.value))} 
+          />
+        </div>
+      </div>
+
+      {/* Results Box */}
+      <div className="bg-info bg-opacity-10 border border-info border-opacity-50 rounded-4 p-3 mt-auto shadow-inner text-center">
+        
+        <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-info border-opacity-25">
+          <span className="text-muted fw-bold small">Future Home Value</span>
+          <span className="fw-bold text-success fs-6">{formatCurrency(futureHomeValue)}</span>
+        </div>
+        
+        <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-info border-opacity-25">
+          <span className="text-muted fw-bold small">Future Accrued Debt</span>
+          <span className="fw-bold text-danger fs-6">{formatCurrency(futureDebt)}</span>
         </div>
 
-        {/* RESULTS BOX */}
-        <div className="bg-input border border-secondary rounded-3 p-3 mt-auto">
-          <div className="d-flex justify-content-between mb-1">
-            <span className="text-muted" style={{fontSize: '0.75rem'}}>Future Home Value</span>
-            <span className="fw-bold text-success" style={{fontSize: '0.85rem'}}>{formatCurrency(futureHomeValue)}</span>
-          </div>
-          <div className="d-flex justify-content-between mb-2">
-            <span className="text-muted" style={{fontSize: '0.75rem'}}>Future Debt</span>
-            <span className="fw-bold text-danger" style={{fontSize: '0.85rem'}}>{formatCurrency(futureDebt)}</span>
-          </div>
-          
-          <div className="progress rounded-pill bg-danger border border-secondary mt-2 mb-2" style={{ height: '8px' }}>
-             <div className="progress-bar bg-success" role="progressbar" style={{ width: `${Math.max(0, equityPercentage)}%` }}></div>
-          </div>
-          
-          <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-50">
-            <span className="text-muted fw-bold" style={{fontSize: '0.75rem'}}>Remaining Equity</span>
-            <span className={`fw-bold ${remainingEquity > 0 ? 'text-white' : 'text-danger'}`}>{formatCurrency(remainingEquity)}</span>
-          </div>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <span className="text-info fw-bolder text-uppercase ls-1 small">Remaining Equity</span>
+          <span className={`fw-bolder fs-5 ${remainingEquity > 0 ? 'text-info' : 'text-danger'}`}>{formatCurrency(remainingEquity)}</span>
         </div>
 
+        {/* Visual Progress Bar */}
+        <div className="progress rounded-pill bg-danger shadow-inner border border-secondary" style={{ height: '10px' }}>
+           <div 
+             className="progress-bar bg-success" 
+             role="progressbar" 
+             style={{ width: `${Math.max(0, equityPercentage)}%` }}
+           ></div>
+        </div>
+        <div className="mt-1 d-flex justify-content-between text-muted" style={{fontSize: '0.65rem'}}>
+           <span>{Math.max(0, equityPercentage).toFixed(1)}% Equity</span>
+           <span>{Math.min(100, debtPercentage).toFixed(1)}% Debt</span>
+        </div>
+        
       </div>
     </div>
   );
