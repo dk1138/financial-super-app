@@ -37,7 +37,7 @@ const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, displa
                       
                       {employerMatch > 0 && (
                           <div className="d-flex justify-content-between mb-1">
-                              <span>Paycheck RRSP Deductions:</span>
+                              <span>RRSP Deductions:</span>
                               <span className="text-danger fw-medium">-${employerMatch.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                           </div>
                       )}
@@ -260,7 +260,7 @@ const AvgTaxRateInfoButton = ({ totalIncomeTax, grossIncome }: { totalIncomeTax:
                           <span>${totalIncomeTax.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                       </div>
                       <div className="d-flex justify-content-between mb-2">
-                          <span>÷ Gross Paycheck:</span>
+                          <span>÷ Gross Income:</span>
                           <span>${grossIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                       </div>
                       <div className="pt-2 mt-2 border-top border-secondary border-opacity-50 d-flex justify-content-between fw-bold text-main">
@@ -447,7 +447,7 @@ export default function IncomeTaxCard() {
 
   const calculatePlayerMetrics = (p: 'p1' | 'p2') => {
       const yData = results?.timeline?.[0];
-      if (!yData) return { gross: getActiveIncome(p), takeHome: getActiveIncome(p) };
+      if (!yData) return { gross: getActiveIncome(p), netIncome: getActiveIncome(p) };
 
       const salary = p === 'p1' ? ((yData.incomeP1 || 0) - (yData.rrspMatchP1 || 0)) : ((yData.incomeP2 || 0) - (yData.rrspMatchP2 || 0));
       const match = p === 'p1' ? (yData.rrspMatchP1 || 0) : (yData.rrspMatchP2 || 0);
@@ -461,17 +461,17 @@ export default function IncomeTaxCard() {
       const taxDetails = p === 'p1' ? yData.taxDetailsP1 : yData.taxDetailsP2;
       const totalTax = taxDetails?.totalTax || 0;
 
-      // Take-home pay strips out the employer match (since it goes straight to RRSP) and Taxes
-      const takeHome = actualGross - match - totalTax;
+      // Net Income calculation
+      const netIncome = actualGross - match - totalTax;
 
-      return { actualGross, takeHome };
+      return { actualGross, netIncome };
   };
 
   const p1Metrics = calculatePlayerMetrics('p1');
-  const p2Metrics = isCouple ? calculatePlayerMetrics('p2') : { actualGross: 0, takeHome: 0 };
+  const p2Metrics = isCouple ? calculatePlayerMetrics('p2') : { actualGross: 0, netIncome: 0 };
 
   const hhGross = p1Metrics.actualGross + p2Metrics.actualGross;
-  const hhNet = p1Metrics.takeHome + p2Metrics.takeHome;
+  const hhNet = p1Metrics.netIncome + p2Metrics.netIncome;
 
   const toggleCredits = (p: string) => setShowCredits(prev => ({ ...prev, [p]: !prev[p] }));
   const toggleGross = (p: string) => setShowGross(prev => ({ ...prev, [p]: !prev[p] }));
@@ -530,7 +530,7 @@ export default function IncomeTaxCard() {
       const utilizedProvNrtc = taxDetails.utilizedProvNrtc || 0;
       const utilizedNrtcTotal = taxDetails.utilizedNrtcTotal || 0;
 
-      // Add the utilized credits BACK into the displayed tax so the UI matches their paycheck!
+      // Add the utilized credits BACK into the displayed tax
       const displayFedTax = taxDetails.fed + utilizedFedNrtc;
       const displayProvTax = taxDetails.prov + utilizedProvNrtc;
       
@@ -569,7 +569,7 @@ export default function IncomeTaxCard() {
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleGross(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showGross[p] ? 'text-main' : 'text-muted'}`}>
-                          <i className={`bi bi-chevron-${showGross[p] ? 'up' : 'down'} small`}></i> Gross Paycheck Income
+                          <i className={`bi bi-chevron-${showGross[p] ? 'up' : 'down'} small`}></i> Gross Income
                       </span>
                       <span className="small fw-bold">${Math.round(actualGross).toLocaleString()}</span>
                   </div>
@@ -590,7 +590,7 @@ export default function IncomeTaxCard() {
               <div className="border-bottom border-secondary border-opacity-50 pb-2 mb-1">
                   <div className="d-flex justify-content-between align-items-center cursor-pointer transition-all user-select-none hover-opacity-75" onClick={() => toggleDeductions(p)}>
                       <span className={`small fw-medium d-flex align-items-center gap-1 ${showDeductions[p] ? 'text-main' : 'text-muted'}`}>
-                          <i className={`bi bi-chevron-${showDeductions[p] ? 'up' : 'down'} small`}></i> Paycheck Deductions
+                          <i className={`bi bi-chevron-${showDeductions[p] ? 'up' : 'down'} small`}></i> Deductions
                       </span>
                       <span className="small fw-bold text-info">-${Math.round(totalDeductions).toLocaleString()}</span>
                   </div>
@@ -780,11 +780,11 @@ export default function IncomeTaxCard() {
               {/* --- STANDARD PAYCHECK VS TAX REFUND --- */}
               <div className="mt-3 pt-3 border-top border-secondary">
                   
-                  {/* Standard Payroll Take-Home */}
+                  {/* Standard Net Income */}
                   <div className="d-flex justify-content-between align-items-center mb-2">
                       <span className="text-main fw-bold d-flex align-items-center">
-                          Standard Take-Home Pay 
-                          <InfoBtn align="right" title="Standard Paycheck" text="Your Gross Salary minus standard payroll deductions (CPP, EI, and Base Income Tax). This closely matches what typically hits your bank account bi-weekly." />
+                          Net Income 
+                          <InfoBtn align="right" title="Net Income" text="Your Gross Income minus deductions (CPP, EI, and Base Income Tax)." />
                       </span> 
                       <span className="text-main fw-bold fs-6">
                           ${Math.round(actualGross - match - taxDetails.totalTax - totalRefundFromCredits).toLocaleString()}
@@ -801,7 +801,7 @@ export default function IncomeTaxCard() {
                               <span className="text-success fw-bold d-flex align-items-center gap-1">
                                   <i className={`bi bi-chevron-${showRefund[p] ? 'up' : 'down'} small`}></i> 
                                   Estimated Tax Refund
-                                  <InfoBtn align="right" title="Spring Tax Refund" text="The estimated lump-sum refund you will receive when you file your taxes, generated by your extra Tax Credits (Age Amount, Disability, Donations, etc.).<br><br><i>Note: You can apply to have these added directly to your paycheck using CRA Form T1213.</i> <a href='https://www.canada.ca/en/revenue-agency/services/forms-publications/forms/t1213.html' target='_blank' class='text-primary'>Learn more</a>" />
+                                  <InfoBtn align="right" title="Spring Tax Refund" text="The estimated lump-sum refund you will receive when you file your taxes, generated by your extra Tax Credits (Age Amount, Disability, Donations, etc.)." />
                               </span> 
                               <span className="text-success fw-bold fs-6">
                                   +${Math.round(totalRefundFromCredits).toLocaleString()}
@@ -1214,14 +1214,14 @@ export default function IncomeTaxCard() {
             <div className="card-body p-4">
               <div className="row text-center align-items-center">
                 <div className="col-md-6 border-end border-primary border-opacity-25 mb-3 mb-md-0">
-                  <div className="small fw-bold text-primary text-uppercase ls-1 mb-2">Total Household (Gross Paycheck)</div>
+                  <div className="small fw-bold text-primary text-uppercase ls-1 mb-2">Total Household (Gross Income)</div>
                   <div className="fs-3 fw-bold text-primary mb-1">{formatCurrency(hhGross)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
                   <div className="small text-muted fw-bold">{formatCurrency(hhGross / 12)} /mo</div>
                 </div>
                 <div className="col-md-6">
                   <div className="small fw-bold text-success text-uppercase ls-1 mb-2">
-                      Total Household (True Net Income)
-                      <InfoBtn align="center" title="Household Net Income" text="Combined Gross Paycheck Income (excluding employer matches) minus Total Taxes. This includes any estimated tax refunds you generate from your credits." />
+                      Total Household (Net Income)
+                      <InfoBtn align="center" title="Household Net Income" text="Combined Gross Income (excluding employer matches) minus Total Taxes. This includes any estimated tax refunds you generate from your credits." />
                   </div>
                   <div className="fs-3 fw-bold text-success mb-1">{formatCurrency(hhNet)} <span className="fs-6 text-muted fw-normal">/yr</span></div>
                   <div className="small text-muted fw-bold">{formatCurrency(hhNet / 12)} /mo</div>
