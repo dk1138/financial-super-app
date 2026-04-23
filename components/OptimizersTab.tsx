@@ -24,15 +24,19 @@ const MortgageAffordability = dynamic(() => import('./optimizers/MortgageAfforda
 const CPPImporter = dynamic(() => import('./optimizers/CPPImporter'), { ssr: false });
 const BuyVsRentAnalyzer = dynamic(() => import('./optimizers/BuyVsRentAnalyzer'), { ssr: false });
 
+// NEW IMPORT
+const ReverseMortgage = dynamic(() => import('./optimizers/ReverseMortgage'), { ssr: false });
+
 export default function OptimizersTab() {
   const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash');
-  const [expandedTool, setExpandedTool] = useState<string | null>(null); // Tracks which card is full-width
+  const [expandedTool, setExpandedTool] = useState<string | null>(null);
   
   const toolCategories = [
     { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv', 'pensionbb'] },
     { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa', 'resp', 'medical'] },
     { title: "Business & Income", keys: ['sidehustle'] },
-    { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal'] },
+    // ADDED 'reversemortgage' TO THIS CATEGORY
+    { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal', 'reversemortgage'] },
     { title: "Data Importers", keys: ['cppimport'] }
   ];
 
@@ -40,7 +44,6 @@ export default function OptimizersTab() {
       let ContentComponent = null;
       const isExpanded = expandedTool === id;
 
-      // Pass the state down via props so the card knows it should render its "Large" view
       switch (id) {
           case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
           case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
@@ -63,11 +66,13 @@ export default function OptimizersTab() {
           case 'car': ContentComponent = <CarLease />; break;
           case 'afford': ContentComponent = <MortgageAffordability />; break;
           case 'cppimport': ContentComponent = <CPPImporter />; break;
+          
+          // NEW CASE
+          case 'reversemortgage': ContentComponent = <ReverseMortgage />; break;
           default: return null;
       }
 
       return (
-          // THIS is the magic line. If expanded, it takes 12 columns (full width). Otherwise, 4 columns (1/3 width).
           <div key={id} className={`transition-all ${isExpanded ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"}`}>
               {ContentComponent}
           </div>
@@ -89,7 +94,7 @@ export default function OptimizersTab() {
                   key={cat.title}
                   onClick={() => {
                       setActiveCategory(cat.title);
-                      setExpandedTool(null); // Reset expansions when switching categories
+                      setExpandedTool(null); 
                   }}
                   className={`btn rounded-pill fw-bold px-3 px-md-4 py-2 transition-all border-0 shadow-sm ${activeCategory === cat.title ? 'bg-primary text-white' : 'bg-input text-muted border border-secondary hover-opacity-100'}`}
               >
