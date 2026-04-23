@@ -313,7 +313,7 @@ export default function ProjectionTab() {
           wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[`${pUpper} ${k}`] || 0));
       }
       let net = added - withdrawn;
-      if (Math.abs(net) < 1) return <span style={{width: '45px', display: 'inline-block'}}></span>; 
+      if (Math.abs(net) < 1) return <span className="flex-shrink-0" style={{minWidth: '45px', display: 'inline-block'}}></span>; 
       
       net = getRealValue(net, year);
       const isPos = net > 0;
@@ -321,7 +321,7 @@ export default function ProjectionTab() {
       const formatted = absNet >= 1000 ? `${(absNet/1000).toFixed(1).replace('.0', '')}k` : Math.round(absNet);
       
       return (
-          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2`} style={{fontSize: '0.65rem', width: '45px', display: 'inline-block'}}>
+          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2 text-nowrap flex-shrink-0`} style={{fontSize: '0.65rem', minWidth: '45px', display: 'inline-block'}}>
               ({isPos ? '+' : '-'}{formatted})
           </span>
       );
@@ -503,43 +503,43 @@ export default function ProjectionTab() {
               {salary > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment/other income." align="left" /></span>
-                      <span className="fw-medium">{formatCurrency(salary, year)}</span>
+                      <span className="fw-medium text-nowrap">{formatCurrency(salary, year)}</span>
                   </div>
               )}
               {match > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Employer Match <InfoBtn title="Employer Match" text="<span class='text-info fw-bold'>Taxable Benefit.</span><br>Offset by RRSP deduction." align="left" /></span>
-                      <span className="text-success">+{formatCurrency(match, year)}</span>
+                      <span className="text-success text-nowrap">+{formatCurrency(match, year)}</span>
                   </div>
               )}
               {cpp > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">CPP <InfoBtn title="CPP Benefit" text={`<span class='text-info fw-bold'>100% Taxable.</span><br>Base CPP adjusted for start age (${cppStart}).`} align="left" /></span>
-                      <span>{formatCurrency(cpp, year)}</span>
+                      <span className="text-nowrap">{formatCurrency(cpp, year)}</span>
                   </div>
               )}
               {oas > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">OAS <InfoBtn title="OAS Math" text={buildOasTooltip(oas, oasClawback, taxInc, year, y.oasThreshold)} align="left" /></span>
-                      <span>{formatCurrency(netOas, year)}</span>
+                      <span className="text-nowrap">{formatCurrency(netOas, year)}</span>
                   </div>
               )}
               {db > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Pension (DB) <InfoBtn title="Pension" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Defined Benefit Pension payout." align="left" /></span>
-                      <span>{formatCurrency(db, year)}</span>
+                      <span className="text-nowrap">{formatCurrency(db, year)}</span>
                   </div>
               )}
               {ccb > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">CCB <InfoBtn title="Canada Child Benefit" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Tax-free monthly payment for eligible children." align="left" /></span>
-                      <span className="text-success">+{formatCurrency(ccb, year)}</span>
+                      <span className="text-success text-nowrap">+{formatCurrency(ccb, year)}</span>
                   </div>
               )}
               {invInc > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, useRealDollars)}`} align="left" /></span>
-                      <span className="text-success">+{formatCurrency(invInc, year)}</span>
+                      <span className="text-success text-nowrap">+{formatCurrency(invInc, year)}</span>
                   </div>
               )}
 
@@ -582,7 +582,7 @@ export default function ProjectionTab() {
                   return (
                       <div className="d-flex justify-content-between small mb-1 align-items-center" key={k}>
                           <span className="text-muted ms-2 d-flex align-items-center">{cleanName} W/D <InfoBtn align="left" title={`${cleanName} Math`} text={info} /></span>
-                          <span className="text-primary">+{formatCurrency(val, year)}</span>
+                          <span className="text-primary text-nowrap">+{formatCurrency(val, year)}</span>
                       </div>
                   );
               })}
@@ -594,7 +594,7 @@ export default function ProjectionTab() {
                       {refund > 0 && (
                           <div className="d-flex justify-content-between small mb-1 align-items-center">
                               <span className="text-muted ms-2 d-flex align-items-center">Tax Refund <InfoBtn align="left" title="Tax Refund" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Refund generated from prior year RRSP/FHSA contributions." /></span>
-                              <span className="text-success">+{formatCurrency(refund, year)}</span>
+                              <span className="text-success text-nowrap">+{formatCurrency(refund, year)}</span>
                           </div>
                       )}
 
@@ -610,7 +610,7 @@ export default function ProjectionTab() {
                           return (
                               <div className="d-flex justify-content-between small mb-1 align-items-center" key={k}>
                                   <span className="text-muted ms-2 d-flex align-items-center">{cleanName} W/D <InfoBtn align="left" title={`${cleanName} Withdrawal`} text={info} /></span>
-                                  <span className="text-primary">+{formatCurrency(val, year)}</span>
+                                  <span className="text-primary text-nowrap">+{formatCurrency(val, year)}</span>
                               </div>
                           );
                       })}
@@ -733,7 +733,6 @@ export default function ProjectionTab() {
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25">
                         {renderAges(y)}
                       </td>
-                      {/* ADDED text-nowrap TO THE 4 COLUMNS BELOW */}
                       <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
                       <td className="py-3 text-center text-danger fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
                       <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
@@ -761,14 +760,14 @@ export default function ProjectionTab() {
                                         {y.windfall > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2">
                                                 <span className="text-muted fw-bold text-success d-flex align-items-center">Windfalls / Property Sale <InfoBtn align="left" title="Windfalls" text="Taxable status depends on the source. Mapped accordingly in Net Worth." /></span>
-                                                <span className="fw-medium text-success">{formatCurrency(y.windfall, y.year)}</span>
+                                                <span className="fw-medium text-success text-nowrap">{formatCurrency(y.windfall, y.year)}</span>
                                             </div>
                                         )}
                                         
                                         {shortfall > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
                                                 <span className="text-danger fw-bold d-flex align-items-center">Shortfall (Cash Deficit) <InfoBtn align="left" title="Shortfall" text="Expenses exceeded total available cash flow and withdrawals. The simulation mathematically borrows this to keep running." /></span>
-                                                <span className="fw-medium text-danger">+{formatCurrency(shortfall, y.year)}</span>
+                                                <span className="fw-medium text-danger text-nowrap">+{formatCurrency(shortfall, y.year)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -784,35 +783,35 @@ export default function ProjectionTab() {
                                     </h6>
                                     
                                     <div className="flex-grow-1">
-                                        <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Living Expenses</span><span className="fw-medium">{formatCurrency(y.expenses, y.year)}</span></div>
+                                        <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Living Expenses</span><span className="fw-medium text-nowrap">{formatCurrency(y.expenses, y.year)}</span></div>
                                         {y.mortgagePay > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="d-flex align-items-center text-muted ms-2">Mortgage Payments <InfoBtn align="right" title="Mortgage" text="Principal and interest payments for the year based on your amortization schedule."/></span>
-                                                <span>{formatCurrency(y.mortgagePay, y.year)}</span>
+                                                <span className="text-nowrap">{formatCurrency(y.mortgagePay, y.year)}</span>
                                             </div>
                                         )}
                                         {y.eduExpense > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold text-info">Education Costs</span>
-                                                <span className="fw-medium text-info">{formatCurrency(y.eduExpense, y.year)}</span>
+                                                <span className="fw-medium text-info text-nowrap">{formatCurrency(y.eduExpense, y.year)}</span>
                                             </div>
                                         )}
                                         {baseDebtRepayment > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold" style={{ color: '#d97706' }}>Large Purchases/Debt</span>
-                                                <span className="fw-medium" style={{ color: '#d97706' }}>{formatCurrency(baseDebtRepayment, y.year)}</span>
+                                                <span className="fw-medium text-nowrap" style={{ color: '#d97706' }}>{formatCurrency(baseDebtRepayment, y.year)}</span>
                                             </div>
                                         )}
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, y.year)} /></span>
-                                                <span className="text-danger fw-medium">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
+                                                <span className="text-danger fw-medium text-nowrap">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
                                             </div>
                                             {isCouple && (
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, y.year)} /></span>
-                                                    <span className="text-danger fw-medium">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
+                                                    <span className="text-danger fw-medium text-nowrap">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -820,14 +819,14 @@ export default function ProjectionTab() {
                                         {engineContributions > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center mt-2 pt-2 border-top border-secondary border-opacity-25">
                                                 <span className="d-flex align-items-center text-muted fw-bold text-primary">Surplus Invested <InfoBtn align="right" title="Contributions" text={buildContributionTooltip(y.flows, isCouple, y.year)} /></span>
-                                                <span className="text-primary fw-medium">{formatCurrency(engineContributions, y.year)}</span>
+                                                <span className="text-primary fw-medium text-nowrap">{formatCurrency(engineContributions, y.year)}</span>
                                             </div>
                                         )}
                                         
                                         {unallocated > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
                                                 <span className="text-success fw-bold d-flex align-items-center">Unallocated Surplus <InfoBtn align="right" title="Surplus" text="Cash generated that wasn't spent or automatically routed into a tracked investment account." /></span>
-                                                <span className="fw-medium text-success">+{formatCurrency(unallocated, y.year)}</span>
+                                                <span className="fw-medium text-success text-nowrap">+{formatCurrency(unallocated, y.year)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -844,13 +843,13 @@ export default function ProjectionTab() {
                                     <div className="flex-grow-1">
                                         {y.p1Alive && (
                                             <div className="mb-3">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold">{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold text-nowrap">{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['tfsa'], ['TFSA', 'TFSA (Successor)'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency((y.assetsP1?.tfsa||0) + (y.assetsP1?.tfsa_successor||0), y.year)}</span>
+                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency((y.assetsP1?.tfsa||0) + (y.assetsP1?.tfsa_successor||0), y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -859,7 +858,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">FHSA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['fhsa'], ['FHSA'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.fhsa||0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.fhsa||0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -869,7 +868,7 @@ export default function ProjectionTab() {
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['rrsp'], ['RRSP'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -879,7 +878,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2 d-flex align-items-center">RRIF <InfoBtn title="RRIF" text="Registered Retirement Income Fund.<br>Converted from RRSP at age 71." align="left" /></span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['RRIF'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.rrif_acct || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.rrif_acct || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -889,7 +888,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIRA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['LIRF'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.lirf || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.lirf || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -899,7 +898,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['LIF'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.lif || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.lif || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -908,7 +907,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['nonreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
+                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -916,7 +915,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['cash'], ['Cash'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
+                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -925,7 +924,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">Crypto</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['crypto'], ['Crypto'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.crypto || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.crypto || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -934,13 +933,13 @@ export default function ProjectionTab() {
 
                                         {isCouple && y.p2Alive && (
                                             <div className="mb-2 border-top border-secondary border-opacity-25 pt-2">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold" style={{color: 'var(--bs-purple)'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold text-nowrap" style={{color: 'var(--bs-purple)'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['tfsa'], ['TFSA', 'TFSA (Successor)'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency((y.assetsP2?.tfsa||0) + (y.assetsP2?.tfsa_successor||0), y.year)}</span>
+                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency((y.assetsP2?.tfsa||0) + (y.assetsP2?.tfsa_successor||0), y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -949,7 +948,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">FHSA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['fhsa'], ['FHSA'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.fhsa||0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.fhsa||0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -959,7 +958,7 @@ export default function ProjectionTab() {
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['rrsp'], ['RRSP'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.rrsp || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.rrsp || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -969,7 +968,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2 d-flex align-items-center">RRIF <InfoBtn title="RRIF" text="Registered Retirement Income Fund.<br>Converted from RRSP at age 71." align="left" /></span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['RRIF'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.rrif_acct || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.rrif_acct || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -979,7 +978,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIRA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['LIRF'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.lirf || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.lirf || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -989,7 +988,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['LIF'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.lif || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.lif || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -998,7 +997,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['nonreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
+                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1006,7 +1005,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['cash'], ['Cash'], y.year)}
-                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
+                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1015,7 +1014,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">Crypto</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['crypto'], ['Crypto'], y.year)}
-                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.crypto || 0, y.year)}</span>
+                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.crypto || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1028,7 +1027,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted fw-bold d-flex align-items-center">Family RESP</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year)}
-                                                        <span className="text-info fw-bold text-end" style={{width: '75px'}}>{formatCurrency(respBal, y.year)}</span>
+                                                        <span className="text-info fw-bold text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(respBal, y.year)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1036,7 +1035,7 @@ export default function ProjectionTab() {
 
                                         <div className="d-flex justify-content-between small mb-1 mt-3">
                                             <span className="text-muted fw-bold">Liquid Portfolio Assets</span>
-                                            <span className="fw-medium">{formatCurrency(y.liquidNW, y.year)}</span>
+                                            <span className="fw-medium text-nowrap">{formatCurrency(y.liquidNW, y.year)}</span>
                                         </div>
                                         
                                         {y.reIncludedEq > 0 && (
@@ -1044,7 +1043,7 @@ export default function ProjectionTab() {
                                                 <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
                                                 <span className="d-flex align-items-center">
                                                     <span className="badge bg-success bg-opacity-25 text-success border border-success fw-normal py-0 px-1 me-2" style={{fontSize: '0.55rem'}}>IN NW</span>
-                                                    {formatCurrency(y.reIncludedEq, y.year)}
+                                                    <span className="text-nowrap">{formatCurrency(y.reIncludedEq, y.year)}</span>
                                                 </span>
                                             </div>
                                         )}
@@ -1053,7 +1052,7 @@ export default function ProjectionTab() {
                                                 <span className="text-muted d-flex align-items-center">Excluded RE Equity <InfoBtn align="right" title="Excluded Equity" text="Property equity that is tracked but explicitly toggled off from being included in your liquid/total Net Worth."/></span>
                                                 <span className="d-flex align-items-center opacity-75">
                                                     <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-0 px-1 me-2" style={{fontSize: '0.55rem'}}>HIDDEN</span>
-                                                    {formatCurrency(y.reExcludedEq, y.year)}
+                                                    <span className="text-nowrap">{formatCurrency(y.reExcludedEq, y.year)}</span>
                                                 </span>
                                             </div>
                                         )}
@@ -1065,17 +1064,14 @@ export default function ProjectionTab() {
                             <div className="row g-0 bg-black bg-opacity-25 border-top border-secondary mt-auto" style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Sourced</span>
-                                    {/* Added text-nowrap here as well just in case! */}
                                     <span className="text-main fw-bold text-nowrap">{formatCurrency(finalBalancedTotal, y.year)}</span>
                                 </div>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Spent/Saved</span>
-                                    {/* Added text-nowrap here as well just in case! */}
                                     <span className="text-main fw-bold text-nowrap">{formatCurrency(finalBalancedTotal, y.year)}</span>
                                 </div>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center">
                                     <span className="text-main fw-bold small">Total Net Worth</span>
-                                    {/* Added text-nowrap here as well just in case! */}
                                     <span className="text-success fw-bold fs-6 text-nowrap">{formatCurrency(totalNW, y.year)}</span>
                                 </div>
                             </div>
