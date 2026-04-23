@@ -8,7 +8,7 @@ export default function LandingPage() {
   
   const slides = [
     { id: 1, name: "Dashboard & Summary", icon: "bi-clipboard2-data", color: "text-blue-500", bg: "bg-blue-500" },
-    { id: 2, name: "Timeline Projection", icon: "bi-table", color: "text-emerald-500", bg: "bg-emerald-500" },
+    { id: 2, name: "Timeline Projection", icon: "bi-table", color: "text-emerald-500", bg: "bg-emerald-500", img: "/preview-projection.png" },
     { id: 3, name: "Strategy & Optimization", icon: "bi-sliders", color: "text-purple-500", bg: "bg-purple-500" },
     { id: 4, name: "Cash Flow Analysis", icon: "bi-diagram-3", color: "text-amber-500", bg: "bg-amber-500" }
   ];
