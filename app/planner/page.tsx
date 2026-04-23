@@ -150,7 +150,7 @@ export default function PlannerPage() {
       </div>
 
       <footer className="mt-auto pt-5 pb-3 border-top border-secondary border-opacity-50 text-center">
-          <div className="px-3" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div className="px-3" style={{ maxWidth: '1400px', margin: '0 auto' }}>
               <p className="text-muted mb-3 text-start text-md-center" style={{ fontSize: '0.75rem', lineHeight: '1.6' }}>
                   <strong>Disclaimer:</strong> Planfolio - Planner is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
               </p>
@@ -162,7 +162,7 @@ export default function PlannerPage() {
 
       {showQuickAdjust && (
           <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
-               style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '220px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+               style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '240px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
               <div className="d-flex justify-content-between align-items-center mb-2 pb-2 mt-1 border-bottom border-secondary">
                   <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.7rem'}}><i className="bi bi-sliders me-2"></i>Quick Adjust</h6>
               </div>
