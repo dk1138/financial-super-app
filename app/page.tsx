@@ -1,194 +1,304 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+'use client'; 
 
-export default function LandingPage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
+import React, { useState, useEffect } from 'react';
+import PlanTab from '../../components/PlanTab';
+import StrategyTab from '../../components/StrategyTab';
+import DashboardTab from '../../components/DashboardTab';
+import ProjectionTab from '../../components/ProjectionTab';
+import RiskTab from '../../components/RiskTab';
+import CashFlowTab from '../../components/CashFlowTab';
+import OptimizersTab from '../../components/OptimizersTab';
+import CompareTab from '../../components/CompareTab';
+import { useFinance } from '../../lib/FinanceContext';
+import { StepperInput } from '../../components/SharedUI'; 
+
+import SplashScreen from '../../components/SplashScreen';
+import { sampleProfile } from '../../lib/sampleData';
+
+export default function PlannerPage() {
+  const financeContext = useFinance() as any; 
+  const { data, updateInput, updateMultipleInputs, resetData } = financeContext;
   
-  // Reconfigured slides: Removed Dashboard, added Risk and Tools
-  // Slide order: Summary, Strategy, Projection, Cash Flow, Risk, Tools
-  const slides = [
-    { id: 1, name: "Plan Summary", icon: "bi-clipboard2-data", img: "/preview-dashboard.png" },
-    { id: 2, name: "Strategy & Optimization", icon: "bi-sliders", img: "/preview-strategy.png" },
-    { id: 3, name: "Timeline Projection", icon: "bi-table", img: "/preview-projection.png" },
-    { id: 4, name: "Cash Flow Analysis", icon: "bi-diagram-3", img: "/preview-cashflow.png" },
-    { id: 5, name: "Risk Assessment", icon: "bi-activity", img: "/preview-risk.png" },
-    { id: 6, name: "Tools & Calculators", icon: "bi-magic", img: "/preview-tools.png" }
+  // --- UI STATE ---
+  const [activeTab, setActiveTab] = useState('plan');
+  const [showQuickAdjust, setShowQuickAdjust] = useState(false);
+  
+  // --- FEEDBACK STATE ---
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
+
+  const isCouple = data.mode === 'Couple';
+
+  // --- SET PAGE TITLE ---
+  useEffect(() => {
+      document.title = "Planfolio - Planner";
+  }, []);
+
+  // --- HANDLERS ---
+  const handleStartBlankPlan = () => {
+      if (resetData) resetData();
+      localStorage.setItem('active_plan_name', 'Untitled Plan');
+      window.dispatchEvent(new CustomEvent('updateActivePlan', { detail: 'Untitled Plan' }));
+      setActiveTab('plan'); 
+  };
+
+  const handleLoadDummyData = () => {
+      if (financeContext.loadData) {
+          financeContext.loadData(sampleProfile);
+          const sampleName = "Sarah & John (Sample)";
+          localStorage.setItem('active_plan_name', sampleName);
+          window.dispatchEvent(new CustomEvent('updateActivePlan', { detail: sampleName }));
+      }
+      setActiveTab('dashboard'); 
+  };
+
+  const handleRetireAgeChange = (player: 'p1'|'p2', newRetAge: number) => {
+      const updates: Record<string, any> = { [`${player}_retireAge`]: newRetAge };
+      if (newRetAge > (data.inputs[`${player}_lifeExp`] || 90)) {
+          updates[`${player}_lifeExp`] = newRetAge;
+      }
+      if (isCouple && data.inputs.retire_same_time) {
+          const playerAge = data.inputs[`${player}_age`] ?? (player === 'p1' ? 38 : 34);
+          const yearsToRetire = newRetAge - playerAge;
+          const otherPlayer = player === 'p1' ? 'p2' : 'p1';
+          const otherAge = data.inputs[`${otherPlayer}_age`] ?? (player === 'p1' ? 34 : 38);
+          const otherNewRetAge = Math.max(18, otherAge + yearsToRetire);
+          
+          updates[`${otherPlayer}_retireAge`] = otherNewRetAge;
+          if (otherNewRetAge > (data.inputs[`${otherPlayer}_lifeExp`] || 90)) {
+              updates[`${otherPlayer}_lifeExp`] = otherNewRetAge;
+          }
+      }
+      updateMultipleInputs(updates);
+  };
+
+  const handleSyncToggle = (checked: boolean) => {
+      if (checked) {
+          const p1Age = data.inputs.p1_age ?? 38;
+          const p1Ret = data.inputs.p1_retireAge ?? 60;
+          const p2Age = data.inputs.p2_age ?? 34;
+          const yearsToRetire = p1Ret - p1Age;
+          const newP2Ret = Math.max(18, p2Age + yearsToRetire);
+          
+          const updates: Record<string, any> = { 
+              retire_same_time: true, 
+              p2_retireAge: newP2Ret 
+          };
+          if (newP2Ret > (data.inputs.p2_lifeExp || 95)) updates.p2_lifeExp = newP2Ret;
+          updateMultipleInputs(updates);
+      } else {
+          updateInput('retire_same_time', false);
+      }
+  };
+
+  const handleSendFeedback = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!feedbackText.trim()) return;
+  
+  setIsSending(true);
+
+  try {
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: feedbackText }),
+    });
+
+    if (response.ok) {
+      setSendSuccess(true);
+      setFeedbackText('');
+      // Auto-close modal after 2s
+      setTimeout(() => {
+        setShowFeedbackModal(false);
+        setSendSuccess(false);
+      }, 2000);
+    } else {
+      alert("Something went wrong. Please try again.");
+    }
+  } catch (error) {
+    console.error("Failed to send feedback:", error);
+  } finally {
+    setIsSending(false);
+  }
+};
+
+  const tabs = [
+    { id: 'plan', label: 'Inputs', icon: 'bi-pencil-square' },
+    { id: 'strategy', label: 'Strategy', icon: 'bi-sliders' },
+    { id: 'dashboard', label: 'Summary', icon: 'bi-clipboard2-data' },
+    { id: 'projection', label: 'Projection', icon: 'bi-table' },
+    { id: 'risk', label: 'Risk', icon: 'bi-activity' },
+    { id: 'cashflow', label: 'Cash Flow', icon: 'bi-diagram-3' },
+    { id: 'optimizers', label: 'Tools & Calculators', icon: 'bi-magic' },
+    { id: 'compare', label: 'Compare', icon: 'bi-bar-chart-line' }
   ];
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-blue-500/30 font-sans">
-      
-      {/* HEADER */}
-      <nav className="fixed top-0 w-full z-50 bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-800">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 text-decoration-none">
-            <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-500/20">
-              <i className="bi bi-graph-up-arrow text-white text-lg"></i>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-white">Planfolio</span>
-          </Link>
-          
-          <div className="hidden md:flex items-center gap-10 text-sm font-semibold">
-            <a href="#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</a>
-            <Link href="/features" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Features</Link>
-            <a href="#pricing" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Pricing</a>
-          </div>
+    <div 
+        className="container-fluid d-flex flex-column min-vh-100" 
+        style={{ paddingLeft: 'clamp(1rem, 8vw, 15rem)', paddingRight: 'clamp(1rem, 8vw, 15rem)' }}
+    >
+      <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
 
-          <div className="flex items-center gap-4">
-            {/* GREYED OUT LOGIN */}
-            <button 
-              disabled 
-              className="text-sm font-semibold text-slate-500 cursor-not-allowed opacity-50 px-4 py-2"
-            >
-              Log In
-            </button>
-            {/* GET STARTED REMOVED FROM HERE */}
-          </div>
-        </div>
-      </nav>
-
-      {/* HERO SECTION */}
-      <header className="relative pt-48 pb-24 overflow-hidden">
-        <div className="container mx-auto px-6 text-center relative z-10">
-          <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight tracking-tighter">
-            Master Your Financial Future,<br/>
-            <span className="text-blue-500">One Decision at a Time.</span>
-          </h1>
-          
-          <p className="max-w-2xl mx-auto text-lg text-slate-400 mb-10 leading-relaxed">
-            The only platform that bridges the gap between today's spending and tomorrow's wealth. Advanced CRA-ready forecasting for the modern Canadian.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/planner" className="bg-white text-slate-900 px-10 py-4 rounded-full font-bold hover:bg-slate-100 transition-all text-lg shadow-xl text-decoration-none text-center">
-              Start Your Plan
-            </Link>
-            <Link href="/features" className="bg-slate-800/50 text-white px-10 py-4 rounded-full font-bold border border-slate-700 hover:bg-slate-800 transition-all text-lg text-decoration-none text-center">
-              Explore Features
-            </Link>
-          </div>
-        </div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-blue-600/10 blur-[120px] rounded-full -z-10"></div>
-      </header>
-
-      {/* GALLERY SECTION */}
-      <section id="about" className="py-24 border-t border-slate-800">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-white mb-6">Built for Accuracy. <br/>Built for Canadians.</h2>
-              <p className="text-slate-400 mb-6 leading-relaxed text-lg">
-                Generic retirement tools don't understand the complexities of Canadian taxation. Planfolio handles <b>RRSP vs TFSA</b> optimizations, <b>OAS Clawbacks</b>, and the <b>Smith Maneuver</b> out of the box.
-              </p>
-              <ul className="space-y-4">
-                {['Hyper-accurate 2026 CRA Tax Engine', 'CPP & OAS Benefit Estimators', 'Institutional-grade Risk Modeling'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-200">
-                    <i className="bi bi-check2-circle text-blue-500 text-xl"></i>
-                    <span className="font-medium">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-slate-800/50 border border-slate-700 p-3 rounded-[2rem] shadow-2xl">
-              <div className="bg-[#0f172a] rounded-3xl border border-slate-700 relative overflow-hidden aspect-[16/10] flex flex-col group">
-                 <div className="flex-1 w-full h-full relative bg-slate-900">
-                    {slides.map((slide, i) => (
-                      <div key={slide.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                        <img 
-                            src={slide.img} 
-                            alt={slide.name} 
-                            className="w-full h-full object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
-                        />
-                        <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-800 text-slate-500">
-                            <i className={`bi ${slide.icon} text-6xl mb-4 opacity-50`}></i>
-                            <span>Preview coming soon</span>
-                        </div>
-                        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0f172a] via-[#0f172a]/80 to-transparent pt-20 pb-6 px-8">
-                            <h3 className="text-xl font-bold text-white tracking-wide flex items-center gap-3">
-                                <i className={`bi ${slide.icon} text-blue-400`}></i> {slide.name}
-                            </h3>
-                        </div>
+      {/* --- STICKY NAVIGATION TABS --- */}
+      <div 
+        className="position-sticky pt-2 pb-2 mb-3 shadow-sm" 
+        style={{ 
+            top: 'var(--global-header-height, 65px)', 
+            backgroundColor: 'var(--bg-body)', 
+            zIndex: 1030,
+            borderBottom: '1px solid var(--border-color)',
+            margin: '0 -0.5rem',
+            padding: '0 0.5rem'
+        }}
+      >
+          <div className="row fade-in">
+              <div className="col-12">
+              <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
+                  {tabs.map(tab => (
+                  <li className="nav-item flex-fill" key={tab.id}>
+                      <div 
+                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
+                      onClick={() => setActiveTab(tab.id)}
+                      style={{ fontSize: '0.85rem' }}
+                      >
+                      <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
+                      <span className="text-nowrap">{tab.label}</span>
                       </div>
-                    ))}
-                 </div>
-                 <div className="absolute top-4 right-6 flex gap-2 z-20">
-                   {slides.map((_, i) => (
-                      <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-6 bg-blue-500' : 'w-2 bg-slate-600/80 backdrop-blur-sm'}`}></div>
-                   ))}
-                 </div>
+                  </li>
+                  ))}
+              </ul>
               </div>
+          </div>
+      </div>
+
+      {/* --- TAB CONTENT --- */}
+      <div className="row g-4 flex-grow-1">
+        <div className="col-12">
+          <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
+            <div className="card-body p-0 fade-in-tab" key={activeTab}>
+              {activeTab === 'plan' && <PlanTab />}
+              {activeTab === 'strategy' && <StrategyTab />}
+              {activeTab === 'dashboard' && <DashboardTab />}
+              {activeTab === 'projection' && <ProjectionTab />}
+              {activeTab === 'risk' && <RiskTab />}
+              {activeTab === 'cashflow' && <CashFlowTab />}
+              {activeTab === 'optimizers' && <OptimizersTab />}
+              {activeTab === 'compare' && <CompareTab />}
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* PRICING SECTION */}
-      <section id="pricing" className="py-24 bg-slate-900/50 border-t border-slate-800">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold text-white mb-4">Straightforward Pricing</h2>
-          <p className="text-slate-400 mb-16">Professional planning, accessible to everyone.</p>
-          
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="bg-[#0f172a] border-2 border-blue-600 rounded-[2.5rem] p-10 shadow-2xl shadow-blue-500/10 text-start">
-              <span className="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Active</span>
-              <h3 className="text-2xl font-bold text-white mt-4">Early Access</h3>
-              <div className="text-5xl font-black text-white my-6">$0 <span className="text-lg font-medium text-slate-500">/ development</span></div>
-              <p className="text-slate-400 text-sm mb-8">Full access to all features while we refine the platform. Your feedback helps shape our future.</p>
-              <Link href="/planner" className="block w-full text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all text-decoration-none">
-                Get Started Now
-              </Link>
-            </div>
-
-            <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-10 opacity-50 cursor-not-allowed text-start">
-              <span className="bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Future</span>
-              <h3 className="text-2xl font-bold text-slate-400 mt-4">Standard Plan</h3>
-              <div className="text-5xl font-black text-slate-500 my-6">$5 <span className="text-lg font-medium text-slate-600">/ per month</span></div>
-              <p className="text-slate-500 text-sm mb-8">Full access once the platform moves out of early development. Simple, predictable pricing.</p>
-              <div className="w-full text-center bg-slate-800 text-slate-500 font-bold py-4 rounded-2xl">
-                Coming Soon
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="py-16 border-t border-slate-800 bg-[#0a0f1c]">
-        <div className="container mx-auto px-6 text-start">
-          <div className="flex items-center gap-2 mb-12">
-            <div className="bg-blue-600 p-1.5 rounded-lg">
-              <i className="bi bi-graph-up-arrow text-white"></i>
-            </div>
-            <span className="font-bold text-white text-xl">Planfolio</span>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-12 text-xs text-slate-500 border-t border-slate-800/60 pt-10">
-            <div>
-              <h4 className="text-slate-400 font-bold mb-3 uppercase tracking-widest">Terms of Use</h4>
-              <p className="leading-relaxed">
-                Planfolio is an educational simulation tool intended for informational use only. It does not provide professional financial, legal, or tax advice. All projections are based on user data and historical market assumptions; actual results will vary.
+      {/* --- FOOTER --- */}
+      <footer className="mt-auto pt-5 pb-3 border-top border-secondary border-opacity-50 text-center">
+          <div className="px-3" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+              <p className="text-muted mb-3 text-start text-md-center" style={{ fontSize: '0.75rem', lineHeight: '1.6' }}>
+                  <strong>Disclaimer:</strong> Planfolio is a simulation tool intended strictly for educational, informational, and personal use. It does not constitute professional financial, tax, or legal advice.
               </p>
-            </div>
-            <div>
-              <h4 className="text-slate-400 font-bold mb-3 uppercase tracking-widest">Privacy Policy</h4>
-              <p className="leading-relaxed">
-                Planfolio follows a local-first philosophy. Your sensitive financial data is processed and stored locally within your browser. We do not transmit your personal financial scenarios to our servers, nor do we sell your data to third parties.
+              <p className="text-muted fw-bold ls-1" style={{ fontSize: '0.8rem' }}>
+                  <i className="bi bi-shield-check text-success me-1"></i> Planfolio © {new Date().getFullYear()}. Data is processed securely and locally.
               </p>
-            </div>
           </div>
-          <p className="text-slate-600 text-[10px] mt-12">© {new Date().getFullYear()} Planfolio. All rights reserved.</p>
-        </div>
       </footer>
+
+      {/* --- FEEDBACK MODAL POPUP --- */}
+      {showFeedbackModal && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center px-3" style={{ zIndex: 2000, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-body border border-secondary shadow-lg rounded-4 overflow-hidden fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+            <div className="p-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h6 className="mb-0 fw-bold text-uppercase ls-1"><i className="bi bi-chat-left-heart text-primary me-2"></i>Send Feedback</h6>
+                <button className="btn-close" onClick={() => setShowFeedbackModal(false)}></button>
+              </div>
+
+              {sendSuccess ? (
+                <div className="text-center py-4">
+                  <div className="text-success fs-1 mb-2"><i className="bi bi-check-circle-fill"></i></div>
+                  <h6 className="fw-bold">Feedback Sent!</h6>
+                  <p className="text-muted small">Thanks for helping us improve Planfolio.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSendFeedback}>
+                  <textarea 
+                    className="form-control bg-input border-secondary mb-3 rounded-3 text-sm" 
+                    rows={5} 
+                    placeholder="Found a bug? Have a feature request? Let us know..."
+                    required
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    style={{ resize: 'none', fontSize: '0.9rem' }}
+                  ></textarea>
+                  <button 
+                    type="submit" 
+                    disabled={isSending || !feedbackText.trim()}
+                    className="btn btn-primary w-100 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
+                  >
+                    {isSending ? (
+                      <><span className="spinner-border spinner-border-sm"></span> Sending...</>
+                    ) : (
+                      <><i className="bi bi-send"></i> Submit Feedback</>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- QUICK ADJUST POPUP --- */}
+      {showQuickAdjust && (
+          <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
+               style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '260px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+              <div className="d-flex justify-content-between align-items-center mb-2 pb-2 mt-1 border-bottom border-secondary">
+                  <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.7rem'}}><i className="bi bi-sliders me-2"></i>Quick Adjust</h6>
+              </div>
+              {isCouple && (
+                  <div className="form-check form-switch mb-2 pb-2 border-bottom border-secondary border-opacity-50 d-flex align-items-center justify-content-between px-0">
+                      <label className="form-check-label fw-bold text-muted cursor-pointer text-nowrap" style={{fontSize: '0.75rem'}} htmlFor="syncRetireFAB">Retire at same time</label>
+                      <input className="form-check-input ms-0 mt-0 cursor-pointer flex-shrink-0" style={{transform: 'scale(0.8)'}} type="checkbox" id="syncRetireFAB" checked={data.inputs.retire_same_time ?? false} onChange={e => handleSyncToggle(e.target.checked)} />
+                  </div>
+              )}
+              <div className="d-flex flex-column gap-2">
+                  <div className="d-flex justify-content-between align-items-center gap-2">
+                      <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>P1 Retire Age</span>
+                      <div style={{width: '120px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={data.inputs.p1_lifeExp ?? 90} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p1', val)} /></div>
+                  </div>
+                  {isCouple && (
+                      <div className="d-flex justify-content-between align-items-center gap-2">
+                          <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>P2 Retire Age</span>
+                          <div style={{width: '120px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={data.inputs.p2_lifeExp ?? 90} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p2', val)} /></div>
+                      </div>
+                  )}
+              </div>
+          </div>
+      )}
+
+      {/* --- FEEDBACK BUTTON (Bottom Left) --- */}
+      <button 
+          onClick={() => setShowFeedbackModal(true)}
+          className="btn btn-outline-secondary rounded-circle shadow-sm position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
+          style={{ 
+              width: '48px', 
+              height: '48px', 
+              bottom: '30px', 
+              left: '30px', 
+              zIndex: 1050,
+              backgroundColor: 'var(--bg-body)',
+              borderColor: 'var(--border-color)'
+          }} 
+          title="Send Feedback"
+      >
+          <i className="bi bi-chat-left-dots fs-5"></i>
+      </button>
+
+      {/* --- QUICK ADJUST BUTTON (Bottom Right) --- */}
+      <button className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }} title="Quick Adjust Variables" onClick={() => setShowQuickAdjust(!showQuickAdjust)}>
+          <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
+      </button>
     </div>
   );
 }
