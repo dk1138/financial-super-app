@@ -268,26 +268,37 @@ export default function PlannerPage() {
           </div>
       )}
 
-      {/* --- FEEDBACK BUTTON (Bottom Left) --- */}
+      {/* --- FEEDBACK BUTTON (Right Side, Indigo Pop) --- */}
       <button 
           onClick={() => setShowFeedbackModal(true)}
-          className="btn btn-outline-secondary rounded-circle shadow-sm position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
+          className="btn shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all border-0" 
           style={{ 
               width: '48px', 
               height: '48px', 
               bottom: '30px', 
-              left: '30px', 
+              right: '90px', // Positioned to the left of the Quick Adjust button
               zIndex: 1050,
-              backgroundColor: 'var(--bg-body)',
-              borderColor: 'var(--border-color)'
+              backgroundColor: '#6366f1', // Vibrant Indigo (Distinct from Primary Blue)
+              color: 'white'
           }} 
           title="Send Feedback"
       >
           <i className="bi bi-chat-left-dots fs-5"></i>
       </button>
 
-      {/* --- QUICK ADJUST BUTTON (Bottom Right) --- */}
-      <button className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" style={{ width: '48px', height: '48px', bottom: '30px', right: '30px', zIndex: 1050 }} title="Quick Adjust Variables" onClick={() => setShowQuickAdjust(!showQuickAdjust)}>
+      {/* --- QUICK ADJUST BUTTON (Bottom Right, Primary Blue) --- */}
+      <button 
+          className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
+          style={{ 
+              width: '48px', 
+              height: '48px', 
+              bottom: '30px', 
+              right: '30px', 
+              zIndex: 1050 
+          }} 
+          title="Quick Adjust Variables" 
+          onClick={() => setShowQuickAdjust(!showQuickAdjust)}
+      >
           <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
       </button>
     </div>
