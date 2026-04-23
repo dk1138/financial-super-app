@@ -3,28 +3,28 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function LandingPage() {
-  // State for the sliding gallery
   const [currentSlide, setCurrentSlide] = useState(0);
   
+  // Real screenshots placed in your /public folder
   const slides = [
-    { id: 1, name: "Dashboard & Summary", icon: "bi-clipboard2-data", color: "text-blue-500", bg: "bg-blue-500" },
-    { id: 2, name: "Timeline Projection", icon: "bi-table", color: "text-emerald-500", bg: "bg-emerald-500", img: "/preview-projection.png" },
-    { id: 3, name: "Strategy & Optimization", icon: "bi-sliders", color: "text-purple-500", bg: "bg-purple-500" },
-    { id: 4, name: "Cash Flow Analysis", icon: "bi-diagram-3", color: "text-amber-500", bg: "bg-amber-500" }
+    { id: 1, name: "Dashboard Summary", icon: "bi-clipboard2-data", img: "/preview-dashboard.png" },
+    { id: 2, name: "Timeline Projection", icon: "bi-table", img: "/preview-projection.png" },
+    { id: 3, name: "Strategy & Optimization", icon: "bi-sliders", img: "/preview-strategy.png" },
+    { id: 4, name: "Cash Flow Analysis", icon: "bi-diagram-3", img: "/preview-cashflow.png" }
   ];
 
-  // Auto-slide every 3 seconds
+  // Auto-slide every 4 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 3000);
+    }, 4000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-blue-500/30 font-sans">
       
-      {/* CLEAN MARKETING HEADER */}
+      {/* HEADER */}
       <nav className="fixed top-0 w-full z-50 bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-800">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -34,7 +34,6 @@ export default function LandingPage() {
             <span className="text-xl font-bold tracking-tight text-white">Planfolio</span>
           </div>
           
-          {/* Main Links */}
           <div className="hidden md:flex items-center gap-10 text-sm font-semibold">
             <a href="#about" className="text-slate-400 hover:text-white transition-colors">About</a>
             <Link href="/features" className="text-slate-400 hover:text-white transition-colors">Features</Link>
@@ -51,9 +50,8 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO SECTION */}
-      <header className="relative pt-40 pb-24 overflow-hidden">
+      <header className="relative pt-48 pb-24 overflow-hidden">
         <div className="container mx-auto px-6 text-center relative z-10">
-          
           <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight tracking-tighter">
             Master Your Financial Future,<br/>
             <span className="text-blue-500">One Decision at a Time.</span>
@@ -72,14 +70,13 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
-        {/* Background Glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-blue-600/10 blur-[120px] rounded-full -z-10"></div>
       </header>
 
-      {/* ABOUT SECTION */}
+      {/* ABOUT & SLIDING GALLERY */}
       <section id="about" className="py-24 border-t border-slate-800">
         <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-3xl font-bold text-white mb-6">Built for Accuracy. <br/>Built for Canadians.</h2>
               <p className="text-slate-400 mb-6 leading-relaxed text-lg">
@@ -94,41 +91,49 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            
-            {/* Sliding Gallery Preview */}
-            <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-3xl shadow-2xl">
-              <div className="bg-[#0f172a] rounded-2xl p-6 border border-slate-700 relative overflow-hidden aspect-video flex flex-col">
-                 <div className="flex-1 w-full h-full relative">
+
+            {/* Sliding Screenshot Gallery */}
+            <div className="bg-slate-800/50 border border-slate-700 p-3 rounded-[2rem] shadow-2xl">
+              <div className="bg-[#0f172a] rounded-3xl border border-slate-700 relative overflow-hidden aspect-[16/10] flex flex-col group">
+                 <div className="flex-1 w-full h-full relative bg-slate-900">
                     {slides.map((slide, i) => (
                       <div
                         key={slide.id}
-                        className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-700 ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                        className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                       >
-                        <div className={`p-4 rounded-full bg-slate-800/50 mb-4 border border-slate-700`}>
-                          <i className={`bi ${slide.icon} ${slide.color} text-5xl`}></i>
+                        <img 
+                            src={slide.img} 
+                            alt={slide.name} 
+                            className="w-full h-full object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity duration-500"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                        />
+                        {/* Fallback if image missing from public folder */}
+                        <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-800 text-slate-500">
+                            <i className={`bi ${slide.icon} text-6xl mb-4 opacity-50`}></i>
+                            <span>Preview coming soon</span>
                         </div>
-                        <h3 className="text-2xl font-bold text-white tracking-wide">{slide.name}</h3>
-                        
-                        {/* Mock UI lines to make it look like an app dashboard */}
-                        <div className="mt-8 w-3/4 h-3 bg-slate-800/80 rounded-full overflow-hidden">
-                           <div className={`h-full ${slide.bg} w-2/3 rounded-full opacity-60`}></div>
-                        </div>
-                        <div className="mt-3 w-1/2 h-3 bg-slate-800/80 rounded-full overflow-hidden">
-                           <div className={`h-full ${slide.bg} w-1/3 rounded-full opacity-60`}></div>
+
+                        {/* Caption Overlay */}
+                        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0f172a] via-[#0f172a]/80 to-transparent pt-20 pb-6 px-8">
+                            <h3 className="text-xl font-bold text-white tracking-wide flex items-center gap-3">
+                                <i className={`bi ${slide.icon} text-blue-400`}></i> {slide.name}
+                            </h3>
                         </div>
                       </div>
                     ))}
                  </div>
                  
-                 {/* Slider Indicators */}
-                 <div className="flex justify-center gap-2 mt-4 z-20">
+                 {/* Indicators */}
+                 <div className="absolute top-4 right-6 flex gap-2 z-20">
                    {slides.map((_, i) => (
-                      <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-6 bg-blue-500' : 'w-2 bg-slate-700'}`}></div>
+                      <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-6 bg-blue-500' : 'w-2 bg-slate-600/80 backdrop-blur-sm'}`}></div>
                    ))}
                  </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -143,19 +148,38 @@ export default function LandingPage() {
             <div className="bg-[#0f172a] rounded-[2.3rem] p-10">
               <span className="text-blue-500 font-bold uppercase tracking-widest text-xs">Full Access</span>
               <div className="text-5xl font-black text-white my-4">$0 <span className="text-lg font-medium text-slate-500">/ while in development</span></div>
-              <p className="text-slate-400 text-sm mt-4">We are currently in Early Access. All features are completely free to use while we are actively building and improving the platform.</p>
+              <p className="text-slate-400 text-sm mt-4">We are currently in Early Access. All features are completely free to use while we are actively building and improving the platform. Your feedback helps shape the future of Planfolio.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="py-12 border-t border-slate-800">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          <p className="text-slate-500 text-xs">© 2026 Planfolio. Data sourced from CRA and Bank of Canada.</p>
-          <div className="flex gap-6 text-sm font-medium text-slate-500">
-            <span>Privacy</span>
-            <span>Terms</span>
+      <footer className="py-16 border-t border-slate-800 bg-[#0a0f1c]">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm">
+                <i className="bi bi-graph-up-arrow text-white"></i>
+              </div>
+              <span className="font-bold text-white text-xl">Planfolio</span>
+            </div>
+            <p className="text-slate-500 text-sm font-medium">© {new Date().getFullYear()} Planfolio. Data processed locally and securely.</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-12 text-xs text-slate-500 border-t border-slate-800/60 pt-10">
+            <div>
+              <h4 className="text-slate-400 font-bold mb-3 uppercase tracking-widest">Terms of Use</h4>
+              <p className="leading-relaxed">
+                Planfolio is a financial simulation tool intended for educational and informational purposes only. It does not provide professional financial, legal, or tax advice. All projections are based on user-provided data and historical market assumptions; actual results will vary. Planfolio is not responsible for any financial decisions made based on its output. Always consult with a certified professional before making significant financial commitments.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-slate-400 font-bold mb-3 uppercase tracking-widest">Privacy Policy</h4>
+              <p className="leading-relaxed">
+                Your privacy is paramount. Planfolio follows a local-first philosophy: all sensitive financial data and personal inputs are processed and stored locally within your browser. We do not transmit your personal financial scenarios to our servers, nor do we sell your data to third parties. We only collect anonymized usage analytics to improve the platform's functionality and stability during our development phase.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
