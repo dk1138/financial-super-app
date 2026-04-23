@@ -95,13 +95,17 @@ export default function LivingCostCard() {
                                 </div>
                             </div>
                             <div className="row g-3">
-                                <div className="col-sm-7">
+                                <div className="col-sm-7 d-flex flex-column">
                                     <label className="form-label small text-muted mb-1">Current Value ($)</label>
-                                    <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_value ?? 800000} onChange={(val: any) => updateInput('primary_value', val)} />
+                                    <div className="mt-auto">
+                                        <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_value ?? 800000} onChange={(val: any) => updateInput('primary_value', val)} />
+                                    </div>
                                 </div>
-                                <div className="col-sm-5">
+                                <div className="col-sm-5 d-flex flex-column">
                                     <label className="form-label small text-muted mb-1">Growth (%)</label>
-                                    <PercentInput className="form-control border-secondary" value={data.inputs.primary_growth ?? 3.0} onChange={(val: any) => updateInput('primary_growth', val)} />
+                                    <div className="mt-auto">
+                                        <PercentInput className="form-control border-secondary" value={data.inputs.primary_growth ?? 3.0} onChange={(val: any) => updateInput('primary_growth', val)} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -116,18 +120,26 @@ export default function LivingCostCard() {
                                 )}
                             </div>
                             <div className="row g-3">
-                                <div className="col-sm-4">
+                                <div className="col-sm-4 d-flex flex-column">
                                     <label className="form-label small text-muted mb-1">Balance ($)</label>
-                                    <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_mortgage ?? 400000} onChange={(val: any) => updateInput('primary_mortgage', val)} />
+                                    <div className="mt-auto">
+                                        <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_mortgage ?? 400000} onChange={(val: any) => updateInput('primary_mortgage', val)} />
+                                    </div>
+                                    <div style={{minHeight: '18px'}}></div>
                                 </div>
-                                <div className="col-sm-4">
+                                <div className="col-sm-4 d-flex flex-column">
                                     <label className="form-label small text-muted mb-1">Int. Rate (%)</label>
-                                    <PercentInput className="form-control border-secondary" value={data.inputs.primary_rate ?? 4.0} onChange={(val: any) => updateInput('primary_rate', val)} />
+                                    <div className="mt-auto">
+                                        <PercentInput className="form-control border-secondary" value={data.inputs.primary_rate ?? 4.0} onChange={(val: any) => updateInput('primary_rate', val)} />
+                                    </div>
+                                    <div style={{minHeight: '18px'}}></div>
                                 </div>
-                                <div className="col-sm-4">
+                                <div className="col-sm-4 d-flex flex-column">
                                     <label className="form-label small text-muted mb-1">Payment /mo ($)</label>
-                                    <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_payment ?? 2000} onChange={(val: any) => updateInput('primary_payment', val)} />
-                                    <div className="text-info fw-bold mt-1 text-end text-nowrap" style={{fontSize: '0.7rem', height: '14px', letterSpacing: '-0.2px'}}>
+                                    <div className="mt-auto">
+                                        <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_payment ?? 2000} onChange={(val: any) => updateInput('primary_payment', val)} />
+                                    </div>
+                                    <div className="text-info fw-bold mt-1 text-end text-nowrap" style={{fontSize: '0.7rem', minHeight: '14px', letterSpacing: '-0.2px'}}>
                                         {data.inputs.primary_mortgage > 0 && data.inputs.primary_payment > 0 ? `Payoff: ${calcAmortization(data.inputs.primary_mortgage, data.inputs.primary_rate, data.inputs.primary_payment)}` : ''}
                                     </div>
                                 </div>
@@ -234,13 +246,17 @@ export default function LivingCostCard() {
                                                 </div>
                                             </div>
                                             <div className="row g-3">
-                                                <div className="col-sm-7">
+                                                <div className="col-sm-7 d-flex flex-column">
                                                     <label className="form-label small text-muted mb-1">Target Price (Today's $)</label>
-                                                    <CurrencyInput className="form-control border-secondary" value={phase.price ?? 500000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'price', val)} />
+                                                    <div className="mt-auto">
+                                                        <CurrencyInput className="form-control border-secondary" value={phase.price ?? 500000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'price', val)} />
+                                                    </div>
                                                 </div>
-                                                <div className="col-sm-5">
+                                                <div className="col-sm-5 d-flex flex-column">
                                                     <label className="form-label small text-muted mb-1">Growth (%)</label>
-                                                    <PercentInput className="form-control border-secondary" value={phase.growth ?? 3.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'growth', val)} />
+                                                    <div className="mt-auto">
+                                                        <PercentInput className="form-control border-secondary" value={phase.growth ?? 3.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'growth', val)} />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -255,18 +271,26 @@ export default function LivingCostCard() {
                                                 )}
                                             </div>
                                             <div className="row g-3">
-                                                <div className="col-sm-4">
+                                                <div className="col-sm-4 d-flex flex-column">
                                                     <label className="form-label small text-muted mb-1">Planned Mort. ($)</label>
-                                                    <CurrencyInput className="form-control border-secondary" value={phase.mortgage ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'mortgage', val)} />
+                                                    <div className="mt-auto">
+                                                        <CurrencyInput className="form-control border-secondary" value={phase.mortgage ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'mortgage', val)} />
+                                                    </div>
+                                                    <div style={{minHeight: '18px'}}></div>
                                                 </div>
-                                                <div className="col-sm-4">
+                                                <div className="col-sm-4 d-flex flex-column">
                                                     <label className="form-label small text-muted mb-1">Int. Rate (%)</label>
-                                                    <PercentInput className="form-control border-secondary" value={phase.rate ?? 4.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rate', val)} />
+                                                    <div className="mt-auto">
+                                                        <PercentInput className="form-control border-secondary" value={phase.rate ?? 4.0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rate', val)} />
+                                                    </div>
+                                                    <div style={{minHeight: '18px'}}></div>
                                                 </div>
-                                                <div className="col-sm-4">
+                                                <div className="col-sm-4 d-flex flex-column">
                                                     <label className="form-label small text-muted mb-1">Payment /mo ($)</label>
-                                                    <CurrencyInput className="form-control border-secondary" value={phase.payment ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'payment', val)} />
-                                                    <div className="text-info fw-bold mt-1 text-end text-nowrap" style={{fontSize: '0.7rem', height: '14px', letterSpacing: '-0.2px'}}>
+                                                    <div className="mt-auto">
+                                                        <CurrencyInput className="form-control border-secondary" value={phase.payment ?? 0} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'payment', val)} />
+                                                    </div>
+                                                    <div className="text-info fw-bold mt-1 text-end text-nowrap" style={{fontSize: '0.7rem', minHeight: '14px', letterSpacing: '-0.2px'}}>
                                                         {phase.mortgage > 0 && phase.payment > 0 ? `Payoff: ${calcAmortization(phase.mortgage, phase.rate, phase.payment)}` : ''}
                                                     </div>
                                                 </div>
@@ -327,13 +351,17 @@ export default function LivingCostCard() {
 
                             <div className="p-3 bg-input flex-grow-1">
                                 <div className="row g-3 mb-3">
-                                    <div className="col-12 col-sm-6">
+                                    <div className="col-12 col-sm-6 d-flex flex-column">
                                         <label className="form-label small text-muted fw-bold mb-1">Value ($)</label>
-                                        <CurrencyInput className="form-control form-control-sm border-secondary" value={prop.value ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'value', val)} />
+                                        <div className="mt-auto">
+                                            <CurrencyInput className="form-control form-control-sm border-secondary" value={prop.value ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'value', val)} />
+                                        </div>
                                     </div>
-                                    <div className="col-12 col-sm-6">
+                                    <div className="col-12 col-sm-6 d-flex flex-column">
                                         <label className="form-label small text-muted fw-bold mb-1">Growth (%)</label>
-                                        <PercentInput className="form-control form-control-sm border-secondary" value={prop.growth} onChange={(val: any) => updateArrayItem('properties', idx, 'growth', val)} />
+                                        <div className="mt-auto">
+                                            <PercentInput className="form-control form-control-sm border-secondary" value={prop.growth} onChange={(val: any) => updateArrayItem('properties', idx, 'growth', val)} />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -346,7 +374,7 @@ export default function LivingCostCard() {
                                             </button>
                                         )}
                                     </div>
-                                    <div className="row g-2">
+                                    <div className="row g-2 align-items-center">
                                         <div className="col-4">
                                             <CurrencyInput className="form-control form-control-sm border-secondary" value={prop.mortgage ?? ''} onChange={(val: any) => updateArrayItem('properties', idx, 'mortgage', val)} placeholder="Bal" />
                                         </div>

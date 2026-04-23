@@ -97,7 +97,10 @@ export default function PlannerPage() {
   ];
 
   return (
-    <div className="container-fluid px-3 px-xxl-5 d-flex flex-column min-vh-100">
+    <div 
+        className="container-fluid d-flex flex-column min-vh-100" 
+        style={{ paddingLeft: 'clamp(1rem, 8vw, 15rem)', paddingRight: 'clamp(1rem, 8vw, 15rem)' }}
+    >
       <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
 
       {/* --- STICKY NAVIGATION TABS (Docks seamlessly to the Global Header) --- */}
