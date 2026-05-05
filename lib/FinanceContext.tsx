@@ -17,6 +17,7 @@ export interface FinanceData {
     windfalls: any[];
     additionalIncome: any[];
     customAssets: any[];
+    deductions?: any[];
     leaves: any[];
     dependents: any[];
     debt: any[];
@@ -185,7 +186,7 @@ export const defaultData: FinanceData = {
   ], 
   housingTransitions: [],
   expensePhases: [],
-  windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
+  windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
@@ -237,7 +238,7 @@ export const emptyData: FinanceData = {
     
     emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
   },
-  properties: [], housingTransitions: [], expensePhases: [], windfalls: [], additionalIncome: [], customAssets: [], leaves: [], dependents: [], debt: [],
+  properties: [], housingTransitions: [], expensePhases: [], windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
@@ -256,7 +257,7 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
     merged.useRealDollars = parsedData.useRealDollars ?? parsedData.inputs?.useRealDollars ?? false;
     merged.expenseMode = parsedData.expenseMode || (parsedData.inputs?.expense_mode_advanced ? 'Advanced' : 'Simple');
 
-    ['properties', 'housingTransitions', 'expensePhases', 'windfalls', 'additionalIncome', 'customAssets', 'leaves', 'dependents', 'debt'].forEach(arr => {
+    ['properties', 'housingTransitions', 'expensePhases', 'windfalls', 'additionalIncome', 'customAssets', 'deductions', 'leaves', 'dependents', 'debt'].forEach(arr => {
         if (parsedData[arr]) merged[arr] = parsedData[arr];
     });
 
