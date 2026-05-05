@@ -1016,7 +1016,7 @@ export default function IncomeTaxCard() {
                   </div>
                   
                   {(data.deductions || []).filter((d: any) => d.owner === p).map((ded: any) => {
-                      const realIdx = data.deductions.indexOf(ded);
+                      const realIdx = (data.deductions || []).indexOf(ded);
                       const updateDed = (field: string, val: any) => updateArrayItem('deductions', realIdx, field, val);
                       return (
                           <div className="border border-secondary rounded-4 mb-3 shadow-sm" key={`ded_${realIdx}`}>
