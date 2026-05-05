@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image'; // 1. Import Next.js Image component
 
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -103,10 +104,14 @@ export default function LandingPage() {
                  <div className="flex-1 w-full h-full relative bg-slate-900">
                     {slides.map((slide, i) => (
                       <div key={slide.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                        <img 
+                        {/* 2. Replaced <img> with Next.js <Image> */}
+                        <Image 
                             src={slide.img} 
-                            alt={slide.name} 
-                            className="w-full h-full object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity"
+                            alt={slide.name}
+                            fill
+                            sizes="(max-width: 1024px) 100vw, 50vw"
+                            priority={i === 0}
+                            className="object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity"
                             onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
                         />
                         <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-800 text-slate-500">
