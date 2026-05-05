@@ -75,6 +75,13 @@ export interface CustomAsset {
     retireRate: number;
 }
 
+export interface Deduction {
+    owner: 'p1' | 'p2' | string;
+    name: string;
+    amount: number;
+    freq: 'bi-weekly' | 'monthly' | string;
+}
+
 export interface PlanData {
     mode: 'Single' | 'Couple';
     useRealDollars: boolean;
@@ -84,6 +91,7 @@ export interface PlanData {
     windfalls: Windfall[];
     additionalIncome: AdditionalIncome[];
     customAssets: CustomAsset[];
+    deductions?: Deduction[];
     leaves: any[];
     dependents: Dependent[];
     debt: Debt[];
