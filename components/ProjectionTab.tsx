@@ -666,7 +666,7 @@ export default function ProjectionTab() {
                 <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '16%' }}>Year & Events</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Gross Income</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>
                 <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>
                 <th className="py-3 pe-4 text-muted text-uppercase text-center border-bottom border-secondary text-success" style={{ width: '14%' }}>Net Worth</th>
