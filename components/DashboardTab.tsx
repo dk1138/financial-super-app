@@ -489,16 +489,36 @@ export default function DashboardTab() {
 
               <div className="row g-3 pt-4 mt-1 border-top border-secondary border-opacity-50">
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Retirement Funding" score={planScore.retirementReadiness} max={50} tooltip="Measures your projected trajectory towards FI and funding a safe retirement without cash shortfalls." />
+                      <ScoreCard 
+                          title="Retirement Funding" 
+                          score={planScore.retirementReadiness} 
+                          max={50} 
+                          tooltip="Calculated based on your plan's ability to fund retirement without shortfalls and progress toward the FI target (25x annual retirement spend). Improve by ensuring your net worth stays above zero and aiming for the 25x FI milestone." 
+                      />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Debt Health" score={planScore.debtHealth} max={20} tooltip="Evaluates your Debt-to-Income (DTI) ratio to ensure sustainable cash flow." />
+                      <ScoreCard 
+                          title="Debt Health" 
+                          score={planScore.debtHealth} 
+                          max={20} 
+                          tooltip="Calculated as your annual debt payments divided by your gross household income. Aim for a DTI ratio ≤ 20%. Improve by accelerating debt repayment or restructuring high-interest loans." 
+                      />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Savings Rate" score={planScore.savingsRate} max={20} tooltip="Measures what percentage of your gross household income is being automatically saved and invested." />
+                      <ScoreCard 
+                          title="Savings Rate" 
+                          score={planScore.savingsRate} 
+                          max={20} 
+                          tooltip="Calculated as your total annual savings contributions divided by gross household income. Target is 20%+ of your income. Improve by increasing automated monthly investment transfers." 
+                      />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Emergency Fund" score={planScore.emergencyFund} max={10} tooltip="Checks if your current liquid cash reserves cover at least 6 months of baseline living expenses." />
+                      <ScoreCard 
+                          title="Emergency Fund" 
+                          score={planScore.emergencyFund} 
+                          max={10} 
+                          tooltip="Calculated by comparing your liquid assets (Cash + TFSA) against 6 months of baseline living expenses. Improve by building your buffer until you have 6 months of core expenses saved." 
+                      />
                   </div>
               </div>
             </div>
