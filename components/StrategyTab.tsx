@@ -187,7 +187,6 @@ export default function StrategyTab() {
     return listItems;
   };
 
-  // Helper template renderer to prevent row code repetition
   const renderLimitField = (label: string, colorClass: string, sharedKey: string, p1Key: string, p2Key: string) => {
     if (isSplitLimits) {
       return (
@@ -209,7 +208,9 @@ export default function StrategyTab() {
 
     return (
       <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-        <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>{label} Max</span>
+        <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>
+          {label} {isCouple ? 'MAX (Combined)' : 'MAX'}
+        </span>
         <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs[sharedKey] || 0} onChange={(val: any) => updateInput(sharedKey, val)} />
       </div>
     );
@@ -297,7 +298,7 @@ export default function StrategyTab() {
           <div className="d-flex align-items-center">
             <i className="bi bi-sliders text-warning fs-4 me-3"></i>
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Max Annual Limits</h5>
-            <InfoBtn align="left" title="Custom Contribution Limits" text="Set a manual upper boundary in flat dollars for how much capital you want to inject into each account per single calendar year. These limits remain static over time. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/><b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed." />
+            <InfoBtn align="left" title="Custom Contribution Limits" text={`Set a manual upper boundary in flat dollars for how much capital you want to inject per single calendar year. These limits remain static over time. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/>${isCouple ? '<b>Combined Mode:</b> When Split mode is turned off, the amount denotes a pooled threshold shared between both players. For example, a $10,000 TFSA limit means the engine caps total combined additions across P1 + P2 at $10,000 for that year.<br/><br/>' : ''}<b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed.`} />
           </div>
           {isCouple && (
             <div className="form-check form-switch mb-0 d-flex align-items-center gap-2 bg-input border border-secondary py-1 px-3 rounded-pill shadow-sm">

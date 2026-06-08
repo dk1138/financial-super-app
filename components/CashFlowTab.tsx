@@ -296,7 +296,7 @@ export default function CashFlowTab() {
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
   const PADDING = detailedMode ? 14 : 20; 
-  const LEFT_X = 160; // Widened slightly to make more space for single-line inline metrics
+  const LEFT_X = 160; 
   const RIGHT_X = 1040; 
   const CENTER_LEFT = 570;
   const CENTER_RIGHT = 630;
