@@ -281,7 +281,7 @@ export default function CashFlowTab() {
 
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
-  const PADDING = detailedMode ? 8 : 20; 
+  const PADDING = detailedMode ? 14 : 20; 
   const LEFT_X = 140; 
   const RIGHT_X = 1060; 
   const CENTER_LEFT = 570;
@@ -305,7 +305,7 @@ export default function CashFlowTab() {
   leftData.forEach(d => {
       const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
-      const step = detailedMode ? 14 : 28;
+      const step = detailedMode ? 24 : 28;
       if (ty - lastTextY < step) ty = lastTextY + step;
       leftNodes.push({ ...d, y: curY, h, ty });
       lastTextY = ty;
@@ -319,7 +319,7 @@ export default function CashFlowTab() {
   rightData.forEach(d => {
       const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
-      const step = detailedMode ? 14 : 28;
+      const step = detailedMode ? 24 : 28;
       if (ty - lastTextY < step) ty = lastTextY + step;
       rightNodes.push({ ...d, y: curY, h, ty });
       lastTextY = ty;
@@ -541,7 +541,7 @@ export default function CashFlowTab() {
           <div className="w-100 position-relative" ref={chartContainerRef}>
               
               {viewMode === 'sankey' && (
-                  <div className="d-flex justify-content-center align-items-center fade-in" style={{ minHeight: '550px', height: '72vh' }}>
+                  <div className="d-flex justify-content-center align-items-center fade-in" style={{ minHeight: '550px', height: '75vh' }}>
                       <svg viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
                           
                           {leftLinks.map((l, i) => (
@@ -560,18 +560,12 @@ export default function CashFlowTab() {
                               <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  {detailedMode ? (
-                                      <text x={LEFT_X - NODE_W - 12} y={n.ty + 4} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '11px', opacity: 0.9 }}>
-                                          {n.label} <tspan fill={n.color} opacity="0.85" fontWeight="bold">({formatCurrency(n.value)})</tspan>
-                                      </text>
-                                  ) : (
-                                      <>
-                                          <text x={LEFT_X - NODE_W - 12} y={n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                                          <text x={LEFT_X - NODE_W - 12} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                              {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
-                                          </text>
-                                      </>
-                                  )}
+                                  <text x={LEFT_X - NODE_W - 12} y={n.ty - 6} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '12px' : '14px', opacity: 0.9 }}>
+                                      {n.label}
+                                  </text>
+                                  <text x={LEFT_X - NODE_W - 12} y={n.ty + 10} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                                      {formatCurrency(n.value)} {!detailedMode && <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>}
+                                  </text>
                               </g>
                           ))}
 
@@ -579,18 +573,12 @@ export default function CashFlowTab() {
                               <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  {detailedMode ? (
-                                      <text x={RIGHT_X + NODE_W + 12} y={n.ty + 4} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '11px', opacity: 0.9 }}>
-                                          {n.label} <tspan fill={n.color} opacity="0.85" fontWeight="bold">({formatCurrency(n.value)})</tspan>
-                                      </text>
-                                  ) : (
-                                      <>
-                                          <text x={RIGHT_X + NODE_W + 12} y={n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                                          <text x={RIGHT_X + NODE_W + 12} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                              {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
-                                          </text>
-                                      </>
-                                  )}
+                                  <text x={RIGHT_X + NODE_W + 12} y={n.ty - 6} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '12px' : '14px', opacity: 0.9 }}>
+                                      {n.label}
+                                  </text>
+                                  <text x={RIGHT_X + NODE_W + 12} y={n.ty + 10} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                                      {formatCurrency(n.value)} {!detailedMode && <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>}
+                                  </text>
                               </g>
                           ))}
 
