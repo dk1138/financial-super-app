@@ -262,13 +262,62 @@ export default function StrategyTab() {
         </div>
       </div>
 
+      {/* --- SECTION 2: MAX ANNUAL LIMITS --- */}
+      <div className="rp-card border border-secondary rounded-4 shadow-sm">
+        <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
+          <i className="bi bi-sliders text-warning fs-4 me-3"></i>
+          <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Max Annual Limits</h5>
+          <InfoBtn align="left" title="Custom Contribution Limits" text="Set a manual upper boundary for how much capital you want to inject into each respective account per single calendar year. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/><b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed." />
+        </div>
+        <div className="card-body p-4 bg-secondary bg-opacity-10">
+          <div className="row g-3">
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
+              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                <span className="small fw-bold text-info text-uppercase ls-1">TFSA Max</span>
+                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_tfsa || 0} onChange={(val: any) => updateInput('max_annual_tfsa', val)} />
+              </div>
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
+              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                <span className="small fw-bold text-danger text-uppercase ls-1">RRSP Max</span>
+                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_rrsp || 0} onChange={(val: any) => updateInput('max_annual_rrsp', val)} />
+              </div>
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
+              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                <span className="small fw-bold text-primary text-uppercase ls-1">FHSA Max</span>
+                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_fhsa || 0} onChange={(val: any) => updateInput('max_annual_fhsa', val)} />
+              </div>
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
+              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                <span className="small fw-bold text-success text-uppercase ls-1">Non-Reg Max</span>
+                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_nonreg || 0} onChange={(val: any) => updateInput('max_annual_nonreg', val)} />
+              </div>
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
+              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                <span className="small fw-bold text-secondary text-uppercase ls-1">Cash Buffer</span>
+                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_cash || 0} onChange={(val: any) => updateInput('max_annual_cash', val)} />
+              </div>
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
+              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+                <span className="small fw-bold text-warning text-uppercase ls-1">Crypto Max</span>
+                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_crypto || 0} onChange={(val: any) => updateInput('max_annual_crypto', val)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="row g-4">
-        {/* --- SECTION 2: ANNUAL LIMITS & EMERGENCY FUND --- */}
+        {/* --- SECTION 3: SYSTEM REFERENCE ROOMS & EMERGENCY BUFFER --- */}
         <div className="col-12 col-xl-5 d-flex flex-column">
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
                     <i className="bi bi-speedometer2 text-info fs-4 me-3"></i>
-                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Account Limits</h5>
+                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">3. Account Guidelines</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10">
                     <div className="row g-3">
@@ -381,13 +430,13 @@ export default function StrategyTab() {
             </div>
         </div>
 
-        {/* --- SECTION 3 & 4: OPTIMIZATIONS & EXCEPTIONS --- */}
+        {/* --- SECTION 4 & 5: OPTIMIZATIONS & EXCEPTIONS --- */}
         <div className="col-12 col-xl-7 d-flex flex-column gap-4">
             
             <div className="rp-card border border-secondary rounded-4 shadow-sm">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
                     <i className="bi bi-cpu text-primary fs-4 me-3"></i>
-                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">3. Engine Optimizations</h5>
+                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">4. Engine Optimizations</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
                     
@@ -440,7 +489,7 @@ export default function StrategyTab() {
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card flex-shrink-0">
                     <i className="bi bi-x-octagon text-danger fs-4 me-3"></i>
                     <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                        4. First-Year Overrides
+                        5. First-Year Overrides
                         <InfoBtn align="left" title="First-Year Overrides" text="Useful for simulating real-world scenarios where you have already maxed out your registered accounts for the current year. The engine will skip contributions in Year 1 and resume normally in Year 2." />
                     </h5>
                 </div>
