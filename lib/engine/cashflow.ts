@@ -38,7 +38,8 @@ export function handleSurplus(
     flowLog: any, yearIndex: number, tfsaLim: number, rrspRoom1: number, rrspRoom2: number,
     cryptoLim: number, fhsaLim1: number, fhsaLim2: number, respLim: number,
     actualDeductions: any, fhsaRooms: any, strategies: any, inputs: any, CONSTANTS: any,
-    age1: number, age2: number
+    age1: number, age2: number,
+    options?: { blockRRSPContributions?: boolean }
 ) {
     let remaining = netSurplus;
     const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'];
@@ -113,6 +114,11 @@ export function handleSurplus(
             }
         }
         else if (acct === 'rrsp') {
+            // Anti-churning check: Skip contribution if this year has experienced programmatic withdrawals
+            if (options?.blockRRSPContributions) {
+                continue;
+            }
+
             if (alive1 && rrspRoom1 > 0) { 
                 let allowed = 0;
                 if (isSplit) {
@@ -288,7 +294,8 @@ export function handleDeficit(
     earned1: number, earned2: number, inflation: number, div1: number, div2: number,
     forceOrder: string[] | null, eligPen1: number, eligPen2: number,
     inputs: any, CONSTANTS: any, province: string, rrifStartAge: number,
-    totalExpenses: number = 0
+    totalExpenses: number = 0,
+    options?: { blockRRSPWithdrawals?: boolean }
 ) {
     let remainingDeficit = deficit;
     
@@ -301,7 +308,7 @@ export function handleDeficit(
     let protectedCash = 0;
 
     if (efMode === 'custom') {
-        protectedCash = efCustomAmt * inflation; // Inflate custom target to preserve purchasing power
+        protectedCash = efCustomAmt * inflation; 
     } else if (efMode === '3_months') {
         protectedCash = (totalExpenses / 12) * 3;
     } else if (efMode === '6_months') {
@@ -315,6 +322,11 @@ export function handleDeficit(
     const executePull = (p: any, prefix: string, acct: string) => {
         if (remainingDeficit <= 0) return;
         
+        // Anti-churning check: Skip withdrawal if this shelter already received cash injections this turn
+        if (acct === 'rrsp' && options?.blockRRSPWithdrawals) {
+            return;
+        }
+        
         let accountBalance = p[acct] || 0;
         if (accountBalance <= 0) return;
 
@@ -323,7 +335,7 @@ export function handleDeficit(
         // If pulling from Cash, respect the Emergency Fund boundary
         if (acct === 'cash') {
             maxAllowed = Math.min(accountBalance, availableHouseholdCash);
-            if (maxAllowed <= 0) return; // Protected floor reached
+            if (maxAllowed <= 0) return; 
         }
         
         let isTaxable = ['rrsp', 'rrif_acct', 'lif', 'lirf', 'nonreg', 'crypto'].includes(acct);
@@ -332,7 +344,6 @@ export function handleDeficit(
         let pullAmount = 0;
         
         if (isTaxable && !isCapitalGain) {
-            // Gross up the withdrawal by 20% to account for estimated tax withholding.
             let requiredGross = remainingDeficit / 0.80; 
             pullAmount = Math.min(maxAllowed, requiredGross);
             remainingDeficit -= (pullAmount * 0.80);
