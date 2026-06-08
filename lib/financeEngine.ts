@@ -630,25 +630,40 @@ export class FinanceEngine {
             let p1_match_rate = this.getVal('p1_rrsp_match') / 100, p1_tier = Math.max(0.01, this.getVal('p1_rrsp_match_tier') / 100);
             let p2_match_rate = this.getVal('p2_rrsp_match') / 100, p2_tier = Math.max(0.01, this.getVal('p2_rrsp_match_tier') / 100);
 
-            let empPortionP1 = (!isRet1 && alive1) ? (person1.inc * p1_match_rate) : 0;
-            let empPortionP2 = (!isRet2 && alive2) ? (person2.inc * p2_match_rate) : 0;
+            // --- TRACK LOCAL ACTIONS FOR ANTI-CHURNING LAYER ---
+            let p1RRSPContributed = false;
+            let p2RRSPContributed = false;
+            let p1RRSPWithdrawn = false;
+            let p2RRSPWithdrawn = false;
 
-            let targetTotalP1 = empPortionP1 + (empPortionP1 / p1_tier);
-            let targetTotalP2 = empPortionP2 + (empPortionP2 / p2_tier);
+            // --- DYNAMIC EMPLOYER MATCH CORRECTED MATH ---
+            let empPortionP1 = (!isRet1 && alive1) ? (person1.inc * p1_match_rate) : 0;
+            let baseEmployeeRequiredP1 = (!isRet1 && alive1) ? (person1.inc * p1_tier) : 0;
 
             let totalMatch1 = 0, actEmpPortionP1 = 0;
-            if (targetTotalP1 > 0) {
-                totalMatch1 = Math.min(targetTotalP1, rrspRoom1);
-                actEmpPortionP1 = empPortionP1 * (totalMatch1 / targetTotalP1);
-                inflows.p1.gross += actEmpPortionP1; person1.rrsp += totalMatch1; rrspRoom1 -= totalMatch1; 
+            if (empPortionP1 > 0 && baseEmployeeRequiredP1 > 0) {
+                let correctTargetTotalP1 = empPortionP1 + baseEmployeeRequiredP1;
+                totalMatch1 = Math.min(correctTargetTotalP1, rrspRoom1);
+                actEmpPortionP1 = empPortionP1 * (totalMatch1 / correctTargetTotalP1);
+                inflows.p1.gross += actEmpPortionP1; 
+                person1.rrsp += totalMatch1; 
+                rrspRoom1 -= totalMatch1; 
+                p1RRSPContributed = true;
                 if (detailed) flowLog.contributions.p1.rrsp += totalMatch1; 
             }
 
+            let empPortionP2 = (!isRet2 && alive2) ? (person2.inc * p2_match_rate) : 0;
+            let baseEmployeeRequiredP2 = (!isRet2 && alive2) ? (person2.inc * p2_tier) : 0;
+
             let totalMatch2 = 0, actEmpPortionP2 = 0;
-            if (targetTotalP2 > 0 && alive2) {
-                totalMatch2 = Math.min(targetTotalP2, rrspRoom2);
-                actEmpPortionP2 = empPortionP2 * (totalMatch2 / targetTotalP2);
-                inflows.p2.gross += actEmpPortionP2; person2.rrsp += totalMatch2; rrspRoom2 -= totalMatch2;
+            if (empPortionP2 > 0 && baseEmployeeRequiredP2 > 0 && alive2) {
+                let correctTargetTotalP2 = empPortionP2 + baseEmployeeRequiredP2;
+                totalMatch2 = Math.min(correctTargetTotalP2, rrspRoom2);
+                actEmpPortionP2 = empPortionP2 * (totalMatch2 / correctTargetTotalP2);
+                inflows.p2.gross += actEmpPortionP2; 
+                person2.rrsp += totalMatch2; 
+                rrspRoom2 -= totalMatch2;
+                p2RRSPContributed = true;
                 if (detailed) flowLog.contributions.p2.rrsp += totalMatch2; 
             }
 
@@ -668,6 +683,10 @@ export class FinanceEngine {
                         if (room > 0) {
                             let pullAmt = Math.min(room, person.rrsp);
                             person.rrsp -= pullAmt; incs.rrspMeltdown += pullAmt; 
+                            if (pullAmt > 0) {
+                                if (prefix === 'p1') p1RRSPWithdrawn = true;
+                                if (prefix === 'p2') p2RRSPWithdrawn = true;
+                            }
                             
                             if (detailed && flowLog) flowLog.withdrawals[`${prefix.toUpperCase()} RRSP`] = (flowLog.withdrawals[`${prefix.toUpperCase()} RRSP`] || 0) + pullAmt;
                             if (detailed && wdBreakdown) {
@@ -965,10 +984,27 @@ export class FinanceEngine {
             let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
 
             if (netSurplus > 0) {
-                handleSurplus(netSurplus, person1, person2, alive1, alive2, flowLog, i, consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, this.strategies, this.inputs, this.CONSTANTS, age1, age2);
+                // Pass blockRRSP flags derived from whether a core programmatic withdrawal occurred this cycle
+                handleSurplus(
+                    netSurplus, person1, person2, alive1, alive2, flowLog, i, 
+                    consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
+                    actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, 
+                    this.strategies, this.inputs, this.CONSTANTS, age1, age2,
+                    {
+                        blockRRSPContributionsP1: p1RRSPWithdrawn,
+                        blockRRSPContributionsP2: p2RRSPWithdrawn
+                    }
+                );
                 
-                if (actualDeductions.p1 > 0) pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend, credits1).totalTax;
-                if (actualDeductions.p2 > 0) pendingRefund.p2 = tax2.totalTax - calculateTaxDetailed(craTaxableIncome2 - actualDeductions.p2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (craTaxableIncome1 - actualDeductions.p1) : -1, isEligibleDividend, credits2).totalTax;
+                // Track contributions driven by the handleSurplus logic layer
+                if (actualDeductions.p1 > 0) {
+                    p1RRSPContributed = true;
+                    pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend, credits1).totalTax;
+                }
+                if (actualDeductions.p2 > 0) {
+                    p2RRSPContributed = true;
+                    pendingRefund.p2 = tax2.totalTax - calculateTaxDetailed(craTaxableIncome2 - actualDeductions.p2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (craTaxableIncome1 - actualDeductions.p1) : -1, isEligibleDividend, credits2).totalTax;
+                }
             } else {
                 for (let pass = 0; pass < 10; pass++) {
                     let dynTax1 = calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1);
@@ -978,10 +1014,22 @@ export class FinanceEngine {
                     let currentDeficit = (expenses + mortgagePayment + rentPayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
                     if (currentDeficit < 1) break; 
                     
-                    handleDeficit(currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
-                        if (prefix === 'p1') { craTaxableIncome1 += taxableAmt; cashIncome1 += cashAmt; }
-                        if (prefix === 'p2') { craTaxableIncome2 += taxableAmt; cashIncome2 += cashAmt; }
-                    }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, simContext?.forceOrder || this.strategies.decum, getEligPension1(), getEligPension2(), this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, expenses + mortgagePayment + rentPayment + debtRepayment);
+                    // Prior portfolio snapshot state variables passed to decouple decumulation actions
+                    handleDeficit(
+                        currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, 
+                        flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
+                            if (prefix === 'p1') { craTaxableIncome1 += taxableAmt; cashIncome1 += cashAmt; p1RRSPWithdrawn = true; }
+                            if (prefix === 'p2') { craTaxableIncome2 += taxableAmt; cashIncome2 += cashAmt; p2RRSPWithdrawn = true; }
+                        }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, 
+                        inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, 
+                        simContext?.forceOrder || this.strategies.decum, getEligPension1(), getEligPension2(), 
+                        this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, 
+                        expenses + mortgagePayment + rentPayment + debtRepayment,
+                        {
+                            blockRRSPWithdrawalsP1: p1RRSPContributed,
+                            blockRRSPWithdrawalsP2: p2RRSPContributed
+                        }
+                    );
                 }
                 tax1 = calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1);
                 tax2 = calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2);
@@ -990,7 +1038,6 @@ export class FinanceEngine {
             previousAFNI = Math.max(0, (craTaxableIncome1 - actualDeductions.p1) + (craTaxableIncome2 - actualDeductions.p2));
 
             // --- APPLY GLOBAL TIMING DELTA MATH ---
-            // Fix: Isolate Contribution vs Withdrawal timing triggers!
             let contTimingStr = String(this.inputs.contribution_timing || this.inputs.cashflow_timing || 'end').toLowerCase();
             let wdTimingStr = String(this.inputs.withdrawal_timing || this.inputs.cashflow_timing || 'end').toLowerCase();
             
@@ -1005,7 +1052,6 @@ export class FinanceEngine {
                             let r = rates[key];
                             if (key === 'nonreg') r = Math.max(0, rates.nonreg - (person.nonreg_yield || 0));
                             
-                            // Apply penalty for withdrawals vs bonus for contributions
                             const multiplier = delta > 0 ? contMultiplier : wdMultiplier;
                             const timingAdjustment = delta * r * multiplier;
                             person[key] += timingAdjustment;

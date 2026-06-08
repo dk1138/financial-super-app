@@ -39,7 +39,7 @@ export function handleSurplus(
     cryptoLim: number, fhsaLim1: number, fhsaLim2: number, respLim: number,
     actualDeductions: any, fhsaRooms: any, strategies: any, inputs: any, CONSTANTS: any,
     age1: number, age2: number,
-    options?: { blockRRSPContributions?: boolean }
+    options?: { blockRRSPContributionsP1?: boolean; blockRRSPContributionsP2?: boolean }
 ) {
     let remaining = netSurplus;
     const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'];
@@ -114,12 +114,7 @@ export function handleSurplus(
             }
         }
         else if (acct === 'rrsp') {
-            // Anti-churning check: Skip contribution if this year has experienced programmatic withdrawals
-            if (options?.blockRRSPContributions) {
-                continue;
-            }
-
-            if (alive1 && rrspRoom1 > 0) { 
+            if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) { 
                 let allowed = 0;
                 if (isSplit) {
                     allowed = maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp);
@@ -134,7 +129,7 @@ export function handleSurplus(
                     if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
                 }
             }
-            if (alive2 && rrspRoom2 > 0 && remaining > 0) { 
+            if (alive2 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) { 
                 let allowed = 0;
                 if (isSplit) {
                     allowed = maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp);
@@ -295,7 +290,7 @@ export function handleDeficit(
     forceOrder: string[] | null, eligPen1: number, eligPen2: number,
     inputs: any, CONSTANTS: any, province: string, rrifStartAge: number,
     totalExpenses: number = 0,
-    options?: { blockRRSPWithdrawals?: boolean }
+    options?: { blockRRSPWithdrawalsP1?: boolean; blockRRSPWithdrawalsP2?: boolean }
 ) {
     let remainingDeficit = deficit;
     
@@ -322,9 +317,10 @@ export function handleDeficit(
     const executePull = (p: any, prefix: string, acct: string) => {
         if (remainingDeficit <= 0) return;
         
-        // Anti-churning check: Skip withdrawal if this shelter already received cash injections this turn
-        if (acct === 'rrsp' && options?.blockRRSPWithdrawals) {
-            return;
+        // Block player-isolated counter-directional actions
+        if (acct === 'rrsp') {
+            if (prefix === 'p1' && options?.blockRRSPWithdrawalsP1) return;
+            if (prefix === 'p2' && options?.blockRRSPWithdrawalsP2) return;
         }
         
         let accountBalance = p[acct] || 0;
