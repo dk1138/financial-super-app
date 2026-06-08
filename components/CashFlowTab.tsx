@@ -268,7 +268,6 @@ export default function CashFlowTab() {
       nodeBreakdowns['debt'].forEach((b: any, i: number) => {
           rawRightNodes.push({ id: `debt-${i}`, label: b.label, value: getRealValue(b.val), color: '#f43f5e', parentId: 'debt' });
       });
-      // In detailed mode, only add valid positive outlays to tax nodes
       taxItems.filter(t => !t.isDivider && !t.isHeader && t.val > 0 && !t.isSavings).forEach((b: any, i: number) => {
           rawRightNodes.push({ id: `tax-${i}`, label: b.label, value: getRealValue(b.val), color: '#ef4444', parentId: 'tax' });
       });
@@ -400,11 +399,9 @@ export default function CashFlowTab() {
           border: '1px solid var(--bs-secondary)'
       };
 
-      // Resolve breakdown structures depending on aggregate vs unique breakout node
       const lookUpKey = meta.parentId || meta.id;
       let items = nodeBreakdowns[lookUpKey]?.filter((b: any) => b.isDivider || b.isHeader || Math.abs(b.val) > 1) || [];
       
-      // If detailed mode, narrow the tooltip list to just focus cleanly on the matching item row
       if (detailedMode && meta.parentId) {
           items = items.filter((b: any) => b.label === meta.label);
       }
@@ -563,11 +560,17 @@ export default function CashFlowTab() {
                               <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  <text x={LEFT_X - NODE_W - 12} y={detailedMode ? n.ty + 4 : n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '14px', opacity: 0.9 }}>{n.label}</text>
-                                  {!detailedMode && (
-                                      <text x={LEFT_X - NODE_W - 12} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                          {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                  {detailedMode ? (
+                                      <text x={LEFT_X - NODE_W - 12} y={n.ty + 4} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '11px', opacity: 0.9 }}>
+                                          {n.label} <tspan fill={n.color} opacity="0.85" fontWeight="bold">({formatCurrency(n.value)})</tspan>
                                       </text>
+                                  ) : (
+                                      <>
+                                          <text x={LEFT_X - NODE_W - 12} y={n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
+                                          <text x={LEFT_X - NODE_W - 12} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                                              {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                          </text>
+                                      </>
                                   )}
                               </g>
                           ))}
@@ -576,11 +579,17 @@ export default function CashFlowTab() {
                               <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  <text x={RIGHT_X + NODE_W + 12} y={detailedMode ? n.ty + 4 : n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '14px', opacity: 0.9 }}>{n.label}</text>
-                                  {!detailedMode && (
-                                      <text x={RIGHT_X + NODE_W + 12} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                          {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                  {detailedMode ? (
+                                      <text x={RIGHT_X + NODE_W + 12} y={n.ty + 4} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '11px', opacity: 0.9 }}>
+                                          {n.label} <tspan fill={n.color} opacity="0.85" fontWeight="bold">({formatCurrency(n.value)})</tspan>
                                       </text>
+                                  ) : (
+                                      <>
+                                          <text x={RIGHT_X + NODE_W + 12} y={n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
+                                          <text x={RIGHT_X + NODE_W + 12} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                                              {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                          </text>
+                                      </>
                                   )}
                               </g>
                           ))}
