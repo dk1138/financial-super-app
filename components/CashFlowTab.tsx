@@ -139,7 +139,6 @@ export default function CashFlowTab() {
   if (totalSourcedRaw < totalSpentRaw) shortfallRaw = totalSpentRaw - totalSourcedRaw;
   else if (totalSourcedRaw > totalSpentRaw) unallocatedRaw = totalSourcedRaw - totalSpentRaw;
 
-  // --- DYNAMIC TAX SAVINGS BREAKDOWN ---
   const getCreditVal = (taxDetails: any, key: string) => {
       if (!taxDetails || !taxDetails.nrtcDetails || !taxDetails.nrtcDetails[key]) return 0;
       return (taxDetails.nrtcDetails[key].fedAmt || 0) + (taxDetails.nrtcDetails[key].provAmt || 0);
@@ -169,23 +168,19 @@ export default function CashFlowTab() {
   const matchSavings = (yData.matchTaxSavingsP1 || 0) + (yData.matchTaxSavingsP2 || 0);
   if (matchSavings > 0) savingsItems.push({ id: 'tax-rrsp-match', label: 'RRSP Match Savings', val: matchSavings, isSavings: true });
 
-  // --- GENERATING DETAILED BREAKDOWN FOR P1 AND P2 SAVINGS ACCOUNTS ---
   const savingsBreakdown: any[] = [];
   if (yData.flows && yData.flows.contributions) {
       if (yData.flows.contributions.p1) {
-          const p1Items = Object.entries(yData.flows.contributions.p1)
-              .map(([acct, val]) => ({ label: `P1 ${acct.toUpperCase()}`, val: val as number }))
-              .filter(item => item.val > 0);
-          savingsBreakdown.push(...p1Items);
+          Object.entries(yData.flows.contributions.p1).forEach(([acct, val]) => {
+              if ((val as number) > 0) savingsBreakdown.push({ label: `P1 ${acct.toUpperCase()}`, val: val as number });
+          });
       }
       if (isCouple && yData.flows.contributions.p2) {
-          const p2Items = Object.entries(yData.flows.contributions.p2)
-              .map(([acct, val]) => ({ label: `P2 ${acct.toUpperCase()}`, val: val as number }))
-              .filter(item => item.val > 0);
-          savingsBreakdown.push(...p2Items);
+          Object.entries(yData.flows.contributions.p2).forEach(([acct, val]) => {
+              if ((val as number) > 0) savingsBreakdown.push({ label: `P2 ${acct.toUpperCase()}`, val: val as number });
+          });
       }
   }
-  // Fallback to absolute overview tokens if nested contributions object isn't detailed yet
   if (savingsBreakdown.length === 0) {
       savingsBreakdown.push({ label: 'P1 Contributions', val: p1Conts });
       if (isCouple) savingsBreakdown.push({ label: 'P2 Contributions', val: p2Conts });
@@ -237,7 +232,6 @@ export default function CashFlowTab() {
       ]
   };
 
-  // Build Left Side Stream Data Nodes
   let rawLeftNodes: any[] = [];
   if (!detailedMode) {
       rawLeftNodes = [
@@ -273,7 +267,6 @@ export default function CashFlowTab() {
       }
   }
 
-  // Build Right Side Stream Data Nodes
   let rawRightNodes: any[] = [];
   if (!detailedMode) {
       rawRightNodes = [
@@ -303,8 +296,8 @@ export default function CashFlowTab() {
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
   const PADDING = detailedMode ? 14 : 20; 
-  const LEFT_X = 140; 
-  const RIGHT_X = 1060; 
+  const LEFT_X = 160; // Widened slightly to make more space for single-line inline metrics
+  const RIGHT_X = 1040; 
   const CENTER_LEFT = 570;
   const CENTER_RIGHT = 630;
   const NODE_W = 15;
@@ -326,7 +319,7 @@ export default function CashFlowTab() {
   leftData.forEach(d => {
       const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
-      const step = detailedMode ? 24 : 28;
+      const step = detailedMode ? 22 : 26;
       if (ty - lastTextY < step) ty = lastTextY + step;
       leftNodes.push({ ...d, y: curY, h, ty });
       lastTextY = ty;
@@ -340,7 +333,7 @@ export default function CashFlowTab() {
   rightData.forEach(d => {
       const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
-      const step = detailedMode ? 24 : 28;
+      const step = detailedMode ? 22 : 26;
       if (ty - lastTextY < step) ty = lastTextY + step;
       rightNodes.push({ ...d, y: curY, h, ty });
       lastTextY = ty;
@@ -586,11 +579,10 @@ export default function CashFlowTab() {
                               <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  <text x={LEFT_X - NODE_W - 12} y={n.ty - 6} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '12px' : '14px', opacity: 0.9 }}>
+                                  <text x={LEFT_X - NODE_W - 12} y={n.ty} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '13px' }}>
                                       {n.label}
-                                  </text>
-                                  <text x={LEFT_X - NODE_W - 12} y={n.ty + 10} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                      {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                      <tspan fill={n.color} dx="6px">{formatCurrency(n.value)}</tspan>
+                                      <tspan fill="currentColor" opacity="0.5" fontSize="10px" dx="4px">({((n.value / MAX) * 100).toFixed(0)}%)</tspan>
                                   </text>
                               </g>
                           ))}
@@ -599,11 +591,10 @@ export default function CashFlowTab() {
                               <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  <text x={RIGHT_X + NODE_W + 12} y={n.ty - 6} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '12px' : '14px', opacity: 0.9 }}>
+                                  <text x={RIGHT_X + NODE_W + 12} y={n.ty} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '13px' }}>
                                       {n.label}
-                                  </text>
-                                  <text x={RIGHT_X + NODE_W + 12} y={n.ty + 10} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                      {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                      <tspan fill={n.color} dx="6px">{formatCurrency(n.value)}</tspan>
+                                      <tspan fill="currentColor" opacity="0.5" fontSize="10px" dx="4px">({((n.value / MAX) * 100).toFixed(0)}%)</tspan>
                                   </text>
                               </g>
                           ))}

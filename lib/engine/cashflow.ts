@@ -48,167 +48,232 @@ export function handleSurplus(
     if (inputs.skip_first_tfsa_p1 && yearIndex === 0) tfsaRoom1 = 0;
     if (inputs.skip_first_tfsa_p2 && yearIndex === 0) tfsaRoom2 = 0;
 
-    // --- TRACK ANNUAL CUSTOM ACCOUNT CONTRIBUTIONS ---
+    // --- TRACK INDIVIDUAL & SHARED ANNUAL CONTRIBUTIONS ---
     let annualContributed = {
-        tfsa: 0,
-        rrsp: 0,
-        fhsa: 0,
-        resp: 0,
-        nonreg: 0,
-        cash: 0,
-        crypto: 0
+        p1: { tfsa: 0, rrsp: 0, fhsa: 0, nonreg: 0, cash: 0, crypto: 0 },
+        p2: { tfsa: 0, rrsp: 0, fhsa: 0, nonreg: 0, cash: 0, crypto: 0 },
+        shared: { tfsa: 0, rrsp: 0, fhsa: 0, nonreg: 0, cash: 0, crypto: 0 }
     };
 
-    // Extract self-imposed limits from inputs (0 or undefined means unlimited)
-    const maxAnnualTfsa = inputs.max_annual_tfsa || 0;
-    const maxAnnualRrsp = inputs.max_annual_rrsp || 0;
-    const maxAnnualFhsa = inputs.max_annual_fhsa || 0;
-    const maxAnnualNonreg = inputs.max_annual_nonreg || 0;
-    const maxAnnualCash = inputs.max_annual_cash || 0;
-    const maxAnnualCrypto = inputs.max_annual_crypto || 0;
+    const isSplit = inputs.split_annual_limits ?? false;
+
+    // Extract dynamic limits per user or fallback to standard shared settings
+    const maxLimits = {
+        p1: {
+            tfsa: isSplit ? (inputs.max_annual_tfsa_p1 || 0) : (inputs.max_annual_tfsa || 0),
+            rrsp: isSplit ? (inputs.max_annual_rrsp_p1 || 0) : (inputs.max_annual_rrsp || 0),
+            fhsa: isSplit ? (inputs.max_annual_fhsa_p1 || 0) : (inputs.max_annual_fhsa || 0),
+            nonreg: isSplit ? (inputs.max_annual_nonreg_p1 || 0) : (inputs.max_annual_nonreg || 0),
+            cash: isSplit ? (inputs.max_annual_cash_p1 || 0) : (inputs.max_annual_cash || 0),
+            crypto: isSplit ? (inputs.max_annual_crypto_p1 || 0) : (inputs.max_annual_crypto || 0)
+        },
+        p2: {
+            tfsa: isSplit ? (inputs.max_annual_tfsa_p2 || 0) : (inputs.max_annual_tfsa || 0),
+            rrsp: isSplit ? (inputs.max_annual_rrsp_p2 || 0) : (inputs.max_annual_rrsp || 0),
+            fhsa: isSplit ? (inputs.max_annual_fhsa_p2 || 0) : (inputs.max_annual_fhsa || 0),
+            nonreg: isSplit ? (inputs.max_annual_nonreg_p2 || 0) : (inputs.max_annual_nonreg || 0),
+            cash: isSplit ? (inputs.max_annual_cash_p2 || 0) : (inputs.max_annual_cash || 0),
+            crypto: isSplit ? (inputs.max_annual_crypto_p2 || 0) : (inputs.max_annual_crypto || 0)
+        }
+    };
 
     for (const acct of accumOrder) {
         if (remaining <= 0) break;
 
         if (acct === 'tfsa') {
-            let allowedTFSA = maxAnnualTfsa === 0 ? Infinity : Math.max(0, maxAnnualTfsa - annualContributed.tfsa);
-            if (allowedTFSA > 0) {
-                if (alive1 && tfsaRoom1 > 0) { 
-                    let take = Math.min(remaining, tfsaRoom1, allowedTFSA); 
-                    person1.tfsa += take; 
-                    remaining -= take; 
-                    tfsaRoom1 -= take; 
-                    allowedTFSA -= take;
-                    annualContributed.tfsa += take;
-                    if (flowLog) flowLog.contributions.p1.tfsa = (flowLog.contributions.p1.tfsa || 0) + take; 
+            if (alive1 && tfsaRoom1 > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p1.tfsa === 0 ? Infinity : Math.max(0, maxLimits.p1.tfsa - annualContributed.p1.tfsa);
+                } else {
+                    allowed = maxLimits.p1.tfsa === 0 ? Infinity : Math.max(0, maxLimits.p1.tfsa - annualContributed.shared.tfsa);
                 }
-                if (alive2 && tfsaRoom2 > 0 && remaining > 0 && allowedTFSA > 0) { 
-                    let take = Math.min(remaining, tfsaRoom2, allowedTFSA); 
-                    person2.tfsa += take; 
-                    remaining -= take; 
-                    tfsaRoom2 -= take; 
-                    annualContributed.tfsa += take;
-                    if (flowLog) flowLog.contributions.p2.tfsa = (flowLog.contributions.p2.tfsa || 0) + take; 
+                
+                if (allowed > 0) {
+                    let take = Math.min(remaining, tfsaRoom1, allowed); 
+                    person1.tfsa += take; remaining -= take; tfsaRoom1 -= take; 
+                    annualContributed.p1.tfsa += take; annualContributed.shared.tfsa += take;
+                    if (flowLog) flowLog.contributions.p1.tfsa = (flowLog.contributions.p1.tfsa || 0) + take;
+                }
+            }
+            if (alive2 && tfsaRoom2 > 0 && remaining > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p2.tfsa === 0 ? Infinity : Math.max(0, maxLimits.p2.tfsa - annualContributed.p2.tfsa);
+                } else {
+                    allowed = maxLimits.p2.tfsa === 0 ? Infinity : Math.max(0, maxLimits.p2.tfsa - annualContributed.shared.tfsa);
+                }
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, tfsaRoom2, allowed); 
+                    person2.tfsa += take; remaining -= take; tfsaRoom2 -= take; 
+                    annualContributed.p2.tfsa += take; annualContributed.shared.tfsa += take;
+                    if (flowLog) flowLog.contributions.p2.tfsa = (flowLog.contributions.p2.tfsa || 0) + take;
                 }
             }
         }
         else if (acct === 'rrsp') {
-            let allowedRRSP = maxAnnualRrsp === 0 ? Infinity : Math.max(0, maxAnnualRrsp - annualContributed.rrsp);
-            if (allowedRRSP > 0) {
-                if (alive1 && rrspRoom1 > 0) { 
-                    let take = Math.min(remaining, rrspRoom1, allowedRRSP); 
-                    person1.rrsp += take; 
-                    remaining -= take; 
-                    rrspRoom1 -= take; 
-                    allowedRRSP -= take;
-                    actualDeductions.p1 += take; 
-                    annualContributed.rrsp += take;
-                    if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take; 
+            if (alive1 && rrspRoom1 > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp);
+                } else {
+                    allowed = maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.shared.rrsp);
                 }
-                if (alive2 && rrspRoom2 > 0 && remaining > 0 && allowedRRSP > 0) { 
-                    let take = Math.min(remaining, rrspRoom2, allowedRRSP); 
-                    person2.rrsp += take; 
-                    remaining -= take; 
-                    rrspRoom2 -= take; 
-                    actualDeductions.p2 += take; 
-                    annualContributed.rrsp += take;
-                    if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take; 
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, rrspRoom1, allowed); 
+                    person1.rrsp += take; remaining -= take; rrspRoom1 -= take; actualDeductions.p1 += take; 
+                    annualContributed.p1.rrsp += take; annualContributed.shared.rrsp += take;
+                    if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
+                }
+            }
+            if (alive2 && rrspRoom2 > 0 && remaining > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp);
+                } else {
+                    allowed = maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.shared.rrsp);
+                }
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, rrspRoom2, allowed); 
+                    person2.rrsp += take; remaining -= take; rrspRoom2 -= take; actualDeductions.p2 += take; 
+                    annualContributed.p2.rrsp += take; annualContributed.shared.rrsp += take;
+                    if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take;
                 }
             }
         }
         else if (acct === 'fhsa') {
-            let allowedFHSA = maxAnnualFhsa === 0 ? Infinity : Math.max(0, maxAnnualFhsa - annualContributed.fhsa);
-            if (allowedFHSA > 0) {
-                if (alive1 && fhsaLim1 > 0 && fhsaRooms.p1 > 0) { 
-                    let take = Math.min(remaining, fhsaLim1, fhsaRooms.p1, allowedFHSA); 
-                    person1.fhsa += take; 
-                    remaining -= take; 
-                    fhsaLim1 -= take; 
-                    fhsaRooms.p1 -= take; 
-                    allowedFHSA -= take;
-                    actualDeductions.p1 += take; 
-                    annualContributed.fhsa += take;
-                    if (flowLog) flowLog.contributions.p1.fhsa = (flowLog.contributions.p1.fhsa || 0) + take; 
+            if (alive1 && fhsaLim1 > 0 && fhsaRooms.p1 > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p1.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p1.fhsa - annualContributed.p1.fhsa);
+                } else {
+                    allowed = maxLimits.p1.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p1.fhsa - annualContributed.shared.fhsa);
                 }
-                if (alive2 && fhsaLim2 > 0 && fhsaRooms.p2 > 0 && remaining > 0 && allowedFHSA > 0) { 
-                    let take = Math.min(remaining, fhsaLim2, fhsaRooms.p2, allowedFHSA); 
-                    person2.fhsa += take; 
-                    remaining -= take; 
-                    fhsaLim2 -= take; 
-                    fhsaRooms.p2 -= take; 
-                    actualDeductions.p2 += take; 
-                    annualContributed.fhsa += take;
-                    if (flowLog) flowLog.contributions.p2.fhsa = (flowLog.contributions.p2.fhsa || 0) + take; 
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, fhsaLim1, fhsaRooms.p1, allowed); 
+                    person1.fhsa += take; remaining -= take; fhsaLim1 -= take; fhsaRooms.p1 -= take; actualDeductions.p1 += take; 
+                    annualContributed.p1.fhsa += take; annualContributed.shared.fhsa += take;
+                    if (flowLog) flowLog.contributions.p1.fhsa = (flowLog.contributions.p1.fhsa || 0) + take;
+                }
+            }
+            if (alive2 && fhsaLim2 > 0 && fhsaRooms.p2 > 0 && remaining > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p2.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p2.fhsa - annualContributed.p2.fhsa);
+                } else {
+                    allowed = maxLimits.p2.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p2.fhsa - annualContributed.shared.fhsa);
+                }
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, fhsaLim2, fhsaRooms.p2, allowed); 
+                    person2.fhsa += take; remaining -= take; fhsaLim2 -= take; fhsaRooms.p2 -= take; actualDeductions.p2 += take; 
+                    annualContributed.p2.fhsa += take; annualContributed.shared.fhsa += take;
+                    if (flowLog) flowLog.contributions.p2.fhsa = (flowLog.contributions.p2.fhsa || 0) + take;
                 }
             }
         }
         else if (acct === 'resp') {
-            // RESP does not have a separate max_annual view; uses native target config limits
             let target = respLim;
             if (alive1 && target > 0) { let take = Math.min(remaining, target); person1.resp += take; remaining -= take; target -= take; if (flowLog) flowLog.contributions.p1.resp = (flowLog.contributions.p1.resp || 0) + take; }
             if (alive2 && target > 0 && remaining > 0) { let take = Math.min(remaining, target); person2.resp += take; remaining -= take; if (flowLog) flowLog.contributions.p2.resp = (flowLog.contributions.p2.resp || 0) + take; }
         }
         else if (acct === 'crypto') {
-            let allowedCrypto = maxAnnualCrypto === 0 ? cryptoLim : Math.min(cryptoLim, Math.max(0, maxAnnualCrypto - annualContributed.crypto));
-            if (allowedCrypto > 0) {
-                if (alive1 && allowedCrypto > 0) { 
-                    let take = Math.min(remaining, allowedCrypto); 
-                    person1.crypto += take; 
-                    person1.crypto_acb += take; 
-                    remaining -= take; 
-                    allowedCrypto -= take; 
-                    annualContributed.crypto += take;
-                    if (flowLog) flowLog.contributions.p1.crypto = (flowLog.contributions.p1.crypto || 0) + take; 
+            if (alive1) {
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p1.crypto === 0 ? cryptoLim : Math.min(cryptoLim, Math.max(0, maxLimits.p1.crypto - annualContributed.p1.crypto));
+                } else {
+                    allowed = maxLimits.p1.crypto === 0 ? cryptoLim : Math.min(cryptoLim, Math.max(0, maxLimits.p1.crypto - annualContributed.shared.crypto));
                 }
-                if (alive2 && allowedCrypto > 0 && remaining > 0) { 
-                    let take = Math.min(remaining, allowedCrypto); 
-                    person2.crypto += take; 
-                    person2.crypto_acb += take; 
-                    remaining -= take; 
-                    annualContributed.crypto += take;
-                    if (flowLog) flowLog.contributions.p2.crypto = (flowLog.contributions.p2.crypto || 0) + take; 
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, allowed);
+                    person1.crypto += take; person1.crypto_acb += take; remaining -= take; 
+                    annualContributed.p1.crypto += take; annualContributed.shared.crypto += take;
+                    if (flowLog) flowLog.contributions.p1.crypto = (flowLog.contributions.p1.crypto || 0) + take;
+                }
+            }
+            if (alive2 && remaining > 0) {
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p2.crypto === 0 ? cryptoLim : Math.min(cryptoLim, Math.max(0, maxLimits.p2.crypto - annualContributed.p2.crypto));
+                } else {
+                    allowed = maxLimits.p2.crypto === 0 ? cryptoLim : Math.min(cryptoLim, Math.max(0, maxLimits.p2.crypto - annualContributed.shared.crypto));
+                }
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, allowed);
+                    person2.crypto += take; person2.crypto_acb += take; remaining -= take; 
+                    annualContributed.p2.crypto += take; annualContributed.shared.crypto += take;
+                    if (flowLog) flowLog.contributions.p2.crypto = (flowLog.contributions.p2.crypto || 0) + take;
                 }
             }
         }
         else if (acct === 'nonreg') {
-            let allowedNonReg = maxAnnualNonreg === 0 ? Infinity : Math.max(0, maxAnnualNonreg - annualContributed.nonreg);
-            if (allowedNonReg > 0) {
-                if (alive1) { 
-                    let take = Math.min(remaining / (alive2 ? 2 : 1), allowedNonReg / (alive2 ? 2 : 1)); 
-                    person1.nonreg += take; 
-                    person1.acb += take; 
-                    remaining -= take; 
-                    allowedNonReg -= take;
-                    annualContributed.nonreg += take;
-                    if (flowLog) flowLog.contributions.p1.nonreg = (flowLog.contributions.p1.nonreg || 0) + take; 
+            if (alive1) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p1.nonreg === 0 ? Infinity : Math.max(0, maxLimits.p1.nonreg - annualContributed.p1.nonreg);
+                } else {
+                    allowed = maxLimits.p1.nonreg === 0 ? Infinity : Math.max(0, maxLimits.p1.nonreg - annualContributed.shared.nonreg);
                 }
-                if (alive2 && remaining > 0 && allowedNonReg > 0) { 
-                    let take = Math.min(remaining, allowedNonReg); 
-                    person2.nonreg += take; 
-                    person2.acb += take; 
-                    remaining -= take; 
-                    annualContributed.nonreg += take;
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining / (alive2 ? 2 : 1), allowed); 
+                    person1.nonreg += take; person1.acb += take; remaining -= take; 
+                    annualContributed.p1.nonreg += take; annualContributed.shared.nonreg += take;
+                    if (flowLog) flowLog.contributions.p1.nonreg = (flowLog.contributions.p1.nonreg || 0) + take;
+                }
+            }
+            if (alive2 && remaining > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p2.nonreg === 0 ? Infinity : Math.max(0, maxLimits.p2.nonreg - annualContributed.p2.nonreg);
+                } else {
+                    allowed = maxLimits.p2.nonreg === 0 ? Infinity : Math.max(0, maxLimits.p2.nonreg - annualContributed.shared.nonreg);
+                }
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, allowed); 
+                    person2.nonreg += take; person2.acb += take; remaining -= take; 
+                    annualContributed.p2.nonreg += take; annualContributed.shared.nonreg += take;
                     if (flowLog) flowLog.contributions.p2.nonreg = (flowLog.contributions.p2.nonreg || 0) + take; 
                 }
             }
         }
         else if (acct === 'cash') {
-            let allowedCash = maxAnnualCash === 0 ? Infinity : Math.max(0, maxAnnualCash - annualContributed.cash);
-            if (allowedCash > 0) {
-                if (alive1) { 
-                    let take = Math.min(remaining / (alive2 ? 2 : 1), allowedCash / (alive2 ? 2 : 1)); 
-                    person1.cash += take; 
-                    remaining -= take; 
-                    allowedCash -= take;
-                    annualContributed.cash += take;
-                    if (flowLog) flowLog.contributions.p1.cash = (flowLog.contributions.p1.cash || 0) + take; 
+            if (alive1) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p1.cash === 0 ? Infinity : Math.max(0, maxLimits.p1.cash - annualContributed.p1.cash);
+                } else {
+                    allowed = maxLimits.p1.cash === 0 ? Infinity : Math.max(0, maxLimits.p1.cash - annualContributed.shared.cash);
                 }
-                if (alive2 && remaining > 0 && allowedCash > 0) { 
-                    let take = Math.min(remaining, allowedCash); 
-                    person2.cash += take; 
-                    remaining -= take; 
-                    annualContributed.cash += take;
-                    if (flowLog) flowLog.contributions.p2.cash = (flowLog.contributions.p2.cash || 0) + take; 
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining / (alive2 ? 2 : 1), allowed); 
+                    person1.cash += take; remaining -= take; 
+                    annualContributed.p1.cash += take; annualContributed.shared.cash += take;
+                    if (flowLog) flowLog.contributions.p1.cash = (flowLog.contributions.p1.cash || 0) + take;
+                }
+            }
+            if (alive2 && remaining > 0) { 
+                let allowed = 0;
+                if (isSplit) {
+                    allowed = maxLimits.p2.cash === 0 ? Infinity : Math.max(0, maxLimits.p2.cash - annualContributed.p2.cash);
+                } else {
+                    allowed = maxLimits.p2.cash === 0 ? Infinity : Math.max(0, maxLimits.p2.cash - annualContributed.shared.cash);
+                }
+
+                if (allowed > 0) {
+                    let take = Math.min(remaining, allowed); 
+                    person2.cash += take; remaining -= take; 
+                    annualContributed.p2.cash += take; annualContributed.shared.cash += take;
+                    if (flowLog) flowLog.contributions.p2.cash = (flowLog.contributions.p2.cash || 0) + take;
                 }
             }
         }
