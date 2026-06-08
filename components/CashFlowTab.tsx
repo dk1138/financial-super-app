@@ -511,13 +511,13 @@ export default function CashFlowTab() {
                   <div className="d-flex align-items-center gap-2">
                       <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
                           <button 
-                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${!detailedMode ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${!detailedMode ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
                               onClick={() => setDetailedMode(false)}
                           >
                               Simple View
                           </button>
                           <button 
-                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${detailedMode ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${detailedMode ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
                               onClick={() => setDetailedMode(true)}
                           >
                               Detailed Streams
@@ -528,13 +528,13 @@ export default function CashFlowTab() {
 
                   <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
                       <button 
-                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'sankey' ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'sankey' ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
                           onClick={() => setViewMode('sankey')}
                       >
                           Sankey Diagram
                       </button>
                       <button 
-                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'ledger' ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'ledger' ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
                           onClick={() => setViewMode('ledger')}
                       >
                           Stacked Ledger
