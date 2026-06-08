@@ -86,6 +86,7 @@ export const sampleProfile = {
     cfg_fhsa_limit: 8000,
     cfg_resp_limit: 2500,
     cfg_crypto_limit: 5000,
+    max_annual_spending_cash: 5000, // Added default baseline constraint limit
     portfolio_allocation: "custom",
     use_glide_path: false,
     fully_optimize_tax: false,
@@ -123,6 +124,7 @@ export const sampleProfile = {
       "tfsa",
       "rrsp",
       "fhsa",
+      "spending_cash", // Inserted into default sequence list here
       "resp",
       "nonreg",
       "cash",

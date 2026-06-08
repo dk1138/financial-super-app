@@ -42,12 +42,15 @@ export function handleSurplus(
     options?: { blockRRSPContributionsP1?: boolean; blockRRSPContributionsP2?: boolean }
 ) {
     let remaining = netSurplus;
-    const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'];
+    const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'];
 
     let tfsaRoom1 = alive1 ? tfsaLim + (yearIndex === 0 ? (inputs.p1_tfsa_room || 0) : 0) : 0;
     let tfsaRoom2 = alive2 ? tfsaLim + (yearIndex === 0 ? (inputs.p2_tfsa_room || 0) : 0) : 0;
     if (inputs.skip_first_tfsa_p1 && yearIndex === 0) tfsaRoom1 = 0;
     if (inputs.skip_first_tfsa_p2 && yearIndex === 0) tfsaRoom2 = 0;
+
+    // Compounding inflation scaling baseline to preserve real purchasing value layers across timeline steps
+    const baseInflation = Math.pow(1 + (inputs.inflation_rate || 2.1) / 100, yearIndex);
 
     // --- TRACK INDIVIDUAL & SHARED ANNUAL CONTRIBUTIONS ---
     let annualContributed = {
@@ -80,6 +83,27 @@ export function handleSurplus(
 
     for (const acct of accumOrder) {
         if (remaining <= 0) break;
+
+        if (acct === 'spending_cash') {
+            let maxSpendingAllowed = Number(inputs.max_annual_spending_cash || 0);
+            
+            // Adjust flat dollar threshold upper bound filters for inflation unless running strict real flat value baselines
+            if (inputs.useRealDollars === false) {
+                maxSpendingAllowed *= baseInflation;
+            }
+
+            if (maxSpendingAllowed > 0) {
+                let actualSpent = Math.min(remaining, maxSpendingAllowed);
+                remaining -= actualSpent;
+
+                // Log details onto flow logs to guarantee correct tabular synchronization updates
+                if (flowLog) {
+                    if (!flowLog.contributions.shared) flowLog.contributions.shared = {};
+                    flowLog.contributions.shared.spending_cash = (flowLog.contributions.shared.spending_cash || 0) + actualSpent;
+                }
+            }
+            continue;
+        }
 
         if (acct === 'tfsa') {
             if (alive1 && tfsaRoom1 > 0) { 

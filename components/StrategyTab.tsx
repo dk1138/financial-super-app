@@ -10,6 +10,7 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
   cash: { label: 'Cash / HYSA', icon: 'bi-cash-stack', color: 'text-secondary', desc: 'High-Yield Savings' },
   crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-warning', desc: 'Digital Assets' },
   resp: { label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', desc: 'Education Savings' },
+  spending_cash: { label: 'Spending Cash', icon: 'bi-bag-heart-fill', color: 'text-warning', desc: 'Unbudgeted Lifestyle Cash' },
   rrif_acct: { label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', desc: 'Converted RRSP' },
   lif: { label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', desc: 'Life Income Fund' },
   lirf: { label: 'LIRA / LIRF', icon: 'bi-lock-fill', color: 'text-muted', desc: 'Locked-In Retirement' },
@@ -40,7 +41,7 @@ export default function StrategyTab() {
   
   // HARD FILTERS: Prevent impossible accounts from showing in the queues
   const filterAccum = (list: string[]) => list.filter(a => !['rrif_acct', 'lif', 'lirf'].includes(a));
-  const filterDecum = (list: string[]) => list.filter(a => !['fhsa', 'resp'].includes(a));
+  const filterDecum = (list: string[]) => list.filter(a => !['fhsa', 'resp', 'spending_cash'].includes(a));
 
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const [localAccum, setLocalAccum] = useState<string[]>(filterAccum(data.strategies.accum || []));
@@ -132,20 +133,41 @@ export default function StrategyTab() {
           className={`d-flex align-items-center justify-content-between p-3 mb-2 rounded-4 transition-all shadow-sm ${isDragging ? 'border border-primary bg-primary bg-opacity-10 shadow' : 'border border-secondary bg-input hover-bg-secondary hover-bg-opacity-10'}`}
           style={{ cursor: isLocked ? 'default' : (isDragging ? 'grabbing' : 'grab') }}
         >
-          <div className="d-flex align-items-center gap-3">
+          <div className="d-flex align-items-center gap-3 flex-grow-1">
             <div className={`d-flex align-items-center justify-content-center ${isLocked ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-25 text-muted'} rounded-circle fw-bold`} style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
                 {displayIndex}
             </div>
             <div className={`bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center ${details.color} flex-shrink-0`} style={{width: '42px', height: '42px'}}>
                 <i className={`bi ${details.icon} fs-5`}></i>
             </div>
-            <div>
-                <h6 className="mb-0 fw-bold text-main">{details.label}</h6>
-                <div className={`small fw-medium ${isLocked ? 'text-success opacity-75' : 'text-muted'}`} style={{ fontSize: '0.7rem' }}>
-                    {isLocked ? 'Auto-Managed' : details.desc}
+            
+            {item === 'spending_cash' ? (
+              <div className="d-flex align-items-center justify-content-between flex-grow-1 me-2 gap-3">
+                <div>
+                    <h6 className="mb-0 fw-bold text-main">{details.label}</h6>
+                    <div className="small fw-medium text-muted" style={{ fontSize: '0.7rem' }}>
+                        {details.desc}
+                    </div>
                 </div>
-            </div>
+                <div className="d-flex align-items-center gap-2 style={{ maxWidth: '140px' }}" onClick={(e) => e.stopPropagation()}>
+                  <span className="small text-muted fw-bold text-nowrap" style={{ fontSize: '0.65rem' }}>MAX:</span>
+                  <CurrencyInput 
+                    className="form-control form-control-sm border-secondary shadow-none text-end fw-bold" 
+                    value={data.inputs.max_annual_spending_cash || 0} 
+                    onChange={(val: any) => updateInput('max_annual_spending_cash', val)} 
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                  <h6 className="mb-0 fw-bold text-main">{details.label}</h6>
+                  <div className={`small fw-medium ${isLocked ? 'text-success opacity-75' : 'text-muted'}`} style={{ fontSize: '0.7rem' }}>
+                      {isLocked ? 'Auto-Managed' : details.desc}
+                  </div>
+              </div>
+            )}
           </div>
+          
           {isLocked ? (
               <i className="bi bi-lock-fill text-success fs-5 opacity-50 ms-2"></i>
           ) : (
