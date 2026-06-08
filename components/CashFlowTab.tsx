@@ -169,6 +169,31 @@ export default function CashFlowTab() {
   const matchSavings = (yData.matchTaxSavingsP1 || 0) + (yData.matchTaxSavingsP2 || 0);
   if (matchSavings > 0) savingsItems.push({ id: 'tax-rrsp-match', label: 'RRSP Match Savings', val: matchSavings, isSavings: true });
 
+  // --- GENERATING DETAILED BREAKDOWN FOR P1 AND P2 SAVINGS ACCOUNTS ---
+  const savingsBreakdown: any[] = [];
+  if (yData.flows && yData.flows.contributions) {
+      if (yData.flows.contributions.p1) {
+          const p1Items = Object.entries(yData.flows.contributions.p1)
+              .map(([acct, val]) => ({ label: `P1 ${acct.toUpperCase()}`, val: val as number }))
+              .filter(item => item.val > 0);
+          savingsBreakdown.push(...p1Items);
+      }
+      if (isCouple && yData.flows.contributions.p2) {
+          const p2Items = Object.entries(yData.flows.contributions.p2)
+              .map(([acct, val]) => ({ label: `P2 ${acct.toUpperCase()}`, val: val as number }))
+              .filter(item => item.val > 0);
+          savingsBreakdown.push(...p2Items);
+      }
+  }
+  // Fallback to absolute overview tokens if nested contributions object isn't detailed yet
+  if (savingsBreakdown.length === 0) {
+      savingsBreakdown.push({ label: 'P1 Contributions', val: p1Conts });
+      if (isCouple) savingsBreakdown.push({ label: 'P2 Contributions', val: p2Conts });
+  }
+  if (unallocatedRaw > 0) {
+      savingsBreakdown.push({ label: 'Unallocated Cash', val: unallocatedRaw });
+  }
+
   const nodeBreakdowns: any = {
       'salary': [
           { label: 'P1 Employment', val: p1BaseSalary },
@@ -206,11 +231,7 @@ export default function CashFlowTab() {
           { label: 'Other Debt/Purchases', val: yData.debtRepayment || 0 }
       ],
       'tax': taxItems,
-      'sav': [
-          { label: 'P1 Contributions', val: p1Conts },
-          { label: 'P2 Contributions', val: p2Conts },
-          { label: 'Unallocated Cash', val: unallocatedRaw }
-      ],
+      'sav': savingsBreakdown,
       'center': [
           { label: 'Total Balanced Flow', val: Math.max(totalSourcedRaw, totalSpentRaw) }
       ]
@@ -391,7 +412,7 @@ export default function CashFlowTab() {
           top: Math.max(10, tooltip.y - 30),
           left: isRightHalf ? 'auto' : tooltip.x + 20,
           right: isRightHalf ? chartWidth - tooltip.x + 20 : 'auto',
-          minWidth: '240px',
+          minWidth: '250px',
           backgroundColor: 'var(--bg-card)',
           zIndex: 1050,
           pointerEvents: 'none',

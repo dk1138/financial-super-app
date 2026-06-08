@@ -20,6 +20,7 @@ export default function StrategyTab() {
   
   const isCouple = data.mode === 'Couple';
   const isOptimized = data.inputs.fully_optimize_tax ?? false;
+  const isSplitLimits = isCouple && (data.inputs.split_annual_limits ?? false);
 
   // --- EMERGENCY FUND MATH ---
   const calcMonthlyExpenses = () => {
@@ -186,6 +187,34 @@ export default function StrategyTab() {
     return listItems;
   };
 
+  // Helper template renderer to prevent row code repetition
+  const renderLimitField = (label: string, colorClass: string, sharedKey: string, p1Key: string, p2Key: string) => {
+    if (isSplitLimits) {
+      return (
+        <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+          <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>{label}</span>
+          <div className="d-flex flex-column gap-2 mt-1">
+            <div className="d-flex align-items-center gap-2">
+              <span className="badge bg-secondary bg-opacity-25 text-muted fw-bold px-2 py-1" style={{ fontSize: '0.6rem', minWidth: '28px' }}>P1</span>
+              <CurrencyInput className="form-control form-control-sm border-secondary shadow-none flex-grow-1" value={data.inputs[p1Key] || 0} onChange={(val: any) => updateInput(p1Key, val)} />
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <span className="badge bg-purple bg-opacity-10 text-purple fw-bold px-2 py-1" style={{ fontSize: '0.6rem', minWidth: '28px' }}>P2</span>
+              <CurrencyInput className="form-control form-control-sm border-secondary shadow-none flex-grow-1" value={data.inputs[p2Key] || 0} onChange={(val: any) => updateInput(p2Key, val)} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
+        <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>{label} Max</span>
+        <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs[sharedKey] || 0} onChange={(val: any) => updateInput(sharedKey, val)} />
+      </div>
+    );
+  };
+
   return (
     <div className="p-3 p-md-4 d-flex flex-column gap-4">
       
@@ -264,48 +293,38 @@ export default function StrategyTab() {
 
       {/* --- SECTION 2: MAX ANNUAL LIMITS --- */}
       <div className="rp-card border border-secondary rounded-4 shadow-sm">
-        <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
-          <i className="bi bi-sliders text-warning fs-4 me-3"></i>
-          <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Max Annual Limits</h5>
-          <InfoBtn align="left" title="Custom Contribution Limits" text="Set a manual upper boundary in flat dollars for how much capital you want to inject into each respective account per single calendar year. These limits remain static over time. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/><b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed." />
+        <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
+          <div className="d-flex align-items-center">
+            <i className="bi bi-sliders text-warning fs-4 me-3"></i>
+            <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Max Annual Limits</h5>
+            <InfoBtn align="left" title="Custom Contribution Limits" text="Set a manual upper boundary in flat dollars for how much capital you want to inject into each account per single calendar year. These limits remain static over time. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/><b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed." />
+          </div>
+          {isCouple && (
+            <div className="form-check form-switch mb-0 d-flex align-items-center gap-2 bg-input border border-secondary py-1 px-3 rounded-pill shadow-sm">
+              <label className="form-check-label small fw-bold text-muted cursor-pointer mb-0 text-uppercase ls-1" htmlFor="toggleSplitLimits" style={{ fontSize: '0.65rem' }}>Split P1 / P2</label>
+              <input className="form-check-input cursor-pointer shadow-none m-0 border-secondary" type="checkbox" id="toggleSplitLimits" checked={data.inputs.split_annual_limits ?? false} onChange={(e) => updateInput('split_annual_limits', e.target.checked)} />
+            </div>
+          )}
         </div>
         <div className="card-body p-4 bg-secondary bg-opacity-10">
           <div className="row g-3">
             <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                <span className="small fw-bold text-info text-uppercase ls-1">TFSA Max</span>
-                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_tfsa || 0} onChange={(val: any) => updateInput('max_annual_tfsa', val)} />
-              </div>
+              {renderLimitField('TFSA', 'text-info', 'max_annual_tfsa', 'max_annual_tfsa_p1', 'max_annual_tfsa_p2')}
             </div>
             <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                <span className="small fw-bold text-danger text-uppercase ls-1">RRSP Max</span>
-                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_rrsp || 0} onChange={(val: any) => updateInput('max_annual_rrsp', val)} />
-              </div>
+              {renderLimitField('RRSP', 'text-danger', 'max_annual_rrsp', 'max_annual_rrsp_p1', 'max_annual_rrsp_p2')}
             </div>
             <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                <span className="small fw-bold text-primary text-uppercase ls-1">FHSA Max</span>
-                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_fhsa || 0} onChange={(val: any) => updateInput('max_annual_fhsa', val)} />
-              </div>
+              {renderLimitField('FHSA', 'text-primary', 'max_annual_fhsa', 'max_annual_fhsa_p1', 'max_annual_fhsa_p2')}
             </div>
             <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                <span className="small fw-bold text-success text-uppercase ls-1">Non-Reg Max</span>
-                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_nonreg || 0} onChange={(val: any) => updateInput('max_annual_nonreg', val)} />
-              </div>
+              {renderLimitField('Non-Reg', 'text-success', 'max_annual_nonreg', 'max_annual_nonreg_p1', 'max_annual_nonreg_p2')}
             </div>
             <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                <span className="small fw-bold text-secondary text-uppercase ls-1">Cash Buffer</span>
-                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_cash || 0} onChange={(val: any) => updateInput('max_annual_cash', val)} />
-              </div>
+              {renderLimitField('Cash', 'text-secondary', 'max_annual_cash', 'max_annual_cash_p1', 'max_annual_cash_p2')}
             </div>
             <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-                <span className="small fw-bold text-warning text-uppercase ls-1">Crypto Max</span>
-                <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.max_annual_crypto || 0} onChange={(val: any) => updateInput('max_annual_crypto', val)} />
-              </div>
+              {renderLimitField('Crypto', 'text-warning', 'max_annual_crypto', 'max_annual_crypto_p1', 'max_annual_crypto_p2')}
             </div>
           </div>
         </div>
