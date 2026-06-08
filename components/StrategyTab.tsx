@@ -267,7 +267,7 @@ export default function StrategyTab() {
         <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
           <i className="bi bi-sliders text-warning fs-4 me-3"></i>
           <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Max Annual Limits</h5>
-          <InfoBtn align="left" title="Custom Contribution Limits" text="Set a manual upper boundary for how much capital you want to inject into each respective account per single calendar year. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/><b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed." />
+          <InfoBtn align="left" title="Custom Contribution Limits" text="Set a manual upper boundary in flat dollars for how much capital you want to inject into each respective account per single calendar year. These limits remain static over time. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/><b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed." />
         </div>
         <div className="card-body p-4 bg-secondary bg-opacity-10">
           <div className="row g-3">
