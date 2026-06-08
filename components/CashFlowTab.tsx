@@ -508,17 +508,22 @@ export default function CashFlowTab() {
               </h5>
               
               <div className="d-flex flex-wrap align-items-center gap-3">
-                  <div className="form-check form-switch bg-input px-3 py-1.5 rounded border border-secondary shadow-sm d-flex align-items-center m-0 gap-2">
-                      <input 
-                          className="form-check-input cursor-pointer ms-0" 
-                          type="checkbox" 
-                          id="detailedModeToggle"
-                          checked={detailedMode}
-                          onChange={(e) => setDetailedMode(e.target.checked)}
-                      />
-                      <label className="form-check-label text-main small fw-bold cursor-pointer user-select-none" htmlFor="detailedModeToggle">
-                          Detailed Streams
-                      </label>
+                  <div className="d-flex align-items-center gap-2">
+                      <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
+                          <button 
+                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${!detailedMode ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                              onClick={() => setDetailedMode(false)}
+                          >
+                              Simple View
+                          </button>
+                          <button 
+                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${detailedMode ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                              onClick={() => setDetailedMode(true)}
+                          >
+                              Detailed Streams
+                          </button>
+                      </div>
+                      <InfoBtn text="Toggle between grouped category aggregates (e.g., Govt Benefits) and broken out individual cash streams (e.g., P1 CPP, P2 OAS, CCB)." />
                   </div>
 
                   <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
