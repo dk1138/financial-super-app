@@ -523,7 +523,7 @@ export default function CashFlowTab() {
                               Detailed Streams
                           </button>
                       </div>
-                      <InfoBtn text="Toggle between grouped category aggregates (e.g., Govt Benefits) and broken out individual cash streams (e.g., P1 CPP, P2 OAS, CCB)." />
+                      <InfoBtn title="Detailed Streams Mode" text="Toggle between grouped category aggregates (e.g., Govt Benefits) and broken out individual cash streams (e.g., P1 CPP, P2 OAS, CCB)." />
                   </div>
 
                   <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
