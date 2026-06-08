@@ -48,38 +48,169 @@ export function handleSurplus(
     if (inputs.skip_first_tfsa_p1 && yearIndex === 0) tfsaRoom1 = 0;
     if (inputs.skip_first_tfsa_p2 && yearIndex === 0) tfsaRoom2 = 0;
 
+    // --- TRACK ANNUAL CUSTOM ACCOUNT CONTRIBUTIONS ---
+    let annualContributed = {
+        tfsa: 0,
+        rrsp: 0,
+        fhsa: 0,
+        resp: 0,
+        nonreg: 0,
+        cash: 0,
+        crypto: 0
+    };
+
+    // Extract self-imposed limits from inputs (0 or undefined means unlimited)
+    const maxAnnualTfsa = inputs.max_annual_tfsa || 0;
+    const maxAnnualRrsp = inputs.max_annual_rrsp || 0;
+    const maxAnnualFhsa = inputs.max_annual_fhsa || 0;
+    const maxAnnualNonreg = inputs.max_annual_nonreg || 0;
+    const maxAnnualCash = inputs.max_annual_cash || 0;
+    const maxAnnualCrypto = inputs.max_annual_crypto || 0;
+
     for (const acct of accumOrder) {
         if (remaining <= 0) break;
 
         if (acct === 'tfsa') {
-            if (alive1 && tfsaRoom1 > 0) { let take = Math.min(remaining, tfsaRoom1); person1.tfsa += take; remaining -= take; tfsaRoom1 -= take; if (flowLog) flowLog.contributions.p1.tfsa = (flowLog.contributions.p1.tfsa || 0) + take; }
-            if (alive2 && tfsaRoom2 > 0 && remaining > 0) { let take = Math.min(remaining, tfsaRoom2); person2.tfsa += take; remaining -= take; tfsaRoom2 -= take; if (flowLog) flowLog.contributions.p2.tfsa = (flowLog.contributions.p2.tfsa || 0) + take; }
+            let allowedTFSA = maxAnnualTfsa === 0 ? Infinity : Math.max(0, maxAnnualTfsa - annualContributed.tfsa);
+            if (allowedTFSA > 0) {
+                if (alive1 && tfsaRoom1 > 0) { 
+                    let take = Math.min(remaining, tfsaRoom1, allowedTFSA); 
+                    person1.tfsa += take; 
+                    remaining -= take; 
+                    tfsaRoom1 -= take; 
+                    allowedTFSA -= take;
+                    annualContributed.tfsa += take;
+                    if (flowLog) flowLog.contributions.p1.tfsa = (flowLog.contributions.p1.tfsa || 0) + take; 
+                }
+                if (alive2 && tfsaRoom2 > 0 && remaining > 0 && allowedTFSA > 0) { 
+                    let take = Math.min(remaining, tfsaRoom2, allowedTFSA); 
+                    person2.tfsa += take; 
+                    remaining -= take; 
+                    tfsaRoom2 -= take; 
+                    annualContributed.tfsa += take;
+                    if (flowLog) flowLog.contributions.p2.tfsa = (flowLog.contributions.p2.tfsa || 0) + take; 
+                }
+            }
         }
         else if (acct === 'rrsp') {
-            if (alive1 && rrspRoom1 > 0) { let take = Math.min(remaining, rrspRoom1); person1.rrsp += take; remaining -= take; rrspRoom1 -= take; actualDeductions.p1 += take; if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take; }
-            if (alive2 && rrspRoom2 > 0 && remaining > 0) { let take = Math.min(remaining, rrspRoom2); person2.rrsp += take; remaining -= take; rrspRoom2 -= take; actualDeductions.p2 += take; if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take; }
+            let allowedRRSP = maxAnnualRrsp === 0 ? Infinity : Math.max(0, maxAnnualRrsp - annualContributed.rrsp);
+            if (allowedRRSP > 0) {
+                if (alive1 && rrspRoom1 > 0) { 
+                    let take = Math.min(remaining, rrspRoom1, allowedRRSP); 
+                    person1.rrsp += take; 
+                    remaining -= take; 
+                    rrspRoom1 -= take; 
+                    allowedRRSP -= take;
+                    actualDeductions.p1 += take; 
+                    annualContributed.rrsp += take;
+                    if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take; 
+                }
+                if (alive2 && rrspRoom2 > 0 && remaining > 0 && allowedRRSP > 0) { 
+                    let take = Math.min(remaining, rrspRoom2, allowedRRSP); 
+                    person2.rrsp += take; 
+                    remaining -= take; 
+                    rrspRoom2 -= take; 
+                    actualDeductions.p2 += take; 
+                    annualContributed.rrsp += take;
+                    if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take; 
+                }
+            }
         }
         else if (acct === 'fhsa') {
-            if (alive1 && fhsaLim1 > 0 && fhsaRooms.p1 > 0) { let take = Math.min(remaining, fhsaLim1, fhsaRooms.p1); person1.fhsa += take; remaining -= take; fhsaLim1 -= take; fhsaRooms.p1 -= take; actualDeductions.p1 += take; if (flowLog) flowLog.contributions.p1.fhsa = (flowLog.contributions.p1.fhsa || 0) + take; }
-            if (alive2 && fhsaLim2 > 0 && fhsaRooms.p2 > 0 && remaining > 0) { let take = Math.min(remaining, fhsaLim2, fhsaRooms.p2); person2.fhsa += take; remaining -= take; fhsaLim2 -= take; fhsaRooms.p2 -= take; actualDeductions.p2 += take; if (flowLog) flowLog.contributions.p2.fhsa = (flowLog.contributions.p2.fhsa || 0) + take; }
+            let allowedFHSA = maxAnnualFhsa === 0 ? Infinity : Math.max(0, maxAnnualFhsa - annualContributed.fhsa);
+            if (allowedFHSA > 0) {
+                if (alive1 && fhsaLim1 > 0 && fhsaRooms.p1 > 0) { 
+                    let take = Math.min(remaining, fhsaLim1, fhsaRooms.p1, allowedFHSA); 
+                    person1.fhsa += take; 
+                    remaining -= take; 
+                    fhsaLim1 -= take; 
+                    fhsaRooms.p1 -= take; 
+                    allowedFHSA -= take;
+                    actualDeductions.p1 += take; 
+                    annualContributed.fhsa += take;
+                    if (flowLog) flowLog.contributions.p1.fhsa = (flowLog.contributions.p1.fhsa || 0) + take; 
+                }
+                if (alive2 && fhsaLim2 > 0 && fhsaRooms.p2 > 0 && remaining > 0 && allowedFHSA > 0) { 
+                    let take = Math.min(remaining, fhsaLim2, fhsaRooms.p2, allowedFHSA); 
+                    person2.fhsa += take; 
+                    remaining -= take; 
+                    fhsaLim2 -= take; 
+                    fhsaRooms.p2 -= take; 
+                    actualDeductions.p2 += take; 
+                    annualContributed.fhsa += take;
+                    if (flowLog) flowLog.contributions.p2.fhsa = (flowLog.contributions.p2.fhsa || 0) + take; 
+                }
+            }
         }
         else if (acct === 'resp') {
+            // RESP does not have a separate max_annual view; uses native target config limits
             let target = respLim;
             if (alive1 && target > 0) { let take = Math.min(remaining, target); person1.resp += take; remaining -= take; target -= take; if (flowLog) flowLog.contributions.p1.resp = (flowLog.contributions.p1.resp || 0) + take; }
             if (alive2 && target > 0 && remaining > 0) { let take = Math.min(remaining, target); person2.resp += take; remaining -= take; if (flowLog) flowLog.contributions.p2.resp = (flowLog.contributions.p2.resp || 0) + take; }
         }
         else if (acct === 'crypto') {
-            let target = cryptoLim;
-            if (alive1 && target > 0) { let take = Math.min(remaining, target); person1.crypto += take; person1.crypto_acb += take; remaining -= take; target -= take; if (flowLog) flowLog.contributions.p1.crypto = (flowLog.contributions.p1.crypto || 0) + take; }
-            if (alive2 && target > 0 && remaining > 0) { let take = Math.min(remaining, target); person2.crypto += take; person2.crypto_acb += take; remaining -= take; if (flowLog) flowLog.contributions.p2.crypto = (flowLog.contributions.p2.crypto || 0) + take; }
+            let allowedCrypto = maxAnnualCrypto === 0 ? cryptoLim : Math.min(cryptoLim, Math.max(0, maxAnnualCrypto - annualContributed.crypto));
+            if (allowedCrypto > 0) {
+                if (alive1 && allowedCrypto > 0) { 
+                    let take = Math.min(remaining, allowedCrypto); 
+                    person1.crypto += take; 
+                    person1.crypto_acb += take; 
+                    remaining -= take; 
+                    allowedCrypto -= take; 
+                    annualContributed.crypto += take;
+                    if (flowLog) flowLog.contributions.p1.crypto = (flowLog.contributions.p1.crypto || 0) + take; 
+                }
+                if (alive2 && allowedCrypto > 0 && remaining > 0) { 
+                    let take = Math.min(remaining, allowedCrypto); 
+                    person2.crypto += take; 
+                    person2.crypto_acb += take; 
+                    remaining -= take; 
+                    annualContributed.crypto += take;
+                    if (flowLog) flowLog.contributions.p2.crypto = (flowLog.contributions.p2.crypto || 0) + take; 
+                }
+            }
         }
         else if (acct === 'nonreg') {
-            if (alive1) { let take = remaining / (alive2 ? 2 : 1); person1.nonreg += take; person1.acb += take; remaining -= take; if (flowLog) flowLog.contributions.p1.nonreg = (flowLog.contributions.p1.nonreg || 0) + take; }
-            if (alive2 && remaining > 0) { let take = remaining; person2.nonreg += take; person2.acb += take; remaining -= take; if (flowLog) flowLog.contributions.p2.nonreg = (flowLog.contributions.p2.nonreg || 0) + take; }
+            let allowedNonReg = maxAnnualNonreg === 0 ? Infinity : Math.max(0, maxAnnualNonreg - annualContributed.nonreg);
+            if (allowedNonReg > 0) {
+                if (alive1) { 
+                    let take = Math.min(remaining / (alive2 ? 2 : 1), allowedNonReg / (alive2 ? 2 : 1)); 
+                    person1.nonreg += take; 
+                    person1.acb += take; 
+                    remaining -= take; 
+                    allowedNonReg -= take;
+                    annualContributed.nonreg += take;
+                    if (flowLog) flowLog.contributions.p1.nonreg = (flowLog.contributions.p1.nonreg || 0) + take; 
+                }
+                if (alive2 && remaining > 0 && allowedNonReg > 0) { 
+                    let take = Math.min(remaining, allowedNonReg); 
+                    person2.nonreg += take; 
+                    person2.acb += take; 
+                    remaining -= take; 
+                    annualContributed.nonreg += take;
+                    if (flowLog) flowLog.contributions.p2.nonreg = (flowLog.contributions.p2.nonreg || 0) + take; 
+                }
+            }
         }
         else if (acct === 'cash') {
-            if (alive1) { let take = remaining / (alive2 ? 2 : 1); person1.cash += take; remaining -= take; if (flowLog) flowLog.contributions.p1.cash = (flowLog.contributions.p1.cash || 0) + take; }
-            if (alive2 && remaining > 0) { let take = remaining; person2.cash += take; remaining -= take; if (flowLog) flowLog.contributions.p2.cash = (flowLog.contributions.p2.cash || 0) + take; }
+            let allowedCash = maxAnnualCash === 0 ? Infinity : Math.max(0, maxAnnualCash - annualContributed.cash);
+            if (allowedCash > 0) {
+                if (alive1) { 
+                    let take = Math.min(remaining / (alive2 ? 2 : 1), allowedCash / (alive2 ? 2 : 1)); 
+                    person1.cash += take; 
+                    remaining -= take; 
+                    allowedCash -= take;
+                    annualContributed.cash += take;
+                    if (flowLog) flowLog.contributions.p1.cash = (flowLog.contributions.p1.cash || 0) + take; 
+                }
+                if (alive2 && remaining > 0 && allowedCash > 0) { 
+                    let take = Math.min(remaining, allowedCash); 
+                    person2.cash += take; 
+                    remaining -= take; 
+                    annualContributed.cash += take;
+                    if (flowLog) flowLog.contributions.p2.cash = (flowLog.contributions.p2.cash || 0) + take; 
+                }
+            }
         }
     }
 }
@@ -137,13 +268,10 @@ export function handleDeficit(
         
         if (isTaxable && !isCapitalGain) {
             // Gross up the withdrawal by 20% to account for estimated tax withholding.
-            // This ensures they pull out enough to actually cover the cash deficit.
-            // The exact tax is trued-up by the main financeEngine loop dynamically.
             let requiredGross = remainingDeficit / 0.80; 
             pullAmount = Math.min(maxAllowed, requiredGross);
             remainingDeficit -= (pullAmount * 0.80);
         } else {
-            // Cash, TFSA, FHSA, Non-Reg, Crypto (Capital gains are treated as 1:1 cash for this step)
             pullAmount = Math.min(maxAllowed, remainingDeficit);
             remainingDeficit -= pullAmount;
         }
@@ -186,16 +314,15 @@ export function handleDeficit(
                 wdBreakdown[prefix][logKey + '_math'].acb += acbDisposed;
                 wdBreakdown[prefix][logKey + '_math'].gain += gain;
                 
-                // Actual Taxable Gain (50% Inclusion)
                 let taxableGain = gain * 0.5;
                 wdBreakdown[prefix][logKey + '_math'].tax += taxableGain;
-                addTaxFn(prefix, taxableGain, pullAmount); // Add taxable gain to income, add full pull to cash flow
+                addTaxFn(prefix, taxableGain, pullAmount); 
 
             } else if (isTaxable) {
                 wdBreakdown[prefix][logKey + '_math'].tax += pullAmount;
-                addTaxFn(prefix, pullAmount, pullAmount); // Full amount is taxable, full amount is cash flow
+                addTaxFn(prefix, pullAmount, pullAmount); 
             } else {
-                addTaxFn(prefix, 0, pullAmount); // $0 taxable, full amount is cash flow
+                addTaxFn(prefix, 0, pullAmount); 
             }
         }
     };
@@ -214,14 +341,11 @@ export function handleDeficit(
     }
 
     // --- 3. BREAK THE GLASS PROTOCOL (Failsafe) ---
-    // If we still have a deficit, and there is protected cash sitting in the Emergency Fund, 
-    // we must spend it to survive and prevent the simulation from prematurely failing.
     if (remainingDeficit > 0 && protectedCash > 0) {
         let p1RemainingCash = alive1 ? person1.cash : 0;
         let p2RemainingCash = alive2 ? person2.cash : 0;
 
         if (p1RemainingCash > 0) {
-            // Bypass the lock by setting available Household cash to Infinity
             availableHouseholdCash = Infinity;
             executePull(person1, 'p1', 'cash');
         }
