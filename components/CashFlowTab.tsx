@@ -296,8 +296,8 @@ export default function CashFlowTab() {
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
   const PADDING = detailedMode ? 14 : 20; 
-  const LEFT_X = 160; 
-  const RIGHT_X = 1040; 
+  const LEFT_X = 240; // Increased to 240 to allocate comfortable room for inline values
+  const RIGHT_X = 960; // Decreased to 960 to perfectly mimic horizontal spacing mirrors
   const CENTER_LEFT = 570;
   const CENTER_RIGHT = 630;
   const NODE_W = 15;
@@ -579,10 +579,11 @@ export default function CashFlowTab() {
                               <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
+                                  {/* Right-aligned text sequence block on left side */}
                                   <text x={LEFT_X - NODE_W - 12} y={n.ty} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '13px' }}>
-                                      {n.label}
-                                      <tspan fill={n.color} dx="6px">{formatCurrency(n.value)}</tspan>
-                                      <tspan fill="currentColor" opacity="0.5" fontSize="10px" dx="4px">({((n.value / MAX) * 100).toFixed(0)}%)</tspan>
+                                      <tspan fill="currentColor" opacity="0.4" fontSize="10px" fontStyle="italic">({((n.value / MAX) * 100).toFixed(0)}%)</tspan>
+                                      <tspan fill={n.color} dx="6px" fontWeight="800">{formatCurrency(n.value)}</tspan>
+                                      <tspan fill="currentColor" dx="8px" opacity="0.95">{n.label}</tspan>
                                   </text>
                               </g>
                           ))}
@@ -591,10 +592,11 @@ export default function CashFlowTab() {
                               <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
+                                  {/* Left-aligned text sequence block on right side */}
                                   <text x={RIGHT_X + NODE_W + 12} y={n.ty} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '13px' }}>
-                                      {n.label}
-                                      <tspan fill={n.color} dx="6px">{formatCurrency(n.value)}</tspan>
-                                      <tspan fill="currentColor" opacity="0.5" fontSize="10px" dx="4px">({((n.value / MAX) * 100).toFixed(0)}%)</tspan>
+                                      <tspan fill="currentColor" opacity="0.95">{n.label}</tspan>
+                                      <tspan fill={n.color} dx="8px" fontWeight="800">{formatCurrency(n.value)}</tspan>
+                                      <tspan fill="currentColor" opacity="0.4" fontSize="10px" fontStyle="italic" dx="6px">({((n.value / MAX) * 100).toFixed(0)}%)</tspan>
                                   </text>
                               </g>
                           ))}
