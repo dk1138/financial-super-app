@@ -8,6 +8,7 @@ export default function CashFlowTab() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'sankey' | 'ledger'>('sankey');
+  const [detailedMode, setDetailedMode] = useState<boolean>(false);
   
   const [tooltip, setTooltip] = useState<{ id: string, x: number, y: number } | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -145,13 +146,13 @@ export default function CashFlowTab() {
   };
 
   let taxItems: any[] = [
-      { label: 'Federal Tax Paid', val: (yData.taxDetailsP1?.fed || 0) + (yData.taxDetailsP2?.fed || 0) },
-      { label: 'Provincial Tax Paid', val: (yData.taxDetailsP1?.prov || 0) + (yData.taxDetailsP2?.prov || 0) },
-      { label: 'CPP / EI Premiums', val: (yData.taxDetailsP1?.cpp_ei || 0) + (yData.taxDetailsP2?.cpp_ei || 0) },
+      { id: 'tax-fed', label: 'Federal Tax Paid', val: (yData.taxDetailsP1?.fed || 0) + (yData.taxDetailsP2?.fed || 0) },
+      { id: 'tax-prov', label: 'Provincial Tax Paid', val: (yData.taxDetailsP1?.prov || 0) + (yData.taxDetailsP2?.prov || 0) },
+      { id: 'tax-cpp-ei', label: 'CPP / EI Premiums', val: (yData.taxDetailsP1?.cpp_ei || 0) + (yData.taxDetailsP2?.cpp_ei || 0) },
   ];
   
   const clawback = (yData.taxDetailsP1?.oas_clawback || 0) + (yData.taxDetailsP2?.oas_clawback || 0);
-  if (clawback > 0) taxItems.push({ label: 'OAS Clawback', val: clawback });
+  if (clawback > 0) taxItems.push({ id: 'tax-oas-clawback', label: 'OAS Clawback', val: clawback });
 
   let savingsItems: any[] = [];
   const creditsList = ['age', 'pension', 'disability', 'caregiver', 'medical', 'homeBuyer', 'donations'];
@@ -159,20 +160,14 @@ export default function CashFlowTab() {
   
   creditsList.forEach(key => {
       const val = getCreditVal(yData.taxDetailsP1, key) + getCreditVal(yData.taxDetailsP2, key);
-      if (val > 0) savingsItems.push({ label: creditLabels[key], val: val, isSavings: true });
+      if (val > 0) savingsItems.push({ id: `tax-credit-${key}`, label: creditLabels[key], val: val, isSavings: true });
   });
 
   const transit = (yData.taxDetailsP1?.rtc?.transit || 0) + (yData.taxDetailsP2?.rtc?.transit || 0);
-  if (transit > 0) savingsItems.push({ label: 'Transit Refund', val: transit, isSavings: true });
+  if (transit > 0) savingsItems.push({ id: 'tax-transit', label: 'Transit Refund', val: transit, isSavings: true });
 
   const matchSavings = (yData.matchTaxSavingsP1 || 0) + (yData.matchTaxSavingsP2 || 0);
-  if (matchSavings > 0) savingsItems.push({ label: 'RRSP Match Savings', val: matchSavings, isSavings: true });
-
-  if (savingsItems.length > 0) {
-      taxItems.push({ isDivider: true });
-      taxItems.push({ label: 'Tax Reductions Applied', isHeader: true });
-      taxItems = taxItems.concat(savingsItems);
-  }
+  if (matchSavings > 0) savingsItems.push({ id: 'tax-rrsp-match', label: 'RRSP Match Savings', val: matchSavings, isSavings: true });
 
   const nodeBreakdowns: any = {
       'salary': [
@@ -210,7 +205,7 @@ export default function CashFlowTab() {
           { label: 'Mortgage Payments', val: yData.mortgagePay || 0 },
           { label: 'Other Debt/Purchases', val: yData.debtRepayment || 0 }
       ],
-      'tax': taxItems, // Dynamic Tax Items Generated Above
+      'tax': taxItems,
       'sav': [
           { label: 'P1 Contributions', val: p1Conts },
           { label: 'P2 Contributions', val: p2Conts },
@@ -221,29 +216,73 @@ export default function CashFlowTab() {
       ]
   };
 
-  const rawLeftNodes = [
-      { id: 'salary', label: 'Employment', value: getRealValue(salaryRaw), color: '#3b82f6' },
-      { id: 'match', label: 'Employer Match', value: getRealValue(matchRaw), color: '#0ea5e9' },
-      { id: 'govt', label: 'Govt Benefits', value: getRealValue(govtRaw), color: '#8b5cf6' },
-      { id: 'pen', label: 'Pensions', value: getRealValue(penRaw), color: '#6366f1' },
-      { id: 'wds', label: 'Withdrawals', value: getRealValue(wdsRaw), color: '#f59e0b' },
-      { id: 'other', label: 'Other/Yield', value: getRealValue(otherRaw), color: '#10b981' },
-      { id: 'shortfall', label: 'Shortfall', value: getRealValue(shortfallRaw), color: '#ef4444' },
-  ];
+  // Build Left Side Stream Data Nodes
+  let rawLeftNodes: any[] = [];
+  if (!detailedMode) {
+      rawLeftNodes = [
+          { id: 'salary', label: 'Employment', value: getRealValue(salaryRaw), color: '#3b82f6' },
+          { id: 'match', label: 'Employer Match', value: getRealValue(matchRaw), color: '#0ea5e9' },
+          { id: 'govt', label: 'Govt Benefits', value: getRealValue(govtRaw), color: '#8b5cf6' },
+          { id: 'pen', label: 'Pensions', value: getRealValue(penRaw), color: '#6366f1' },
+          { id: 'wds', label: 'Withdrawals', value: getRealValue(wdsRaw), color: '#f59e0b' },
+          { id: 'other', label: 'Other/Yield', value: getRealValue(otherRaw), color: '#10b981' },
+          { id: 'shortfall', label: 'Shortfall', value: getRealValue(shortfallRaw), color: '#ef4444' },
+      ];
+  } else {
+      nodeBreakdowns['salary'].forEach((b: any, i: number) => {
+          rawLeftNodes.push({ id: `salary-${i}`, label: b.label, value: getRealValue(b.val), color: '#3b82f6', parentId: 'salary' });
+      });
+      nodeBreakdowns['match'].forEach((b: any, i: number) => {
+          rawLeftNodes.push({ id: `match-${i}`, label: b.label, value: getRealValue(b.val), color: '#0ea5e9', parentId: 'match' });
+      });
+      nodeBreakdowns['govt'].forEach((b: any, i: number) => {
+          rawLeftNodes.push({ id: `govt-${i}`, label: b.label, value: getRealValue(b.val), color: '#8b5cf6', parentId: 'govt' });
+      });
+      nodeBreakdowns['pen'].forEach((b: any, i: number) => {
+          rawLeftNodes.push({ id: `pen-${i}`, label: b.label, value: getRealValue(b.val), color: '#6366f1', parentId: 'pen' });
+      });
+      nodeBreakdowns['wds'].forEach((b: any, i: number) => {
+          rawLeftNodes.push({ id: `wds-${i}`, label: b.label, value: getRealValue(b.val), color: '#f59e0b', parentId: 'wds' });
+      });
+      nodeBreakdowns['other'].forEach((b: any, i: number) => {
+          rawLeftNodes.push({ id: `other-${i}`, label: b.label, value: getRealValue(b.val), color: '#10b981', parentId: 'other' });
+      });
+      if (shortfallRaw > 0) {
+          rawLeftNodes.push({ id: 'shortfall-0', label: 'Unfunded Deficit', value: getRealValue(shortfallRaw), color: '#ef4444', parentId: 'shortfall' });
+      }
+  }
 
-  const rawRightNodes = [
-      { id: 'exp', label: 'Living Expenses', value: getRealValue(expRaw), color: '#f59e0b' },
-      { id: 'debt', label: 'Debt/Mortgage', value: getRealValue(debtRaw), color: '#f43f5e' },
-      { id: 'tax', label: 'Taxes Paid', value: getRealValue(taxRaw), color: '#ef4444' },
-      { id: 'sav', label: 'Saved/Invested', value: getRealValue(contsRaw + unallocatedRaw), color: '#10b981' },
-  ];
+  // Build Right Side Stream Data Nodes
+  let rawRightNodes: any[] = [];
+  if (!detailedMode) {
+      rawRightNodes = [
+          { id: 'exp', label: 'Living Expenses', value: getRealValue(expRaw), color: '#f59e0b' },
+          { id: 'debt', label: 'Debt/Mortgage', value: getRealValue(debtRaw), color: '#f43f5e' },
+          { id: 'tax', label: 'Taxes Paid', value: getRealValue(taxRaw), color: '#ef4444' },
+          { id: 'sav', label: 'Saved/Invested', value: getRealValue(contsRaw + unallocatedRaw), color: '#10b981' },
+      ];
+  } else {
+      nodeBreakdowns['exp'].forEach((b: any, i: number) => {
+          rawRightNodes.push({ id: `exp-${i}`, label: b.label, value: getRealValue(b.val), color: '#f59e0b', parentId: 'exp' });
+      });
+      nodeBreakdowns['debt'].forEach((b: any, i: number) => {
+          rawRightNodes.push({ id: `debt-${i}`, label: b.label, value: getRealValue(b.val), color: '#f43f5e', parentId: 'debt' });
+      });
+      // In detailed mode, only add valid positive outlays to tax nodes
+      taxItems.filter(t => !t.isDivider && !t.isHeader && t.val > 0 && !t.isSavings).forEach((b: any, i: number) => {
+          rawRightNodes.push({ id: `tax-${i}`, label: b.label, value: getRealValue(b.val), color: '#ef4444', parentId: 'tax' });
+      });
+      nodeBreakdowns['sav'].forEach((b: any, i: number) => {
+          rawRightNodes.push({ id: `sav-${i}`, label: b.label, value: getRealValue(b.val), color: '#10b981', parentId: 'sav' });
+      });
+  }
 
   const leftData = rawLeftNodes.filter(d => d.value >= 1);
   const rightData = rawRightNodes.filter(d => d.value >= 1);
 
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
-  const PADDING = 20; 
+  const PADDING = detailedMode ? 8 : 20; 
   const LEFT_X = 140; 
   const RIGHT_X = 1060; 
   const CENTER_LEFT = 570;
@@ -267,7 +306,8 @@ export default function CashFlowTab() {
   leftData.forEach(d => {
       const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
-      if (ty - lastTextY < 28) ty = lastTextY + 28;
+      const step = detailedMode ? 14 : 28;
+      if (ty - lastTextY < step) ty = lastTextY + step;
       leftNodes.push({ ...d, y: curY, h, ty });
       lastTextY = ty;
       curY += h + PADDING;
@@ -280,7 +320,8 @@ export default function CashFlowTab() {
   rightData.forEach(d => {
       const h = d.value * pxPerDollar;
       let ty = curY + h / 2;
-      if (ty - lastTextY < 28) ty = lastTextY + 28;
+      const step = detailedMode ? 14 : 28;
+      if (ty - lastTextY < step) ty = lastTextY + step;
       rightNodes.push({ ...d, y: curY, h, ty });
       lastTextY = ty;
       curY += h + PADDING;
@@ -332,7 +373,11 @@ export default function CashFlowTab() {
   const getOpacity = (id: string) => (!hovered || hovered === id) ? 1 : 0.15;
   const getLinkOpacity = (id: string) => hovered === id ? 0.7 : (hovered ? 0.05 : 0.35);
 
-  const allNodesMeta = [...leftData, ...rightData, { id: 'center', label: 'Total Balanced Flow', value: getRealValue(Math.max(totalSourcedRaw, totalSpentRaw)), color: '#10b981' }];
+  const allNodesMeta = [
+      ...leftData, 
+      ...rightData, 
+      { id: 'center', label: 'Total Balanced Flow', value: getRealValue(Math.max(totalSourcedRaw, totalSpentRaw)), color: '#10b981' }
+  ];
 
   const renderTooltip = () => {
       if (!tooltip) return null;
@@ -347,7 +392,7 @@ export default function CashFlowTab() {
           top: Math.max(10, tooltip.y - 30),
           left: isRightHalf ? 'auto' : tooltip.x + 20,
           right: isRightHalf ? chartWidth - tooltip.x + 20 : 'auto',
-          minWidth: '220px',
+          minWidth: '240px',
           backgroundColor: 'var(--bg-card)',
           zIndex: 1050,
           pointerEvents: 'none',
@@ -355,7 +400,21 @@ export default function CashFlowTab() {
           border: '1px solid var(--bs-secondary)'
       };
 
-      const items = nodeBreakdowns[tooltip.id]?.filter((b: any) => b.isDivider || b.isHeader || Math.abs(b.val) > 1) || [];
+      // Resolve breakdown structures depending on aggregate vs unique breakout node
+      const lookUpKey = meta.parentId || meta.id;
+      let items = nodeBreakdowns[lookUpKey]?.filter((b: any) => b.isDivider || b.isHeader || Math.abs(b.val) > 1) || [];
+      
+      // If detailed mode, narrow the tooltip list to just focus cleanly on the matching item row
+      if (detailedMode && meta.parentId) {
+          items = items.filter((b: any) => b.label === meta.label);
+      }
+
+      let completeTaxItems = [...taxItems];
+      if (savingsItems.length > 0) {
+          completeTaxItems.push({ isDivider: true });
+          completeTaxItems.push({ label: 'Tax Reductions Applied', isHeader: true });
+          completeTaxItems = completeTaxItems.concat(savingsItems);
+      }
 
       return (
           <div className="rounded-1 p-3 transition-none" style={style}>
@@ -367,22 +426,35 @@ export default function CashFlowTab() {
                   <span className="fw-bolder text-main ms-3">{formatCurrency(meta.value)}</span>
               </div>
               <div className="d-flex flex-column gap-1">
-                  {items.map((b: any, i: number) => {
-                      if (b.isDivider) return <div key={i} className="border-bottom border-secondary border-opacity-50 my-1"></div>;
-                      if (b.isHeader) return <div key={i} className="fw-bold text-main small text-uppercase ls-1 mt-1" style={{fontSize: '0.7rem'}}>{b.label}</div>;
-                      return (
-                          <div className="d-flex justify-content-between align-items-center small" key={i}>
-                              <span className={`fw-medium ${b.isSavings ? 'text-success' : 'text-muted'}`}>
-                                  {b.isSavings && <i className="bi bi-arrow-down-short me-1"></i>}
-                                  {b.label}
-                              </span>
-                              <span className={`fw-bold ms-3 ${b.isSavings ? 'text-success' : 'text-main'}`}>
-                                  {b.isSavings ? '-' : ''}{formatCurrency(getRealValue(b.val))}
-                              </span>
-                          </div>
-                      );
-                  })}
-                  {items.length === 0 && (
+                  {lookUpKey === 'tax' && !detailedMode ? (
+                      completeTaxItems.map((b: any, i: number) => {
+                          if (b.isDivider) return <div key={i} className="border-bottom border-secondary border-opacity-50 my-1"></div>;
+                          if (b.isHeader) return <div key={i} className="fw-bold text-main small text-uppercase ls-1 mt-1" style={{fontSize: '0.7rem'}}>{b.label}</div>;
+                          return (
+                              <div className="d-flex justify-content-between align-items-center small" key={i}>
+                                  <span className={`fw-medium ${b.isSavings ? 'text-success' : 'text-muted'}`}>
+                                      {b.isSavings && <i className="bi bi-arrow-down-short me-1"></i>}
+                                      {b.label}
+                                  </span>
+                                  <span className={`fw-bold ms-3 ${b.isSavings ? 'text-success' : 'text-main'}`}>
+                                      {b.isSavings ? '-' : ''}{formatCurrency(getRealValue(b.val))}
+                                  </span>
+                              </div>
+                          );
+                      })
+                  ) : (
+                      items.map((b: any, i: number) => {
+                          if (b.isDivider) return <div key={i} className="border-bottom border-secondary border-opacity-50 my-1"></div>;
+                          if (b.isHeader) return <div key={i} className="fw-bold text-main small text-uppercase ls-1 mt-1" style={{fontSize: '0.7rem'}}>{b.label}</div>;
+                          return (
+                              <div className="d-flex justify-content-between align-items-center small" key={i}>
+                                  <span className={`fw-medium ${b.isSavings ? 'text-success' : 'text-muted'}`}>{b.label}</span>
+                                  <span className="fw-bold text-main ms-3">{formatCurrency(getRealValue(b.val))}</span>
+                              </div>
+                          );
+                      })
+                  )}
+                  {items.length === 0 && lookUpKey !== 'tax' && (
                       <span className="text-muted small fst-italic">No sub-items this year.</span>
                   )}
               </div>
@@ -391,7 +463,7 @@ export default function CashFlowTab() {
   };
 
   const topInflowNode = [...leftData].sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
-  const topOutflowNode = [...rightData].filter(d => d.id !== 'sav').sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
+  const topOutflowNode = [...rightData].filter(d => d.id !== 'sav' && d.parentId !== 'sav').sort((a, b) => b.value - a.value)[0] || { label: 'None', value: 0 };
   const savingsRate = totalSourcedRaw > 0 ? ((contsRaw + unallocatedRaw) / totalSourcedRaw) * 100 : 0;
   const effectiveTax = totalSourcedRaw > 0 ? (taxRaw / totalSourcedRaw) * 100 : 0;
 
@@ -437,26 +509,42 @@ export default function CashFlowTab() {
               <h5 className="fw-bold text-uppercase ls-1 text-info mb-0">
                   <i className="bi bi-water me-2"></i> Cash Flow Engine
               </h5>
-              <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
-                  <button 
-                      className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'sankey' ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
-                      onClick={() => setViewMode('sankey')}
-                  >
-                      Sankey Diagram
-                  </button>
-                  <button 
-                      className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'ledger' ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
-                      onClick={() => setViewMode('ledger')}
-                  >
-                      Stacked Ledger
-                  </button>
+              
+              <div className="d-flex flex-wrap align-items-center gap-3">
+                  <div className="form-check form-switch bg-input px-3 py-1.5 rounded border border-secondary shadow-sm d-flex align-items-center m-0 gap-2">
+                      <input 
+                          className="form-check-input cursor-pointer ms-0" 
+                          type="checkbox" 
+                          id="detailedModeToggle"
+                          checked={detailedMode}
+                          onChange={(e) => setDetailedMode(e.target.checked)}
+                      />
+                      <label className="form-check-label text-main small fw-bold cursor-pointer user-select-none" htmlFor="detailedModeToggle">
+                          Detailed Streams
+                      </label>
+                  </div>
+
+                  <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
+                      <button 
+                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'sankey' ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                          onClick={() => setViewMode('sankey')}
+                      >
+                          Sankey Diagram
+                      </button>
+                      <button 
+                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'ledger' ? 'bg-secondary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                          onClick={() => setViewMode('ledger')}
+                      >
+                          Stacked Ledger
+                      </button>
+                  </div>
               </div>
           </div>
           
           <div className="w-100 position-relative" ref={chartContainerRef}>
               
               {viewMode === 'sankey' && (
-                  <div className="d-flex justify-content-center align-items-center fade-in" style={{ minHeight: '550px', height: '65vh' }}>
+                  <div className="d-flex justify-content-center align-items-center fade-in" style={{ minHeight: '550px', height: '72vh' }}>
                       <svg viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
                           
                           {leftLinks.map((l, i) => (
@@ -475,10 +563,12 @@ export default function CashFlowTab() {
                               <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  <text x={LEFT_X - NODE_W - 12} y={n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                                  <text x={LEFT_X - NODE_W - 12} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                      {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
-                                  </text>
+                                  <text x={LEFT_X - NODE_W - 12} y={detailedMode ? n.ty + 4 : n.ty - 7} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '14px', opacity: 0.9 }}>{n.label}</text>
+                                  {!detailedMode && (
+                                      <text x={LEFT_X - NODE_W - 12} y={n.ty + 11} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                                          {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                      </text>
+                                  )}
                               </g>
                           ))}
 
@@ -486,10 +576,12 @@ export default function CashFlowTab() {
                               <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  <text x={RIGHT_X + NODE_W + 12} y={n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: '14px', opacity: 0.9 }}>{n.label}</text>
-                                  <text x={RIGHT_X + NODE_W + 12} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                      {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
-                                  </text>
+                                  <text x={RIGHT_X + NODE_W + 12} y={detailedMode ? n.ty + 4 : n.ty - 7} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '14px', opacity: 0.9 }}>{n.label}</text>
+                                  {!detailedMode && (
+                                      <text x={RIGHT_X + NODE_W + 12} y={n.ty + 11} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
+                                          {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                      </text>
+                                  )}
                               </g>
                           ))}
 
@@ -524,11 +616,11 @@ export default function CashFlowTab() {
                               {leftData.map(d => (
                                   <div key={d.id} className="h-100 cursor-crosshair transition-all border-end border-black border-opacity-50" 
                                        style={{width: `${(d.value/MAX)*100}%`, backgroundColor: d.color, opacity: getOpacity(d.id)}} 
-                                       onMouseMove={(e) => handleMouseMove(e, d.id)} onMouseLeave={handleMouseLeave}></div>
+                                       onMouseMove={(e) => handleMouseMove(e, d.id)} onMouseLeave={handleMouseLeave} />
                               ))}
                           </div>
                           
-                          <div className="d-flex flex-column gap-2 pe-1 custom-scrollbar overflow-auto" style={{maxHeight: '400px'}}>
+                          <div className="d-flex flex-column gap-2 pe-1 custom-scrollbar overflow-auto" style={{maxHeight: '420px'}}>
                               {leftData.map(d => (
                                    <div key={d.id} className="d-flex justify-content-between align-items-center p-3 rounded-1 bg-input border border-secondary shadow-sm cursor-crosshair transition-all hover-bg-secondary" 
                                         style={{opacity: getOpacity(d.id)}}
@@ -556,11 +648,11 @@ export default function CashFlowTab() {
                               {rightData.map(d => (
                                   <div key={d.id} className="h-100 cursor-crosshair transition-all border-end border-black border-opacity-50" 
                                        style={{width: `${(d.value/MAX)*100}%`, backgroundColor: d.color, opacity: getOpacity(d.id)}} 
-                                       onMouseMove={(e) => handleMouseMove(e, d.id)} onMouseLeave={handleMouseLeave}></div>
+                                       onMouseMove={(e) => handleMouseMove(e, d.id)} onMouseLeave={handleMouseLeave} />
                               ))}
                           </div>
                           
-                          <div className="d-flex flex-column gap-2 pe-1 custom-scrollbar overflow-auto" style={{maxHeight: '400px'}}>
+                          <div className="d-flex flex-column gap-2 pe-1 custom-scrollbar overflow-auto" style={{maxHeight: '420px'}}>
                               {rightData.map(d => (
                                    <div key={d.id} className="d-flex justify-content-between align-items-center p-3 rounded-1 bg-input border border-secondary shadow-sm cursor-crosshair transition-all hover-bg-secondary" 
                                         style={{opacity: getOpacity(d.id)}}
