@@ -564,8 +564,7 @@ export default function CashFlowTab() {
                                       {n.label}
                                   </text>
                                   <text x={LEFT_X - NODE_W - 12} y={n.ty + 10} textAnchor="end" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                      {formatCurrency(n.value)}
-                                      <tspan fill="currentColor" opacity="0.6" fontSize="11px" dx="-65" textAnchor="end">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                      {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
                                   </text>
                               </g>
                           ))}
@@ -578,8 +577,7 @@ export default function CashFlowTab() {
                                       {n.label}
                                   </text>
                                   <text x={RIGHT_X + NODE_W + 12} y={n.ty + 10} textAnchor="start" alignmentBaseline="middle" fill={n.color} className="fw-bold" style={{ fontSize: '12px' }}>
-                                      {formatCurrency(n.value)}
-                                      <tspan fill="currentColor" opacity="0.6" fontSize="11px" dx="75" textAnchor="start">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
+                                      {formatCurrency(n.value)} <tspan fill="currentColor" opacity="0.6" fontSize="11px">({((n.value / MAX) * 100).toFixed(1)}%)</tspan>
                                   </text>
                               </g>
                           ))}
