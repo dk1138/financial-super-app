@@ -40,13 +40,21 @@ export default function StrategyTab() {
   const [draggingType, setDraggingType] = useState<'accum' | 'decum' | null>(null);
   
   // HARD FILTERS: Prevent impossible accounts from showing in the queues
-  const filterAccum = (list: string[]) => list.filter(a => !['rrif_acct', 'lif', 'lirf'].includes(a));
+  const filterAccum = (list: string[]) => {
+      const filtered = list.filter(a => !['rrif_acct', 'lif', 'lirf'].includes(a));
+      // DEFENSIVE UPGRADE LAYER: If spending_cash is missing from saved profile state, automatically patch it in safely!
+      if (!filtered.includes('spending_cash')) {
+          filtered.push('spending_cash');
+      }
+      return filtered;
+  };
   const filterDecum = (list: string[]) => list.filter(a => !['fhsa', 'resp', 'spending_cash'].includes(a));
 
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
-  const [localAccum, setLocalAccum] = useState<string[]>(filterAccum(data.strategies.accum || []));
-  const [localDecum, setLocalDecum] = useState<string[]>(filterDecum(data.strategies.decum || []));
+  const [localAccum, setLocalAccum] = useState<string[]>([]);
+  const [localDecum, setLocalDecum] = useState<string[]>([]);
 
+  // Track initial state loads and updates with clean automatic injection mapping checks
   useEffect(() => {
       if (!draggingType) {
           setLocalAccum(filterAccum(data.strategies.accum || []));
