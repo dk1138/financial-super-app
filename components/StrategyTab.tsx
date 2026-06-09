@@ -149,7 +149,14 @@ export default function StrategyTab() {
                         {details.desc}
                     </div>
                 </div>
-                <div className="d-flex align-items-center gap-2 style={{ maxWidth: '140px' }}" onClick={(e) => e.stopPropagation()}>
+                {/* Prevent drag events from capturing focus or interrupting input typing */}
+                <div 
+                  className="d-flex align-items-center gap-2" 
+                  style={{ maxWidth: '140px' }} 
+                  draggable={false}
+                  onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <span className="small text-muted fw-bold text-nowrap" style={{ fontSize: '0.65rem' }}>MAX:</span>
                   <CurrencyInput 
                     className="form-control form-control-sm border-secondary shadow-none text-end fw-bold" 

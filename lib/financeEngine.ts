@@ -430,6 +430,9 @@ export class FinanceEngine {
     }
 
     runSimulation(detailed = false, simContext: any = null): any[] {
+        // HARD FILTER SAFEGUARD: Explicitly prevent accumulation lifestyle containers from bleeding into decumulation
+        const filterDecum = (list: string[]) => list.filter(a => !['fhsa', 'resp', 'spending_cash'].includes(a));
+
         if (this.inputs['fully_optimize_tax'] && !simContext?.isMetaRun) {
             let bestNW = -Infinity, bestData: any = null, bestOrder: string[] = [];
             
@@ -447,17 +450,18 @@ export class FinanceEngine {
             ];
 
             for (let decumOrder of perms) {
+                let cleanedOrder = filterDecum(decumOrder);
                 let tempData = JSON.parse(JSON.stringify({
-                    inputs: this.inputs, properties: this.properties, housingTransitions: this.housingTransitions, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: { accum: this.strategies.accum, decum: decumOrder }, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
+                    inputs: this.inputs, properties: this.properties, housingTransitions: this.housingTransitions, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: { accum: this.strategies.accum, decum: cleanedOrder }, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
                 }));
                 
                 let tempEngine = new FinanceEngine(tempData);
-                let tempResult = tempEngine.runSimulation(true, { ...simContext, isMetaRun: true, forceOrder: decumOrder });
+                let tempResult = tempEngine.runSimulation(true, { ...simContext, isMetaRun: true, forceOrder: cleanedOrder });
                 
                 if (tempResult?.length > 0 && tempResult[tempResult.length - 1].afterTaxEstate > bestNW) {
                     bestNW = tempResult[tempResult.length - 1].afterTaxEstate;
                     bestData = tempResult;
-                    bestOrder = decumOrder;
+                    bestOrder = cleanedOrder;
                 }
             }
             
@@ -1022,7 +1026,7 @@ export class FinanceEngine {
                             if (prefix === 'p2') { craTaxableIncome2 += taxableAmt; cashIncome2 += cashAmt; p2RRSPWithdrawn = true; }
                         }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, 
                         inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, 
-                        simContext?.forceOrder || this.strategies.decum, getEligPension1(), getEligPension2(), 
+                        simContext?.forceOrder || filterDecum(this.strategies.decum), getEligPension1(), getEligPension2(), 
                         this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, 
                         expenses + mortgagePayment + rentPayment + debtRepayment,
                         {
