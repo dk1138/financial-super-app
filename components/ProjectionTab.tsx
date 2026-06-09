@@ -75,7 +75,7 @@ export default function ProjectionTab() {
 
       const headers = [
           "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
-          "Living Expenses", "Mortgage & Debt", "Education Costs", "Contributions", "Withdrawals",
+          "Living Expenses", "Mortgage & Debt", "Education Costs", "Lifestyle Spending Cash", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
 
@@ -98,9 +98,11 @@ export default function ProjectionTab() {
           const totalWithdrawals = y.flows?.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
           let engineContributions = 0;
           if (y.flows && y.flows.contributions) {
-              engineContributions += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-              if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+              engineContributions += Object.entries(y.flows.contributions.p1 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
+              if (isCouple) engineContributions += Object.entries(y.flows.contributions.p2 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
           }
+
+          const lifestyleSpendingCash = y.flows?.contributions?.shared?.spending_cash || 0;
 
           const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
           const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
@@ -123,6 +125,7 @@ export default function ProjectionTab() {
               Math.round(getRealValue(y.expenses || 0, y.year)),
               Math.round(getRealValue((y.mortgagePay || 0) + baseDebtRepayment, y.year)),
               Math.round(getRealValue(y.eduExpense || 0, y.year)),
+              Math.round(getRealValue(lifestyleSpendingCash, y.year)),
               Math.round(getRealValue(engineContributions, y.year)),
               Math.round(getRealValue(totalWithdrawals as number, y.year)),
               Math.round(getRealValue(y.liquidNW || 0, y.year)),
@@ -217,6 +220,7 @@ export default function ProjectionTab() {
       if (y.flows && y.flows.contributions) {
           contsRaw += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
           if (isCouple) contsRaw += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+          if (y.flows.contributions.shared) contsRaw += Object.values(y.flows.contributions.shared).reduce((a: any, b: any) => a + b, 0) as number;
       }
 
       const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
@@ -696,12 +700,14 @@ export default function ProjectionTab() {
                 
                 let engineContributions = 0;
                 if (y.flows && y.flows.contributions) {
-                    engineContributions += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-                    if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+                    engineContributions += Object.entries(y.flows.contributions.p1 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
+                    if (isCouple) engineContributions += Object.entries(y.flows.contributions.p2 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
                 }
 
+                const lifestyleSpendingCash = y.flows?.contributions?.shared?.spending_cash || 0;
+
                 const totalSourcedRaw = totalIncome + (totalWithdrawals as number);
-                const totalSpentRaw = totalExpenses + totalTaxes + engineContributions;
+                const totalSpentRaw = totalExpenses + totalTaxes + engineContributions + lifestyleSpendingCash;
                 
                 let shortfall = 0;
                 let unallocated = 0;
@@ -815,6 +821,13 @@ export default function ProjectionTab() {
                                                 </div>
                                             )}
                                         </div>
+
+                                        {lifestyleSpendingCash > 0 && (
+                                            <div className="d-flex justify-content-between small mb-1 align-items-center mt-2 pt-2 border-top border-secondary border-opacity-25">
+                                                <span className="d-flex align-items-center text-muted fw-bold text-warning">Spending Cash <InfoBtn align="right" title="Spending Cash Outflow" text="Discretionary cash drawn sequentially from leftover unallocated accumulation funds to power targeted lifestyle additions." /></span>
+                                                <span className="text-warning fw-medium text-nowrap">{formatCurrency(lifestyleSpendingCash, y.year)}</span>
+                                            </div>
+                                        )}
 
                                         {engineContributions > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center mt-2 pt-2 border-top border-secondary border-opacity-25">
