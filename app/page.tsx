@@ -1,15 +1,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // 1. Import Next.js Image component
+import Image from 'next/image';
 
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   
-  // Reconfigured slides: Removed Dashboard, added Risk and Tools
-  // Slide order: Summary, Strategy, Projection, Cash Flow, Risk, Tools
   const slides = [
-    { id: 1, name: "Plan Summary", icon: "bi-clipboard2-data", img: "/preview-dashboard.png" },
+    { id: 1, name: "Plan Summary", icon: "bi-clipboard2-data", img: "/preview-summary.png" }, // Re-mapped to active preview file asset
     { id: 2, name: "Strategy & Optimization", icon: "bi-sliders", img: "/preview-strategy.png" },
     { id: 3, name: "Timeline Projection", icon: "bi-table", img: "/preview-projection.png" },
     { id: 4, name: "Cash Flow Analysis", icon: "bi-diagram-3", img: "/preview-cashflow.png" },
@@ -44,14 +42,12 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* GREYED OUT LOGIN */}
             <button 
               disabled 
               className="text-sm font-semibold text-slate-500 cursor-not-allowed opacity-50 px-4 py-2"
             >
               Log In
             </button>
-            {/* GET STARTED REMOVED FROM HERE */}
           </div>
         </div>
       </nav>
@@ -104,24 +100,18 @@ export default function LandingPage() {
                  <div className="flex-1 w-full h-full relative bg-slate-900">
                     {slides.map((slide, i) => (
                       <div key={slide.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                        {/* 2. Replaced <img> with Next.js <Image> */}
                         <Image 
-                            src={slide.img} 
-                            alt={slide.name}
-                            fill
-                            sizes="(max-width: 1024px) 100vw, 50vw"
-                            priority={i === 0}
-                            className="object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
+                          src={slide.img} 
+                          alt={slide.name}
+                          fill
+                          sizes="(max-width: 1024px) 100vw, 50vw"
+                          priority={i === 0}
+                          className="object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity"
                         />
-                        <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-800 text-slate-500">
-                            <i className={`bi ${slide.icon} text-6xl mb-4 opacity-50`}></i>
-                            <span>Preview coming soon</span>
-                        </div>
                         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0f172a] via-[#0f172a]/80 to-transparent pt-20 pb-6 px-8">
-                            <h3 className="text-xl font-bold text-white tracking-wide flex items-center gap-3">
-                                <i className={`bi ${slide.icon} text-blue-400`}></i> {slide.name}
-                            </h3>
+                          <h3 className="text-xl font-bold text-white tracking-wide flex items-center gap-3">
+                            <i className={`bi ${slide.icon} text-blue-400`}></i> {slide.name}
+                          </h3>
                         </div>
                       </div>
                     ))}
