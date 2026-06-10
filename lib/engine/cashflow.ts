@@ -1,30 +1,23 @@
 export function applyPensionSplitting(ti1: number, ti2: number, inflows: any, regMins: any, age1: number, age2: number, applyFn: Function) {
-    // 1. Calculate how much eligible pension income each person already has
     let p1Eligible = inflows.p1.pension + (age1 >= 65 ? regMins.p1 + regMins.lifTaken1 : 0);
     let p2Eligible = inflows.p2.pension + (age2 >= 65 ? regMins.p2 + regMins.lifTaken2 : 0);
 
-    // If P1 makes more (or exactly the same) and has eligible pension to share
     if (ti1 >= ti2 && p1Eligible > 0) {
-        let maxTransfer = p1Eligible * 0.50; // CRA limit is 50%
+        let maxTransfer = p1Eligible * 0.50;
         let diff = ti1 - ti2;
-        let transferToEqualize = diff / 2; // Mathematical optimal for marginal rates
+        let transferToEqualize = diff / 2;
         
-        // TAX CREDIT OPTIMIZATION: If P2 has less than $2,000 in eligible pension, 
-        // force a transfer to max out their Non-Refundable Pension Tax Credit!
         let p2Shortfall = Math.max(0, 2000 - p2Eligible);
         let optimalTransfer = Math.max(transferToEqualize, p2Shortfall);
         
         let transfer = Math.min(maxTransfer, optimalTransfer);
         if (transfer > 0) applyFn(ti1 - transfer, ti2 + transfer, transfer, 'p1_to_p2');
         
-    // If P2 makes more (or exactly the same) and has eligible pension to share
     } else if (ti2 >= ti1 && p2Eligible > 0) {
-        let maxTransfer = p2Eligible * 0.50; // CRA limit is 50%
+        let maxTransfer = p2Eligible * 0.50;
         let diff = ti2 - ti1;
-        let transferToEqualize = diff / 2; // Mathematical optimal for marginal rates
+        let transferToEqualize = diff / 2;
         
-        // TAX CREDIT OPTIMIZATION: If P1 has less than $2,000 in eligible pension, 
-        // force a transfer to max out their Non-Refundable Pension Tax Credit!
         let p1Shortfall = Math.max(0, 2000 - p1Eligible);
         let optimalTransfer = Math.max(transferToEqualize, p1Shortfall);
 
@@ -39,7 +32,13 @@ export function handleSurplus(
     cryptoLim: number, fhsaLim1: number, fhsaLim2: number, respLim: number,
     actualDeductions: any, fhsaRooms: any, strategies: any, inputs: any, CONSTANTS: any,
     age1: number, age2: number,
-    options?: { blockRRSPContributionsP1?: boolean; blockRRSPContributionsP2?: boolean }
+    options?: { 
+        blockRRSPContributionsP1?: boolean; 
+        blockRRSPContributionsP2?: boolean;
+        p1RRSPContributedRef?: { current: boolean };
+        p2RRSPContributedRef?: { current: boolean };
+        flowLogExtensions?: { p1Match?: number; p2Match?: number; rrspTotalMatch1?: number; rrspTotalMatch2?: number }
+    }
 ): number {
     let remaining = netSurplus;
     const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'];
@@ -49,10 +48,11 @@ export function handleSurplus(
     if (inputs.skip_first_tfsa_p1 && yearIndex === 0) tfsaRoom1 = 0;
     if (inputs.skip_first_tfsa_p2 && yearIndex === 0) tfsaRoom2 = 0;
 
-    // Compounding inflation builder to scale custom flat dollar limits over the timeline
+    let localRrspRoom1 = rrspRoom1;
+    let localRrspRoom2 = rrspRoom2;
+
     const baseInflation = Math.pow(1 + (inputs.inflation_rate || 2.1) / 100, yearIndex);
 
-    // --- TRACK INDIVIDUAL & SHARED ANNUAL CONTRIBUTIONS ---
     let annualContributed = {
         p1: { tfsa: 0, rrsp: 0, fhsa: 0, nonreg: 0, cash: 0, crypto: 0 },
         p2: { tfsa: 0, rrsp: 0, fhsa: 0, nonreg: 0, cash: 0, crypto: 0 },
@@ -61,7 +61,6 @@ export function handleSurplus(
 
     const isSplit = inputs.split_annual_limits ?? false;
 
-    // Extract dynamic limits per user or fallback to standard shared settings
     const maxLimits = {
         p1: {
             tfsa: isSplit ? (inputs.max_annual_tfsa_p1 || 0) : (inputs.max_annual_tfsa || 0),
@@ -87,13 +86,10 @@ export function handleSurplus(
         // --- DISCRETIONARY LIFESTYLE SPENDING CASH CONTAINER ---
         if (acct === 'spending_cash') {
             let maxSpendingAllowed = Number(inputs.max_annual_spending_cash || 0);
-            
-            // Check all potential system location variants for Today's Dollars configuration toggle
             const useRealDollars = Boolean(
                 inputs.useRealDollars === true || 
                 inputs.todays_dollars === true || 
-                inputs.use_real_dollars === true ||
-                inputs.useRealDollars === true
+                inputs.use_real_dollars === true
             );
 
             if (!useRealDollars) {
@@ -143,27 +139,95 @@ export function handleSurplus(
 
         // --- REGISTERED RETIREMENT SAVINGS PLAN (RRSP) ---
         if (acct === 'rrsp') {
-            if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) { 
+            // Process Player 1
+            if (alive1 && localRrspRoom1 > 0 && !options?.blockRRSPContributionsP1) { 
+                let p1_match_rate = (Number(inputs.p1_rrsp_match) || 0) / 100;
+                let p1_tier = Math.max(0.01, (Number(inputs.p1_rrsp_match_tier) || 0) / 100);
+                
+                let isRetired1 = age1 >= (Number(inputs.p1_retireAge) || 65);
+                let empPortionP1 = (!isRetired1) ? (person1.inc * p1_match_rate) : 0;
+                let baseEmployeeRequiredP1 = (!isRetired1) ? (person1.inc * p1_tier) : 0;
+
+                // 1. First satisfy the matching requirement if it exists, subject to remaining engine cash flow
+                if (empPortionP1 > 0 && baseEmployeeRequiredP1 > 0) {
+                    let totalMatchSetup = empPortionP1 + baseEmployeeRequiredP1;
+                    let cappedMatchSetup = Math.min(totalMatchSetup, localRrspRoom1);
+                    let actualEmployeeRequired = baseEmployeeRequiredP1 * (cappedMatchSetup / totalMatchSetup);
+                    let actualEmployerMatch = empPortionP1 * (cappedMatchSetup / totalMatchSetup);
+
+                    // Only execute match program if we have the organic surplus left to satisfy the employee's end
+                    if (remaining >= actualEmployeeRequired) {
+                        remaining -= actualEmployeeRequired;
+                        person1.rrsp += cappedMatchSetup;
+                        localRrspRoom1 -= cappedMatchSetup;
+                        actualDeductions.p1 += cappedMatchSetup;
+                        annualContributed.p1.rrsp += cappedMatchSetup;
+                        annualContributed.shared.rrsp += cappedMatchSetup;
+
+                        if (options?.p1RRSPContributedRef) options.p1RRSPContributedRef.current = true;
+                        if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + cappedMatchSetup;
+                        if (options?.flowLogExtensions) {
+                            options.flowLogExtensions.p1Match = actualEmployerMatch;
+                            options.flowLogExtensions.rrspTotalMatch1 = cappedMatchSetup;
+                        }
+                    }
+                }
+
+                // 2. Process standard optional top-up routing up to custom max constraints
                 let allowed = isSplit 
                     ? (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp))
                     : (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.shared.rrsp));
 
-                if (allowed > 0) {
-                    let take = Math.min(remaining, rrspRoom1, allowed); 
-                    person1.rrsp += take; remaining -= take; rrspRoom1 -= take; actualDeductions.p1 += take; 
+                if (allowed > 0 && remaining > 0) {
+                    let take = Math.min(remaining, localRrspRoom1, allowed); 
+                    person1.rrsp += take; remaining -= take; localRrspRoom1 -= take; actualDeductions.p1 += take; 
                     annualContributed.p1.rrsp += take; annualContributed.shared.rrsp += take;
+                    if (take > 0 && options?.p1RRSPContributedRef) options.p1RRSPContributedRef.current = true;
                     if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
                 }
             }
-            if (alive2 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) { 
+
+            // Process Player 2
+            if (alive2 && localRrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) { 
+                let p2_match_rate = (Number(inputs.p2_rrsp_match) || 0) / 100;
+                let p2_tier = Math.max(0.01, (Number(inputs.p2_rrsp_match_tier) || 0) / 100);
+                
+                let isRetired2 = age2 >= (Number(inputs.p2_retireAge) || 65);
+                let empPortionP2 = (!isRetired2) ? (person2.inc * p2_match_rate) : 0;
+                let baseEmployeeRequiredP2 = (!isRetired2) ? (person2.inc * p2_tier) : 0;
+
+                if (empPortionP2 > 0 && baseEmployeeRequiredP2 > 0) {
+                    let totalMatchSetup = empPortionP2 + baseEmployeeRequiredP2;
+                    let cappedMatchSetup = Math.min(totalMatchSetup, localRrspRoom2);
+                    let actualEmployeeRequired = baseEmployeeRequiredP2 * (cappedMatchSetup / totalMatchSetup);
+                    let actualEmployerMatch = empPortionP2 * (cappedMatchSetup / totalMatchSetup);
+
+                    if (remaining >= actualEmployeeRequired) {
+                        remaining -= actualEmployeeRequired;
+                        person2.rrsp += cappedMatchSetup;
+                        localRrspRoom2 -= cappedMatchSetup;
+                        actualDeductions.p2 += cappedMatchSetup;
+                        annualContributed.p2.rrsp += cappedMatchSetup;
+                        annualContributed.shared.rrsp += cappedMatchSetup;
+
+                        if (options?.p2RRSPContributedRef) options.p2RRSPContributedRef.current = true;
+                        if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + cappedMatchSetup;
+                        if (options?.flowLogExtensions) {
+                            options.flowLogExtensions.p2Match = actualEmployerMatch;
+                            options.flowLogExtensions.rrspTotalMatch2 = cappedMatchSetup;
+                        }
+                    }
+                }
+
                 let allowed = isSplit 
                     ? (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp))
                     : (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.shared.rrsp));
 
-                if (allowed > 0) {
-                    let take = Math.min(remaining, rrspRoom2, allowed); 
-                    person2.rrsp += take; remaining -= take; rrspRoom2 -= take; actualDeductions.p2 += take; 
+                if (allowed > 0 && remaining > 0) {
+                    let take = Math.min(remaining, localRrspRoom2, allowed); 
+                    person2.rrsp += take; remaining -= take; localRrspRoom2 -= take; actualDeductions.p2 += take; 
                     annualContributed.p2.rrsp += take; annualContributed.shared.rrsp += take;
+                    if (take > 0 && options?.p2RRSPContributedRef) options.p2RRSPContributedRef.current = true;
                     if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take;
                 }
             }
@@ -312,7 +376,6 @@ export function handleDeficit(
     let remainingDeficit = deficit;
     const decumOrder = forceOrder || inputs.strategies?.decum || ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'];
 
-    // --- 1. CALCULATE PROTECTED EMERGENCY FUND ---
     let efMode = inputs.emergency_fund_mode || 'none';
     let efCustomAmt = inputs.emergency_fund_custom_amount || 0;
     let protectedCash = 0;
@@ -328,7 +391,6 @@ export function handleDeficit(
     let householdCash = (alive1 ? person1.cash : 0) + (alive2 ? person2.cash : 0);
     let availableHouseholdCash = Math.max(0, householdCash - protectedCash);
 
-    // --- HELPER FUNCTION: EXECUTE WITHDRAWAL ---
     const executePull = (p: any, prefix: string, acct: string) => {
         if (remainingDeficit <= 0) return;
         
@@ -409,7 +471,6 @@ export function handleDeficit(
         }
     };
 
-    // --- 2. MAIN WITHDRAWAL LOOP ---
     for (const acct of decumOrder) {
         if (remainingDeficit <= 0) break;
 
@@ -422,7 +483,6 @@ export function handleDeficit(
         }
     }
 
-    // --- 3. BREAK THE GLASS PROTOCOL (Failsafe) ---
     if (remainingDeficit > 0 && protectedCash > 0) {
         let p1RemainingCash = alive1 ? person1.cash : 0;
         let p2RemainingCash = alive2 ? person2.cash : 0;

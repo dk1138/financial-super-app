@@ -170,7 +170,8 @@ export const defaultData: FinanceData = {
     skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
     exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
     
-    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
+    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0,
+    max_annual_spending_cash: 0 // Added base structural default parameter key configuration
   },
   properties: [
     {
@@ -188,7 +189,7 @@ export const defaultData: FinanceData = {
   expensePhases: [],
   windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
   strategies: { 
-    accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
+    accum: ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'], 
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
   },
   expensesByCategory: {
@@ -236,11 +237,12 @@ export const emptyData: FinanceData = {
     skip_first_tfsa_p2: false, skip_first_rrsp_p2: false,
     exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
     
-    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0
+    emergency_fund_mode: 'none', emergency_fund_custom_amount: 0,
+    max_annual_spending_cash: 0
   },
   properties: [], housingTransitions: [], expensePhases: [], windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
   strategies: { 
-    accum: ['tfsa', 'rrsp', 'fhsa', 'resp', 'nonreg', 'cash', 'crypto'], 
+    accum: ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'], 
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
   },
   expensesByCategory: {
@@ -264,6 +266,12 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
     if (parsedData.strategies) {
         if (parsedData.strategies.accum) merged.strategies.accum = parsedData.strategies.accum.map((s: string) => s === 'nreg' ? 'nonreg' : s);
         if (parsedData.strategies.decum) merged.strategies.decum = parsedData.strategies.decum.map((s: string) => s === 'nreg' ? 'nonreg' : s);
+    }
+
+    // DEFENSIVE UPGRADE: Inject 'spending_cash' into accum lists if old arrays omit it entirely
+    if (merged.strategies && merged.strategies.accum && !merged.strategies.accum.includes('spending_cash')) {
+        // Place it directly underneath standard tax-sheltered buckets (index 3) or append to tail safely
+        merged.strategies.accum.splice(3, 0, 'spending_cash');
     }
 
     if (parsedData.expensesData) {
@@ -305,9 +313,10 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
             merged.inputs[newKey] = val;
         });
         
-        // Ensure new variables exist even on old saved plans
+        // Ensure new structural engine variables exist even on old saved profiles
         merged.inputs.emergency_fund_mode = parsedData.inputs.emergency_fund_mode || 'none';
         merged.inputs.emergency_fund_custom_amount = parsedData.inputs.emergency_fund_custom_amount || 0;
+        merged.inputs.max_annual_spending_cash = parsedData.inputs.max_annual_spending_cash !== undefined ? parsedData.inputs.max_annual_spending_cash : 0;
     }
 
     // Apply Boundaries to legacy loaded data
@@ -404,7 +413,7 @@ export function useFinance() {
     };
 }
 
-// --- SIDE-EFFECT MANAGER (Replaces pure React Context) ---
+// --- SIDE-EFFECT MANAGER ---
 export function FinanceProvider({ children }: { children: ReactNode }) {
     const data = useFinanceStore(state => state.data);
     const setResults = useFinanceStore(state => state.setResults);
