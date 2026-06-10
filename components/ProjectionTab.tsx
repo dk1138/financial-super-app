@@ -693,6 +693,8 @@ export default function ProjectionTab() {
                 const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
+                
+                // Exclude lifestyleSpendingCash from the generic 'Expenses' column so it displays as its own independent outflow row block
                 const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + baseDebtRepayment + (y.eduExpense || 0);
 
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
@@ -741,7 +743,7 @@ export default function ProjectionTab() {
                       </td>
                       <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
                       <td className="py-3 text-center text-danger fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
-                      <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
+                      <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses + lifestyleSpendingCash, y.year)}</td>
                       <td className="py-3 pe-4 text-center text-success fw-bold fs-6 text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
                     </tr>
 
@@ -785,11 +787,24 @@ export default function ProjectionTab() {
                                     <h6 className="fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center" style={{ color: '#d97706' }}>
                                         <i className="bi bi-box-arrow-right me-2"></i>
                                         <span className="text-uppercase">Cash Outflows</span>
-                                        <InfoBtn align="center" title="Cash Outflows" text="All cash spent or allocated during the year, including living expenses, taxes, mortgage payments, education costs, and surplus cash saved into the portfolio." />
+                                        <InfoBtn align="center" title="Cash Outflows" text="All cash spent or allocated during the year, including living expenses, taxes, mortgage payments, education costs, and lifestyle spending items." />
                                     </h6>
                                     
                                     <div className="flex-grow-1">
                                         <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Living Expenses</span><span className="fw-medium text-nowrap">{formatCurrency(y.expenses, y.year)}</span></div>
+                                        
+                                        {/* Breakout Lifestyle Spending Row Block */}
+                                        {lifestyleSpendingCash > 0 && (
+                                            <div className="d-flex justify-content-between small mb-1 align-items-center bg-warning bg-opacity-10 px-2 py-1 rounded-2 my-2 border border-warning border-opacity-25">
+                                                <span className="d-flex align-items-center text-warning-emphasis fw-bold">
+                                                    <i className="bi bi-bag-heart-fill me-2 text-warning"></i>
+                                                    Lifestyle Spending Cash 
+                                                    <InfoBtn align="center" title="Lifestyle Cash Outflow" text="Discretionary cash drawn sequentially from accumulation funds to process unbudgeted cash items." />
+                                                </span>
+                                                <span className="text-warning-emphasis fw-bold text-nowrap">{formatCurrency(lifestyleSpendingCash, y.year)}</span>
+                                            </div>
+                                        )}
+
                                         {y.mortgagePay > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="d-flex align-items-center text-muted ms-2">Mortgage Payments <InfoBtn align="right" title="Mortgage" text="Principal and interest payments for the year based on your amortization schedule."/></span>
@@ -822,16 +837,9 @@ export default function ProjectionTab() {
                                             )}
                                         </div>
 
-                                        {lifestyleSpendingCash > 0 && (
-                                            <div className="d-flex justify-content-between small mb-1 align-items-center mt-2 pt-2 border-top border-secondary border-opacity-25">
-                                                <span className="d-flex align-items-center text-muted fw-bold text-warning">Spending Cash <InfoBtn align="right" title="Spending Cash Outflow" text="Discretionary cash drawn sequentially from leftover unallocated accumulation funds to power targeted lifestyle additions." /></span>
-                                                <span className="text-warning fw-medium text-nowrap">{formatCurrency(lifestyleSpendingCash, y.year)}</span>
-                                            </div>
-                                        )}
-
                                         {engineContributions > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center mt-2 pt-2 border-top border-secondary border-opacity-25">
-                                                <span className="d-flex align-items-center text-muted fw-bold text-primary">Surplus Invested <InfoBtn align="right" title="Contributions" text={buildContributionTooltip(y.flows, isCouple, y.year)} /></span>
+                                                <span className="d-flex align-items-center text-primary fw-bold">Surplus Invested <InfoBtn align="right" title="Contributions" text={buildContributionTooltip(y.flows, isCouple, y.year)} /></span>
                                                 <span className="text-primary fw-medium text-nowrap">{formatCurrency(engineContributions, y.year)}</span>
                                             </div>
                                         )}
@@ -878,7 +886,7 @@ export default function ProjectionTab() {
 
                                                 {((y.p1Age || y.ageP1) < 72 && (y.assetsP1?.rrsp > 0 || y.flows?.contributions?.p1?.rrsp > 0)) && (
                                                     <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                        <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
+                                                        <span className="text-muted ms-2 d-flex align-items-center">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['rrsp'], ['RRSP'], y.year)}
                                                             <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
@@ -1040,7 +1048,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted fw-bold d-flex align-items-center">Family RESP</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year)}
-                                                        <span className="text-info fw-bold text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(respBal, y.year)}</span>
+                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(respBal, y.year)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1062,7 +1070,7 @@ export default function ProjectionTab() {
                                         )}
                                         {y.reExcludedEq > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
-                                                <span className="text-muted d-flex align-items-center">Excluded RE Equity <InfoBtn align="right" title="Excluded Equity" text="Property equity that is tracked but explicitly toggled off from being included in your liquid/total Net Worth."/></span>
+                                                <span className="text-muted d-flex align-items-center">Excluded RE Equity <InfoBtn align="right" title="Excluded Equity" text="Property equity that is tracked but explicitly toggled off from being included in your net worth."/></span>
                                                 <span className="d-flex align-items-center opacity-75">
                                                     <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-0 px-1 me-2" style={{fontSize: '0.55rem'}}>HIDDEN</span>
                                                     <span className="text-nowrap">{formatCurrency(y.reExcludedEq, y.year)}</span>
