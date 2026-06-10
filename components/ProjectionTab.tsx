@@ -462,9 +462,9 @@ export default function ProjectionTab() {
   const buildContributionTooltip = (flows: any, isCouple: boolean, year: number) => {
       if (!flows || !flows.contributions) return "No contributions.";
       let lines: string[] = [];
-      Object.entries(flows.contributions.p1).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`P1 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
-      if (isCouple) Object.entries(flows.contributions.p2).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`P2 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
-      return lines.length > 0 ? lines.join('<br>') : "No contributions.";
+      Object.entries(flows.contributions.p1).forEach(([k, v]) => { if ((v as number) > 0 && k !== 'spending_cash') lines.push(`P1 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
+      if (isCouple) Object.entries(flows.contributions.p2).forEach(([k, v]) => { if ((v as number) > 0 && k !== 'spending_cash') lines.push(`P2 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
+      return lines.length > 0 ? lines.join('<br>') : "No investments.";
   };
 
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
@@ -694,7 +694,6 @@ export default function ProjectionTab() {
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
                 
-                // Exclude lifestyleSpendingCash from the generic 'Expenses' column so it displays as its own independent outflow row block
                 const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + baseDebtRepayment + (y.eduExpense || 0);
 
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
