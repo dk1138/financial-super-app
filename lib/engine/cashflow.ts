@@ -159,7 +159,6 @@ export function handleSurplus(
                 let p1Tier = options?.p1Tier || 0;
                 let isRet1 = options?.isRet1 ?? false;
 
-                // Execute employer match calculation inside sequence room context
                 let empPortionP1 = (!isRet1) ? (person1.inc * p1MatchRate) : 0;
                 let baseEmployeeRequiredP1 = (!isRet1) ? (person1.inc * p1Tier) : 0;
 
@@ -168,7 +167,10 @@ export function handleSurplus(
                     let matchTake = Math.min(remaining, rrspRoom1, correctTargetTotalP1);
                     
                     if (matchTake > 0) {
-                        let actEmpPortionP1 = empPortionP1 * (matchTake / correctTargetTotalP1);
+                        let employeeShareRatio = baseEmployeeRequiredP1 / correctTargetTotalP1;
+                        let actEmployeePortionP1 = matchTake * employeeShareRatio;
+                        let actEmpPortionP1 = matchTake * (empPortionP1 / correctTargetTotalP1);
+                        
                         if (options?.inflowsReference?.p1) {
                             options.inflowsReference.p1.gross += actEmpPortionP1;
                         }
@@ -176,9 +178,13 @@ export function handleSurplus(
                             options.matchTracking.p1MatchAdded = actEmpPortionP1;
                             options.matchTracking.totalMatch1 = matchTake;
                         }
+                        
                         person1.rrsp += matchTake;
-                        remaining -= matchTake;
                         rrspRoom1 -= matchTake;
+                        
+                        // FIX: Only deduct the employee's out-of-pocket payroll cash from your surplus pool!
+                        remaining -= actEmployeePortionP1; 
+                        
                         if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + matchTake;
                     }
                 }
@@ -198,7 +204,7 @@ export function handleSurplus(
                 }
             }
 
-            // Process Process Player 2 Matching & Discretionary Contributions
+            // Process Player 2 Matching & Discretionary Contributions
             if (alive2 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) {
                 let p2MatchRate = options?.p2MatchRate || 0;
                 let p2Tier = options?.p2Tier || 0;
@@ -212,7 +218,10 @@ export function handleSurplus(
                     let matchTake = Math.min(remaining, rrspRoom2, correctTargetTotalP2);
                     
                     if (matchTake > 0) {
-                        let actEmpPortionP2 = empPortionP2 * (matchTake / correctTargetTotalP2);
+                        let employeeShareRatio = baseEmployeeRequiredP2 / correctTargetTotalP2;
+                        let actEmployeePortionP2 = matchTake * employeeShareRatio;
+                        let actEmpPortionP2 = matchTake * (empPortionP2 / correctTargetTotalP2);
+                        
                         if (options?.inflowsReference?.p2) {
                             options.inflowsReference.p2.gross += actEmpPortionP2;
                         }
@@ -220,9 +229,13 @@ export function handleSurplus(
                             options.matchTracking.p2MatchAdded = actEmpPortionP2;
                             options.matchTracking.totalMatch2 = matchTake;
                         }
+                        
                         person2.rrsp += matchTake;
-                        remaining -= matchTake;
                         rrspRoom2 -= matchTake;
+                        
+                        // FIX: Only deduct the employee's portion from surplus cash pool
+                        remaining -= actEmployeePortionP2;
+                        
                         if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + matchTake;
                     }
                 }
