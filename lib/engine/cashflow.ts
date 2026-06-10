@@ -39,7 +39,18 @@ export function handleSurplus(
     cryptoLim: number, fhsaLim1: number, fhsaLim2: number, respLim: number,
     actualDeductions: any, fhsaRooms: any, strategies: any, inputs: any, CONSTANTS: any,
     age1: number, age2: number,
-    options?: { blockRRSPContributionsP1?: boolean; blockRRSPContributionsP2?: boolean }
+    options?: { 
+        blockRRSPContributionsP1?: boolean; 
+        blockRRSPContributionsP2?: boolean;
+        isRet1?: boolean;
+        isRet2?: boolean;
+        p1MatchRate?: number;
+        p1Tier?: number;
+        p2MatchRate?: number;
+        p2Tier?: number;
+        inflowsReference?: any;
+        matchTracking?: any;
+    }
 ): number {
     let remaining = netSurplus;
     const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'];
@@ -92,8 +103,7 @@ export function handleSurplus(
             const useRealDollars = Boolean(
                 inputs.useRealDollars === true || 
                 inputs.todays_dollars === true || 
-                inputs.use_real_dollars === true ||
-                inputs.useRealDollars === true
+                inputs.use_real_dollars === true
             );
 
             if (!useRealDollars) {
@@ -143,28 +153,91 @@ export function handleSurplus(
 
         // --- REGISTERED RETIREMENT SAVINGS PLAN (RRSP) ---
         if (acct === 'rrsp') {
-            if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) { 
-                let allowed = isSplit 
-                    ? (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp))
-                    : (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.shared.rrsp));
+            // Process Player 1 Matching & Discretionary Contributions
+            if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) {
+                let p1MatchRate = options?.p1MatchRate || 0;
+                let p1Tier = options?.p1Tier || 0;
+                let isRet1 = options?.isRet1 ?? false;
 
-                if (allowed > 0) {
-                    let take = Math.min(remaining, rrspRoom1, allowed); 
-                    person1.rrsp += take; remaining -= take; rrspRoom1 -= take; actualDeductions.p1 += take; 
-                    annualContributed.p1.rrsp += take; annualContributed.shared.rrsp += take;
-                    if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
+                // Execute employer match calculation inside sequence room context
+                let empPortionP1 = (!isRet1) ? (person1.inc * p1MatchRate) : 0;
+                let baseEmployeeRequiredP1 = (!isRet1) ? (person1.inc * p1Tier) : 0;
+
+                if (empPortionP1 > 0 && baseEmployeeRequiredP1 > 0) {
+                    let correctTargetTotalP1 = empPortionP1 + baseEmployeeRequiredP1;
+                    let matchTake = Math.min(remaining, rrspRoom1, correctTargetTotalP1);
+                    
+                    if (matchTake > 0) {
+                        let actEmpPortionP1 = empPortionP1 * (matchTake / correctTargetTotalP1);
+                        if (options?.inflowsReference?.p1) {
+                            options.inflowsReference.p1.gross += actEmpPortionP1;
+                        }
+                        if (options?.matchTracking) {
+                            options.matchTracking.p1MatchAdded = actEmpPortionP1;
+                            options.matchTracking.totalMatch1 = matchTake;
+                        }
+                        person1.rrsp += matchTake;
+                        remaining -= matchTake;
+                        rrspRoom1 -= matchTake;
+                        if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + matchTake;
+                    }
+                }
+
+                // Handle regular discretionary leftovers up to limits
+                if (remaining > 0 && rrspRoom1 > 0) {
+                    let allowed = isSplit 
+                        ? (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp))
+                        : (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.shared.rrsp));
+
+                    if (allowed > 0) {
+                        let take = Math.min(remaining, rrspRoom1, allowed);
+                        person1.rrsp += take; remaining -= take; rrspRoom1 -= take; actualDeductions.p1 += take;
+                        annualContributed.p1.rrsp += take; annualContributed.shared.rrsp += take;
+                        if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
+                    }
                 }
             }
-            if (alive2 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) { 
-                let allowed = isSplit 
-                    ? (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp))
-                    : (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.shared.rrsp));
 
-                if (allowed > 0) {
-                    let take = Math.min(remaining, rrspRoom2, allowed); 
-                    person2.rrsp += take; remaining -= take; rrspRoom2 -= take; actualDeductions.p2 += take; 
-                    annualContributed.p2.rrsp += take; annualContributed.shared.rrsp += take;
-                    if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take;
+            // Process Process Player 2 Matching & Discretionary Contributions
+            if (alive2 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) {
+                let p2MatchRate = options?.p2MatchRate || 0;
+                let p2Tier = options?.p2Tier || 0;
+                let isRet2 = options?.isRet2 ?? false;
+
+                let empPortionP2 = (!isRet2) ? (person2.inc * p2MatchRate) : 0;
+                let baseEmployeeRequiredP2 = (!isRet2) ? (person2.inc * p2Tier) : 0;
+
+                if (empPortionP2 > 0 && baseEmployeeRequiredP2 > 0) {
+                    let correctTargetTotalP2 = empPortionP2 + baseEmployeeRequiredP2;
+                    let matchTake = Math.min(remaining, rrspRoom2, correctTargetTotalP2);
+                    
+                    if (matchTake > 0) {
+                        let actEmpPortionP2 = empPortionP2 * (matchTake / correctTargetTotalP2);
+                        if (options?.inflowsReference?.p2) {
+                            options.inflowsReference.p2.gross += actEmpPortionP2;
+                        }
+                        if (options?.matchTracking) {
+                            options.matchTracking.p2MatchAdded = actEmpPortionP2;
+                            options.matchTracking.totalMatch2 = matchTake;
+                        }
+                        person2.rrsp += matchTake;
+                        remaining -= matchTake;
+                        rrspRoom2 -= matchTake;
+                        if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + matchTake;
+                    }
+                }
+
+                if (remaining > 0 && rrspRoom2 > 0) {
+                    let allowed = isSplit 
+                        ? (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp))
+                        : (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.shared.rrsp));
+
+                    if (allowed > 0) {
+                        let take = Math.min(remaining, rrspRoom2, allowed);
+                        person2.rrsp += take; remaining -= take; rrspRoom2 -= take; actualDeductions.p2 += take;
+                        annualContributed.p2.rrsp += take; annualContributed.shared.rrsp += take;
+                        if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take;
+                    }
                 }
             }
             continue;
