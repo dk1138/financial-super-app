@@ -40,7 +40,7 @@ export function handleSurplus(
     actualDeductions: any, fhsaRooms: any, strategies: any, inputs: any, CONSTANTS: any,
     age1: number, age2: number,
     options?: { blockRRSPContributionsP1?: boolean; blockRRSPContributionsP2?: boolean }
-) {
+): number {
     let remaining = netSurplus;
     const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'];
 
@@ -294,6 +294,8 @@ export function handleSurplus(
             continue;
         }
     }
+
+    return remaining;
 }
 
 export function handleDeficit(

@@ -549,7 +549,7 @@ export class FinanceEngine {
             if (this.mode === 'Couple' && alive2 && age2 >= (this.CONSTANTS?.RRIF_START_AGE || 72) && person2.rrsp > 0) { person2.rrif_acct += person2.rrsp; person2.rrsp = 0; }
 
             if (detailed) {
-                flowLog = { contributions: { p1: {tfsa:0, fhsa:0, resp:0, rrsp:0, nonreg:0, cash:0, crypto:0}, p2: {tfsa:0, fhsa:0, rrsp:0, nonreg:0, cash:0, crypto:0} }, withdrawals: {} };
+                flowLog = { contributions: { p1: {tfsa:0, fhsa:0, resp:0, rrsp:0, nonreg:0, cash:0, crypto:0}, p2: {tfsa:0, fhsa:0, rrsp:0, nonreg:0, cash:0, crypto:0}, shared: {spending_cash:0} }, withdrawals: {} };
             }
 
             let deathEvents: string[] = [];
@@ -665,8 +665,7 @@ export class FinanceEngine {
                 totalMatch2 = Math.min(correctTargetTotalP2, rrspRoom2);
                 actEmpPortionP2 = empPortionP2 * (totalMatch2 / correctTargetTotalP2);
                 inflows.p2.gross += actEmpPortionP2; 
-                person2.rrsp += totalMatch2; 
-                rrspRoom2 -= totalMatch2;
+                person2.rrsp += totalMatch2; rrspRoom2 -= totalMatch2;
                 p2RRSPContributed = true;
                 if (detailed) flowLog.contributions.p2.rrsp += totalMatch2; 
             }
@@ -988,8 +987,8 @@ export class FinanceEngine {
             let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
 
             if (netSurplus > 0) {
-                // Pass blockRRSP flags derived from whether a core programmatic withdrawal occurred this cycle
-                handleSurplus(
+                // Fix Assigned: Deduct the spent funds from the net surplus sequence pool cleanly
+                netSurplus = handleSurplus(
                     netSurplus, person1, person2, alive1, alive2, flowLog, i, 
                     consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
                     actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, 
