@@ -84,10 +84,19 @@ export function handleSurplus(
     for (const acct of accumOrder) {
         if (remaining <= 0) break;
 
-        // --- NEW: DISCRETIONARY LIFESTYLE SPENDING CASH CONTAINER ---
+        // --- DISCRETIONARY LIFESTYLE SPENDING CASH CONTAINER ---
         if (acct === 'spending_cash') {
             let maxSpendingAllowed = Number(inputs.max_annual_spending_cash || 0);
-            if (inputs.useRealDollars === false) {
+            
+            // Check all potential system location variants for Today's Dollars configuration toggle
+            const useRealDollars = Boolean(
+                inputs.useRealDollars === true || 
+                inputs.todays_dollars === true || 
+                inputs.use_real_dollars === true ||
+                inputs.useRealDollars === true
+            );
+
+            if (!useRealDollars) {
                 maxSpendingAllowed *= baseInflation;
             }
 
@@ -299,8 +308,6 @@ export function handleDeficit(
     options?: { blockRRSPWithdrawalsP1?: boolean; blockRRSPWithdrawalsP2?: boolean }
 ) {
     let remainingDeficit = deficit;
-    
-    // Ensure we have a valid order to pull from
     const decumOrder = forceOrder || inputs.strategies?.decum || ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'];
 
     // --- 1. CALCULATE PROTECTED EMERGENCY FUND ---
@@ -323,7 +330,6 @@ export function handleDeficit(
     const executePull = (p: any, prefix: string, acct: string) => {
         if (remainingDeficit <= 0) return;
         
-        // Block player-isolated counter-directional actions
         if (acct === 'rrsp') {
             if (prefix === 'p1' && options?.blockRRSPWithdrawalsP1) return;
             if (prefix === 'p2' && options?.blockRRSPWithdrawalsP2) return;
@@ -334,7 +340,6 @@ export function handleDeficit(
 
         let maxAllowed = accountBalance;
 
-        // If pulling from Cash, respect the Emergency Fund boundary
         if (acct === 'cash') {
             maxAllowed = Math.min(accountBalance, availableHouseholdCash);
             if (maxAllowed <= 0) return; 
@@ -354,11 +359,9 @@ export function handleDeficit(
             remainingDeficit -= pullAmount;
         }
 
-        // Deduct from account
         p[acct] -= pullAmount;
         if (acct === 'cash') availableHouseholdCash -= pullAmount;
 
-        // Map account names for UI compatibility
         let logKey = acct;
         if (acct === 'nonreg') logKey = 'Non-Reg';
         else if (acct === 'crypto') logKey = 'Crypto';
@@ -366,7 +369,6 @@ export function handleDeficit(
         else if (acct === 'rrif_acct') logKey = 'RRIF';
         else logKey = acct.toUpperCase();
 
-        // Handle Logging and ACB / Tax Math
         if (flowLog) {
             flowLog.withdrawals[`${prefix.toUpperCase()} ${logKey}`] = (flowLog.withdrawals[`${prefix.toUpperCase()} ${logKey}`] || 0) + pullAmount;
         }
