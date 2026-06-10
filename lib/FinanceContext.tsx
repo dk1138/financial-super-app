@@ -508,4 +508,5 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }, [hasHydrated]);
 
     return <>{children}</>;
+    
 }
