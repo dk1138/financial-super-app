@@ -955,6 +955,7 @@ export class FinanceEngine {
             let matchTracking = { p1MatchAdded: 0, p2MatchAdded: 0, totalMatch1: 0, totalMatch2: 0 };
 
             if (netSurplus > 0) {
+                // Route parameters and tracking vectors directly into sequential tracking frame context
                 netSurplus = handleSurplus(
                     netSurplus, person1, person2, alive1, alive2, flowLog, i, 
                     consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
@@ -972,16 +973,16 @@ export class FinanceEngine {
                 );
                 
                 // Track contributions driven by the handleSurplus logic layer
-                if (actualDeductions.p1 > 0) {
+                if (actualDeductions.p1 > 0 || matchTracking.totalMatch1 > 0) {
                     p1RRSPContributed = true;
                     pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend, credits1).totalTax;
                 }
-                if (actualDeductions.p2 > 0) {
+                if (actualDeductions.p2 > 0 || matchTracking.totalMatch2 > 0) {
                     p2RRSPContributed = true;
                     pendingRefund.p2 = tax2.totalTax - calculateTaxDetailed(craTaxableIncome2 - actualDeductions.p2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (craTaxableIncome1 - actualDeductions.p1) : -1, isEligibleDividend, credits2).totalTax;
                 }
 
-                // Sync engine calculation displays with internal mutations
+                // Sync engine calculation displays with internal sequential mutations
                 craTaxableIncome1 = Math.max(0, craTaxableIncome1 + matchTracking.p1MatchAdded - actualDeductions.p1);
                 craTaxableIncome2 = Math.max(0, craTaxableIncome2 + matchTracking.p2MatchAdded - actualDeductions.p2);
                 cashIncome1 = Math.max(0, cashIncome1 + matchTracking.p1MatchAdded - actualDeductions.p1);
