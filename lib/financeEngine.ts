@@ -597,7 +597,7 @@ export class FinanceEngine {
 
             let isFullyRetired = isRet1 && (this.mode === 'Single' || isRet2);
             let currentLiquidNW = person1.tfsa + person1.tfsa_successor + person1.rrsp + person1.crypto + person1.nonreg + person1.cash + person1.rrif_acct + (person1.fhsa || 0);
-            if (this.mode === 'Couple') currentLiquidNW += person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nonreg + person2.cash + person2.rrif_acct + (person2.fhsa || 0);
+            if (merged.mode === 'Couple') currentLiquidNW += person2.tfsa + person2.tfsa_successor + person2.rrsp + person2.crypto + person2.nonreg + person2.cash + person2.rrif_acct + (person2.fhsa || 0);
 
             if (this.inputs['enable_guardrails'] && isFullyRetired) {
                 let baseExpObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, 1.0);
