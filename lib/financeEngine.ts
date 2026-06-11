@@ -645,35 +645,74 @@ export class FinanceEngine {
             const regMins = calcRegMinimums(person1, person2, age1, age2, alive1, alive2, preGrowthRrsp1, preGrowthRrif1, preGrowthRrsp2, preGrowthRrif2, preGrowthLirf1, preGrowthLif1, preGrowthLirf2, preGrowthLif2, this.CONSTANTS?.RRIF_START_AGE || 72);
             let wdBreakdown = detailed ? { p1: {} as any, p2: {} as any } : null;
 
+            // --- REFACTORED SMART RRSP MELTDOWN OPTIMIZATION LOOP ---
             if (this.inputs['fully_optimize_tax'] === true || this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true) {
-                const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: 'p1' | 'p2', rrifMin: number, lifMin: number) => {
-                    let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
-                    if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
-                        let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
-                        
-                        let bracketTop = this.CONSTANTS.TAX_DATA?.FED?.brackets?.[0] || 55867;
-                        let targetBracketCap = bracketTop * baseInflation; 
-                        
-                        let room = Math.max(0, targetBracketCap - currentTaxable);
-                        if (room > 0) {
-                            let pullAmt = Math.min(room, person.rrsp);
-                            person.rrsp -= pullAmt; incs.rrspMeltdown += pullAmt; 
-                            if (pullAmt > 0) {
-                                if (prefix === 'p1') p1RRSPWithdrawn = true;
-                                if (prefix === 'p2') p2RRSPWithdrawn = true;
-                            }
-                            
-                            if (detailed && flowLog) flowLog.withdrawals[`${prefix.toUpperCase()} RRSP`] = (flowLog.withdrawals[`${prefix.toUpperCase()} RRSP`] || 0) + pullAmt;
+                let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
+                let bracketTop = this.CONSTANTS.TAX_DATA?.FED?.brackets?.[0] || 55867;
+                let targetBracketCap = bracketTop * baseInflation;
+
+                // Scenario Check: Are both partners alive, retired, and UNDER the Canadian Pension Splitting Threshold age (65)?
+                const isUnderAge65SplittingCap = this.mode === 'Couple' && alive1 && alive2 && age1 < 65 && age2 < 65 && isRet1 && isRet2;
+
+                if (isUnderAge65SplittingCap) {
+                    // Calculate individual current taxable baselines before proactive meltdowns
+                    let curTaxable1 = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + (person1.nonreg * person1.nonreg_yield) + regMins.p1 + regMins.lifTaken1;
+                    let curTaxable2 = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + (person2.nonreg * person2.nonreg_yield) + regMins.p2 + regMins.lifTaken2;
+
+                    let room1 = Math.max(0, targetBracketCap - curTaxable1);
+                    let room2 = Math.max(0, targetBracketCap - curTaxable2);
+
+                    // Split the low-tax bracket allocation space manually 50/50 since the CRA blocks financial paper splitting pre-65
+                    if (room1 > 0 && person1.rrsp > 0) {
+                        let pull1 = Math.min(room1 * 0.5, person1.rrsp);
+                        if (pull1 > 0) {
+                            person1.rrsp -= pull1; inflows.p1.rrspMeltdown += pull1; p1RRSPWithdrawn = true;
+                            if (detailed && flowLog) flowLog.withdrawals['P1 RRSP'] = (flowLog.withdrawals['P1 RRSP'] || 0) + pull1;
                             if (detailed && wdBreakdown) {
-                                if (!wdBreakdown[prefix].RRSP_math) wdBreakdown[prefix].RRSP_math = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
-                                wdBreakdown[prefix].RRSP = (wdBreakdown[prefix].RRSP || 0) + pullAmt;
-                                wdBreakdown[prefix].RRSP_math.wd += pullAmt; wdBreakdown[prefix].RRSP_math.tax += pullAmt;
+                                if (!wdBreakdown.p1.RRSP_math) wdBreakdown.p1.RRSP_math = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
+                                wdBreakdown.p1.RRSP = (wdBreakdown.p1.RRSP || 0) + pull1;
+                                wdBreakdown.p1.RRSP_math.wd += pull1; wdBreakdown.p1.RRSP_math.tax += pull1;
                             }
                         }
                     }
-                };
-                if (alive1) executeMeltdown(person1, age1, inflows.p1, alive1, 'p1', regMins.p1, regMins.lifTaken1);
-                if (this.mode === 'Couple' && alive2) executeMeltdown(person2, age2, inflows.p2, alive2, 'p2', regMins.p2, regMins.lifTaken2);
+
+                    if (room2 > 0 && person2.rrsp > 0) {
+                        let pull2 = Math.min(room2 * 0.5, person2.rrsp);
+                        if (pull2 > 0) {
+                            person2.rrsp -= pull2; inflows.p2.rrspMeltdown += pull2; p2RRSPWithdrawn = true;
+                            if (detailed && flowLog) flowLog.withdrawals['P2 RRSP'] = (flowLog.withdrawals['P2 RRSP'] || 0) + pull2;
+                            if (detailed && wdBreakdown) {
+                                if (!wdBreakdown.p2.RRSP_math) wdBreakdown.p2.RRSP_math = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
+                                wdBreakdown.p2.RRSP = (wdBreakdown.p2.RRSP || 0) + pull2;
+                                wdBreakdown.p2.RRSP_math.wd += pull2; wdBreakdown.p2.RRSP_math.tax += pull2;
+                            }
+                        }
+                    }
+                } else {
+                    // Standard sequential baseline path used when single or age >= 65 (where CRA paper pension splitting safely balances out tax bills)
+                    const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: 'p1' | 'p2', rrifMin: number, lifMin: number) => {
+                        if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
+                            let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
+                            let room = Math.max(0, targetBracketCap - currentTaxable);
+                            if (room > 0) {
+                                let pullAmt = Math.min(room, person.rrsp);
+                                person.rrsp -= pullAmt; incs.rrspMeltdown += pullAmt; 
+                                if (pullAmt > 0) {
+                                    if (prefix === 'p1') p1RRSPWithdrawn = true;
+                                    if (prefix === 'p2') p2RRSPWithdrawn = true;
+                                }
+                                if (detailed && flowLog) flowLog.withdrawals[`${prefix.toUpperCase()} RRSP`] = (flowLog.withdrawals[`${prefix.toUpperCase()} RRSP`] || 0) + pullAmt;
+                                if (detailed && wdBreakdown) {
+                                    if (!wdBreakdown[prefix].RRSP_math) wdBreakdown[prefix].RRSP_math = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
+                                    wdBreakdown[prefix].RRSP = (wdBreakdown[prefix].RRSP || 0) + pullAmt;
+                                    wdBreakdown[prefix].RRSP_math.wd += pullAmt; wdBreakdown[prefix].RRSP_math.tax += pullAmt;
+                                }
+                            }
+                        }
+                    };
+                    if (alive1) executeMeltdown(person1, age1, inflows.p1, alive1, 'p1', regMins.p1, regMins.lifTaken1);
+                    if (this.mode === 'Couple' && alive2) executeMeltdown(person2, age2, inflows.p2, alive2, 'p2', regMins.p2, regMins.lifTaken2);
+                }
             }
 
             if (inflows.p1.rrspMeltdown > 0) rrspRoom1 = 0; 
