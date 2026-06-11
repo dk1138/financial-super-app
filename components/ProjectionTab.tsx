@@ -26,6 +26,12 @@ export default function ProjectionTab() {
 
   const isCouple = data.mode === 'Couple';
 
+  // Resolve dynamic custom player names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+  const p1Upper = p1Name.toUpperCase();
+  const p2Upper = p2Name.toUpperCase();
+
   const showToast = (msg: string) => {
       setToastMsg(msg);
       setTimeout(() => setToastMsg(''), 4000);
@@ -74,7 +80,7 @@ export default function ProjectionTab() {
       if (!results || !results.timeline) return;
 
       const headers = [
-          "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
+          "Year", `${p1Name} Age`, isCouple ? `${p2Name} Age` : "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
           "Living Expenses", "Mortgage & Debt", "Education Costs", "Lifestyle Spending Cash", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
@@ -104,33 +110,22 @@ export default function ProjectionTab() {
 
           const lifestyleSpendingCash = y.flows?.contributions?.shared?.spending_cash || 0;
 
-          const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
-          const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
-          const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
-
-          const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
-          const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
-          const totalClawback = p1Clawback + p2Clawback;
-
-          const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
-          const totalEstate = (y.afterTaxEstate !== undefined ? y.afterTaxEstate : (y.liquidNW + (y.reIncludedEq || 0)));
-
           return [
               y.year,
               y.p1Age || y.ageP1 || '',
               isCouple ? (y.p2Age || y.ageP2 || '') : 'N/A',
               phase,
-              Math.round(getRealValue((y.grossInflow || 0) - totalClawback, y.year)),
-              Math.round(getRealValue(totalTaxes, y.year)),
+              Math.round(getRealValue((y.grossInflow || 0) - ((y.taxDetailsP1?.oas_clawback || 0) + (y.taxDetailsP2?.oas_clawback || 0)), y.year)),
+              Math.round(getRealValue((y.taxP1 || 0) + (y.taxP2 || 0) - ((y.taxDetailsP1?.oas_clawback || 0) + (y.taxDetailsP2?.oas_clawback || 0)), y.year)),
               Math.round(getRealValue(y.expenses || 0, y.year)),
-              Math.round(getRealValue((y.mortgagePay || 0) + baseDebtRepayment, y.year)),
+              Math.round(getRealValue((y.mortgagePay || 0) + Math.max(0, (y.debtRepayment || 0) - Math.max(0, (y.eduExpense || 0) - ((y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0)))), y.year)),
               Math.round(getRealValue(y.eduExpense || 0, y.year)),
               Math.round(getRealValue(lifestyleSpendingCash, y.year)),
               Math.round(getRealValue(engineContributions, y.year)),
               Math.round(getRealValue(totalWithdrawals as number, y.year)),
               Math.round(getRealValue(y.liquidNW || 0, y.year)),
               Math.round(getRealValue((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)),
-              Math.round(getRealValue(totalEstate, y.year))
+              Math.round(getRealValue((y.afterTaxEstate !== undefined ? y.afterTaxEstate : (y.liquidNW + (y.reIncludedEq || 0))), y.year))
           ].join(",");
       });
 
@@ -236,10 +231,6 @@ export default function ProjectionTab() {
       }
   });
 
-  const planSuccess = !hasShortfall;
-  const finalYear = results.timeline[results.timeline.length - 1];
-  const finalEstate = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
-
   const toggleRow = (year: number) => {
     setExpandedYear(expandedYear === year ? null : year);
   };
@@ -257,8 +248,12 @@ export default function ProjectionTab() {
           else if (ev.includes('Downsize')) { colorClass = "text-danger"; icon = "bi-house-down-fill"; }
           else if (ev.includes('RRSP')) { colorClass = "text-secondary"; icon = "bi-arrow-left-right"; }
           
+          const dynamicText = ev
+              .replace(/\bP1\b/g, p1Name)
+              .replace(/\bP2\b/g, p2Name);
+
           return (
-              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={ev} style={{cursor: 'help'}}></i>
+              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={dynamicText} style={{cursor: 'help'}}></i>
           );
       });
   };
@@ -306,15 +301,15 @@ export default function ProjectionTab() {
       return (assets.cash||0) + (assets.tfsa||0) + (assets.fhsa||0) + (assets.rrsp||0) + (assets.lirf||0) + (assets.lif||0) + (assets.rrif_acct||0) + (assets.nonreg||0) + (assets.crypto||0);
   };
 
-  const getAccountFlow = (y: any, player: string, acctKeys: string[], wdKeys: string[], year: number) => {
+  const getAccountFlow = (y: any, player: 'p1' | 'p2', acctKeys: string[], wdKeys: string[], year: number) => {
       let added = 0;
       let withdrawn = 0;
       if (y.flows && y.flows.contributions && y.flows.contributions[player]) {
           acctKeys.forEach(k => added += (y.flows.contributions[player][k] || 0));
       }
       if (y.flows && y.flows.withdrawals) {
-          const pUpper = player.toUpperCase();
-          wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[`${pUpper} ${k}`] || 0));
+          const prefix = player === 'p1' ? 'P1 ' : 'P2 ';
+          wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[`${prefix}${k}`] || 0));
       }
       let net = added - withdrawn;
       if (Math.abs(net) < 1) return <span className="flex-shrink-0" style={{minWidth: '45px', display: 'inline-block'}}></span>; 
@@ -335,7 +330,8 @@ export default function ProjectionTab() {
       if (!taxData) return "No tax generated.";
       
       const isP1 = player === 'p1';
-      const pUpper = player.toUpperCase();
+      const nameRef = isP1 ? p1Name : p2Name;
+      const prefix = isP1 ? 'P1 ' : 'P2 ';
 
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
@@ -355,11 +351,11 @@ export default function ProjectionTab() {
       if (db > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Pension:</span> <span>$${formatStr(db, year)}</span></div>`; sum += db; }
       if (invInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Inv. Yield:</span> <span>$${formatStr(invInc, year)}</span></div>`; sum += invInc; }
 
-      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
+      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(prefix) && y.flows.withdrawals[k] > 0);
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
 
       taxableWds.forEach(k => {
-          const cleanName = k.replace(`${pUpper} `, '');
+          const cleanName = k.replace(prefix, '');
           if (k.includes('RRIF') || k.includes('LIF') || k.includes('RRSP') || k.includes('LIRF')) {
               const amt = y.flows.withdrawals[k];
               breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} W/D:</span> <span>$${formatStr(amt, year)}</span></div>`;
@@ -452,24 +448,22 @@ export default function ProjectionTab() {
       const eliminationThreshold = threshold + (gross / 0.15);
       const isFullyEliminated = clawback >= (gross - 0.01);
 
-      if (clawback <= 0) {
-          return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br>No clawback applied.`;
-      }
-      
-      return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br><span class="text-danger"><b>Clawback Penalty:</b> -$${formatStr(clawback, year)}${isFullyEliminated ? ' <br><i>(OAS Fully Eliminated)</i>' : ''}</span><br><b>Net OAS Received:</b> $${formatStr(Math.max(0, gross - clawback), year)}`;
+      return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br>` + 
+      (clawback <= 0 ? `No clawback applied.` : `<span class="text-danger"><b>Clawback Penalty:</b> -$${formatStr(clawback, year)}${isFullyEliminated ? ' <br><i>(OAS Fully Eliminated)</i>' : ''}</span><br><b>Net OAS Received:</b> $${formatStr(Math.max(0, gross - clawback), year)}`);
   };
 
   const buildContributionTooltip = (flows: any, isCouple: boolean, year: number) => {
       if (!flows || !flows.contributions) return "No contributions.";
       let lines: string[] = [];
-      Object.entries(flows.contributions.p1).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`P1 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
-      if (isCouple) Object.entries(flows.contributions.p2).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`P2 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
+      Object.entries(flows.contributions.p1).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`${p1Name} ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
+      if (isCouple) Object.entries(flows.contributions.p2).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`${p2Name} ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
       return lines.length > 0 ? lines.join('<br>') : "No contributions.";
   };
 
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
       const isP1 = player === 'p1';
-      const pUpper = player.toUpperCase();
+      const nameRef = isP1 ? p1Name : p2Name;
+      const prefix = isP1 ? 'P1 ' : 'P2 ';
       const age = isP1 ? (y.p1Age || y.ageP1) : (y.p2Age || y.ageP2);
       
       const salary = isP1 ? y.incomeP1 - (y.rrspMatchP1 || 0) : y.incomeP2 - (y.rrspMatchP2 || 0);
@@ -484,7 +478,7 @@ export default function ProjectionTab() {
       const cppStart = isP1 ? data.inputs.p1_cpp_start : data.inputs.p2_cpp_start;
       const refund = isP1 ? y.rrspRefundP1 : y.rrspRefundP2;
 
-      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
+      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(prefix) && y.flows.withdrawals[k] > 0);
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
       const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash') || k.includes('RESP'));
 
@@ -494,15 +488,16 @@ export default function ProjectionTab() {
 
       let priorRrifBal = 0;
       const prevYear = index > 0 ? timeline[index - 1] : null;
+      const assetKey = isP1 ? 'assetsP1' : 'assetsP2';
       if (prevYear) {
-          priorRrifBal = (prevYear[`assets${pUpper}`]?.rrif_acct || 0) + (prevYear[`assets${pUpper}`]?.rrsp || 0);
+          priorRrifBal = (prevYear[assetKey]?.rrif_acct || 0) + (prevYear[assetKey]?.rrsp || 0);
       } else {
           priorRrifBal = (Number(data.inputs[`${player}_rrif_acct`]) || 0) + (Number(data.inputs[`${player}_rrsp`]) || 0);
       }
 
       return (
           <div className="mb-3 pb-2 border-bottom border-secondary border-opacity-25">
-              <div className="fw-bold text-uppercase ls-1 mb-2" style={{fontSize: '0.75rem', color: isP1 ? 'var(--bs-info)' : 'var(--bs-purple)'}}>{pUpper} Inflows</div>
+              <div className="fw-bold text-uppercase ls-1 mb-2" style={{fontSize: '0.75rem', color: isP1 ? 'var(--bs-info)' : 'var(--bs-purple)'}}>{nameRef} Inflows</div>
               
               {salary > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
@@ -549,7 +544,7 @@ export default function ProjectionTab() {
 
               {taxableWds.map(k => {
                   const val = y.flows.withdrawals[k];
-                  const cleanName = k.replace(`${pUpper} `, '');
+                  const cleanName = k.replace(prefix, '');
                   let info = "";
                   
                   if (k.includes('RRIF')) {
@@ -604,7 +599,7 @@ export default function ProjectionTab() {
 
                       {nonTaxWds.map(k => {
                           const val = y.flows.withdrawals[k];
-                          const cleanName = k.replace(`${pUpper} `, '');
+                          const cleanName = k.replace(prefix, '');
                           let info = `<span class='text-info fw-bold'>0% Taxable.</span><br>Tax-free withdrawal. Does not affect taxable income.`;
                           
                           if (k.includes('RESP')) {
@@ -666,10 +661,10 @@ export default function ProjectionTab() {
             
             <thead className="surface-card" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
               <tr style={{ fontSize: '0.75rem', letterSpacing: '0.05em' }}>
-                <th className="py-3 ps-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '4%' }}></th>
+                <th className="py-3 ps-3 text-center text-primary border-bottom border-secondary" style={{ width: '4%' }}></th>
                 <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '16%' }}>Year & Events</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages ({p1Name}{isCouple ? ` / ${p2Name}` : ''})</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Gross Income</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>
                 <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>
@@ -694,7 +689,7 @@ export default function ProjectionTab() {
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
                 
-                // Exclude lifestyleSpendingCash from the generic 'Expenses' column so it displays as its own independent outflow row block
+                // Exclude lifestyleSpendingCash from the generic 'Expenses' column
                 const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + baseDebtRepayment + (y.eduExpense || 0);
 
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
@@ -826,12 +821,12 @@ export default function ProjectionTab() {
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, y.year)} /></span>
+                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">{p1Name} Taxes <InfoBtn align="right" title={`${p1Name} Tax Breakdown`} text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, y.year)} /></span>
                                                 <span className="text-danger fw-medium text-nowrap">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
                                             </div>
                                             {isCouple && (
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, y.year)} /></span>
+                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">{p2Name} Taxes <InfoBtn align="right" title={`${p2Name} Tax Breakdown`} text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, y.year)} /></span>
                                                     <span className="text-danger fw-medium text-nowrap">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
                                                 </div>
                                             )}
@@ -864,7 +859,7 @@ export default function ProjectionTab() {
                                     <div className="flex-grow-1">
                                         {y.p1Alive && (
                                             <div className="mb-3">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold text-nowrap">{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>{p1Name} Portfolio</span><span className="text-info fw-bold text-nowrap">{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
@@ -954,7 +949,7 @@ export default function ProjectionTab() {
 
                                         {isCouple && y.p2Alive && (
                                             <div className="mb-2 border-top border-secondary border-opacity-25 pt-2">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold text-nowrap" style={{color: 'var(--bs-purple)'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>{p2Name} Portfolio</span><span className="fw-bold text-nowrap" style={{color: 'var(--bs-purple)'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
