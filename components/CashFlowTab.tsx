@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
@@ -12,6 +14,14 @@ export default function CashFlowTab() {
   
   const [tooltip, setTooltip] = useState<{ id: string, x: number, y: number } | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  const isCouple = data.mode === 'Couple';
+
+  // Resolve dynamic custom player names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+  const p1Upper = p1Name.toUpperCase();
+  const p2Upper = p2Name.toUpperCase();
 
   useEffect(() => {
       let interval: any;
@@ -39,7 +49,6 @@ export default function CashFlowTab() {
     );
   }
 
-  const isCouple = data.mode === 'Couple';
   const startYear = results.timeline[0].year;
   const endYear = results.timeline[results.timeline.length - 1].year;
   const currentVal = Math.max(startYear, Math.min(endYear, selectedYear));
@@ -172,18 +181,18 @@ export default function CashFlowTab() {
   if (yData.flows && yData.flows.contributions) {
       if (yData.flows.contributions.p1) {
           Object.entries(yData.flows.contributions.p1).forEach(([acct, val]) => {
-              if ((val as number) > 0) savingsBreakdown.push({ label: `P1 ${acct.toUpperCase()}`, val: val as number });
+              if ((val as number) > 0) savingsBreakdown.push({ label: `${p1Name} ${acct.toUpperCase()}`, val: val as number });
           });
       }
       if (isCouple && yData.flows.contributions.p2) {
           Object.entries(yData.flows.contributions.p2).forEach(([acct, val]) => {
-              if ((val as number) > 0) savingsBreakdown.push({ label: `P2 ${acct.toUpperCase()}`, val: val as number });
+              if ((val as number) > 0) savingsBreakdown.push({ label: `${p2Name} ${acct.toUpperCase()}`, val: val as number });
           });
       }
   }
   if (savingsBreakdown.length === 0) {
-      savingsBreakdown.push({ label: 'P1 Contributions', val: p1Conts });
-      if (isCouple) savingsBreakdown.push({ label: 'P2 Contributions', val: p2Conts });
+      savingsBreakdown.push({ label: `${p1Name} Contributions`, val: p1Conts });
+      if (isCouple) savingsBreakdown.push({ label: `${p2Name} Contributions`, val: p2Conts });
   }
   if (unallocatedRaw > 0) {
       savingsBreakdown.push({ label: 'Unallocated Cash', val: unallocatedRaw });
@@ -191,25 +200,30 @@ export default function CashFlowTab() {
 
   const nodeBreakdowns: any = {
       'salary': [
-          { label: 'P1 Employment', val: p1BaseSalary },
-          { label: 'P2 Employment', val: p2BaseSalary }
+          { label: `${p1Name} Employment`, val: p1BaseSalary },
+          { label: `${p2Name} Employment`, val: p2BaseSalary }
       ],
       'match': [
-          { label: 'P1 RRSP Match', val: yData.rrspMatchP1 || 0 },
-          { label: 'P2 RRSP Match', val: yData.rrspMatchP2 || 0 }
+          { label: `${p1Name} RRSP Match`, val: yData.rrspMatchP1 || 0 },
+          { label: `${p2Name} RRSP Match`, val: yData.rrspMatchP2 || 0 }
       ],
       'govt': [
-          { label: 'P1 CPP', val: yData.cppP1 || 0 },
-          { label: 'P2 CPP', val: yData.cppP2 || 0 },
-          { label: 'P1 OAS', val: yData.oasP1 || 0 },
-          { label: 'P2 OAS', val: yData.oasP2 || 0 },
+          { label: `${p1Name} CPP`, val: yData.cppP1 || 0 },
+          { label: `${p2Name} CPP`, val: yData.cppP2 || 0 },
+          { label: `${p1Name} OAS`, val: yData.oasP1 || 0 },
+          { label: `${p2Name} OAS`, val: yData.oasP2 || 0 },
           { label: 'CCB (Tax-Free)', val: yData.ccbP1 || 0 }
       ],
       'pen': [
-          { label: 'P1 DB Pension', val: yData.dbP1 || 0 },
-          { label: 'P2 DB Pension', val: yData.dbP2 || 0 }
+          { label: `${p1Name} DB Pension`, val: yData.dbP1 || 0 },
+          { label: `${p2Name} DB Pension`, val: yData.dbP2 || 0 }
       ],
-      'wds': Object.entries(yData.flows?.withdrawals || {}).map(([key, val]) => ({ label: key, val: val as number })),
+      'wds': Object.entries(yData.flows?.withdrawals || {}).map(([key, val]) => {
+          const dynamicKey = key
+              .replace(/\bP1\b/g, p1Name)
+              .replace(/\bP2\b/g, p2Name);
+          return { label: dynamicKey, val: val as number };
+      }),
       'other': [
           { label: 'Non-Reg / Crypto Yield', val: otherYield },
           { label: 'Simulated RRSP/FHSA Refund', val: otherRefund },
@@ -245,15 +259,19 @@ export default function CashFlowTab() {
       ];
   } else {
       nodeBreakdowns['salary'].forEach((b: any, i: number) => {
+          if (!isCouple && b.label.includes(p2Name)) return;
           rawLeftNodes.push({ id: `salary-${i}`, label: b.label, value: getRealValue(b.val), color: '#3b82f6', parentId: 'salary' });
       });
       nodeBreakdowns['match'].forEach((b: any, i: number) => {
+          if (!isCouple && b.label.includes(p2Name)) return;
           rawLeftNodes.push({ id: `match-${i}`, label: b.label, value: getRealValue(b.val), color: '#0ea5e9', parentId: 'match' });
       });
       nodeBreakdowns['govt'].forEach((b: any, i: number) => {
+          if (!isCouple && b.label.includes(p2Name)) return;
           rawLeftNodes.push({ id: `govt-${i}`, label: b.label, value: getRealValue(b.val), color: '#8b5cf6', parentId: 'govt' });
       });
       nodeBreakdowns['pen'].forEach((b: any, i: number) => {
+          if (!isCouple && b.label.includes(p2Name)) return;
           rawLeftNodes.push({ id: `pen-${i}`, label: b.label, value: getRealValue(b.val), color: '#6366f1', parentId: 'pen' });
       });
       nodeBreakdowns['wds'].forEach((b: any, i: number) => {
@@ -296,7 +314,7 @@ export default function CashFlowTab() {
   const VIEWBOX_W = 1200;
   const VIEWBOX_H = 650;
   const PADDING = detailedMode ? 14 : 20; 
-  const LEFT_X = 260; // Adjusted for label -> amount -> % spacing boundaries
+  const LEFT_X = 260; 
   const RIGHT_X = 940; 
   const CENTER_LEFT = 570;
   const CENTER_RIGHT = 630;
@@ -537,7 +555,7 @@ export default function CashFlowTab() {
                               Detailed Streams
                           </button>
                       </div>
-                      <InfoBtn title="Detailed Streams Mode" text="Toggle between grouped category aggregates (e.g., Govt Benefits) and broken out individual cash streams (e.g., P1 CPP, P2 OAS, CCB)." />
+                      <InfoBtn title="Detailed Streams Mode" text={`Toggle between grouped category aggregates (e.g., Govt Benefits) and broken out individual cash streams (e.g., ${p1Name} CPP, ${p2Name} OAS, CCB).`} />
                   </div>
 
                   <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
@@ -579,7 +597,6 @@ export default function CashFlowTab() {
                               <g key={`L-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={LEFT_X - NODE_W} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  {/* Left side text anchor sequence order: Label -> Amount -> % (Right aligned setup) */}
                                   <text x={LEFT_X - NODE_W - 12} y={n.ty} textAnchor="end" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '13px' }}>
                                       <tspan fill="currentColor" opacity="0.95">{n.label}</tspan>
                                       <tspan fill={n.color} dx="8px" fontWeight="800">{formatCurrency(n.value)}</tspan>
@@ -592,7 +609,6 @@ export default function CashFlowTab() {
                               <g key={`R-${i}`} className="transition-all cursor-crosshair" style={{ opacity: getOpacity(n.id) }} 
                                  onMouseMove={(e) => handleMouseMove(e, n.id)} onMouseLeave={handleMouseLeave}>
                                   <rect x={RIGHT_X} y={n.y} width={NODE_W} height={n.h} fill={n.color} />
-                                  {/* Right side text anchor sequence order: Label -> Amount -> % (Left aligned setup) */}
                                   <text x={RIGHT_X + NODE_W + 12} y={n.ty} textAnchor="start" alignmentBaseline="middle" fill="currentColor" className="fw-bold" style={{ fontSize: detailedMode ? '11px' : '13px' }}>
                                       <tspan fill="currentColor" opacity="0.95">{n.label}</tspan>
                                       <tspan fill={n.color} dx="8px" fontWeight="800">{formatCurrency(n.value)}</tspan>
