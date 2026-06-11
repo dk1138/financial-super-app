@@ -64,7 +64,7 @@ export default function RealEstateCard() {
                     </div>
                     <div className="d-flex align-items-center gap-3">
                         <div className="form-check form-switch mb-0 d-flex align-items-center" title="Include property equity in total Net Worth">
-                            <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={prop.includeInNW ?? false} onChange={(e) => updateArrayItem('properties', idx, 'includeInNW', e.checked ?? e.target.checked)} />
+                            <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={prop.includeInNW ?? false} onChange={(e) => updateArrayItem('properties', idx, 'includeInNW', e.target.checked)} />
                             <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer d-none d-md-block">Include in NW</label>
                         </div>
                         <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('properties', idx)}><i className="bi bi-x-lg fs-5"></i></button>
@@ -135,7 +135,7 @@ export default function RealEstateCard() {
                                 </div>
                                 <div className="col-sm-4">
                                     <label className="form-label small text-muted mb-1">Int. Rate (%)</label>
-                                    <PercentInput className="form-control" value={prop.rate} onChange={(val: any) => updateArrayItem('properties', idx, 'rate', val)} />
+                                    <PercentInput className="form-control" value={prop.growth ?? 4.5} onChange={(val: any) => updateArrayItem('properties', idx, 'rate', val)} />
                                 </div>
                                 <div className="col-sm-4">
                                     <label className="form-label small text-muted mb-1">Payment /mo ($)</label>
