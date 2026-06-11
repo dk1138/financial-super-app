@@ -42,6 +42,10 @@ export default function PortfolioAssetsCard() {
       setLocalGlide(data.inputs.use_glide_path || false);
   }, [data.inputs.portfolio_allocation, data.inputs.use_glide_path]);
 
+  // Fallbacks for dynamic customizable names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+
   const handleAllocationChange = (val: string) => {
       if (val === 'custom') {
           updateInput('portfolio_allocation', val);
@@ -148,6 +152,7 @@ export default function PortfolioAssetsCard() {
           {['p1', 'p2'].map((p) => {
             if (!isCouple && p === 'p2') return null;
             const isP1 = p === 'p1';
+            const currentName = isP1 ? p1Name : p2Name;
             
             const playerCustomAssets = data.customAssets?.filter((ca: any) => ca.owner === p) || [];
 
@@ -157,7 +162,7 @@ export default function PortfolioAssetsCard() {
                 <div className="card-body p-3 p-md-4">
                   
                   <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary cursor-pointer user-select-none" onClick={() => setAssetsOpen(!assetsOpen)}>
-                      <h6 className={`fw-bold text-uppercase ls-1 mb-0 ${isP1 ? 'text-info' : ''}`} style={!isP1 ? {color: 'var(--bs-purple)'} : {}}>{p.toUpperCase()} Asset Mix</h6>
+                      <h6 className={`fw-bold text-uppercase ls-1 mb-0 ${isP1 ? 'text-info' : ''}`} style={!isP1 ? {color: 'var(--bs-purple)'} : {}}>{currentName} Asset Mix</h6>
                       <button type="button" className="btn btn-sm btn-link text-muted p-0"><i className={`bi bi-chevron-${assetsOpen ? 'up' : 'down'} fs-5`}></i></button>
                   </div>
 
@@ -345,12 +350,12 @@ export default function PortfolioAssetsCard() {
           <div className="card-body p-3">
               <div className="row text-center align-items-center">
                   <div className={isCouple ? "col-4 border-end border-success border-opacity-25" : "col-6 border-end border-success border-opacity-25"}>
-                      <div className="small fw-bold text-success text-uppercase ls-1 mb-1">P1 Portfolio</div>
+                      <div className="small fw-bold text-success text-uppercase ls-1 mb-1">{p1Name} Portfolio</div>
                       <div className="fs-5 fw-bold text-success">{formatCurrency(p1Total)}</div>
                   </div>
                   {isCouple && (
                     <div className="col-4 border-end border-success border-opacity-25">
-                        <div className="small fw-bold text-uppercase ls-1 mb-1" style={{ color: 'var(--bs-purple)' }}>P2 Portfolio</div>
+                        <div className="small fw-bold text-uppercase ls-1 mb-1" style={{ color: 'var(--bs-purple)' }}>{p2Name} Portfolio</div>
                         <div className="fs-5 fw-bold" style={{ color: 'var(--bs-purple)' }}>{formatCurrency(p2Total)}</div>
                     </div>
                   )}

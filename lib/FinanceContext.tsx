@@ -130,7 +130,7 @@ export const defaultData: FinanceData = {
   useRealDollars: false, 
   expenseMode: 'Simple',
   inputs: {
-    p1_dob: '1996-01', p1_age: 30, p1_retireAge: 65, p1_lifeExp: 90,
+    p1_name: 'Player 1', p1_dob: '1996-01', p1_age: 30, p1_retireAge: 65, p1_lifeExp: 90,
     p1_income: 85000, p1_income_growth: 2.0, p1_rrsp_match: 3.0, p1_rrsp_match_tier: 100.0,
     p1_cash: 10000, p1_cash_ret: 2.0,
     p1_tfsa: 25000, p1_tfsa_ret: 6.0,
@@ -145,7 +145,7 @@ export const defaultData: FinanceData = {
     p1_cpp_enabled: true, p1_cpp_est_base: 12000, p1_cpp_start: 65,
     p1_oas_enabled: true, p1_oas_years: 40, p1_oas_start: 65,
 
-    p2_dob: '1996-01', p2_age: 30, p2_retireAge: 65, p2_lifeExp: 90,
+    p2_name: 'Player 2', p2_dob: '1996-01', p2_age: 30, p2_retireAge: 65, p2_lifeExp: 90,
     p2_income: 75000, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 100.0,
     p2_cash: 5000, p2_cash_ret: 2.0,
     p2_tfsa: 15000, p2_tfsa_ret: 6.0,
@@ -171,7 +171,7 @@ export const defaultData: FinanceData = {
     exp_gogo_age: 75, exp_slow_age: 85, pension_split_enabled: false,
     
     emergency_fund_mode: 'none', emergency_fund_custom_amount: 0,
-    max_annual_spending_cash: 0 // Added base structural default parameter key configuration
+    max_annual_spending_cash: 0 
   },
   properties: [
     {
@@ -207,7 +207,7 @@ export const emptyData: FinanceData = {
   useRealDollars: false, 
   expenseMode: 'Simple',
   inputs: {
-    p1_dob: '1990-01', p1_age: 35, p1_retireAge: 60, p1_lifeExp: 90,
+    p1_name: 'Player 1', p1_dob: '1990-01', p1_age: 35, p1_retireAge: 60, p1_lifeExp: 90,
     p1_income: 0, p1_income_growth: 2.0, p1_rrsp_match: 0.0, p1_rrsp_match_tier: 0.0,
     p1_cash: 0, p1_cash_ret: 2.0, p1_tfsa: 0, p1_tfsa_ret: 6.0, p1_fhsa: 0, p1_fhsa_ret: 6.0,
     p1_rrsp: 0, p1_rrsp_ret: 6.0, p1_resp: 0, p1_resp_ret: 6.0, p1_lirf: 0, p1_lirf_ret: 6.0,
@@ -217,7 +217,7 @@ export const emptyData: FinanceData = {
     p1_cpp_enabled: true, p1_cpp_est_base: 0, p1_cpp_start: 65,
     p1_oas_enabled: true, p1_oas_years: 0, p1_oas_start: 65,
 
-    p2_dob: '1990-01', p2_age: 35, p2_retireAge: 60, p2_lifeExp: 90,
+    p2_name: 'Player 2', p2_dob: '1990-01', p2_age: 35, p2_retireAge: 60, p2_lifeExp: 90,
     p2_income: 0, p2_income_growth: 2.0, p2_rrsp_match: 0.0, p2_rrsp_match_tier: 0.0,
     p2_cash: 0, p2_cash_ret: 2.0, p2_tfsa: 0, p2_tfsa_ret: 6.0, p2_fhsa: 0, p2_fhsa_ret: 6.0,
     p2_rrsp: 0, p2_rrsp_ret: 6.0, p2_resp: 0, p2_resp_ret: 6.0, p2_lirf: 0, p2_lirf_ret: 6.0,
@@ -268,9 +268,7 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
         if (parsedData.strategies.decum) merged.strategies.decum = parsedData.strategies.decum.map((s: string) => s === 'nreg' ? 'nonreg' : s);
     }
 
-    // DEFENSIVE UPGRADE: Inject 'spending_cash' into accum lists if old arrays omit it entirely
     if (merged.strategies && merged.strategies.accum && !merged.strategies.accum.includes('spending_cash')) {
-        // Place it directly underneath standard tax-sheltered buckets (index 3) or append to tail safely
         merged.strategies.accum.splice(3, 0, 'spending_cash');
     }
 
@@ -313,13 +311,13 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
             merged.inputs[newKey] = val;
         });
         
-        // Ensure new structural engine variables exist even on old saved profiles
+        merged.inputs.p1_name = parsedData.inputs.p1_name || 'Player 1';
+        merged.inputs.p2_name = parsedData.inputs.p2_name || 'Player 2';
         merged.inputs.emergency_fund_mode = parsedData.inputs.emergency_fund_mode || 'none';
         merged.inputs.emergency_fund_custom_amount = parsedData.inputs.emergency_fund_custom_amount || 0;
         merged.inputs.max_annual_spending_cash = parsedData.inputs.max_annual_spending_cash !== undefined ? parsedData.inputs.max_annual_spending_cash : 0;
     }
 
-    // Apply Boundaries to legacy loaded data
     ['p1', 'p2'].forEach(player => {
         let dob = merged.inputs[`${player}_dob`];
         if (dob) {
@@ -428,7 +426,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         dataRef.current = data;
     }, [data]);
 
-    // 1. Initialization
     useEffect(() => {
         try {
             const savedData = localStorage.getItem('retirement_plan_data');
@@ -457,7 +454,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return () => workerRef.current?.terminate();
     }, []);
 
-    // 2. Calculation Engine Trigger
     useEffect(() => {
         if (!hasHydrated) return;
         setIsCalculating(true);
@@ -472,7 +468,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return () => clearTimeout(calcTimeoutId);
     }, [data, hasHydrated]);
 
-    // 3. Local Storage Saver
     useEffect(() => {
         if (!hasHydrated) return;
         const saveTimeoutId = setTimeout(() => {
@@ -486,7 +481,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return () => clearTimeout(saveTimeoutId);
     }, [data, hasHydrated]);
 
-    // 4. Rotating Backup
     useEffect(() => {
         if (!hasHydrated) return;
         const backupIntervalId = setInterval(() => {
@@ -508,5 +502,4 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }, [hasHydrated]);
 
     return <>{children}</>;
-    
 }

@@ -71,6 +71,9 @@ export default function GovtBenefitsCard() {
           {['p1', 'p2'].map((p) => {
             if (!isCouple && p === 'p2') return null;
             
+            // Resolve dynamic customized name
+            const playerName = data.inputs[`${p}_name`] || (p === 'p1' ? 'Player 1' : 'Player 2');
+
             const cppBase = Number(data.inputs[`${p}_cpp_est_base`]) || 0;
             const cppStart = Number(data.inputs[`${p}_cpp_start`]) || 65;
             const cppAdjYr = getAdjustedCPP(cppBase, cppStart);
@@ -90,7 +93,7 @@ export default function GovtBenefitsCard() {
             <div className="col-12 col-xl-6" key={p}>
                 <div className="card h-100 border-secondary surface-card shadow-none">
                     <div className="card-body p-4">
-                        <h6 className={`fw-bold text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{p.toUpperCase()} Benefits</h6>
+                        <h6 className={`fw-bold text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{playerName} Benefits</h6>
                         
                         {/* CPP Box */}
                         <div className="border border-secondary rounded-4 mb-3 shadow-sm">

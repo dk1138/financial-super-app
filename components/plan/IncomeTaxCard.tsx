@@ -437,6 +437,10 @@ export default function IncomeTaxCard() {
   const [showTaxBreakdown, setShowTaxBreakdown] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showRefund, setShowRefund] = useState<Record<string, boolean>>({ p1: false, p2: false });
 
+  // Resolve dynamic custom player names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
   const getActiveIncome = (player: string) => {
@@ -978,13 +982,14 @@ export default function IncomeTaxCard() {
         <div className="row g-4">
           {['p1', 'p2'].map((p) => {
             if (!isCouple && p === 'p2') return null;
+            const currentName = p === 'p1' ? p1Name : p2Name;
             return (
             <div className="col-12 col-xl-6" key={p}>
               
               <div className="card h-100 border-secondary surface-card shadow-none mb-4">
                 <div className="card-body p-4">
                   <div className="d-flex justify-content-between mb-4 border-bottom border-secondary pb-2">
-                    <h6 className={`fw-bold text-uppercase ls-1 ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{p.toUpperCase()} Income</h6>
+                    <h6 className={`fw-bold text-uppercase ls-1 ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{currentName} Income</h6>
                     <div className="d-flex gap-2">
                       <button type="button" className={`btn btn-sm btn-outline-${p === 'p1' ? 'info' : 'primary'} rounded-pill px-3 py-1 fw-bold`} style={p === 'p2' ? {color:'var(--bs-purple)', borderColor:'var(--bs-purple)'} : {}} onClick={() => addArrayItem('additionalIncome', { owner: p, name: 'Side Hustle', amount: 5000, freq: 'year', growth: 2.0, startMode: 'date', start: '2026-01', endMode: 'never', taxable: true })}>+ Stream</button>
                     </div>

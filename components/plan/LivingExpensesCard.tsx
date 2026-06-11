@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { InfoBtn, CurrencyInput, StepperInput, FrequencyToggle } from '../SharedUI';
+import { InfoBtn, CurrencyInput, StepperInput, FrequencyToggle, ModernDropdown } from '../SharedUI';
 
 export default function LivingExpensesCard() {
   const { data, updateInput, updateExpenseCategory, addArrayItem, updateArrayItem, removeArrayItem } = useFinance(); 
@@ -10,6 +10,18 @@ export default function LivingExpensesCard() {
   const [showSyncError, setShowSyncError] = useState(false);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [pendingSyncData, setPendingSyncData] = useState<{ annual: number, categories: any } | null>(null);
+
+  const isCouple = data.mode === 'Couple';
+
+  // Fallbacks for dynamic customizable names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+
+  const OWNER_OPTIONS = [
+      { id: 'p1', label: p1Name, icon: 'bi-person', color: 'text-info' },
+      { id: 'p2', label: p2Name, icon: 'bi-person', color: 'text-purple' },
+      { id: 'joint', label: 'Joint', icon: 'bi-people', color: 'text-success' }
+  ];
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
 
@@ -84,7 +96,7 @@ export default function LivingExpensesCard() {
                   name: `${expenseCat} (Tracked)`,
                   curr: avgMonthly,
                   ret: Math.round(avgMonthly * 0.8),
-                  trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12
+                  trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12, owner: 'joint'
               });
           }
       });
@@ -92,7 +104,7 @@ export default function LivingExpensesCard() {
       Object.keys(newPlannerItems).forEach(cat => {
           const finalItems = newPlannerItems[cat].length > 0 
               ? newPlannerItems[cat] 
-              : [{ name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12 }];
+              : [{ name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12, owner: 'joint' }];
           
           updateExpenseCategory(cat, finalItems);
       });
@@ -105,8 +117,9 @@ export default function LivingExpensesCard() {
     <div className="rp-card border border-secondary rounded-4 mb-4">
       <div className="card-header d-flex flex-wrap align-items-center justify-content-between border-bottom border-secondary p-3 surface-card gap-2">
         <div className="d-flex align-items-center">
+            <i className="bi bi-cart4 text-main fs-4 me-3"></i>
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                <i className="bi bi-cart4 text-main me-3"></i>6. Living Expenses
+                6. Living Expenses
                 <InfoBtn align="left" title="Budgeting" text="Enter your current monthly or annual spending." />
             </h5>
             
@@ -176,17 +189,18 @@ export default function LivingExpensesCard() {
                             {getCategoryIcon(cat)} <span className="ls-1">{cat}</span>
                         </h6>
                         <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => { 
-                            const newList = [...data.expensesByCategory[cat].items, { name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12 }]; 
+                            const newList = [...data.expensesByCategory[cat].items, { name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12, owner: 'joint' }]; 
                             updateExpenseCategory(cat, newList); 
                         }}>
                             <i className="bi bi-plus-lg me-1"></i> Add Item
                         </button>
                     </div>
                     <div className="card-body p-0 table-responsive hide-scrollbar">
-                        <table className="table table-borderless align-middle mb-0 w-100" style={{ minWidth: expenseAdvancedMode ? '1000px' : '650px' }}>
+                        <table className="table table-borderless align-middle mb-0 w-100" style={{ minWidth: expenseAdvancedMode ? '1100px' : '750px' }}>
                             <thead className="border-bottom border-secondary text-muted text-uppercase" style={{fontSize: '0.7rem'}}>
                                 <tr>
-                                    <th className="ps-4 py-3" style={{ width: '25%' }}>Expense Item</th>
+                                    {isCouple && <th className="ps-4 py-3" style={{ width: '135px' }}>Owner</th>}
+                                    <th className={isCouple ? "py-3" : "ps-4 py-3"} style={{ width: '23%' }}>Expense Item</th>
                                     <th className="py-3">Working</th>
                                     {expenseAdvancedMode && <th className="py-3 text-primary">Transition</th>}
                                     <th className="py-3">Retire (Base)</th>
@@ -204,7 +218,16 @@ export default function LivingExpensesCard() {
                             <tbody>
                                 {data.expensesByCategory[cat].items.map((exp: any, idx: number) => (
                                     <tr key={`${cat}_${idx}`} className="border-bottom border-secondary border-opacity-25">
-                                        <td className="ps-4 py-2">
+                                        {isCouple && (
+                                            <td className="ps-4 py-2">
+                                                <ModernDropdown 
+                                                    value={exp.owner || 'joint'} 
+                                                    onChange={(val) => updateExpense(cat, idx, 'owner', val)} 
+                                                    options={OWNER_OPTIONS} 
+                                                />
+                                            </td>
+                                        )}
+                                        <td className={isCouple ? "py-2" : "ps-4 py-2"}>
                                             <input type="text" className="form-control form-control-sm bg-input border border-secondary fw-bold text-main rounded-3 shadow-none" value={exp.name || ''} onChange={(e) => updateExpense(cat, idx, 'name', e.target.value)} />
                                         </td>
                                         <td className="py-2"><CurrencyInput className="form-control form-control-sm" value={exp.curr ?? ''} onChange={(val: any) => updateExpense(cat, idx, 'curr', val)} /></td>

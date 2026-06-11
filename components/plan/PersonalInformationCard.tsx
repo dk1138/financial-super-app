@@ -6,6 +6,10 @@ export default function PersonalInformationCard() {
   const { data, updateInput, updateMultipleInputs, updateMode } = useFinance();
   const isCouple = data.mode === 'Couple';
 
+  // Fallbacks for custom names if they aren't initialized yet
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+
   const handleAgeChangeBase = (player: 'p1'|'p2', newAge: number, dobStr: string) => {
       const updates: Record<string, any> = {
           [`${player}_dob`]: dobStr,
@@ -122,11 +126,19 @@ export default function PersonalInformationCard() {
         <div className="row g-4">
           <div className="col-12 col-xl-6">
             <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
-                <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0">
+                <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-2 rounded-top-4 flex-shrink-0">
                     <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px'}}>
                         <i className="bi bi-person-fill fs-5"></i>
                     </div>
-                    <h6 className="fw-bold mb-0 text-uppercase ls-1 text-info">Player 1 (P1)</h6>
+                    <input 
+                      type="text" 
+                      className="form-control form-control-sm bg-transparent border-0 fw-bold mb-0 text-uppercase ls-1 text-info p-0 shadow-none fs-6"
+                      value={p1Name}
+                      onChange={(e) => updateInput('p1_name', e.target.value)}
+                      title="Click to rename"
+                      style={{ maxWidth: '200px' }}
+                    />
+                    <i className="bi bi-pencil small text-muted hover-opacity-100 opacity-50 ms-auto"></i>
                 </div>
                 <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
@@ -180,11 +192,19 @@ export default function PersonalInformationCard() {
           {isCouple && (
             <div className="col-12 col-xl-6">
                 <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
-                    <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-3 rounded-top-4 flex-shrink-0" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
+                    <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-2 rounded-top-4 flex-shrink-0" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
                         <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px', backgroundColor: 'rgba(111, 66, 193, 0.25)', color: 'var(--bs-purple)'}}>
                             <i className="bi bi-person-fill fs-5"></i>
                         </div>
-                        <h6 className="fw-bold mb-0 text-uppercase ls-1" style={{color: 'var(--bs-purple)'}}>Player 2 (P2)</h6>
+                        <input 
+                          type="text" 
+                          className="form-control form-control-sm bg-transparent border-0 fw-bold mb-0 text-uppercase ls-1 p-0 shadow-none fs-6"
+                          value={p2Name}
+                          onChange={(e) => updateInput('p2_name', e.target.value)}
+                          title="Click to rename"
+                          style={{ color: 'var(--bs-purple)', maxWidth: '200px' }}
+                        />
+                        <i className="bi bi-pencil small text-muted hover-opacity-100 opacity-50 ms-auto"></i>
                     </div>
                     <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">

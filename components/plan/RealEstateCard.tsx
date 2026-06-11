@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { InfoBtn, CurrencyInput, PercentInput, StepperInput } from '../SharedUI';
+import { InfoBtn, CurrencyInput, PercentInput, StepperInput, SegmentedControl } from '../SharedUI';
 
 const calcAmortization = (principal: number, rate: number, payment: number) => {
     if (!principal || !payment || principal <= 0 || payment <= 0) return '';
@@ -21,6 +21,11 @@ const calc25YearPayment = (principal: number, rate: number) => {
 
 export default function RealEstateCard() {
   const { data, updateArrayItem, addArrayItem, removeArrayItem } = useFinance();
+  const isCouple = data.mode === 'Couple';
+
+  // Fallbacks for dynamic customizable player names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
@@ -32,14 +37,22 @@ export default function RealEstateCard() {
                 <InfoBtn title="Property Tracking" text="Track your real estate assets, mortgages, and housing transitions. <br><br><b>Modular Housing:</b> To simulate downsizing, set your current home to 'Sell' at a specific age. Then, add a new property, toggle it to 'Future Purchase', and enter the same age! <br><br><b>Include in NW:</b> If unchecked, the property remains an asset but isn't counted as liquid cash." />
             </h5>
         </div>
-        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('properties', { name: `Primary Residence`, value: 800000, mortgage: 400000, rate: 3.5, payment: 2000, growth: 3.0, includeInNW: true, sellEnabled: false, isFuturePurchase: false, purchaseAge: data.inputs.p1_retireAge || 60 })}>
+        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('properties', { name: `Primary Residence`, value: 800000, mortgage: 400000, rate: 3.5, payment: 2000, growth: 3.0, includeInNW: true, sellEnabled: false, isFuturePurchase: false, purchaseAge: data.inputs.p1_retireAge || 60, owner: 'joint' })}>
             <i className="bi bi-plus-lg me-1"></i> Add Property
         </button>
       </div>
       <div className="card-body p-4">
         {data.properties.length === 0 && <div className="text-center text-muted small fst-italic">No properties added.</div>}
         
-        {data.properties.map((prop: any, idx: number) => (
+        {data.properties.map((prop: any, idx: number) => {
+            const currentOwner = prop.owner || 'joint';
+            
+            // Contextual age limits based on property ownership
+            const ageKey = currentOwner === 'p2' ? 'p2_age' : 'p1_age';
+            const retireKey = currentOwner === 'p2' ? 'p2_retireAge' : 'p1_retireAge';
+            const displayOwnerLabel = currentOwner === 'p2' ? p2Name : p1Name;
+
+            return (
             <div className="p-0 border border-secondary rounded-4 mb-4 shadow-sm" key={`prop_${idx}`}>
                 
                 <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center rounded-top-4">
@@ -51,7 +64,7 @@ export default function RealEstateCard() {
                     </div>
                     <div className="d-flex align-items-center gap-3">
                         <div className="form-check form-switch mb-0 d-flex align-items-center" title="Include property equity in total Net Worth">
-                            <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={prop.includeInNW ?? false} onChange={(e) => updateArrayItem('properties', idx, 'includeInNW', e.target.checked)} />
+                            <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={prop.includeInNW ?? false} onChange={(e) => updateArrayItem('properties', idx, 'includeInNW', e.checked ?? e.target.checked)} />
                             <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer d-none d-md-block">Include in NW</label>
                         </div>
                         <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('properties', idx)}><i className="bi bi-x-lg fs-5"></i></button>
@@ -60,12 +73,27 @@ export default function RealEstateCard() {
 
                 <div className="p-4 bg-input rounded-bottom-4">
                     
-                    {/* OWNERSHIP TOGGLE */}
-                    <div className="d-flex justify-content-center mb-4">
-                        <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100" style={{maxWidth: '400px'}}>
+                    {/* OWNERSHIP & TYPE TOGGLES */}
+                    <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 border-bottom border-secondary border-opacity-25 pb-3 mb-4">
+                        <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100" style={{maxWidth: '340px'}}>
                             <button type="button" onClick={() => updateArrayItem('properties', idx, 'isFuturePurchase', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${!prop.isFuturePurchase ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Currently Own</button>
                             <button type="button" onClick={() => updateArrayItem('properties', idx, 'isFuturePurchase', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${prop.isFuturePurchase ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Future Purchase</button>
                         </div>
+
+                        {isCouple && (
+                            <div className="d-flex align-items-center gap-2">
+                                <span className="small text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>Owner</span>
+                                <SegmentedControl 
+                                    value={currentOwner} 
+                                    onChange={(val: string) => updateArrayItem('properties', idx, 'owner', val)} 
+                                    options={[
+                                        { value: 'p1', label: p1Name },
+                                        { value: 'p2', label: p2Name },
+                                        { value: 'joint', label: 'Joint' }
+                                    ]} 
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="row g-4">
@@ -74,9 +102,9 @@ export default function RealEstateCard() {
                             <div className="row g-3">
                                 {prop.isFuturePurchase && (
                                     <div className="col-12 mb-1">
-                                        <label className="form-label small text-muted mb-1 fw-bold">Purchase at P1 Age</label>
+                                        <label className="form-label small text-muted mb-1 fw-bold">Purchase at {displayOwnerLabel} Age</label>
                                         <div style={{maxWidth: '150px'}}>
-                                            <StepperInput min={data.inputs.p1_age || 18} max={120} value={prop.purchaseAge ?? (data.inputs.p1_retireAge || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'purchaseAge', val)} />
+                                            <StepperInput min={data.inputs[ageKey] || 18} max={120} value={prop.purchaseAge ?? (data.inputs[retireKey] || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'purchaseAge', val)} />
                                         </div>
                                     </div>
                                 )}
@@ -135,9 +163,9 @@ export default function RealEstateCard() {
                             {prop.sellEnabled && (
                                 <div className="row g-3 bg-info bg-opacity-10 p-3 rounded-4 border border-secondary border-opacity-50">
                                     <div className="col-12 col-md-5">
-                                        <label className="form-label small text-muted mb-1 fw-bold">Sell at P1 Age</label>
+                                        <label className="form-label small text-muted mb-1 fw-bold">Sell at {displayOwnerLabel} Age</label>
                                         <div style={{maxWidth: '200px'}}>
-                                            <StepperInput min={data.inputs.p1_age || 18} max={120} value={prop.sellAge ?? (data.inputs.p1_retireAge || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'sellAge', val)} />
+                                            <StepperInput min={data.inputs[ageKey] || 18} max={120} value={prop.sellAge ?? (data.inputs[retireKey] || 60)} onChange={(val: any) => updateArrayItem('properties', idx, 'sellAge', val)} />
                                         </div>
                                     </div>
                                     <div className="col-12 col-md-7 d-flex align-items-center">
@@ -149,7 +177,8 @@ export default function RealEstateCard() {
                     </div>
                 </div>
             </div>
-        ))}
+            );
+        })}
       </div>
     </div>
   );

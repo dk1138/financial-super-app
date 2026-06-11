@@ -1,9 +1,14 @@
 import React from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { InfoBtn, CurrencyInput, MonthYearStepper } from '../SharedUI';
+import { InfoBtn, CurrencyInput, MonthYearStepper, SegmentedControl } from '../SharedUI';
 
 export default function WindfallsCard() {
   const { data, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
+  const isCouple = data.mode === 'Couple';
+
+  // Fallbacks for dynamic customizable names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
@@ -14,7 +19,7 @@ export default function WindfallsCard() {
                 <InfoBtn align="left" title="Windfalls" text="One-time cash inflows like inheritance, selling a business, or downsizing property. <br><b>Taxable:</b> Check this if the amount will be added to your taxable income for that year (e.g. severance, RRSP deregistration)." />
             </h5>
         </div>
-        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('windfalls', { name: 'Inheritance', amount: 100000, start: '2030-01', freq: 'one', end: '', taxable: false })}>
+        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('windfalls', { name: 'Inheritance', amount: 100000, start: '2030-01', freq: 'one', end: '', taxable: false, owner: 'joint' })}>
             <i className="bi bi-plus-lg me-1"></i> Add Event
         </button>
       </div>
@@ -35,6 +40,22 @@ export default function WindfallsCard() {
                             <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('windfalls', idx)}><i className="bi bi-x-lg fs-5"></i></button>
                         </div>
 
+                        {/* Dynamic Owner Identifier Toggle Row */}
+                        {isCouple && (
+                            <div className="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-25 pb-2 mb-1">
+                                <span className="small text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>Recipient / Owner</span>
+                                <SegmentedControl 
+                                    value={w.owner || 'joint'} 
+                                    onChange={(val: string) => updateArrayItem('windfalls', idx, 'owner', val)} 
+                                    options={[
+                                        { value: 'p1', label: p1Name },
+                                        { value: 'p2', label: p2Name },
+                                        { value: 'joint', label: 'Joint' }
+                                    ]} 
+                                />
+                            </div>
+                        )}
+
                         <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100" style={{maxWidth: '300px'}}>
                             <button type="button" onClick={() => updateArrayItem('windfalls', idx, 'freq', 'one')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${(!w.freq || w.freq === 'one') ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>One-Time</button>
                             <button type="button" onClick={() => updateArrayItem('windfalls', idx, 'freq', 'month')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${w.freq === 'month' ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Monthly</button>
@@ -45,7 +66,7 @@ export default function WindfallsCard() {
                             
                             <div className="flex-grow-1" style={{minWidth: '140px'}}>
                                 <label className="small text-muted mb-1 fw-bold">Amount ($)</label>
-                                <CurrencyInput className="form-control form-control-sm border-secondary" value={w.amount ?? ''} onChange={(val: any) => updateArrayItem('windfalls', idx, 'amount', val)} placeholder="Amount ($)" />
+                                <CurrencyInput className="form-control form-control-sm border-secondary" value={data.windfalls[idx].amount ?? ''} onChange={(val: any) => updateArrayItem('windfalls', idx, 'amount', val)} placeholder="Amount ($)" />
                             </div>
                             
                             <div className="d-flex align-items-center gap-2 pe-3 border-end border-secondary border-opacity-50 pb-1" style={{height: '31px'}}>
