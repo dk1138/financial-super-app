@@ -69,17 +69,19 @@ export default function RRSPGrossUp() {
 
     return (
         <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between border-bottom border-secondary border-opacity-25 pb-3 mb-3 gap-3">
-                <div className="d-flex align-items-center">
-                    <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                        <i className="bi bi-arrow-up-right-circle fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 className="fw-bold text-success mb-0 text-uppercase ls-1">RRSP Gross-Up Maximizer</h5>
-                    </div>
+            {/* Header Area */}
+            <div className="d-flex align-items-center mb-3">
+                <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                    <i className="bi bi-arrow-up-right-circle fs-4"></i>
                 </div>
-                
-                {isCouple && (
+                <div>
+                    <h5 className="fw-bold text-success mb-0 text-uppercase ls-1">RRSP Gross-Up Maximizer</h5>
+                </div>
+            </div>
+
+            {/* Selection Pill Row - Repositioned Below Title */}
+            {isCouple && (
+                <div className="border-bottom border-secondary border-opacity-25 pb-3 mb-3">
                     <SegmentedControl 
                         value={activeTarget} 
                         onChange={(val: any) => setActiveTarget(val)} 
@@ -88,8 +90,8 @@ export default function RRSPGrossUp() {
                             { value: 'p2', label: p2Name }
                         ]} 
                     />
-                )}
-            </div>
+                </div>
+            )}
             
             <p className="text-muted small mb-4">Calculates the exact short-term RRSP catch-up loan required to perfectly amplify your out-of-pocket savings, using your upcoming tax refund to completely wipe out the loan balance within 90 days.</p>
 

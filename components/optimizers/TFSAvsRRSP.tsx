@@ -61,17 +61,19 @@ export default function TFSAvsRRSP() {
 
     return (
         <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between border-bottom border-secondary border-opacity-25 pb-3 mb-3 gap-3">
-                <div className="d-flex align-items-center">
-                    <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                        <i className="bi bi-scale fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">TFSA vs RRSP</h5>
-                    </div>
+            {/* Header Area */}
+            <div className="d-flex align-items-center mb-3">
+                <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                    <i className="bi bi-scale fs-4"></i>
                 </div>
-                
-                {isCouple && (
+                <div>
+                    <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">TFSA vs RRSP</h5>
+                </div>
+            </div>
+
+            {/* Selection Pill Row - Repositioned Below Title */}
+            {isCouple && (
+                <div className="border-bottom border-secondary border-opacity-25 pb-3 mb-3">
                     <SegmentedControl 
                         value={activeTarget} 
                         onChange={(val: any) => setActiveTarget(val)} 
@@ -80,8 +82,8 @@ export default function TFSAvsRRSP() {
                             { value: 'p2', label: p2Name }
                         ]} 
                     />
-                )}
-            </div>
+                </div>
+            )}
             
             <p className="text-muted small mb-4">Compares your current marginal tax rate against your projected effective tax rate in retirement to tell you where your next dollar should go.</p>
 
