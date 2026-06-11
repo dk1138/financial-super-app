@@ -181,5 +181,6 @@ export default function RealEstateCard() {
         })}
       </div>
     </div>
+    
   );
 }
