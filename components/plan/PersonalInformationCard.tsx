@@ -57,6 +57,7 @@ export default function PersonalInformationCard() {
   const handleRetireChange = (player: 'p1'|'p2', newRetAge: number) => {
       const updates: Record<string, any> = { [`${player}_retireAge`]: newRetAge };
       if (newRetAge > (data.inputs[`${player}_lifeExp`] || 90)) {
+          updates[`${updates}`] = newRetAge;
           updates[`${player}_lifeExp`] = newRetAge;
       }
 
@@ -126,20 +127,24 @@ export default function PersonalInformationCard() {
         <div className="row g-4">
           <div className="col-12 col-xl-6">
             <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
+                
+                {/* Player 1 Unified Input and Pen Flex Box Row */}
                 <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-2 rounded-top-4 flex-shrink-0">
-                    <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px'}}>
+                    <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
                         <i className="bi bi-person-fill fs-5"></i>
                     </div>
-                    <input 
-                      type="text" 
-                      className="form-control form-control-sm bg-transparent border-0 fw-bold mb-0 text-uppercase ls-1 text-info p-0 shadow-none fs-6"
-                      value={p1Name}
-                      onChange={(e) => updateInput('p1_name', e.target.value)}
-                      title="Click to rename"
-                      style={{ maxWidth: '200px' }}
-                    />
-                    <i className="bi bi-pencil small text-muted hover-opacity-100 opacity-50 ms-auto"></i>
+                    <div className="d-flex align-items-center gap-2 border-bottom border-transparent hover-border-secondary hover-border-opacity-25 pb-1 flex-grow-1" style={{ maxWidth: '220px' }}>
+                        <input 
+                          type="text" 
+                          className="form-control form-control-sm bg-transparent border-0 fw-bold mb-0 text-uppercase ls-1 text-info p-0 shadow-none fs-6 w-100"
+                          value={p1Name}
+                          onChange={(e) => updateInput('p1_name', e.target.value)}
+                          title="Click to rename"
+                        />
+                        <i className="bi bi-pencil small text-muted opacity-50 flex-shrink-0" style={{ pointerEvents: 'none' }}></i>
+                    </div>
                 </div>
+                
                 <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                         <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
@@ -192,20 +197,25 @@ export default function PersonalInformationCard() {
           {isCouple && (
             <div className="col-12 col-xl-6">
                 <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
+                    
+                    {/* Player 2 Unified Input and Pen Flex Box Row */}
                     <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-2 rounded-top-4 flex-shrink-0" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
-                        <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '36px', height: '36px', backgroundColor: 'rgba(111, 66, 193, 0.25)', color: 'var(--bs-purple)'}}>
+                        <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px', backgroundColor: 'rgba(111, 66, 193, 0.25)', color: 'var(--bs-purple)'}}>
                             <i className="bi bi-person-fill fs-5"></i>
                         </div>
-                        <input 
-                          type="text" 
-                          className="form-control form-control-sm bg-transparent border-0 fw-bold mb-0 text-uppercase ls-1 p-0 shadow-none fs-6"
-                          value={p2Name}
-                          onChange={(e) => updateInput('p2_name', e.target.value)}
-                          title="Click to rename"
-                          style={{ color: 'var(--bs-purple)', maxWidth: '200px' }}
-                        />
-                        <i className="bi bi-pencil small text-muted hover-opacity-100 opacity-50 ms-auto"></i>
+                        <div className="d-flex align-items-center gap-2 border-bottom border-transparent hover-border-secondary hover-border-opacity-25 pb-1 flex-grow-1" style={{ maxWidth: '220px' }}>
+                            <input 
+                              type="text" 
+                              className="form-control form-control-sm bg-transparent border-0 fw-bold mb-0 text-uppercase ls-1 p-0 shadow-none fs-6 w-100"
+                              value={p2Name}
+                              onChange={(e) => updateInput('p2_name', e.target.value)}
+                              title="Click to rename"
+                              style={{ color: 'var(--bs-purple)' }}
+                            />
+                            <i className="bi bi-pencil small text-muted opacity-50 flex-shrink-0" style={{ pointerEvents: 'none' }}></i>
+                        </div>
                     </div>
+                    
                     <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
                             <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
