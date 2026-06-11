@@ -1,112 +1,107 @@
+'use client';
+
 import React, { useState } from 'react';
-import dynamic from 'next/dynamic';
+import { useFinance } from '../lib/FinanceContext';
+import CCBMaximizer from './optimizers/CCBMaximizer';
+import RESPMaximizer from './optimizers/RESPMaximizer';
+import TFSAvsRRSP from './optimizers/TFSAvsRRSP';
+import FHSAvsRRSP from './optimizers/FHSAvsRRSP';
+import RRSPSweetSpot from './optimizers/RRSPSweetSpot';
+import RRSPGrossUp from './optimizers/RRSPGrossUp';
+import CPPGridSearch from './optimizers/CPPGridSearch';
+import MortgageVsInvest from './optimizers/MortgageVsInvest';
+import CarLease from './optimizers/CarLease';
+import HomeMoveUp from './optimizers/HomeMoveUp';
+import SideHustleROI from './optimizers/SideHustleROI';
+import EmergencyFund from './optimizers/EmergencyFund';
 
-// --- DYNAMIC IMPORTS (LAZY LOADING) ---
-const MedicalExpenseOptimizer = dynamic(() => import('./optimizers/MedicalExpenseOptimizer'), { ssr: false });
-const SideHustleROI = dynamic(() => import('./optimizers/SideHustleROI'), { ssr: false });
-const DieWithZero = dynamic(() => import('./optimizers/DieWithZero'), { ssr: false });
-const CPPGridSearch = dynamic(() => import('./optimizers/CPPGridSearch'), { ssr: false });
-const PensionBuyback = dynamic(() => import('./optimizers/PensionBuyback'), { ssr: false });
-const RRSPSweetSpot = dynamic(() => import('./optimizers/RRSPSweetSpot'), { ssr: false });
-const RRSPGrossUp = dynamic(() => import('./optimizers/RRSPGrossUp'), { ssr: false });
-const TFSAvsRRSP = dynamic(() => import('./optimizers/TFSAvsRRSP'), { ssr: false });
-const CCBMaximizer = dynamic(() => import('./optimizers/CCBMaximizer'), { ssr: false });
-const RESPMaximizer = dynamic(() => import('./optimizers/RESPMaximizer'), { ssr: false });
-const FHSAvsRRSP = dynamic(() => import('./optimizers/FHSAvsRRSP'), { ssr: false });
-const MortgageVsInvest = dynamic(() => import('./optimizers/MortgageVsInvest'), { ssr: false });
-const HomeMoveUp = dynamic(() => import('./optimizers/HomeMoveUp'), { ssr: false });
-const MortgageRenewal = dynamic(() => import('./optimizers/MortgageRenewal'), { ssr: false });
-const PensionCV = dynamic(() => import('./optimizers/PensionCV'), { ssr: false });
-const SmithManeuver = dynamic(() => import('./optimizers/SmithManeuver'), { ssr: false });
-const EmergencyFund = dynamic(() => import('./optimizers/EmergencyFund'), { ssr: false });
-const CarLease = dynamic(() => import('./optimizers/CarLease'), { ssr: false });
-const MortgageAffordability = dynamic(() => import('./optimizers/MortgageAffordability'), { ssr: false });
-const CPPImporter = dynamic(() => import('./optimizers/CPPImporter'), { ssr: false });
-const BuyVsRentAnalyzer = dynamic(() => import('./optimizers/BuyVsRentAnalyzer'), { ssr: false });
-
-// NEW IMPORT
-const ReverseMortgage = dynamic(() => import('./optimizers/ReverseMortgage'), { ssr: false });
+const OPTIMIZER_TOOLS = [
+  { id: 'tfsa-rrsp', label: 'TFSA vs RRSP', icon: 'bi-balance-scale', desc: 'Find your optimal account strategy' },
+  { id: 'fhsa-rrsp', label: 'FHSA vs RRSP', icon: 'bi-house-heart', desc: 'First-home saving optimization' },
+  { id: 'rrsp-sweet', label: 'RRSP Sweet Spot', icon: 'bi-calculator', desc: 'Optimize tax bracket deductions' },
+  { id: 'rrsp-gross', label: 'RRSP Gross-Up', icon: 'bi-arrow-up-right-circle', desc: 'Maximize refunds using leverage' },
+  { id: 'cpp-search', label: 'CPP/OAS Age Search', icon: 'bi-search', desc: 'Find optimal government benefit ages' },
+  { id: 'ccb-max', label: 'CCB Maximizer', icon: 'bi-emoji-smile', desc: 'Maximize Canada Child Benefit payouts' },
+  { id: 'resp-max', label: 'RESP Maximizer', icon: 'bi-mortarboard', desc: 'Optimize education savings grants' },
+  { id: 'mortgage-invest', label: 'Mortgage vs Invest', icon: 'bi-bank', desc: 'Pay down debt or invest surplus' },
+  { id: 'car-lease', label: 'Car Lease vs Buy', icon: 'bi-car-front', desc: 'Analyze auto financing options' },
+  { id: 'home-moveup', label: 'Home Move-Up', icon: 'bi-house-up', desc: 'Analyze real estate upsizes' },
+  { id: 'side-hustle', label: 'Side Hustle ROI', icon: 'bi-lightning', desc: 'Evaluate side business cash returns' },
+  { id: 'emergency-fund', label: 'Emergency Fund', icon: 'bi-shield-check', desc: 'Calculate dynamic safety buffers' }
+];
 
 export default function OptimizersTab() {
-  const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash');
-  const [expandedTool, setExpandedTool] = useState<string | null>(null);
-  
-  const toolCategories = [
-    { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv', 'pensionbb'] },
-    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'ccb', 'fhsa', 'resp', 'medical'] },
-    { title: "Business & Income", keys: ['sidehustle'] },
-    // ADDED 'reversemortgage' TO THIS CATEGORY
-    { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal', 'reversemortgage'] },
-    { title: "Data Importers", keys: ['cppimport'] }
-  ];
+  const { data } = useFinance();
+  const [activeTool, setActiveTool] = useState('tfsa-rrsp');
 
-  const renderToolCard = (id: string) => {
-      let ContentComponent = null;
-      const isExpanded = expandedTool === id;
+  // Resolve dynamic custom player names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+  const isCouple = data.mode === 'Couple';
 
-      switch (id) {
-          case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
-          case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
-          case 'sidehustle': ContentComponent = <SideHustleROI />; break;
-          case 'dwz': ContentComponent = <DieWithZero />; break;
-          case 'cpp': ContentComponent = <CPPGridSearch />; break;
-          case 'pensionbb': ContentComponent = <PensionBuyback />; break;
-          case 'sweetspot': ContentComponent = <RRSPSweetSpot />; break;
-          case 'grossup': ContentComponent = <RRSPGrossUp />; break;
-          case 'tfsavsrrsp': ContentComponent = <TFSAvsRRSP />; break;
-          case 'ccb': ContentComponent = <CCBMaximizer />; break;
-          case 'resp': ContentComponent = <RESPMaximizer />; break;
-          case 'fhsa': ContentComponent = <FHSAvsRRSP />; break;
-          case 'mvi': ContentComponent = <MortgageVsInvest />; break;
-          case 'moveup': ContentComponent = <HomeMoveUp />; break;
-          case 'renewal': ContentComponent = <MortgageRenewal />; break;
-          case 'pensioncv': ContentComponent = <PensionCV />; break;
-          case 'smith': ContentComponent = <SmithManeuver />; break;
-          case 'emerg': ContentComponent = <EmergencyFund />; break;
-          case 'car': ContentComponent = <CarLease />; break;
-          case 'afford': ContentComponent = <MortgageAffordability />; break;
-          case 'cppimport': ContentComponent = <CPPImporter />; break;
-          
-          // NEW CASE
-          case 'reversemortgage': ContentComponent = <ReverseMortgage />; break;
-          default: return null;
-      }
-
-      return (
-          <div key={id} className={`transition-all ${isExpanded ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"}`}>
-              {ContentComponent}
-          </div>
-      );
+  const renderActiveTool = () => {
+    switch (activeTool) {
+      case 'tfsa-rrsp': return <TFSAvsRRSP />;
+      case 'fhsa-rrsp': return <FHSAvsRRSP />;
+      case 'rrsp-sweet': return <RRSPSweetSpot />;
+      case 'rrsp-gross': return <RRSPGrossUp />;
+      case 'cpp-search': return <CPPGridSearch />;
+      case 'ccb-max': return <CCBMaximizer />;
+      case 'resp-max': return <RESPMaximizer />;
+      case 'mortgage-invest': return <MortgageVsInvest />;
+      case 'car-lease': return <CarLease />;
+      case 'home-moveup': return <HomeMoveUp />;
+      case 'side-hustle': return <SideHustleROI />;
+      case 'emergency-fund': return <EmergencyFund />;
+      default: return <TFSAvsRRSP />;
+    }
   };
 
   return (
-    <div className="p-3 p-md-4 h-100 d-flex flex-column">
+    <div className="p-3 p-md-4">
+      <div className="row g-4">
+        
+        {/* Left Side Navigation Menu */}
+        <div className="col-12 col-xl-4 col-xxl-3">
+          <div className="rp-card border border-secondary rounded-4 p-3 surface-card h-100 shadow-sm">
+            <h6 className="fw-bold text-muted text-uppercase ls-1 mb-3 px-2" style={{ fontSize: '0.7rem' }}>
+              Optimization Suite ({p1Name}{isCouple ? ` & ${p2Name}` : ''})
+            </h6>
+            <div className="d-flex flex-column gap-2 custom-scrollbar overflow-auto" style={{ maxHeight: '70vh' }}>
+              {OPTIMIZER_TOOLS.map(t => {
+                // Hide family/child specific optimization menus if no dependents exist
+                if ((t.id === 'ccb-max' || t.id === 'resp-max') && (!data.dependents || data.dependents.length === 0)) return null;
+                
+                const isActive = activeTool === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`btn text-start p-3 rounded-3 border transition-all d-flex align-items-center gap-3 shadow-none ${isActive ? 'bg-primary border-primary text-white shadow-sm' : 'bg-input border-secondary hover-bg-secondary hover-bg-opacity-10 text-main'}`}
+                    onClick={() => setActiveTool(t.id)}
+                  >
+                    <div className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${isActive ? 'bg-white bg-opacity-25 text-white' : 'bg-secondary bg-opacity-25 text-muted'}`} style={{ width: '36px', height: '36px' }}>
+                      <i className={`bi ${t.icon} fs-5`}></i>
+                    </div>
+                    <div>
+                      <div className="fw-bold small">{t.label}</div>
+                      <div className={`fw-medium style-none-uppercase ${isActive ? 'text-white text-opacity-75' : 'text-muted'}`} style={{ fontSize: '0.65rem' }}>{t.desc}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
-      <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
-          <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
-              <i className="bi bi-magic me-3"></i> Smart Optimizers
-          </h5>
+        {/* Right Side Work Area Panel */}
+        <div className="col-12 col-xl-8 col-xxl-9">
+          <div className="h-100">
+            {renderActiveTool()}
+          </div>
+        </div>
+
       </div>
-
-      <div className="d-flex flex-wrap justify-content-center gap-2 gap-md-3 mb-4 pb-2">
-          {toolCategories.map(cat => (
-              <button 
-                  key={cat.title}
-                  onClick={() => {
-                      setActiveCategory(cat.title);
-                      setExpandedTool(null); 
-                  }}
-                  className={`btn rounded-pill fw-bold px-3 px-md-4 py-2 transition-all border-0 shadow-sm ${activeCategory === cat.title ? 'bg-primary text-white' : 'bg-input text-muted border border-secondary hover-opacity-100'}`}
-              >
-                  {cat.title}
-              </button>
-          ))}
-      </div>
-
-      <div className="row g-4 mb-5">
-          {toolCategories.find(c => c.title === activeCategory)?.keys.map(toolId => renderToolCard(toolId))}
-      </div>
-
     </div>
   );
 }
