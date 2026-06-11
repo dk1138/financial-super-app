@@ -929,6 +929,13 @@ export class FinanceEngine {
             
             debtRepayment += unfundedEdu; 
             
+            if (detailed && i === 0 && this.inputs['skip_first_rrsp_p1']) {
+                rrspRoom1 = 0;
+            }
+            if (detailed && i === 0 && this.inputs['skip_first_rrsp_p2']) {
+                rrspRoom2 = 0;
+            }
+            
             if (detailed && simProperties.reduce((sum: number, p: any) => sum + p.mortgage, 0) <= 0 && !trackedEvents.has('Mortgage Paid') && simProperties.some((p: any) => p.mortgage === 0 && p.value > 0)) {                
                 trackedEvents.add('Mortgage Paid'); inflows.events.push('Mortgage Paid'); 
             }
@@ -954,6 +961,53 @@ export class FinanceEngine {
 
             let matchTracking = { p1MatchAdded: 0, p2MatchAdded: 0, totalMatch1: 0, totalMatch2: 0 };
 
+            // --- REFACTORED RRSP MATCHING IMPLEMENTATION (DOLLAR-FOR-DOLLAR MODEL) ---
+            if (alive1 && rrspRoom1 > 0 && !p1RRSPWithdrawn && p1_match_rate > 0 && p1_tier > 0) {
+                let maxEmployerCap1 = person1.inc * p1_match_rate;
+                let requiredEmployeeDeposit1 = maxEmployerCap1 / p1_tier;
+                let totalMatchingSpace1 = Math.min(netSurplus, rrspRoom1, requiredEmployeeDeposit1 + maxEmployerCap1);
+
+                if (totalMatchingSpace1 > 0) {
+                    let employeeRatio1 = 1 / (1 + p1_tier);
+                    let actEmployeePortionP1 = totalMatchingSpace1 * employeeRatio1;
+                    let actEmpPortionP1 = totalMatchingSpace1 * (1 - employeeRatio1);
+
+                    inflows.p1.gross += actEmpPortionP1;
+                    matchTracking.p1MatchAdded = actEmpPortionP1;
+                    matchTracking.totalMatch1 = totalMatchingSpace1;
+
+                    person1.rrsp += totalMatchingSpace1;
+                    rrspRoom1 -= totalMatchingSpace1;
+                    netSurplus -= actEmployeePortionP1;
+                    p1RRSPContributed = true;
+
+                    if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + totalMatchingSpace1;
+                }
+            }
+
+            if (this.mode === 'Couple' && alive2 && rrspRoom2 > 0 && netSurplus > 0 && !p2RRSPWithdrawn && p2_match_rate > 0 && p2_tier > 0) {
+                let maxEmployerCap2 = person2.inc * p2_match_rate;
+                let requiredEmployeeDeposit2 = maxEmployerCap2 / p2_tier;
+                let totalMatchingSpace2 = Math.min(netSurplus, rrspRoom2, requiredEmployeeDeposit2 + maxEmployerCap2);
+
+                if (totalMatchingSpace2 > 0) {
+                    let employeeRatio2 = 1 / (1 + p2_tier);
+                    let actEmployeePortionP2 = totalMatchingSpace2 * employeeRatio2;
+                    let actEmpPortionP2 = totalMatchingSpace2 * (1 - employeeRatio2);
+
+                    inflows.p2.gross += actEmpPortionP2;
+                    matchTracking.p2MatchAdded = actEmpPortionP2;
+                    matchTracking.totalMatch2 = totalMatchingSpace2;
+
+                    person2.rrsp += totalMatchingSpace2;
+                    rrspRoom2 -= totalMatchingSpace2;
+                    netSurplus -= actEmployeePortionP2;
+                    p2RRSPContributed = true;
+
+                    if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + totalMatchingSpace2;
+                }
+            }
+
             if (netSurplus > 0) {
                 // Route parameters and tracking vectors directly into sequential tracking frame context
                 netSurplus = handleSurplus(
@@ -962,11 +1016,11 @@ export class FinanceEngine {
                     actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, 
                     this.strategies, this.inputs, this.CONSTANTS, age1, age2,
                     {
-                        blockRRSPContributionsP1: p1RRSPWithdrawn,
-                        blockRRSPContributionsP2: p2RRSPWithdrawn,
+                        blockRRSPContributionsP1: true, // Legacy discretionary match block bypassed via the direct block override architecture rewritten above
+                        blockRRSPContributionsP2: true,
                         isRet1, isRet2,
-                        p1MatchRate: p1_match_rate, p1Tier: p1_tier,
-                        p2MatchRate: p2_match_rate, p2Tier: p2_tier,
+                        p1MatchRate: 0, p1Tier: 1,
+                        p2MatchRate: 0, p2Tier: 1,
                         inflowsReference: inflows,
                         matchTracking
                     }
@@ -1098,7 +1152,7 @@ export class FinanceEngine {
                 }
 
                 const totalWithdrawals = Object.values(flowLog.withdrawals).reduce((sum: any, val: any) => sum + val, 0);
-                const grossInflow = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax + divInc1 + divInc2 + cryptoYield1 + cryptoYield2 + (totalWithdrawals as number);
+                const grossInflow = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.rrspMeltdown +  + regMins.p1 + regMins.lifTaken1 + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax + divInc1 + divInc2 + cryptoYield1 + cryptoYield2 + (totalWithdrawals as number);
                 
                 projectionData.push({
                     year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
