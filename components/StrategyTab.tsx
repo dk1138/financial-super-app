@@ -23,6 +23,10 @@ export default function StrategyTab() {
   const isOptimized = data.inputs.fully_optimize_tax ?? false;
   const isSplitLimits = isCouple && (data.inputs.split_annual_limits ?? false);
 
+  // Fallbacks for customized names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+
   // --- EMERGENCY FUND MATH ---
   const calcMonthlyExpenses = () => {
       let total = 0;
@@ -231,11 +235,11 @@ export default function StrategyTab() {
           <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>{label}</span>
           <div className="d-flex flex-column gap-2 mt-1">
             <div className="d-flex align-items-center gap-2">
-              <span className="badge bg-secondary bg-opacity-25 text-muted fw-bold px-2 py-1" style={{ fontSize: '0.6rem', minWidth: '28px' }}>P1</span>
+              <span className="badge bg-secondary bg-opacity-25 text-muted fw-bold px-2 py-1" style={{ fontSize: '0.6rem', minWidth: '28px' }}>{p1Name}</span>
               <CurrencyInput className="form-control form-control-sm border-secondary shadow-none flex-grow-1" value={data.inputs[p1Key] || 0} onChange={(val: any) => updateInput(p1Key, val)} />
             </div>
             <div className="d-flex align-items-center gap-2">
-              <span className="badge bg-purple bg-opacity-10 text-purple fw-bold px-2 py-1" style={{ fontSize: '0.6rem', minWidth: '28px' }}>P2</span>
+              <span className="badge bg-purple bg-opacity-10 text-purple fw-bold px-2 py-1" style={{ fontSize: '0.6rem', minWidth: '28px' }}>{p2Name}</span>
               <CurrencyInput className="form-control form-control-sm border-secondary shadow-none flex-grow-1" value={data.inputs[p2Key] || 0} onChange={(val: any) => updateInput(p2Key, val)} />
             </div>
           </div>
@@ -339,7 +343,7 @@ export default function StrategyTab() {
           </div>
           {isCouple && (
             <div className="form-check form-switch mb-0 d-flex align-items-center gap-2 bg-input border border-secondary py-1 px-3 rounded-pill shadow-sm">
-              <label className="form-check-label small fw-bold text-muted cursor-pointer mb-0 text-uppercase ls-1" htmlFor="toggleSplitLimits" style={{ fontSize: '0.65rem' }}>Split P1 / P2</label>
+              <label className="form-check-label small fw-bold text-muted cursor-pointer mb-0 text-uppercase ls-1" htmlFor="toggleSplitLimits" style={{ fontSize: '0.65rem' }}>Split {p1Name} / {p2Name}</label>
               <input className="form-check-input cursor-pointer shadow-none m-0 border-secondary" type="checkbox" id="toggleSplitLimits" checked={data.inputs.split_annual_limits ?? false} onChange={(e) => updateInput('split_annual_limits', e.target.checked)} />
             </div>
           )}
@@ -554,7 +558,7 @@ export default function StrategyTab() {
                     <div className="row g-4 h-100">
                         <div className={`col-12 ${isCouple ? 'col-md-6' : ''}`}>
                             <div className="p-4 bg-input border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column justify-content-center">
-                                <h6 className="fw-bold small text-info text-uppercase ls-1 mb-3 pb-2 border-bottom border-secondary border-opacity-50">Player 1 (P1)</h6>
+                                <h6 className="fw-bold small text-info text-uppercase ls-1 mb-3 pb-2 border-bottom border-secondary border-opacity-50">{p1Name}</h6>
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <label className="form-check-label small text-muted fw-bold">Skip TFSA Contrib.</label>
                                     <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5 shadow-none border-secondary" type="checkbox" checked={data.inputs.skip_first_tfsa_p1 ?? false} onChange={(e) => updateInput('skip_first_tfsa_p1', e.target.checked)} /></div>
@@ -568,7 +572,7 @@ export default function StrategyTab() {
                         {isCouple && (
                             <div className="col-12 col-md-6">
                                 <div className="p-4 bg-input border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column justify-content-center">
-                                    <h6 className="fw-bold small text-uppercase ls-1 mb-3 pb-2 border-bottom border-secondary border-opacity-50" style={{color: 'var(--bs-purple)'}}>Player 2 (P2)</h6>
+                                    <h6 className="fw-bold small text-uppercase ls-1 mb-3 pb-2 border-bottom border-secondary border-opacity-50" style={{color: 'var(--bs-purple)'}}>{p2Name}</h6>
                                     <div className="d-flex justify-content-between align-items-center mb-3">
                                         <label className="form-check-label small text-muted fw-bold">Skip TFSA Contrib.</label>
                                         <div className="form-check form-switch mb-0"><input className="form-check-input m-0 cursor-pointer fs-5 shadow-none border-secondary" type="checkbox" checked={data.inputs.skip_first_tfsa_p2 ?? false} onChange={(e) => updateInput('skip_first_tfsa_p2', e.target.checked)} /></div>
