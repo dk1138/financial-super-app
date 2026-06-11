@@ -135,4 +135,5 @@ export default function RRSPSweetSpot() {
             <span className="small text-muted text-center fst-italic mt-2"><i className="bi bi-info-circle me-1"></i> If the final fractional rate matches your starting rate, your contribution sits comfortably inside your top bracket.</span>
         </div>
     );
+    
 }
