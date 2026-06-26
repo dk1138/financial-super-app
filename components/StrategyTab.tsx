@@ -2,18 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, SegmentedControl } from './SharedUI';
 
-const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, desc: string }> = {
-  tfsa: { label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', desc: 'Tax-Free Savings' },
-  rrsp: { label: 'RRSP', icon: 'bi-bank2', color: 'text-danger', desc: 'Registered Retirement' },
-  fhsa: { label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', desc: 'First Home Savings' },
-  nonreg: { label: 'Non-Reg', icon: 'bi-graph-up-arrow', color: 'text-success', desc: 'Taxable Investments' },
-  cash: { label: 'Cash / HYSA', icon: 'bi-cash-stack', color: 'text-secondary', desc: 'High-Yield Savings' },
-  crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-warning', desc: 'Digital Assets' },
-  resp: { label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', desc: 'Education Savings' },
+const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, desc: string, contextDesc?: Record<string, string> }> = {
+  tfsa: { 
+    label: 'TFSA', icon: 'bi-piggy-bank-fill', color: 'text-info', desc: 'Tax-Free Savings Account',
+    contextDesc: { shortfall: 'Taps flexible tax shelter; withdrawals recreate contribution room next calendar year.', decum: 'Tax-Free systematic depletion pool.' }
+  },
+  rrsp: { 
+    label: 'RRSP', icon: 'bi-bank2', color: 'text-danger', desc: 'Registered Retirement Savings Plan',
+    contextDesc: { shortfall: 'RISK ALERT: Early withdrawal permanently burns room and triggers immediate withholding tax.', decum: 'Taxable systematic income conversions.' }
+  },
+  fhsa: { label: 'FHSA', icon: 'bi-house-add-fill', color: 'text-primary', desc: 'First Home Savings Account' },
+  nonreg: { 
+    label: 'Non-Reg', icon: 'bi-graph-up-arrow', color: 'text-success', desc: 'Taxable Investments',
+    contextDesc: { shortfall: 'Liquidates open assets; triggers taxable capital gains or losses.', decum: 'Tax-efficient margin or capital gains draw.' }
+  },
+  cash: { 
+    label: 'Cash / HYSA', icon: 'bi-cash-stack', color: 'text-secondary', desc: 'High-Yield Savings Accounts',
+    contextDesc: { shortfall: 'Taps uninvested cash buffer first to preserve compounding assets.', decum: 'Liquid transactional buffer depletion.' }
+  },
+  crypto: { label: 'Crypto', icon: 'bi-currency-bitcoin', color: 'text-warning', desc: 'Digital Assets', contextDesc: { shortfall: 'Taps speculative alternative asset positions.', decum: 'Alternative asset run-down.' } },
+  resp: { label: 'RESP', icon: 'bi-mortarboard-fill', color: 'text-purple', desc: 'Education Savings Plan' },
   spending_cash: { label: 'Spending Cash', icon: 'bi-bag-heart-fill', color: 'text-warning', desc: 'Unbudgeted Lifestyle Cash' },
-  rrif_acct: { label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', desc: 'Converted RRSP' },
-  lif: { label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', desc: 'Life Income Fund' },
-  lirf: { label: 'LIRA / LIRF', icon: 'bi-lock-fill', color: 'text-muted', desc: 'Locked-In Retirement' },
+  rrif_acct: { label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger', desc: 'Converted RRSP Pool', contextDesc: { shortfall: 'N/A Pre-Retirement', decum: 'Mandatory minimum registered withdrawals.' } },
+  lif: { label: 'LIF', icon: 'bi-safe2-fill', color: 'text-secondary', desc: 'Life Income Fund', contextDesc: { shortfall: 'N/A Pre-Retirement', decum: 'Locked-in retirement payroll conversions.' } },
+  lirf: { label: 'LIRA / LIRF', icon: 'bi-lock-fill', color: 'text-muted', desc: 'Locked-In Retirement Account', contextDesc: { shortfall: 'N/A Locked Asset', decum: 'Locked-in supplemental liquidation layers.' } },
 };
 
 export default function StrategyTab() {
@@ -40,99 +52,96 @@ export default function StrategyTab() {
   const efCustomAmt = data.inputs.emergency_fund_custom_amount || 0;
   const showCashDragWarning = efMode === 'custom' && efCustomAmt > 100000;
 
-  // --- INSTANT-SWAP DRAG & DROP ENGINE ---
-  const [draggingType, setDraggingType] = useState<'accum' | 'decum' | null>(null);
+  // --- 3-WAY INSTANT-SWAP DRAG & DROP ENGINE ---
+  const [draggingType, setDraggingType] = useState<'accum' | 'shortfall' | 'decum' | null>(null);
   
-  // HARD FILTERS: Prevent impossible accounts from showing in the queues
+  // HARD FILTERS: Prevent structural anomalies across discrete life periods
   const filterAccum = (list: string[]) => {
       const filtered = list.filter(a => !['rrif_acct', 'lif', 'lirf'].includes(a));
-      // DEFENSIVE UPGRADE LAYER: If spending_cash is missing from saved profile state, automatically patch it in safely!
       if (!filtered.includes('spending_cash')) {
           filtered.push('spending_cash');
       }
       return filtered;
   };
+  const filterShortfall = (list: string[]) => list.filter(a => !['rrif_acct', 'lif', 'lirf', 'fhsa', 'resp', 'spending_cash'].includes(a));
   const filterDecum = (list: string[]) => list.filter(a => !['fhsa', 'resp', 'spending_cash'].includes(a));
 
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const [localAccum, setLocalAccum] = useState<string[]>([]);
+  const [localShortfall, setLocalShortfall] = useState<string[]>([]);
   const [localDecum, setLocalDecum] = useState<string[]>([]);
 
-  // Track initial state loads and updates with clean automatic injection mapping checks
+  // Synchronize state loops
   useEffect(() => {
       if (!draggingType) {
           setLocalAccum(filterAccum(data.strategies.accum || []));
+          setLocalShortfall(filterShortfall(data.strategies.shortfall || ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp']));
           setLocalDecum(filterDecum(data.strategies.decum || []));
       }
   }, [data.strategies, draggingType]);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number, type: 'accum' | 'decum') => {
-      if (type === 'decum' && isOptimized) return; // Failsafe
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number, type: 'accum' | 'shortfall' | 'decum') => {
+      if (type === 'decum' && isOptimized) return; 
       
       setDraggingType(type);
       setDraggedItemIndex(index);
       
       const target = e.target as HTMLElement;
-      setTimeout(() => {
-          target.style.opacity = '0.4';
-      }, 0);
+      setTimeout(() => { target.style.opacity = '0.4'; }, 0);
   };
 
-  const handleDragEnter = (index: number, type: 'accum' | 'decum') => {
+  const handleDragEnter = (index: number, type: 'accum' | 'shortfall' | 'decum') => {
       if (draggingType !== type || draggedItemIndex === null || draggedItemIndex === index) return;
-      if (type === 'decum' && isOptimized) return; // Failsafe
+      if (type === 'decum' && isOptimized) return; 
 
-      const list = type === 'accum' ? [...localAccum] : [...localDecum];
+      let list = [];
+      if (type === 'accum') list = [...localAccum];
+      else if (type === 'shortfall') list = [...localShortfall];
+      else list = [...localDecum];
+
       const draggedItemContent = list[draggedItemIndex];
-
       list.splice(draggedItemIndex, 1);
       list.splice(index, 0, draggedItemContent);
 
       if (type === 'accum') setLocalAccum(list);
+      else if (type === 'shortfall') setLocalShortfall(list);
       else setLocalDecum(list);
 
       setDraggedItemIndex(index); 
   };
 
-  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>, type: 'accum' | 'decum') => {
-      if (type === 'decum' && isOptimized) return; // Failsafe
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>, type: 'accum' | 'shortfall' | 'decum') => {
+      if (type === 'decum' && isOptimized) return; 
       
       const target = e.target as HTMLElement;
       target.style.opacity = '1';
 
-      const listToSave = type === 'accum' ? localAccum : localDecum;
+      const listToSave = type === 'accum' ? localAccum : (type === 'shortfall' ? localShortfall : localDecum);
       updateStrategy(type, listToSave); 
       setDraggingType(null);
       setDraggedItemIndex(null);
   };
 
-  const renderDraggableList = (type: 'accum' | 'decum') => {
-    let currentList = type === 'accum' ? localAccum : localDecum;
+  const renderDraggableList = (type: 'accum' | 'shortfall' | 'decum') => {
+    let currentList = type === 'accum' ? localAccum : (type === 'shortfall' ? localShortfall : localDecum);
 
-    // OVERRIDE: If Smart Optimizer is on, dynamically read the exact winning route from the Meta-Runner
     if (type === 'decum' && isOptimized) {
         const engineOptimalRoute = results?.timeline?.[0]?.optimalStrategy;
-        
         if (engineOptimalRoute && Array.isArray(engineOptimalRoute) && engineOptimalRoute.length > 0) {
-            currentList = filterDecum(engineOptimalRoute); // Filter the engine's list too!
+            currentList = filterDecum(engineOptimalRoute); 
         } else {
-            // Fallback while waiting for calculation to finish (Removed FHSA & RESP)
             const fallbackOrder = ['nonreg', 'cash', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'tfsa', 'crypto'];
-            currentList = [...currentList].sort((a, b) => {
-                const idxA = fallbackOrder.indexOf(a);
-                const idxB = fallbackOrder.indexOf(b);
-                return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
-            });
+            currentList = [...currentList].sort((a, b) => fallbackOrder.indexOf(a) - fallbackOrder.indexOf(b));
         }
     }
 
-    const listItems = currentList.map((item: string, index: number) => {
+    return currentList.map((item: string, index: number) => {
       const details = ACCOUNT_MAP[item] || { label: item, icon: 'bi-wallet', color: 'text-white', desc: '' };
       const isDragging = draggingType === type && draggedItemIndex === index;
       const isLocked = type === 'decum' && isOptimized;
-      
-      // If optimized, we shift the numbering down by 1 because we are injecting a "Virtual Step 1" above it
       const displayIndex = (type === 'decum' && isOptimized) ? index + 2 : index + 1;
+
+      const contextualDescription = details.contextDesc?.[type] || details.desc;
 
       return (
         <div
@@ -158,10 +167,9 @@ export default function StrategyTab() {
                 <div>
                     <h6 className="mb-0 fw-bold text-main">{details.label}</h6>
                     <div className="small fw-medium text-muted" style={{ fontSize: '0.7rem' }}>
-                        {details.desc}
+                        {contextualDescription}
                     </div>
                 </div>
-                {/* Prevent drag events from capturing focus or interrupting input typing */}
                 <div 
                   className="d-flex align-items-center gap-2" 
                   style={{ maxWidth: '140px' }} 
@@ -180,8 +188,8 @@ export default function StrategyTab() {
             ) : (
               <div>
                   <h6 className="mb-0 fw-bold text-main">{details.label}</h6>
-                  <div className={`small fw-medium ${isLocked ? 'text-success opacity-75' : 'text-muted'}`} style={{ fontSize: '0.7rem' }}>
-                      {isLocked ? 'Auto-Managed' : details.desc}
+                  <div className={`small fw-medium ${isLocked ? 'text-success opacity-75' : (item === 'rrsp' && type === 'shortfall' ? 'text-warning font-semibold' : 'text-muted')}`} style={{ fontSize: '0.7rem' }}>
+                      {isLocked ? 'Auto-Managed' : contextualDescription}
                   </div>
               </div>
             )}
@@ -195,37 +203,6 @@ export default function StrategyTab() {
         </div>
       );
     });
-
-    // Inject the visual "Phase 1: Meltdown" block when optimized
-    if (type === 'decum' && isOptimized) {
-        return (
-            <div className="d-flex flex-column">
-                <div className="mb-2 ms-2 mt-1 small fw-bold text-danger text-uppercase ls-1" style={{fontSize: '0.65rem', letterSpacing: '1px'}}>Phase 1: Bracket Filling</div>
-                <div className="d-flex align-items-center justify-content-between p-3 mb-3 rounded-4 shadow-sm border border-danger bg-danger bg-opacity-10" style={{ cursor: 'default' }}>
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="d-flex align-items-center justify-content-center bg-danger text-white rounded-circle fw-bold shadow-sm" style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
-                        1
-                    </div>
-                    <div className="bg-danger bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center text-danger flex-shrink-0" style={{width: '42px', height: '42px'}}>
-                        <i className="bi bi-fire fs-5"></i>
-                    </div>
-                    <div>
-                        <h6 className="mb-0 fw-bold text-danger">Proactive RRSP Meltdown</h6>
-                        <div className="small fw-medium text-danger opacity-75" style={{ fontSize: '0.7rem', lineHeight: 1.2 }}>
-                            Sips from RRSP to perfectly fill the lowest tax brackets.
-                        </div>
-                    </div>
-                  </div>
-                  <i className="bi bi-lock-fill text-danger fs-5 opacity-50 ms-2"></i>
-                </div>
-
-                <div className="mb-2 ms-2 mt-2 small fw-bold text-primary text-uppercase ls-1" style={{fontSize: '0.65rem', letterSpacing: '1px'}}>Phase 2: Lifestyle Funding</div>
-                {listItems}
-            </div>
-        );
-    }
-
-    return listItems;
   };
 
   const renderLimitField = (label: string, colorClass: string, sharedKey: string, p1Key: string, p2Key: string) => {
@@ -265,35 +242,37 @@ export default function StrategyTab() {
         <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
           <div className="d-flex align-items-center">
             <i className="bi bi-arrow-down-up text-primary fs-4 me-3"></i>
-            <h5 className="mb-0 fw-bold text-uppercase ls-1">1. Priority Queues</h5>
-            <InfoBtn align="left" title="Priority Routing" text="The engine processes events sequentially. Drag to reorder how the algorithm handles surplus cash and retirement deficits." />
+            <h5 className="mb-0 fw-bold text-uppercase ls-1">1. Financial Optimization & Flow Priority Queues</h5>
+            <InfoBtn align="left" title="Flow Hierarchies" text="The execution stack segregates optimization pipelines completely across three lifecycle environments. Re-order each stack independently." />
           </div>
         </div>
-        <div className="card-body p-4 bg-secondary bg-opacity-10">
+        <div className="card-header bg-secondary bg-opacity-10 p-4 pb-0 border-0">
             {/* Shortfall Mitigation alert banner layer built using core Bootstrap styling tokens */}
-            <div className="alert border-info bg-info bg-opacity-10 rounded-4 p-3 mb-4 d-flex gap-3 align-items-start">
+            <div className="alert border-info bg-info bg-opacity-10 rounded-4 p-3 mb-0 d-flex gap-3 align-items-start">
               <div className="bg-info bg-opacity-25 rounded-circle p-2 text-info d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '36px', height: '36px' }}>
                 <i className="bi bi-shield-check-fill fs-5"></i>
               </div>
               <div>
                 <h6 className="fw-bold mb-1 text-info text-uppercase ls-1" style={{ fontSize: '0.8rem' }}>Guaranteed Alpha Return Safeguard Enabled</h6>
                 <p className="small text-muted mb-0 lh-sm" style={{ fontSize: '0.75rem' }}>
-                  The cash flow core dynamically isolates your <strong>RRSP Employer Match</strong> first. If personal income in a high-expense calendar year drops below targets, structural matching payroll bounds are fulfilled as a baseline obligation. The resulting deficit is cleared out via your chosen decumulation sequence below (e.g., pulling out tax-free TFSA reserves) rather than sacrificing a guaranteed, instant-matching ROI loop.
+                  The engine dynamically isolates your <strong>RRSP Employer Match</strong> as an untouchable baseline priority. If income drops during a high-expense working year, matching payroll allocations are fulfilled as a mandatory constraint. The resulting mid-career expense shortfall is cleared according to your specific <strong>Working-Year Shortfall Hierarchy</strong> stack, protecting matched returns before liquidation occurs.
                 </p>
               </div>
             </div>
+        </div>
 
+        <div className="card-body p-4 bg-secondary bg-opacity-10">
             <div className="row g-4">
-                {/* Accumulation */}
-                <div className="col-12 col-xl-6">
+                {/* 1. ACCUMULATION ROUTE */}
+                <div className="col-12 col-xl-4">
                     <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
                         <div className="bg-success bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
                             <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
                                 <i className="bi bi-piggy-bank-fill fs-5"></i>
                             </div>
                             <div>
-                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-success">Accumulation Route</h6>
-                                <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of filling accounts when surplus cash exists</span>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-success" style={{ fontSize: '0.85rem' }}>Surplus Savings</h6>
+                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>Order of filling spaces when surplus cash exists</span>
                             </div>
                         </div>
                         <div className="p-3 bg-transparent h-100">
@@ -302,16 +281,34 @@ export default function StrategyTab() {
                     </div>
                 </div>
 
-                {/* Decumulation / Shortfall Routing */}
-                <div className="col-12 col-xl-6">
+                {/* 2. WORKING-YEAR SHORTFALL HIERARCHY */}
+                <div className="col-12 col-xl-4">
+                    <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card">
+                        <div className="bg-warning bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
+                            <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
+                                <i className="bi bi-exclamation-triangle-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-warning" style={{ fontSize: '0.85rem' }}>Working-Year Shortfalls</h6>
+                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>Order of drawing buffers if cash dips mid-career</span>
+                            </div>
+                        </div>
+                        <div className="p-3 bg-transparent h-100">
+                            {renderDraggableList('shortfall')}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. RETIREMENT DECUMULATION ROUTE */}
+                <div className="col-12 col-xl-4">
                     <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card position-relative">
                         <div className="bg-primary bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
                             <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
                                 <i className="bi bi-wallet2 fs-5"></i>
                             </div>
                             <div>
-                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary">Decumulation & Deficit Route</h6>
-                                <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of draining or tapping capital during shortfall/retirement years</span>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary" style={{ fontSize: '0.85rem' }}>Retirement Decumulation</h6>
+                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>Drawdown sequence across terminal years</span>
                             </div>
                         </div>
                         
@@ -325,7 +322,7 @@ export default function StrategyTab() {
                             {renderDraggableList('decum')}
                         </div>
 
-                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER (CENTERED & HUGGED) */}
+                        {/* COMPACT OVERLAY FOR SMART OPTIMIZER */}
                         {isOptimized && (
                             <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: 'fit-content', minWidth: '220px' }}>
                                 <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 px-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
@@ -334,12 +331,11 @@ export default function StrategyTab() {
                                     </div>
                                     <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
                                     <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.7rem'}}>
-                                        Engine's tax-efficient route is locked in.
+                                        Engine's tax-efficient route handles this stack.
                                     </span>
                                 </div>
                             </div>
                         )}
-
                     </div>
                 </div>
             </div>
@@ -352,7 +348,7 @@ export default function StrategyTab() {
           <div className="d-flex align-items-center">
             <i className="bi bi-sliders text-warning fs-4 me-3"></i>
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Max Annual Limits</h5>
-            <InfoBtn align="left" title="Custom Contribution Limits" text={`Set a manual upper boundary in flat dollars for how much capital you want to inject per single calendar year. These limits remain static over time. Once a threshold is reached, excess cash flows down to the next priority container in your Accumulation Route. <br/><br/>${isCouple ? '<b>Combined Mode:</b> When Split mode is turned off, the amount denotes a pooled threshold shared between both players. For example, a $10,000 TFSA limit means the engine caps total combined additions across P1 + P2 at $10,000 for that year.<br/><br/>' : ''}<b>Note:</b> Setting an entry to $0 signifies no allocation ceiling filter is imposed.`} />
+            <InfoBtn align="left" title="Custom Limits" text="Set a manual upper boundary in flat dollars. Excess cash flows down to the next priority container." />
           </div>
           {isCouple && (
             <div className="form-check form-switch mb-0 d-flex align-items-center gap-2 bg-input border border-secondary py-1 px-3 rounded-pill shadow-sm">
@@ -363,30 +359,18 @@ export default function StrategyTab() {
         </div>
         <div className="card-body p-4 bg-secondary bg-opacity-10">
           <div className="row g-3">
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              {renderLimitField('TFSA', 'text-info', 'max_annual_tfsa', 'max_annual_tfsa_p1', 'max_annual_tfsa_p2')}
-            </div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              {renderLimitField('RRSP', 'text-danger', 'max_annual_rrsp', 'max_annual_rrsp_p1', 'max_annual_rrsp_p2')}
-            </div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              {renderLimitField('FHSA', 'text-primary', 'max_annual_fhsa', 'max_annual_fhsa_p1', 'max_annual_fhsa_p2')}
-            </div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              {renderLimitField('Non-Reg', 'text-success', 'max_annual_nonreg', 'max_annual_nonreg_p1', 'max_annual_nonreg_p2')}
-            </div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              {renderLimitField('Cash', 'text-secondary', 'max_annual_cash', 'max_annual_cash_p1', 'max_annual_cash_p2')}
-            </div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">
-              {renderLimitField('Crypto', 'text-warning', 'max_annual_crypto', 'max_annual_crypto_p1', 'max_annual_crypto_p2')}
-            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('TFSA', 'text-info', 'max_annual_tfsa', 'max_annual_tfsa_p1', 'max_annual_tfsa_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('RRSP', 'text-danger', 'max_annual_rrsp', 'max_annual_rrsp_p1', 'max_annual_rrsp_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('FHSA', 'text-primary', 'max_annual_fhsa', 'max_annual_fhsa_p1', 'max_annual_fhsa_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('Non-Reg', 'text-success', 'max_annual_nonreg', 'max_annual_nonreg_p1', 'max_annual_nonreg_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('Cash', 'text-secondary', 'max_annual_cash', 'max_annual_cash_p1', 'max_annual_cash_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('Crypto', 'text-warning', 'max_annual_crypto', 'max_annual_crypto_p1', 'max_annual_crypto_p2')}</div>
           </div>
         </div>
       </div>
 
       <div className="row g-4">
-        {/* --- SECTION 3: SYSTEM REFERENCE ROOMS & EMERGENCY BUFFER --- */}
+        {/* --- SECTION 3: ACCOUNT GUIDELINES --- */}
         <div className="col-12 col-xl-5 d-flex flex-column">
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
@@ -399,7 +383,7 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-info text-uppercase ls-1">TFSA</span>
-                                    <InfoBtn align="right" title="TFSA Limit" text="The annual contribution room granted by the CRA for a Tax-Free Savings Account.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account/contributions.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
+                                    <InfoBtn align="right" title="TFSA Limit" text="The annual contribution room granted by the CRA for a Tax-Free Savings Account." />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_tfsa_limit} onChange={(val: any) => updateInput('cfg_tfsa_limit', val)} />
                             </div>
@@ -408,7 +392,7 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-danger text-uppercase ls-1">RRSP Max</span>
-                                    <InfoBtn align="right" title="RRSP Limit" text="The absolute maximum RRSP contribution cap set by the CRA for the year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/contributing-a-rrsp-prpp/contributions-affect-your-rrsp-prpp-deduction-limit.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
+                                    <InfoBtn align="right" title="RRSP Limit" text="The absolute maximum RRSP contribution cap set by the CRA for the year." />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_rrsp_limit} onChange={(val: any) => updateInput('cfg_rrsp_limit', val)} />
                             </div>
@@ -417,7 +401,6 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-primary text-uppercase ls-1">FHSA</span>
-                                    <InfoBtn align="right" title="FHSA Limit" text="The annual contribution limit for a First Home Savings Account (Max $8,000/yr).<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account/contributing-your-fhsa.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>CRA Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_fhsa_limit} onChange={(val: any) => updateInput('cfg_fhsa_limit', val)} />
                             </div>
@@ -426,7 +409,6 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="small fw-bold text-muted text-uppercase ls-1">Crypto Limit</span>
-                                    <InfoBtn align="right" title="Crypto Constraint" text="A self-imposed maximum amount of cash you are willing to invest into Crypto per year to control risk exposure." />
                                 </div>
                                 <CurrencyInput suffix="/ yr" className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_crypto_limit} onChange={(val: any) => updateInput('cfg_crypto_limit', val)} />
                             </div>
@@ -435,7 +417,6 @@ export default function StrategyTab() {
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <span className="small fw-bold text-purple text-uppercase ls-1">RESP Strategy</span>
-                                    <InfoBtn align="right" title="RESP Guidelines" text="The optimal annual contribution to maximize the 20% CESG match is $2,500. CESG grants are only paid on contributions made up to the end of the year the child turns 17.<br/><br/><a href='https://www.canada.ca/en/services/benefits/education/education-savings.html' target='_blank' rel='noopener noreferrer' class='text-primary text-decoration-none fw-bold'>Govt of Canada Reference <i class='bi bi-box-arrow-up-right ms-1'></i></a>" />
                                 </div>
                                 <div className="row g-2">
                                     <div className="col-6">
@@ -457,9 +438,7 @@ export default function StrategyTab() {
                         <div className="col-12 mt-2 pt-3 border-top border-secondary border-opacity-50">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                                 <span className="fw-bold text-success text-uppercase ls-1">Emergency Fund Buffer</span>
-                                <InfoBtn align="right" title="Emergency Fund" text="A protected cash buffer that the engine will not touch for normal retirement spending.<br><br><b>Break-the-Glass:</b> If your other accounts completely run out of money, the engine will be allowed to spend this buffer to prevent immediate plan failure.<br><br><b>Inflation:</b> Custom amounts will automatically inflate over time to preserve purchasing power." />
                             </div>
-                            
                             <SegmentedControl 
                                 value={efMode} 
                                 onChange={(val: string) => updateInput('emergency_fund_mode', val)} 
@@ -470,7 +449,6 @@ export default function StrategyTab() {
                                     { value: 'custom', label: 'Custom' }
                                 ]} 
                             />
-
                             <div className="mt-3">
                                 {efMode === 'none' && (
                                     <div className="bg-black bg-opacity-25 border border-secondary rounded-3 p-2 text-center text-muted small fst-italic shadow-inner">
@@ -490,15 +468,13 @@ export default function StrategyTab() {
                                         <CurrencyInput className={`form-control border-secondary shadow-none ${showCashDragWarning ? 'border-warning text-warning' : ''}`} value={efCustomAmt} onChange={(val: any) => updateInput('emergency_fund_custom_amount', val)} placeholder="Enter base amount..." />
                                         {showCashDragWarning && (
                                             <div className="d-flex align-items-center mt-2 text-warning small fw-bold">
-                                                <i className="bi bi-exclamation-triangle-fill me-2"></i> 
-                                                High cash balances create "cash drag," losing value to inflation over decades.
+                                                <i className="bi bi-exclamation-triangle-fill me-2"></i> High cash balances create cash drag.
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -506,21 +482,19 @@ export default function StrategyTab() {
 
         {/* --- SECTION 4 & 5: OPTIMIZATIONS & EXCEPTIONS --- */}
         <div className="col-12 col-xl-7 d-flex flex-column gap-4">
-            
             <div className="rp-card border border-secondary rounded-4 shadow-sm">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
                     <i className="bi bi-cpu text-primary fs-4 me-3"></i>
                     <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">4. Engine Optimizations</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
-                    
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-primary">
                         <div className="flex-grow-1 pe-md-3">
                             <h6 className="fw-bold mb-2 text-success text-uppercase ls-1 d-flex align-items-center">
                                 <i className="bi bi-magic me-2 fs-5"></i> Smart RRSP Meltdown & Tax Optimizer
                             </h6>
                             <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
-                                Overrides your manual withdrawal order to mathematically minimize lifetime taxes. It proactively draws down your RRSP early (a "Meltdown") to completely fill your lowest tax brackets, while aggressively sheltering your TFSA for as long as possible. 
+                                Overrides your retirement decumulation order to mathematically minimize lifetime taxes. Proactively draws down RRSPs early to perfectly fill lower brackets.
                             </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
@@ -533,9 +507,6 @@ export default function StrategyTab() {
                             <h6 className="fw-bold mb-2 text-info text-uppercase ls-1 d-flex align-items-center">
                                 <i className="bi bi-shield-check me-2 fs-5"></i> Avoid OAS Clawbacks
                             </h6>
-                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
-                                Prioritizes withdrawing from non-taxable accounts (like your TFSA) or strictly limiting RRSP/RRIF withdrawals to stay below the CRA's OAS repayment threshold, preserving your full government benefits.
-                            </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
                             <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.oas_clawback_optimize ?? false} onChange={(e) => updateInput('oas_clawback_optimize', e.target.checked)} />
@@ -547,25 +518,18 @@ export default function StrategyTab() {
                             <h6 className="fw-bold mb-2 text-warning text-uppercase ls-1 d-flex align-items-center">
                                 <i className="bi bi-arrow-down-up me-2 fs-5"></i> Variable Spending (Guardrails)
                             </h6>
-                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
-                                Implements the Guyton-Klinger Guardrails rule. If a market crash pushes your withdrawal rate 20% higher than your initial retirement withdrawal rate, the engine automatically cuts your lifestyle spending by 10% to preserve capital.
-                            </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
                             <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.enable_guardrails ?? false} onChange={(e) => updateInput('enable_guardrails', e.target.checked)} />
                         </div>
                     </div>
-
                 </div>
             </div>
 
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1 d-flex flex-column">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card flex-shrink-0">
                     <i className="bi bi-x-octagon text-danger fs-4 me-3"></i>
-                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                        5. First-Year Overrides
-                        <InfoBtn align="left" title="First-Year Overrides" text="Useful for simulating real-world scenarios where you have already maxed out your registered accounts for the current year. The engine will skip contributions in Year 1 and resume normally in Year 2." />
-                    </h5>
+                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">5. First-Year Overrides</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10 flex-grow-1">
                     <div className="row g-4 h-100">
@@ -600,9 +564,9 @@ export default function StrategyTab() {
                     </div>
                 </div>
             </div>
-
         </div>
       </div>
+
     </div>
   );
 }

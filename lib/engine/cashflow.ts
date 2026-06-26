@@ -390,10 +390,20 @@ export function handleDeficit(
     forceOrder: string[] | null, eligPen1: number, eligPen2: number,
     inputs: any, CONSTANTS: any, province: string, rrifStartAge: number,
     totalExpenses: number = 0,
-    options?: { blockRRSPWithdrawalsP1?: boolean; blockRRSPWithdrawalsP2?: boolean }
+    options?: { blockRRSPWithdrawalsP1?: boolean; blockRRSPWithdrawalsP2?: boolean; isRet1?: boolean; isRet2?: boolean }
 ) {
     let remainingDeficit = deficit;
-    const decumOrder = forceOrder || inputs.strategies?.decum || ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'];
+
+    // --- DECOUPLE TIMELINE CONTEXTS ---
+    // If the simulation is in pre-retirement/working years, route execution through 'shortfall' config stack.
+    // If in retirement, fall back to structural long-term tax optimization ('decum' order stack).
+    const isBothRetired = (options?.isRet1 ?? false) && (options?.isRet2 ?? false);
+    const targetShortfallOrder = inputs.strategies?.shortfall || ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp'];
+    
+    const decumOrder = forceOrder || 
+                       (isBothRetired 
+                           ? (inputs.strategies?.decum || ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto']) 
+                           : targetShortfallOrder.filter(a => !['rrif_acct', 'lif', 'lirf', 'fhsa', 'resp', 'spending_cash'].includes(a)));
 
     // --- 1. CALCULATE PROTECTED EMERGENCY FUND ---
     let efMode = inputs.emergency_fund_mode || 'none';
