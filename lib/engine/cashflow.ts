@@ -93,8 +93,6 @@ export function handleSurplus(
     };
 
     // --- CRITICAL DEFENSIVE UPGRADE: PRE-PROCESS GUARANTEED EMPLOYER MATCHES ---
-    // We execute the employer match checks BEFORE traversing the discretionary asset accumulation list.
-    // This protects the guaranteed alpha return stream regardless of initial surplus constraints.
     if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) {
         let p1MatchRate = options?.p1MatchRate || 0;
         let p1Tier = options?.p1Tier || 0;
@@ -105,7 +103,6 @@ export function handleSurplus(
 
         if (empPortionP1 > 0 && baseEmployeeRequiredP1 > 0) {
             let correctTargetTotalP1 = empPortionP1 + baseEmployeeRequiredP1;
-            // Allow the match execution block to look beyond standard positive remaining surplus to secure the asset
             let matchTake = Math.min(rrspRoom1, correctTargetTotalP1);
             
             if (matchTake > 0) {
@@ -123,7 +120,7 @@ export function handleSurplus(
                 
                 person1.rrsp += matchTake;
                 rrspRoom1 -= matchTake;
-                remaining -= actEmployeePortionP1; // Deduct cash requirements (may create a dynamic temporary shortfall handled by decumulation)
+                remaining -= actEmployeePortionP1; 
                 
                 if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + matchTake;
             }
@@ -168,7 +165,6 @@ export function handleSurplus(
     for (const acct of accumOrder) {
         if (remaining <= 0) break;
 
-        // --- DISCRETIONARY LIFESTYLE SPENDING CASH CONTAINER ---
         if (acct === 'spending_cash') {
             let maxSpendingAllowed = Number(inputs.max_annual_spending_cash || 0);
             const useRealDollars = Boolean(
@@ -193,7 +189,6 @@ export function handleSurplus(
             continue;
         }
 
-        // --- TAX-FREE SAVINGS ACCOUNT (TFSA) ---
         if (acct === 'tfsa') {
             if (alive1 && tfsaRoom1 > 0) { 
                 let allowed = isSplit 
@@ -222,8 +217,6 @@ export function handleSurplus(
             continue;
         }
 
-        // --- REGISTERED RETIREMENT SAVINGS PLAN (RRSP) ---
-        // (Note: Matching blocks were processed first; this handles normal voluntary discretionary contributions)
         if (acct === 'rrsp') {
             if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) {
                 let allowed = isSplit 
@@ -253,7 +246,6 @@ export function handleSurplus(
             continue;
         }
 
-        // --- FIRST HOME SAVINGS ACCOUNT (FHSA) ---
         if (acct === 'fhsa') {
             if (alive1 && fhsaLim1 > 0 && fhsaRooms.p1 > 0) { 
                 let allowed = isSplit 
@@ -282,7 +274,6 @@ export function handleSurplus(
             continue;
         }
 
-        // --- REGISTERED EDUCATION SAVINGS PLAN (RESP) ---
         if (acct === 'resp') {
             let target = respLim;
             if (alive1 && target > 0) { let take = Math.min(remaining, target); person1.resp += take; remaining -= take; target -= take; if (flowLog) flowLog.contributions.p1.resp = (flowLog.contributions.p1.resp || 0) + take; }
@@ -290,7 +281,6 @@ export function handleSurplus(
             continue;
         }
 
-        // --- CRYPTOCURRENCY ---
         if (acct === 'crypto') {
             if (alive1) {
                 let allowed = isSplit 
@@ -319,7 +309,6 @@ export function handleSurplus(
             continue;
         }
 
-        // --- NON-REGISTERED INVESTMENTS ---
         if (acct === 'nonreg') {
             if (alive1) { 
                 let allowed = isSplit 
@@ -348,7 +337,6 @@ export function handleSurplus(
             continue;
         }
 
-        // --- HIGH-YIELD CASH ACCOUNTS ---
         if (acct === 'cash') {
             if (alive1) { 
                 let allowed = isSplit 
@@ -395,15 +383,14 @@ export function handleDeficit(
     let remainingDeficit = deficit;
 
     // --- DECOUPLE TIMELINE CONTEXTS ---
-    // If the simulation is in pre-retirement/working years, route execution through 'shortfall' config stack.
-    // If in retirement, fall back to structural long-term tax optimization ('decum' order stack).
     const isBothRetired = (options?.isRet1 ?? false) && (options?.isRet2 ?? false);
     const targetShortfallOrder = inputs.strategies?.shortfall || ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp'];
     
     const decumOrder = forceOrder || 
                        (isBothRetired 
                            ? (inputs.strategies?.decum || ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto']) 
-                           : targetShortfallOrder.filter(a => !['rrif_acct', 'lif', 'lirf', 'fhsa', 'resp', 'spending_cash'].includes(a)));
+                           // FIXED: Added absolute types context block string constraints to arrow parameters here to satisfy strict noImplicitAny builders
+                           : targetShortfallOrder.filter((a: string) => !['rrif_acct', 'lif', 'lirf', 'fhsa', 'resp', 'spending_cash'].includes(a)));
 
     // --- 1. CALCULATE PROTECTED EMERGENCY FUND ---
     let efMode = inputs.emergency_fund_mode || 'none';
@@ -492,7 +479,6 @@ export function handleDeficit(
                 let taxableGain = gain * 0.5;
                 wdBreakdown[prefix][logKey + '_math'].tax += taxableGain;
                 addTaxFn(prefix, taxableGain, pullAmount); 
-
             } else if (isTaxable) {
                 wdBreakdown[prefix][logKey + '_math'].tax += pullAmount;
                 addTaxFn(prefix, pullAmount, pullAmount); 
