@@ -1018,7 +1018,7 @@ export class FinanceEngine {
                         {
                             blockRRSPWithdrawalsP1: p1RRSPContributed,
                             blockRRSPWithdrawalsP2: p2RRSPContributed,
-                            isRet1, // FIXED: Added dynamic runtime context flags to decouple working and retired draws
+                            isRet1, 
                             isRet2
                         }
                     );
