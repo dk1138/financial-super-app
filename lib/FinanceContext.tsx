@@ -23,6 +23,7 @@ export interface FinanceData {
     debt: any[];
     strategies: {
         accum: string[];
+        shortfall?: string[]; // Added supporting architecture mapping
         decum: string[];
     };
     expensesByCategory: Record<string, any>;
@@ -89,32 +90,20 @@ const boundDob = (dobString: string): string => {
 };
 
 const syncAgeAndDob = (player: string, prevInputs: any, finalInputs: any) => {
-    const oldAge = prevInputs[`${player}_age`];
-    let newAge = finalInputs[`${player}_age`];
-    const oldDob = prevInputs[`${player}_dob`] || "1990-01";
-    let newDob = finalInputs[`${player}_dob`] || oldDob;
+    const prevDob = prevInputs[`${player}_dob`];
+    const newDob = finalInputs[`${player}_dob`];
+    const prevAge = prevInputs[`${player}_age`];
+    const newAge = finalInputs[`${player}_age`];
 
-    const ageChanged = oldAge !== newAge;
-    const dobChanged = oldDob !== newDob;
-
-    if (ageChanged && !dobChanged) {
-        newAge = boundAge(newAge);
-        finalInputs[`${player}_age`] = newAge;
-        finalInputs[`${player}_dob`] = boundDob(shiftDobYear(oldDob, newAge));
-    } else if (dobChanged && !ageChanged) {
-        newDob = boundDob(newDob);
-        finalInputs[`${player}_dob`] = newDob;
-        finalInputs[`${player}_age`] = boundAge(calculateExactAge(newDob));
-    } else if (ageChanged && dobChanged) {
-        if (oldDob.split('-')[1] !== newDob.split('-')[1]) {
-            newDob = boundDob(newDob);
-            finalInputs[`${player}_dob`] = newDob;
-            finalInputs[`${player}_age`] = boundAge(calculateExactAge(newDob));
-        } else {
-            newAge = boundAge(newAge);
-            finalInputs[`${player}_age`] = newAge;
-            finalInputs[`${player}_dob`] = boundDob(shiftDobYear(oldDob, newAge));
-        }
+    if (newDob !== prevDob && newDob) {
+        const bounded = boundDob(newDob);
+        finalInputs[`${player}_dob`] = bounded;
+        finalInputs[`${player}_age`] = boundAge(calculateExactAge(bounded));
+    } else if (newAge !== prevAge && newAge !== undefined) {
+        const boundedAge = boundAge(newAge);
+        finalInputs[`${player}_age`] = boundedAge;
+        const currentYear = new Date().getFullYear();
+        finalInputs[`${player}_dob`] = `${currentYear - boundedAge}-01`;
     }
 };
 
@@ -190,6 +179,7 @@ export const defaultData: FinanceData = {
   windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'], 
+    shortfall: ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp'],
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
   },
   expensesByCategory: {
@@ -243,6 +233,7 @@ export const emptyData: FinanceData = {
   properties: [], housingTransitions: [], expensePhases: [], windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'], 
+    shortfall: ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp'],
     decum: ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto'] 
   },
   expensesByCategory: {
@@ -265,6 +256,7 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
 
     if (parsedData.strategies) {
         if (parsedData.strategies.accum) merged.strategies.accum = parsedData.strategies.accum.map((s: string) => s === 'nreg' ? 'nonreg' : s);
+        if (parsedData.strategies.shortfall) merged.strategies.shortfall = parsedData.strategies.shortfall.map((s: string) => s === 'nreg' ? 'nonreg' : s);
         if (parsedData.strategies.decum) merged.strategies.decum = parsedData.strategies.decum.map((s: string) => s === 'nreg' ? 'nonreg' : s);
     }
 
@@ -387,7 +379,7 @@ export function useFinance() {
             newList.splice(index, 1);
             return { ...prev, [listName]: newList };
         }),
-        updateStrategy: (type: 'accum' | 'decum', newList: string[]) => store.setData((prev) => ({ 
+        updateStrategy: (type: 'accum' | 'shortfall' | 'decum', newList: string[]) => store.setData((prev) => ({ 
             ...prev, strategies: { ...prev.strategies, [type]: newList } 
         })),
         updateExpenseCategory: (catKey: string, items: any[]) => store.setData((prev) => ({
