@@ -17,7 +17,7 @@ export class FinanceEngine {
     additionalIncome: any[];
     customAssets: any[];
     leaves: any[];
-    strategies: { accum: string[], decum: string[] };
+    strategies: { accum: string[], shortfall?: string[], decum: string[] };
     dependents: any[];
     debt: any[];
     mode: string;
@@ -41,7 +41,7 @@ export class FinanceEngine {
         this.additionalIncome = data.additionalIncome || [];
         this.customAssets = data.customAssets || [];
         this.leaves = data.leaves || []; 
-        this.strategies = data.strategies || { accum: [], decum: [] };
+        this.strategies = data.strategies || { accum: [], shortfall: [], decum: [] };
         this.dependents = data.dependents || []; 
         this.debt = data.debt || []; 
         this.mode = data.mode || 'Couple';
@@ -193,7 +193,6 @@ export class FinanceEngine {
         applyGrowthToPerson(person1, ratesP1, isRet1); 
         applyGrowthToPerson(person2, ratesP2, isRet2);
 
-        // RETURN RATES FOR TIMING DELTA CALCULATIONS LATER
         return { ratesP1, ratesP2 };
     }
 
@@ -285,7 +284,7 @@ export class FinanceEngine {
             if (this.inputs[`${prefix}_cpp_enabled`] && age >= cppStart) {
                 let proration = (age === cppStart) ? startProration : 1.0;
                 inflows.cpp = calcBenefitAmount(maxCpp, cppStart, 1, person.retAge, 'cpp') * proration;
-                if (trackedEvents && age === cppStart) trackedEvents.add(`${prefix.toUpperCase()} CPP`); 
+                if (trackedEvents && age >= cppStart && !trackedEvents.has(`${prefix.toUpperCase()} CPP`)) trackedEvents.add(`${prefix.toUpperCase()} CPP`); 
             }
             
             const oasStart = parseInt(this.getRaw(`${prefix}_oas_start`) || 65);
@@ -299,7 +298,7 @@ export class FinanceEngine {
                 } else {
                     inflows.oas = baseOas;
                 }
-                if (trackedEvents && age === oasStart) trackedEvents.add(`${prefix.toUpperCase()} OAS`); 
+                if (trackedEvents && age >= oasStart && !trackedEvents.has(`${prefix.toUpperCase()} OAS`)) trackedEvents.add(`${prefix.toUpperCase()} OAS`); 
             }
             return inflows;
         };
@@ -430,7 +429,6 @@ export class FinanceEngine {
     }
 
     runSimulation(detailed = false, simContext: any = null): any[] {
-        // HARD FILTER SAFEGUARD: Explicitly prevent accumulation lifestyle containers from bleeding into decumulation
         const filterDecum = (list: string[]) => list.filter(a => !['fhsa', 'resp', 'spending_cash'].includes(a));
 
         if (this.inputs['fully_optimize_tax'] && !simContext?.isMetaRun) {
@@ -444,7 +442,7 @@ export class FinanceEngine {
             if (groupA.length === 0 && groupB.length === 0 && groupC.length === 0) return this.runSimulation(detailed, { ...simContext, isMetaRun: true });
 
             let perms = [
-                [...groupA, ...groupB, ...groupC, ...missing], [...groupA, ...groupC, ...groupB, ...missing],
+                ...groupA, ...groupB, ...groupC, ...missing], [...groupA, ...groupC, ...groupB, ...missing],
                 [...groupB, ...groupA, ...groupC, ...missing], [...groupB, ...groupC, ...groupA, ...missing],
                 [...groupC, ...groupA, ...groupB, ...missing], [...groupC, ...groupB, ...groupA, ...missing]
             ];
@@ -452,7 +450,7 @@ export class FinanceEngine {
             for (let decumOrder of perms) {
                 let cleanedOrder = filterDecum(decumOrder);
                 let tempData = JSON.parse(JSON.stringify({
-                    inputs: this.inputs, properties: this.properties, housingTransitions: this.housingTransitions, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: { accum: this.strategies.accum, decum: cleanedOrder }, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
+                    inputs: this.inputs, properties: this.properties, housingTransitions: this.housingTransitions, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: this.strategies, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
                 }));
                 
                 let tempEngine = new FinanceEngine(tempData);
@@ -581,7 +579,6 @@ export class FinanceEngine {
             const preGrowthNonreg1 = person1.nonreg, preGrowthNonreg2 = person2.nonreg;
             const preGrowthCrypto1 = person1.crypto, preGrowthCrypto2 = person2.crypto;
 
-            // SNAPSHOT PORTFOLIO BEFORE CASHFLOWS FOR TIMING DELTA
             const { ratesP1, ratesP2 } = this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
             
             const postGrowthP1 = { tfsa: person1.tfsa, rrsp: person1.rrsp, nonreg: person1.nonreg, cash: person1.cash, crypto: person1.crypto, fhsa: person1.fhsa || 0, lirf: person1.lirf, lif: person1.lif, rrif_acct: person1.rrif_acct, resp: person1.resp || 0 };
@@ -590,7 +587,6 @@ export class FinanceEngine {
             let inflows = this.calcInflows(yr, i, person1, person2, age1, age2, alive1, alive2, isRet1, isRet2, consts, baseInflation, detailed ? trackedEvents : null);
             if (detailed && deathEvents.length > 0) inflows.events.push(...deathEvents);
 
-            // --- ADD RENTAL INCOME ---
             simProperties.forEach((p: any) => {
                 if (!(p.sellEnabled && p.sellAge <= age1) && p.rentalIncome > 0) {
                     let annualRent = p.rentalIncome * 12 * baseInflation;
@@ -636,7 +632,6 @@ export class FinanceEngine {
             let p1_match_rate = this.getVal('p1_rrsp_match') / 100, p1_tier = Math.max(0.01, this.getVal('p1_rrsp_match_tier') / 100);
             let p2_match_rate = this.getVal('p2_rrsp_match') / 100, p2_tier = Math.max(0.01, this.getVal('p2_rrsp_match_tier') / 100);
 
-            // --- TRACK LOCAL ACTIONS FOR ANTI-CHURNING LAYER ---
             let p1RRSPContributed = false;
             let p2RRSPContributed = false;
             let p1RRSPWithdrawn = false;
@@ -645,24 +640,20 @@ export class FinanceEngine {
             const regMins = calcRegMinimums(person1, person2, age1, age2, alive1, alive2, preGrowthRrsp1, preGrowthRrif1, preGrowthRrsp2, preGrowthRrif2, preGrowthLirf1, preGrowthLif1, preGrowthLirf2, preGrowthLif2, this.CONSTANTS?.RRIF_START_AGE || 72);
             let wdBreakdown = detailed ? { p1: {} as any, p2: {} as any } : null;
 
-            // --- REFACTORED SMART RRSP MELTDOWN OPTIMIZATION LOOP ---
             if (this.inputs['fully_optimize_tax'] === true || this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true) {
                 let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
                 let bracketTop = this.CONSTANTS.TAX_DATA?.FED?.brackets?.[0] || 55867;
                 let targetBracketCap = bracketTop * baseInflation;
 
-                // Scenario Check: Are both partners alive, retired, and UNDER the Canadian Pension Splitting Threshold age (65)?
                 const isUnderAge65SplittingCap = this.mode === 'Couple' && alive1 && alive2 && age1 < 65 && age2 < 65 && isRet1 && isRet2;
 
                 if (isUnderAge65SplittingCap) {
-                    // Calculate individual current taxable baselines before proactive meltdowns
                     let curTaxable1 = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + (person1.nonreg * person1.nonreg_yield) + regMins.p1 + regMins.lifTaken1;
                     let curTaxable2 = inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + (person2.nonreg * person2.nonreg_yield) + regMins.p2 + regMins.lifTaken2;
 
                     let room1 = Math.max(0, targetBracketCap - curTaxable1);
                     let room2 = Math.max(0, targetBracketCap - curTaxable2);
 
-                    // Split the low-tax bracket allocation space manually 50/50 since the CRA blocks financial paper splitting pre-65
                     if (room1 > 0 && person1.rrsp > 0) {
                         let pull1 = Math.min(room1 * 0.5, person1.rrsp);
                         if (pull1 > 0) {
@@ -689,7 +680,6 @@ export class FinanceEngine {
                         }
                     }
                 } else {
-                    // Standard sequential baseline path used when single or age >= 65 (where CRA paper pension splitting safely balances out tax bills)
                     const executeMeltdown = (person: any, currentAge: number, incs: any, isAlive: boolean, prefix: 'p1' | 'p2', rrifMin: number, lifMin: number) => {
                         if (isAlive && currentAge < rrifStartAge && person.rrsp > 0) {
                             let currentTaxable = incs.gross + incs.cpp + incs.oas + incs.pension + incs.windfallTaxable + (person.nonreg * person.nonreg_yield) + rrifMin + lifMin;
@@ -720,9 +710,9 @@ export class FinanceEngine {
 
             if (detailed && wdBreakdown) {
                 if (regMins.p1 > 0) { flowLog.withdrawals['P1 RRIF'] = (flowLog.withdrawals['P1 RRIF'] || 0) + regMins.p1; wdBreakdown.p1.RRIF = regMins.p1; wdBreakdown.p1.RRIF_math = { wd: regMins.p1, tax: regMins.p1, min: regMins.details.p1.min, priorBal: regMins.details.p1.bal, factor: regMins.details.p1.factor }; }
-                if (regMins.lifTaken1 > 0) { flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; wdBreakdown.p1.LIF = regMins.lifTaken1; wdBreakdown.p1.LIF_math = { wd: regMins.lifTaken1, tax: regMins.lifTaken1, min: regMins.details.p1.lifMin, priorBal: regMins.details.p1.lifBal, factor: regMins.details.p1.factor }; }
+                if (regMins.lifTaken1 > 0) { flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; wdBreakdown.p1.LIF = regMins.lifTaken1; wdBreakdown.p1.LIF_math = { wd: regMins.lifTaken1, tax: regMins.lifTaken1, min: regMins.details.p1.min, priorBal: regMins.details.p1.bal, factor: regMins.details.p1.factor }; }
                 if (regMins.p2 > 0) { flowLog.withdrawals['P2 RRIF'] = (flowLog.withdrawals['P2 RRIF'] || 0) + regMins.p2; wdBreakdown.p2.RRIF = regMins.p2; wdBreakdown.p2.RRIF_math = { wd: regMins.p2, tax: regMins.p2, min: regMins.details.p2.min, priorBal: regMins.details.p2.bal, factor: regMins.details.p2.factor }; }
-                if (regMins.lifTaken2 > 0) { flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; wdBreakdown.p2.LIF = regMins.lifTaken2; wdBreakdown.p2.LIF_math = { wd: regMins.lifTaken2, tax: regMins.lifTaken2, min: regMins.details.p2.lifMin, priorBal: regMins.details.p2.lifBal, factor: regMins.details.p2.factor }; }
+                if (regMins.lifTaken2 > 0) { flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; wdBreakdown.p2.LIF = regMins.lifTaken2; wdBreakdown.p2.LIF_math = { wd: regMins.lifTaken2, tax: regMins.lifTaken2, min: regMins.details.p2.min, priorBal: regMins.details.p2.bal, factor: regMins.details.p2.factor }; }
             }
 
             const taxBrackets = getInflatedTaxData(this.CONSTANTS.TAX_DATA, baseInflation);
@@ -793,7 +783,6 @@ export class FinanceEngine {
 
             let mortgagePayment = 0, rentPayment = 0, keptProperties: any[] = [];
             
-            // --- PRIMARY HOUSING TRANSITIONS ---
             let transition = housingTransitions.find((t: any) => t.age === age1);
             if (transition) {
                 if (currentHousingMode === 'own') {
@@ -826,29 +815,14 @@ export class FinanceEngine {
                     currentPrimaryIncludeInNW = transition.includeInNW !== false;
                     primaryValue = (transition.price || 0) * baseInflation;
                     primaryMortgage = (transition.mortgage || 0) * baseInflation;
-                    let downPayment = primaryValue - primaryMortgage;
-                    inflows.p1.windfallNonTax -= downPayment;
-                    
-                    primaryRate = transition.rate !== undefined ? transition.rate : 4.0;
-                    primaryGrowth = (transition.growth !== undefined ? transition.growth : 3.0) / 100;
-
-                    if (primaryMortgage > 0) {
-                        let r = primaryRate / 100 / 12;
-                        let payment = transition.payment || 0;
-                        if (payment === 0) payment = r === 0 ? primaryMortgage / 300 : (primaryMortgage * r) / (1 - Math.pow(1 + r, -300));
-                        primaryPayment = payment;
-                    } else {
-                        primaryPayment = 0; 
-                    }
-                    currentRent = 0;
-                    if (detailed && !trackedEvents.has('Bought New Home')) { trackedEvents.add('Bought New Home'); inflows.events.push('Bought New Home'); }
+                    primaryRate = this.inputs.primary_rate !== undefined ? parseFormattedNumber(this.inputs.primary_rate) : 4.0;
+                    primaryPayment = Number(transition.payment) || 0;
+                    primaryGrowth = Number(transition.growth) || 3.0;
+                    if (detailed && !trackedEvents.has(`Purchased Property`)) { trackedEvents.add(`Purchased Property`); inflows.events.push(`Purchased Property`); }
                 } else if (transition.action === 'rent' || transition.action === 'ltc') {
                     currentHousingMode = transition.action;
                     currentRent = (transition.rent || 0); 
-                    primaryValue = 0;
-                    primaryMortgage = 0;
-                    primaryPayment = 0;
-                    if (detailed && !trackedEvents.has('Transitioned to ' + transition.action.toUpperCase())) { trackedEvents.add('Transitioned to ' + transition.action.toUpperCase()); inflows.events.push('Transitioned to ' + transition.action.toUpperCase()); }
+                    primaryValue = 0; primaryMortgage = 0; primaryPayment = 0;
                 }
             }
 
@@ -875,7 +849,6 @@ export class FinanceEngine {
                 rentPayment = currentRent * 12 * baseInflation;
             }
 
-            // --- RENTAL PROPERTIES ---
             simProperties.forEach((p: any) => {
                 if (p.sellEnabled && p.sellAge === age1) {
                     const proceeds = p.value;
@@ -921,16 +894,14 @@ export class FinanceEngine {
                 }
             });
 
-            // --- EDUCATION & RESP WITHDRAWALS ---
             let eduExpense = 0;
             this.dependents.forEach(dep => {
                 if (dep.hasEdu) {
                     let byear = parseInt(dep.dob.split('-')[0]) || yr;
                     let depAge = yr - byear;
-                    let eStart = parseInt(dep.eduStart) || 18;
-                    let eDur = parseInt(dep.eduDuration) || 4;
-                    if (depAge >= eStart && depAge < eStart + eDur) {
-                        eduExpense += (Number(dep.eduCost) || 15000) * baseInflation;
+                    let stopAge = this.inputs.cfg_resp_stop_age !== undefined ? parseInt(this.inputs.cfg_resp_stop_age) : 17;
+                    if (depAge >= 18 && depAge <= stopAge) {
+                        eduExpense += (this.getVal('cfg_resp_limit') || 2500) * baseInflation;
                     }
                 }
             });
@@ -987,100 +958,45 @@ export class FinanceEngine {
                     if (direction === 'p2_to_p1') pensionSplitTransfer.p2ToP1 = transferAmount;
                 });
             }
-            
-            let tax1 = alive1 ? calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1) : {totalTax: 0, margRate: 0};
-            let tax2 = alive2 ? calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2) : {totalTax: 0, margRate: 0};
 
-            let netCashIncome1 = cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0);
-            let netCashIncome2 = alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0;
-            
-            let netSurplus = (netCashIncome1 + netCashIncome2) - (expenses + mortgagePayment + rentPayment + debtRepayment);
-            let actualDeductions = { p1: 0, p2: 0 };
-            let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
+            let appliedRefundP1Next = pendingRefund.p1 > 0 && alive1 ? pendingRefund.p1 : 0;
+            let appliedRefundP2Next = pendingRefund.p2 > 0 && alive2 ? pendingRefund.p2 : 0;
 
-            let matchTracking = { p1MatchAdded: 0, p2MatchAdded: 0, totalMatch1: 0, totalMatch2: 0 };
+            let p1_match_added = 0, p2_match_added = 0;
+            let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
 
-            // --- REFACTORED RRSP MATCHING IMPLEMENTATION (DOLLAR-FOR-DOLLAR MODEL) ---
-            if (alive1 && rrspRoom1 > 0 && !p1RRSPWithdrawn && p1_match_rate > 0 && p1_tier > 0) {
-                let maxEmployerCap1 = person1.inc * p1_match_rate;
-                let requiredEmployeeDeposit1 = maxEmployerCap1 / p1_tier;
-                let totalMatchingSpace1 = Math.min(netSurplus, rrspRoom1, requiredEmployeeDeposit1 + maxEmployerCap1);
-
-                if (totalMatchingSpace1 > 0) {
-                    let employeeRatio1 = 1 / (1 + p1_tier);
-                    let actEmployeePortionP1 = totalMatchingSpace1 * employeeRatio1;
-                    let actEmpPortionP1 = totalMatchingSpace1 * (1 - employeeRatio1);
-
-                    inflows.p1.gross += actEmpPortionP1;
-                    matchTracking.p1MatchAdded = actEmpPortionP1;
-                    matchTracking.totalMatch1 = totalMatchingSpace1;
-
-                    person1.rrsp += totalMatchingSpace1;
-                    rrspRoom1 -= totalMatchingSpace1;
-                    netSurplus -= actEmployeePortionP1;
-                    p1RRSPContributed = true;
-
-                    if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + totalMatchingSpace1;
+            netSurplus = handleSurplus(
+                cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
+                person1, person2, alive1, alive2, flowLog, i, 
+                consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
+                actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, 
+                this.strategies, this.inputs, this.CONSTANTS, age1, age2,
+                {
+                    blockRRSPContributionsP1: false, 
+                    blockRRSPContributionsP2: false,
+                    isRet1, isRet2,
+                    p1MatchRate: p1_match_rate, p1Tier: p1_tier,
+                    p2MatchRate: p2_match_rate, p2Tier: p2_tier,
+                    inflowsReference: inflows,
+                    matchTracking
                 }
+            );
+            
+            if (actualDeductions.p1 > 0 || matchTracking.totalMatch1 > 0) {
+                p1RRSPContributed = true;
+                pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend, credits1).totalTax;
+            }
+            if (actualDeductions.p2 > 0 || matchTracking.totalMatch2 > 0) {
+                p2RRSPContributed = true;
+                pendingRefund.p2 = tax2.totalTax - calculateTaxDetailed(craTaxableIncome2 - actualDeductions.p2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (craTaxableIncome1 - actualDeductions.p1) : -1, isEligibleDividend, credits2).totalTax;
             }
 
-            if (this.mode === 'Couple' && alive2 && rrspRoom2 > 0 && netSurplus > 0 && !p2RRSPWithdrawn && p2_match_rate > 0 && p2_tier > 0) {
-                let maxEmployerCap2 = person2.inc * p2_match_rate;
-                let requiredEmployeeDeposit2 = maxEmployerCap2 / p2_tier;
-                let totalMatchingSpace2 = Math.min(netSurplus, rrspRoom2, requiredEmployeeDeposit2 + maxEmployerCap2);
+            craTaxableIncome1 = Math.max(0, craTaxableIncome1 + matchTracking.p1MatchAdded - actualDeductions.p1);
+            craTaxableIncome2 = Math.max(0, craTaxableIncome2 + matchTracking.p2MatchAdded - actualDeductions.p2);
+            cashIncome1 = Math.max(0, cashIncome1 + matchTracking.p1MatchAdded - actualDeductions.p1);
+            cashIncome2 = Math.max(0, cashIncome2 + matchTracking.p2MatchAdded - actualDeductions.p2);
 
-                if (totalMatchingSpace2 > 0) {
-                    let employeeRatio2 = 1 / (1 + p2_tier);
-                    let actEmployeePortionP2 = totalMatchingSpace2 * employeeRatio2;
-                    let actEmpPortionP2 = totalMatchingSpace2 * (1 - employeeRatio2);
-
-                    inflows.p2.gross += actEmpPortionP2;
-                    matchTracking.p2MatchAdded = actEmpPortionP2;
-                    matchTracking.totalMatch2 = totalMatchingSpace2;
-
-                    person2.rrsp += totalMatchingSpace2;
-                    rrspRoom2 -= totalMatchingSpace2;
-                    netSurplus -= actEmployeePortionP2;
-                    p2RRSPContributed = true;
-
-                    if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + totalMatchingSpace2;
-                }
-            }
-
-            if (netSurplus > 0) {
-                // Route parameters and tracking vectors directly into sequential tracking frame context
-                netSurplus = handleSurplus(
-                    netSurplus, person1, person2, alive1, alive2, flowLog, i, 
-                    consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
-                    actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, 
-                    this.strategies, this.inputs, this.CONSTANTS, age1, age2,
-                    {
-                        blockRRSPContributionsP1: true, // Legacy discretionary match block bypassed via the direct block override architecture rewritten above
-                        blockRRSPContributionsP2: true,
-                        isRet1, isRet2,
-                        p1MatchRate: 0, p1Tier: 1,
-                        p2MatchRate: 0, p2Tier: 1,
-                        inflowsReference: inflows,
-                        matchTracking
-                    }
-                );
-                
-                // Track contributions driven by the handleSurplus logic layer
-                if (actualDeductions.p1 > 0 || matchTracking.totalMatch1 > 0) {
-                    p1RRSPContributed = true;
-                    pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend, credits1).totalTax;
-                }
-                if (actualDeductions.p2 > 0 || matchTracking.totalMatch2 > 0) {
-                    p2RRSPContributed = true;
-                    pendingRefund.p2 = tax2.totalTax - calculateTaxDetailed(craTaxableIncome2 - actualDeductions.p2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? (craTaxableIncome1 - actualDeductions.p1) : -1, isEligibleDividend, credits2).totalTax;
-                }
-
-                // Sync engine calculation displays with internal sequential mutations
-                craTaxableIncome1 = Math.max(0, craTaxableIncome1 + matchTracking.p1MatchAdded - actualDeductions.p1);
-                craTaxableIncome2 = Math.max(0, craTaxableIncome2 + matchTracking.p2MatchAdded - actualDeductions.p2);
-                cashIncome1 = Math.max(0, cashIncome1 + matchTracking.p1MatchAdded - actualDeductions.p1);
-                cashIncome2 = Math.max(0, cashIncome2 + matchTracking.p2MatchAdded - actualDeductions.p2);
-            } else {
+            if (netSurplus <= 0) {
                 for (let pass = 0; pass < 10; pass++) {
                     let dynTax1 = calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1);
                     let dynTax2 = calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2);
@@ -1089,7 +1005,6 @@ export class FinanceEngine {
                     let currentDeficit = (expenses + mortgagePayment + rentPayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
                     if (currentDeficit < 1) break; 
                     
-                    // Prior portfolio snapshot state variables passed to decouple decumulation actions
                     handleDeficit(
                         currentDeficit, person1, person2, craTaxableIncome1, craTaxableIncome2, alive1, alive2, 
                         flowLog, wdBreakdown, taxBrackets, (prefix: string, taxableAmt: number, cashAmt: number) => {
@@ -1102,7 +1017,9 @@ export class FinanceEngine {
                         expenses + mortgagePayment + rentPayment + debtRepayment,
                         {
                             blockRRSPWithdrawalsP1: p1RRSPContributed,
-                            blockRRSPWithdrawalsP2: p2RRSPContributed
+                            blockRRSPWithdrawalsP2: p2RRSPContributed,
+                            isRet1, // FIXED: Added dynamic runtime context flags to decouple working and retired draws
+                            isRet2
                         }
                     );
                 }
@@ -1115,32 +1032,44 @@ export class FinanceEngine {
 
             previousAFNI = Math.max(0, (craTaxableIncome1 - actualDeductions.p1) + (craTaxableIncome2 - actualDeductions.p2));
 
-            // --- APPLY GLOBAL TIMING DELTA MATH ---
             let contTimingStr = String(this.inputs.contribution_timing || this.inputs.cashflow_timing || 'end').toLowerCase();
-            let wdTimingStr = String(this.inputs.withdrawal_timing || this.inputs.cashflow_timing || 'end').toLowerCase();
-            
-            let contMultiplier = contTimingStr === 'start' ? 1.0 : (contTimingStr === 'mid' ? 0.5 : 0.0);
-            let wdMultiplier = wdTimingStr === 'start' ? 1.0 : (wdTimingStr === 'mid' ? 0.5 : 0.0);
+            let dcmTimingStr = String(this.inputs.decumulation_timing || this.inputs.cashflow_timing || 'end').toLowerCase();
 
-            if (contMultiplier > 0 || wdMultiplier > 0) {
-                const applyTiming = (person: any, postGrowth: any, rates: any) => {
-                    ['tfsa', 'rrsp', 'nonreg', 'cash', 'crypto', 'fhsa', 'lirf', 'lif', 'rrif_acct', 'resp'].forEach(key => {
-                        const delta = (person[key] || 0) - (postGrowth[key] || 0);
-                        if (delta !== 0 && rates && rates[key] !== undefined) {
-                            let r = rates[key];
-                            if (key === 'nonreg') r = Math.max(0, rates.nonreg - (person.nonreg_yield || 0));
-                            
-                            const multiplier = delta > 0 ? contMultiplier : wdMultiplier;
-                            const timingAdjustment = delta * r * multiplier;
-                            person[key] += timingAdjustment;
+            const applyTiming = (person: any, postGrowth: any, rates: any) => {
+                ['tfsa', 'rrsp', 'nonreg', 'cash', 'crypto', 'fhsa', 'lirf', 'lif', 'rrif_acct', 'resp'].forEach(key => {
+                    const delta = (person[key] || 0) - (postGrowth[key] || 0);
+                    if (delta !== 0) {
+                        let timingMode = delta > 0 ? contTimingStr : dcmTimingStr;
+                        if (timingMode === 'beginning') {
+                            let rawRate = rates[key] || 0;
+                            person[key] += delta * rawRate;
                         }
-                    });
-                };
-                if (alive1) applyTiming(person1, postGrowthP1, ratesP1);
-                if (alive2) applyTiming(person2, postGrowthP2, ratesP2);
+                    }
+                });
+            };
+            
+            applyTiming(person1, postGrowthP1, ratesP1);
+            applyTiming(person2, postGrowthP2, ratesP2);
+
+            if (alive1 && !fhsaClosed1) {
+                if (person1.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p1.fhsa > 0)) { fhsaYearsP1 = fhsaYearsP1 === 0 ? 1 : 0; }
+                if (fhsaYearsP1 >= 15 || age1 >= 71) {
+                    if (person1.fhsa > 0) {
+                        if (age1 >= rrifStartAge) person1.rrif_acct += person1.fhsa; else person1.rrsp += person1.fhsa;
+                    }
+                    person1.fhsa = 0; fhsaClosed1 = true;
+                }
+            }
+            if (alive2 && !fhsaClosed2 && this.mode === 'Couple') {
+                if (person2.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p2.fhsa > 0)) { fhsaYearsP2 = fhsaYearsP2 === 0 ? 1 : 0; }
+                if (fhsaYearsP2 >= 15 || age2 >= 71) {
+                    if (person2.fhsa > 0) {
+                        if (age2 >= rrifStartAge) person2.rrif_acct += person2.fhsa; else person2.rrsp += person2.fhsa;
+                    }
+                    person2.fhsa = 0; fhsaClosed2 = true;
+                }
             }
 
-            // Floor checks
             person1.tfsa = Math.max(0, person1.tfsa); person1.rrsp = Math.max(0, person1.rrsp); person1.cash = Math.max(0, person1.cash); person1.nonreg = Math.max(0, person1.nonreg); person1.crypto = Math.max(0, person1.crypto);
             person2.tfsa = Math.max(0, person2.tfsa); person2.rrsp = Math.max(0, person2.rrsp); person2.cash = Math.max(0, person2.cash); person2.nonreg = Math.max(0, person2.nonreg); person2.crypto = Math.max(0, person2.crypto);
 
@@ -1191,7 +1120,7 @@ export class FinanceEngine {
                 }
 
                 const totalWithdrawals = Object.values(flowLog.withdrawals).reduce((sum: any, val: any) => sum + val, 0);
-                const grossInflow = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.rrspMeltdown +  + regMins.p1 + regMins.lifTaken1 + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax + divInc1 + divInc2 + cryptoYield1 + cryptoYield2 + (totalWithdrawals as number);
+                const grossInflow = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.rrspMeltdown + regMins.p1 + regMins.lifTaken1 + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax + divInc1 + divInc2 + cryptoYield1 + cryptoYield2 + (totalWithdrawals as number);
                 
                 projectionData.push({
                     year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
@@ -1214,27 +1143,6 @@ export class FinanceEngine {
                     matchTaxSavingsP1: matchTaxSavings1, matchTaxSavingsP2: matchTaxSavings2, discTaxSavingsP1: pendingRefund.p1, discTaxSavingsP2: pendingRefund.p2,
                     afterTaxEstate: afterTaxEstateValue 
                 });
-            }
-
-            if (alive1 && !fhsaClosed1) {
-                if (person1.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p1.fhsa > 0)) { fhsaYearsP1 = fhsaYearsP1 === 0 ? 1 : fhsaYearsP1 + 1; }
-                if (fhsaYearsP1 >= 15 || age1 >= 71) {
-                    if (person1.fhsa > 0) {
-                        if (age1 >= this.CONSTANTS.RRIF_START_AGE) person1.rrif_acct += person1.fhsa; else person1.rrsp += person1.fhsa;
-                        if (detailed && !trackedEvents.has('FHSA Expired')) { trackedEvents.add('FHSA Expired'); projectionData[projectionData.length - 1].events.push('FHSA Expired'); }
-                    }
-                    person1.fhsa = 0; fhsaClosed1 = true;
-                }
-            }
-            if (alive2 && !fhsaClosed2 && this.mode === 'Couple') {
-                if (person2.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p2.fhsa > 0)) { fhsaYearsP2 = fhsaYearsP2 === 0 ? 1 : fhsaYearsP2 + 1; }
-                if (fhsaYearsP2 >= 15 || age2 >= 71) {
-                    if (person2.fhsa > 0) {
-                        if (age2 >= this.CONSTANTS.RRIF_START_AGE) person2.rrif_acct += person2.fhsa; else person2.rrsp += person2.fhsa;
-                        if (detailed && !trackedEvents.has('FHSA Expired')) { trackedEvents.add('FHSA Expired'); if (!projectionData[projectionData.length - 1].events.includes('FHSA Expired')) projectionData[projectionData.length - 1].events.push('FHSA Expired'); }
-                    }
-                    person2.fhsa = 0; fhsaClosed2 = true;
-                }
             }
 
             consts.cppMax1 *= (1 + consts.inflation); consts.oasMax1 *= (1 + consts.inflation);
