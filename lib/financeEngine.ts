@@ -965,7 +965,8 @@ export class FinanceEngine {
             let p1_match_added = 0, p2_match_added = 0;
             let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
 
-            netSurplus = handleSurplus(
+            // INITIALIZED: Explicit let declaration bound safely inside the annual loop pass scope
+            let netSurplus = handleSurplus(
                 cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
                 person1, person2, alive1, alive2, flowLog, i, 
                 consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
