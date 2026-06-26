@@ -89,11 +89,12 @@ export interface PlanData {
     debt: Debt[];
     strategies: {
         accum: string[];
+        shortfall?: string[]; // Added to fix StrategyTab compilation error
         decum: string[];
     };
     expensesByCategory: Record<string, ExpenseCategory>;
     constants?: any;
-    taxCredits?: any; // Used to provide explicit inputs for specific tax credits dynamically applied
+    taxCredits?: any; 
 }
 
 export interface SimulationDashboard {
