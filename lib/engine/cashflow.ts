@@ -389,7 +389,6 @@ export function handleDeficit(
     const decumOrder = forceOrder || 
                        (isBothRetired 
                            ? (inputs.strategies?.decum || ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'lirf', 'crypto']) 
-                           // FIXED: Added absolute types context block string constraints to arrow parameters here to satisfy strict noImplicitAny builders
                            : targetShortfallOrder.filter((a: string) => !['rrif_acct', 'lif', 'lirf', 'fhsa', 'resp', 'spending_cash'].includes(a)));
 
     // --- 1. CALCULATE PROTECTED EMERGENCY FUND ---
@@ -408,37 +407,41 @@ export function handleDeficit(
     let householdCash = (alive1 ? person1.cash : 0) + (alive2 ? person2.cash : 0);
     let availableHouseholdCash = Math.max(0, householdCash - protectedCash);
 
-    // --- HELPER FUNCTION: EXECUTE WITHDRAWAL ---
-    const executePull = (p: any, prefix: string, acct: string) => {
-        if (remainingDeficit <= 0) return;
+    // --- HELPER FUNCTION: EXECUTE WITHDRAWAL (RETURNS NET CASH CLEARED) ---
+    const executePull = (p: any, prefix: string, acct: string, maxSlice?: number): number => {
+        if (remainingDeficit <= 0) return 0;
         
         if (acct === 'rrsp') {
-            if (prefix === 'p1' && options?.blockRRSPWithdrawalsP1) return;
-            if (prefix === 'p2' && options?.blockRRSPWithdrawalsP2) return;
+            if (prefix === 'p1' && options?.blockRRSPWithdrawalsP1) return 0;
+            if (prefix === 'p2' && options?.blockRRSPWithdrawalsP2) return 0;
         }
         
         let accountBalance = p[acct] || 0;
-        if (accountBalance <= 0) return;
+        if (accountBalance <= 0) return 0;
 
         let maxAllowed = accountBalance;
 
         if (acct === 'cash') {
             maxAllowed = Math.min(accountBalance, availableHouseholdCash);
-            if (maxAllowed <= 0) return; 
+            if (maxAllowed <= 0) return 0; 
         }
         
         let isTaxable = ['rrsp', 'rrif_acct', 'lif', 'lirf', 'nonreg', 'crypto'].includes(acct);
         let isCapitalGain = ['nonreg', 'crypto'].includes(acct);
         
         let pullAmount = 0;
+        let deficitToClear = maxSlice !== undefined ? Math.min(remainingDeficit, maxSlice) : remainingDeficit;
+        let netCashCleared = 0;
         
         if (isTaxable && !isCapitalGain) {
-            let requiredGross = remainingDeficit / 0.80; 
+            let requiredGross = deficitToClear / 0.80; 
             pullAmount = Math.min(maxAllowed, requiredGross);
-            remainingDeficit -= (pullAmount * 0.80);
+            netCashCleared = pullAmount * 0.80;
+            remainingDeficit -= netCashCleared;
         } else {
-            pullAmount = Math.min(maxAllowed, remainingDeficit);
-            remainingDeficit -= pullAmount;
+            pullAmount = Math.min(maxAllowed, deficitToClear);
+            netCashCleared = pullAmount;
+            remainingDeficit -= netCashCleared;
         }
 
         p[acct] -= pullAmount;
@@ -486,18 +489,31 @@ export function handleDeficit(
                 addTaxFn(prefix, 0, pullAmount); 
             }
         }
+        return netCashCleared;
     };
 
     // --- 2. MAIN WITHDRAWAL LOOP ---
     for (const acct of decumOrder) {
         if (remainingDeficit <= 0) break;
 
-        if (alive1) {
-            executePull(person1, 'p1', acct);
-        }
-
-        if (alive2 && remainingDeficit > 0) {
-            executePull(person2, 'p2', acct);
+        // PRE-65 DUAL RETIREMENT EQUALIZATION LOOP:
+        // Tapping taxable registered balances (RRSP, RRIF, LIF, LIRA) before pension splitting age (65)
+        // requires proportional parallel draws to optimize progressive bracket steps on both returns.
+        if (['rrsp', 'rrif_acct', 'lif', 'lirf'].includes(acct) && isBothRetired && age1 < 65 && age2 < 65 && alive1 && alive2) {
+            const trancheSliceLimit = 2500 * inflation; 
+            while (remainingDeficit > 0 && ((person1[acct] || 0) > 0 || (person2[acct] || 0) > 0)) {
+                let p1Pulled = executePull(person1, 'p1', acct, trancheSliceLimit);
+                let p2Pulled = executePull(person2, 'p2', acct, trancheSliceLimit);
+                if (p1Pulled === 0 && p2Pulled === 0) break; 
+            }
+        } else {
+            // Standard prioritized drawdown for single profiles, working years, or ages 65+
+            if (alive1) {
+                executePull(person1, 'p1', acct);
+            }
+            if (alive2 && remainingDeficit > 0) {
+                executePull(person2, 'p2', acct);
+            }
         }
     }
 
