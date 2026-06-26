@@ -270,6 +270,19 @@ export default function StrategyTab() {
           </div>
         </div>
         <div className="card-body p-4 bg-secondary bg-opacity-10">
+            {/* Shortfall Mitigation alert banner layer built using core Bootstrap styling tokens */}
+            <div className="alert border-info bg-info bg-opacity-10 rounded-4 p-3 mb-4 d-flex gap-3 align-items-start">
+              <div className="bg-info bg-opacity-25 rounded-circle p-2 text-info d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '36px', height: '36px' }}>
+                <i className="bi bi-shield-check-fill fs-5"></i>
+              </div>
+              <div>
+                <h6 className="fw-bold mb-1 text-info text-uppercase ls-1" style={{ fontSize: '0.8rem' }}>Guaranteed Alpha Return Safeguard Enabled</h6>
+                <p className="small text-muted mb-0 lh-sm" style={{ fontSize: '0.75rem' }}>
+                  The cash flow core dynamically isolates your <strong>RRSP Employer Match</strong> first. If personal income in a high-expense calendar year drops below targets, structural matching payroll bounds are fulfilled as a baseline obligation. The resulting deficit is cleared out via your chosen decumulation sequence below (e.g., pulling out tax-free TFSA reserves) rather than sacrificing a guaranteed, instant-matching ROI loop.
+                </p>
+              </div>
+            </div>
+
             <div className="row g-4">
                 {/* Accumulation */}
                 <div className="col-12 col-xl-6">
@@ -289,7 +302,7 @@ export default function StrategyTab() {
                     </div>
                 </div>
 
-                {/* Decumulation */}
+                {/* Decumulation / Shortfall Routing */}
                 <div className="col-12 col-xl-6">
                     <div className="p-0 border border-secondary rounded-4 overflow-hidden h-100 shadow-sm surface-card position-relative">
                         <div className="bg-primary bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-3">
@@ -297,8 +310,8 @@ export default function StrategyTab() {
                                 <i className="bi bi-wallet2 fs-5"></i>
                             </div>
                             <div>
-                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary">Decumulation Route</h6>
-                                <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of draining accounts during retirement</span>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary">Decumulation & Deficit Route</h6>
+                                <span className="small text-muted" style={{fontSize: '0.7rem'}}>Order of draining or tapping capital during shortfall/retirement years</span>
                             </div>
                         </div>
                         

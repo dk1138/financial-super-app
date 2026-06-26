@@ -92,14 +92,85 @@ export function handleSurplus(
         }
     };
 
+    // --- CRITICAL DEFENSIVE UPGRADE: PRE-PROCESS GUARANTEED EMPLOYER MATCHES ---
+    // We execute the employer match checks BEFORE traversing the discretionary asset accumulation list.
+    // This protects the guaranteed alpha return stream regardless of initial surplus constraints.
+    if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) {
+        let p1MatchRate = options?.p1MatchRate || 0;
+        let p1Tier = options?.p1Tier || 0;
+        let isRet1 = options?.isRet1 ?? false;
+
+        let empPortionP1 = (!isRet1) ? (person1.inc * p1MatchRate) : 0;
+        let baseEmployeeRequiredP1 = (!isRet1) ? (person1.inc * p1Tier) : 0;
+
+        if (empPortionP1 > 0 && baseEmployeeRequiredP1 > 0) {
+            let correctTargetTotalP1 = empPortionP1 + baseEmployeeRequiredP1;
+            // Allow the match execution block to look beyond standard positive remaining surplus to secure the asset
+            let matchTake = Math.min(rrspRoom1, correctTargetTotalP1);
+            
+            if (matchTake > 0) {
+                let employeeShareRatio = baseEmployeeRequiredP1 / correctTargetTotalP1;
+                let actEmployeePortionP1 = matchTake * employeeShareRatio;
+                let actEmpPortionP1 = matchTake * (empPortionP1 / correctTargetTotalP1);
+                
+                if (options?.inflowsReference?.p1) {
+                    options.inflowsReference.p1.gross += actEmpPortionP1;
+                }
+                if (options?.matchTracking) {
+                    options.matchTracking.p1MatchAdded = actEmpPortionP1;
+                    options.matchTracking.totalMatch1 = matchTake;
+                }
+                
+                person1.rrsp += matchTake;
+                rrspRoom1 -= matchTake;
+                remaining -= actEmployeePortionP1; // Deduct cash requirements (may create a dynamic temporary shortfall handled by decumulation)
+                
+                if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + matchTake;
+            }
+        }
+    }
+
+    if (alive2 && rrspRoom2 > 0 && !options?.blockRRSPContributionsP2) {
+        let p2MatchRate = options?.p2MatchRate || 0;
+        let p2Tier = options?.p2Tier || 0;
+        let isRet2 = options?.isRet2 ?? false;
+
+        let empPortionP2 = (!isRet2) ? (person2.inc * p2MatchRate) : 0;
+        let baseEmployeeRequiredP2 = (!isRet2) ? (person2.inc * p2Tier) : 0;
+
+        if (empPortionP2 > 0 && baseEmployeeRequiredP2 > 0) {
+            let correctTargetTotalP2 = empPortionP2 + baseEmployeeRequiredP2;
+            let matchTake = Math.min(rrspRoom2, correctTargetTotalP2);
+            
+            if (matchTake > 0) {
+                let employeeShareRatio = baseEmployeeRequiredP2 / correctTargetTotalP2;
+                let actEmployeePortionP2 = matchTake * employeeShareRatio;
+                let actEmpPortionP2 = matchTake * (empPortionP2 / correctTargetTotalP2);
+                
+                if (options?.inflowsReference?.p2) {
+                    options.inflowsReference.p2.gross += actEmpPortionP2;
+                }
+                if (options?.matchTracking) {
+                    options.matchTracking.p2MatchAdded = actEmpPortionP2;
+                    options.matchTracking.totalMatch2 = matchTake;
+                }
+                
+                person2.rrsp += matchTake;
+                rrspRoom2 -= matchTake;
+                remaining -= actEmployeePortionP2; 
+                
+                if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + matchTake;
+            }
+        }
+    }
+
+    // --- STANDARD DISCRETIONARY ACCUMULATION PIPELINE ---
     for (const acct of accumOrder) {
         if (remaining <= 0) break;
 
         // --- DISCRETIONARY LIFESTYLE SPENDING CASH CONTAINER ---
         if (acct === 'spending_cash') {
             let maxSpendingAllowed = Number(inputs.max_annual_spending_cash || 0);
-            
-            // Check all potential system location variants for Today's Dollars configuration toggle
             const useRealDollars = Boolean(
                 inputs.useRealDollars === true || 
                 inputs.todays_dollars === true || 
@@ -152,105 +223,31 @@ export function handleSurplus(
         }
 
         // --- REGISTERED RETIREMENT SAVINGS PLAN (RRSP) ---
+        // (Note: Matching blocks were processed first; this handles normal voluntary discretionary contributions)
         if (acct === 'rrsp') {
-            // Process Player 1 Matching & Discretionary Contributions
             if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) {
-                let p1MatchRate = options?.p1MatchRate || 0;
-                let p1Tier = options?.p1Tier || 0;
-                let isRet1 = options?.isRet1 ?? false;
+                let allowed = isSplit 
+                    ? (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp))
+                    : (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.shared.rrsp));
 
-                let empPortionP1 = (!isRet1) ? (person1.inc * p1MatchRate) : 0;
-                let baseEmployeeRequiredP1 = (!isRet1) ? (person1.inc * p1Tier) : 0;
-
-                if (empPortionP1 > 0 && baseEmployeeRequiredP1 > 0) {
-                    let correctTargetTotalP1 = empPortionP1 + baseEmployeeRequiredP1;
-                    let matchTake = Math.min(remaining, rrspRoom1, correctTargetTotalP1);
-                    
-                    if (matchTake > 0) {
-                        let employeeShareRatio = baseEmployeeRequiredP1 / correctTargetTotalP1;
-                        let actEmployeePortionP1 = matchTake * employeeShareRatio;
-                        let actEmpPortionP1 = matchTake * (empPortionP1 / correctTargetTotalP1);
-                        
-                        if (options?.inflowsReference?.p1) {
-                            options.inflowsReference.p1.gross += actEmpPortionP1;
-                        }
-                        if (options?.matchTracking) {
-                            options.matchTracking.p1MatchAdded = actEmpPortionP1;
-                            options.matchTracking.totalMatch1 = matchTake;
-                        }
-                        
-                        person1.rrsp += matchTake;
-                        rrspRoom1 -= matchTake;
-                        
-                        // FIX: Only deduct the employee's out-of-pocket payroll cash from your surplus pool!
-                        remaining -= actEmployeePortionP1; 
-                        
-                        if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + matchTake;
-                    }
-                }
-
-                // Handle regular discretionary leftovers up to limits
-                if (remaining > 0 && rrspRoom1 > 0) {
-                    let allowed = isSplit 
-                        ? (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp))
-                        : (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.shared.rrsp));
-
-                    if (allowed > 0) {
-                        let take = Math.min(remaining, rrspRoom1, allowed);
-                        person1.rrsp += take; remaining -= take; rrspRoom1 -= take; actualDeductions.p1 += take;
-                        annualContributed.p1.rrsp += take; annualContributed.shared.rrsp += take;
-                        if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
-                    }
+                if (allowed > 0) {
+                    let take = Math.min(remaining, rrspRoom1, allowed);
+                    person1.rrsp += take; remaining -= take; rrspRoom1 -= take; actualDeductions.p1 += take;
+                    annualContributed.p1.rrsp += take; annualContributed.shared.rrsp += take;
+                    if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
                 }
             }
 
-            // Process Player 2 Matching & Discretionary Contributions
             if (alive2 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) {
-                let p2MatchRate = options?.p2MatchRate || 0;
-                let p2Tier = options?.p2Tier || 0;
-                let isRet2 = options?.isRet2 ?? false;
+                let allowed = isSplit 
+                    ? (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp))
+                    : (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.shared.rrsp));
 
-                let empPortionP2 = (!isRet2) ? (person2.inc * p2MatchRate) : 0;
-                let baseEmployeeRequiredP2 = (!isRet2) ? (person2.inc * p2Tier) : 0;
-
-                if (empPortionP2 > 0 && baseEmployeeRequiredP2 > 0) {
-                    let correctTargetTotalP2 = empPortionP2 + baseEmployeeRequiredP2;
-                    let matchTake = Math.min(remaining, rrspRoom2, correctTargetTotalP2);
-                    
-                    if (matchTake > 0) {
-                        let employeeShareRatio = baseEmployeeRequiredP2 / correctTargetTotalP2;
-                        let actEmployeePortionP2 = matchTake * employeeShareRatio;
-                        let actEmpPortionP2 = matchTake * (empPortionP2 / correctTargetTotalP2);
-                        
-                        if (options?.inflowsReference?.p2) {
-                            options.inflowsReference.p2.gross += actEmpPortionP2;
-                        }
-                        if (options?.matchTracking) {
-                            options.matchTracking.p2MatchAdded = actEmpPortionP2;
-                            options.matchTracking.totalMatch2 = matchTake;
-                        }
-                        
-                        person2.rrsp += matchTake;
-                        rrspRoom2 -= matchTake;
-                        
-                        // FIX: Only deduct the employee's portion from surplus cash pool
-                        remaining -= actEmployeePortionP2;
-                        
-                        if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + matchTake;
-                    }
-                }
-
-                if (remaining > 0 && rrspRoom2 > 0) {
-                    let allowed = isSplit 
-                        ? (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp))
-                        : (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.shared.rrsp));
-
-                    if (allowed > 0) {
-                        let take = Math.min(remaining, rrspRoom2, allowed);
-                        person2.rrsp += take; remaining -= take; rrspRoom2 -= take; actualDeductions.p2 += take;
-                        annualContributed.p2.rrsp += take; annualContributed.shared.rrsp += take;
-                        if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take;
-                    }
+                if (allowed > 0) {
+                    let take = Math.min(remaining, rrspRoom2, allowed);
+                    person2.rrsp += take; remaining -= take; rrspRoom2 -= take; actualDeductions.p2 += take;
+                    annualContributed.p2.rrsp += take; annualContributed.shared.rrsp += take;
+                    if (flowLog) flowLog.contributions.p2.rrsp = (flowLog.contributions.p2.rrsp || 0) + take;
                 }
             }
             continue;
