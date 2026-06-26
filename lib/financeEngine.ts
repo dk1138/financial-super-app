@@ -442,7 +442,7 @@ export class FinanceEngine {
             if (groupA.length === 0 && groupB.length === 0 && groupC.length === 0) return this.runSimulation(detailed, { ...simContext, isMetaRun: true });
 
             let perms = [
-                ...groupA, ...groupB, ...groupC, ...missing], [...groupA, ...groupC, ...groupB, ...missing],
+                [...groupA, ...groupB, ...groupC, ...missing], [...groupA, ...groupC, ...groupB, ...missing],
                 [...groupB, ...groupA, ...groupC, ...missing], [...groupB, ...groupC, ...groupA, ...missing],
                 [...groupC, ...groupA, ...groupB, ...missing], [...groupC, ...groupB, ...groupA, ...missing]
             ];
