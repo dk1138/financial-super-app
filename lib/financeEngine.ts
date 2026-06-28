@@ -472,6 +472,9 @@ export class FinanceEngine {
 
         const currentYear = new Date().getFullYear();
         let netWorthArray: number[] = [], projectionData: any[] = [];
+        
+        // FIXED HIGHER UP: Declare rrifStartAge universally at the top of the simulation block scope
+        const rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
 
         let person1 = { 
             tfsa: this.getVal('p1_tfsa'), tfsa_successor: 0, fhsa: this.getVal('p1_fhsa'), resp: this.getVal('p1_resp'), 
@@ -543,8 +546,8 @@ export class FinanceEngine {
             
             if (!alive1 && !alive2) break;
 
-            if (alive1 && age1 >= (this.CONSTANTS?.RRIF_START_AGE || 72) && person1.rrsp > 0) { person1.rrif_acct += person1.rrsp; person1.rrsp = 0; }
-            if (this.mode === 'Couple' && alive2 && age2 >= (this.CONSTANTS?.RRIF_START_AGE || 72) && person2.rrsp > 0) { person2.rrif_acct += person2.rrsp; person2.rrsp = 0; }
+            if (alive1 && age1 >= rrifStartAge && person1.rrsp > 0) { person1.rrif_acct += person1.rrsp; person1.rrsp = 0; }
+            if (this.mode === 'Couple' && alive2 && age2 >= rrifStartAge && person2.rrsp > 0) { person2.rrif_acct += person2.rrsp; person2.rrsp = 0; }
 
             if (detailed) {
                 flowLog = { contributions: { p1: {tfsa:0, fhsa:0, resp:0, rrsp:0, nonreg:0, cash:0, crypto:0}, p2: {tfsa:0, fhsa:0, rrsp:0, nonreg:0, cash:0, crypto:0}, shared: {spending_cash:0} }, withdrawals: {} };
@@ -637,11 +640,10 @@ export class FinanceEngine {
             let p1RRSPWithdrawn = false;
             let p2RRSPWithdrawn = false;
 
-            const regMins = calcRegMinimums(person1, person2, age1, age2, alive1, alive2, preGrowthRrsp1, preGrowthRrif1, preGrowthRrsp2, preGrowthRrif2, preGrowthLirf1, preGrowthLif1, preGrowthLirf2, preGrowthLif2, this.CONSTANTS?.RRIF_START_AGE || 72);
+            const regMins = calcRegMinimums(person1, person2, age1, age2, alive1, alive2, preGrowthRrsp1, preGrowthRrif1, preGrowthRrsp2, preGrowthRrif2, preGrowthLirf1, preGrowthLif1, preGrowthLirf2, preGrowthLif2, rrifStartAge);
             let wdBreakdown = detailed ? { p1: {} as any, p2: {} as any } : null;
 
             if (this.inputs['fully_optimize_tax'] === true || this.inputs['rrsp_meltdown_enabled'] === true || this.inputs['smart_rrsp_meltdown'] === true) {
-                let rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
                 let bracketTop = this.CONSTANTS.TAX_DATA?.FED?.brackets?.[0] || 55867;
                 let targetBracketCap = bracketTop * baseInflation;
 
@@ -768,13 +770,6 @@ export class FinanceEngine {
 
             const provinceStr = this.getRaw('tax_province');
 
-            let appliedRefundP1Next = pendingRefund.p1 > 0 && alive1 ? pendingRefund.p1 : 0;
-            let appliedRefundP2Next = pendingRefund.p2 > 0 && alive2 ? pendingRefund.p2 : 0;
-
-            let p1_match_added = 0, p2_match_added = 0;
-            let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
-
-            // RE-INITIALIZED HIGHER UP: Move FHSA bounds and deductions context configurations to top of scope 
             let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
             let actualDeductions = { p1: 0, p2: 0 };
 
@@ -972,6 +967,9 @@ export class FinanceEngine {
                 });
             }
 
+            let p1_match_added = 0, p2_match_added = 0;
+            let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
+
             let netSurplus = handleSurplus(
                 cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
                 person1, person2, alive1, alive2, flowLog, i, 
@@ -1020,7 +1018,7 @@ export class FinanceEngine {
                         }, age1, age2, inflows.p1.oas, inflows.p2.oas, oasThresholdInf, { lifMax1, lifMax2 }, 
                         inflows.p1.earned, inflows.p2.earned, baseInflation, divInc1, divInc2, 
                         simContext?.forceOrder || filterDecum(this.strategies.decum), getEligPension1(), getEligPension2(), 
-                        this.inputs, this.CONSTANTS, provinceStr, this.CONSTANTS?.RRIF_START_AGE || 72, 
+                        this.inputs, this.CONSTANTS, provinceStr, rrifStartAge, 
                         expenses + mortgagePayment + rentPayment + debtRepayment,
                         {
                             blockRRSPWithdrawalsP1: p1RRSPContributed,
