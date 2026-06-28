@@ -342,7 +342,7 @@ export class FinanceEngine {
             let startYear, endYear;
             if (stream.startMode === 'ret_relative') {
                 const ownerPerson = stream.owner === 'p2' ? person2 : person1;
-                startYear = ownerPerson.dob.getFullYear() + ownerPerson.retAge + (stream.startRel || 0);
+                startYear = ownerPerson.dob.getFullYear() + ownerPerson.retireAge + (stream.startRel || 0);
             } else {
                 startYear = new Date((stream.start || "2026-01") + "-01").getFullYear();
             }
@@ -473,7 +473,6 @@ export class FinanceEngine {
         const currentYear = new Date().getFullYear();
         let netWorthArray: number[] = [], projectionData: any[] = [];
         
-        // FIXED HIGHER UP: Declare rrifStartAge universally at the top of the simulation block scope
         const rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
 
         let person1 = { 
@@ -966,9 +965,6 @@ export class FinanceEngine {
                     if (direction === 'p2_to_p1') pensionSplitTransfer.p2ToP1 = transferAmount;
                 });
             }
-
-            let p1_match_added = 0, p2_match_added = 0;
-            let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
 
             let netSurplus = handleSurplus(
                 cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
