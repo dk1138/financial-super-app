@@ -671,7 +671,7 @@ export class FinanceEngine {
                         let pull2 = Math.min(room2 * 0.5, person2.rrsp);
                         if (pull2 > 0) {
                             person2.rrsp -= pull2; inflows.p2.rrspMeltdown += pull2; p2RRSPWithdrawn = true;
-                            if (detailed && flowLog) flowLog.withdrawals['P2 RRSP'] = (flowLog.withdrawals['P2 RRSP'] || 0) + pull2;
+                            if (detailed && flowLog) flowLog.withdrawals['P2 RRSP'] = (flowLog.withdrawals['P2 RESP'] || 0) + pull2;
                             if (detailed && wdBreakdown) {
                                 if (!wdBreakdown.p2.RRSP_math) wdBreakdown.p2.RRSP_math = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
                                 wdBreakdown.p2.RRSP = (wdBreakdown.p2.RRSP || 0) + pull2;
@@ -767,6 +767,10 @@ export class FinanceEngine {
             let getEligPension2 = () => inflows.p2.pension + (age2 >= 65 ? (regMins.p2 + regMins.lifTaken2 + (wdBreakdown?.p2?.RRIF || 0) + (wdBreakdown?.p2?.LIF || 0)) : 0);
 
             const provinceStr = this.getRaw('tax_province');
+
+            // PRE-DECLARED FRAME LAYER: Instantiate variables using let so they exist within block scopes
+            let tax1 = alive1 ? calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1) : {totalTax: 0, margRate: 0};
+            let tax2 = alive2 ? calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2) : {totalTax: 0, margRate: 0};
 
             let taxWithoutMatch1 = alive1 ? calculateTaxDetailed(baseGross1 + grossedDiv1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1) : {totalTax: 0, margRate: 0};
             let taxWithoutMatch2 = alive2 ? calculateTaxDetailed(baseGross2 + grossedDiv2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2) : {totalTax: 0, margRate: 0};
@@ -965,7 +969,6 @@ export class FinanceEngine {
             let p1_match_added = 0, p2_match_added = 0;
             let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
 
-            // INITIALIZED: Explicit let declaration bound safely inside the annual loop pass scope
             let netSurplus = handleSurplus(
                 cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
                 person1, person2, alive1, alive2, flowLog, i, 
