@@ -671,7 +671,7 @@ export class FinanceEngine {
                         let pull2 = Math.min(room2 * 0.5, person2.rrsp);
                         if (pull2 > 0) {
                             person2.rrsp -= pull2; inflows.p2.rrspMeltdown += pull2; p2RRSPWithdrawn = true;
-                            if (detailed && flowLog) flowLog.withdrawals['P2 RRSP'] = (flowLog.withdrawals['P2 RESP'] || 0) + pull2;
+                            if (detailed && flowLog) flowLog.withdrawals['P2 RRSP'] = (flowLog.withdrawals['P2 RRSP'] || 0) + pull2;
                             if (detailed && wdBreakdown) {
                                 if (!wdBreakdown.p2.RRSP_math) wdBreakdown.p2.RRSP_math = { wd: 0, tax: 0, acb: 0, gain: 0, priorBal: 0, factor: 0, min: 0 };
                                 wdBreakdown.p2.RRSP = (wdBreakdown.p2.RRSP || 0) + pull2;
@@ -768,7 +768,16 @@ export class FinanceEngine {
 
             const provinceStr = this.getRaw('tax_province');
 
-            // PRE-DECLARED FRAME LAYER: Instantiate variables using let so they exist within block scopes
+            let appliedRefundP1Next = pendingRefund.p1 > 0 && alive1 ? pendingRefund.p1 : 0;
+            let appliedRefundP2Next = pendingRefund.p2 > 0 && alive2 ? pendingRefund.p2 : 0;
+
+            let p1_match_added = 0, p2_match_added = 0;
+            let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
+
+            // RE-INITIALIZED HIGHER UP: Move FHSA bounds and deductions context configurations to top of scope 
+            let actFhsaLim1 = fhsaClosed1 ? 0 : consts.fhsaLimit * baseInflation, actFhsaLim2 = fhsaClosed2 ? 0 : consts.fhsaLimit * baseInflation;
+            let actualDeductions = { p1: 0, p2: 0 };
+
             let tax1 = alive1 ? calculateTaxDetailed(craTaxableIncome1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? craTaxableIncome2 : -1, isEligibleDividend, credits1) : {totalTax: 0, margRate: 0};
             let tax2 = alive2 ? calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2) : {totalTax: 0, margRate: 0};
 
@@ -962,12 +971,6 @@ export class FinanceEngine {
                     if (direction === 'p2_to_p1') pensionSplitTransfer.p2ToP1 = transferAmount;
                 });
             }
-
-            let appliedRefundP1Next = pendingRefund.p1 > 0 && alive1 ? pendingRefund.p1 : 0;
-            let appliedRefundP2Next = pendingRefund.p2 > 0 && alive2 ? pendingRefund.p2 : 0;
-
-            let p1_match_added = 0, p2_match_added = 0;
-            let matchTracking = { p1MatchAdded: 0, totalMatch1: 0, p2MatchAdded: 0, totalMatch2: 0 };
 
             let netSurplus = handleSurplus(
                 cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
