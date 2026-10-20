@@ -488,11 +488,19 @@ export default function StrategyTab() {
                     <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">4. Engine Optimizations</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
+                    {/* 1. SMART RRSP MELTDOWN */}
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-primary">
                         <div className="flex-grow-1 pe-md-3">
-                            <h6 className="fw-bold mb-2 text-success text-uppercase ls-1 d-flex align-items-center">
-                                <i className="bi bi-magic me-2 fs-5"></i> Smart RRSP Meltdown & Tax Optimizer
-                            </h6>
+                            <div className="d-flex align-items-center mb-1">
+                                <h6 className="fw-bold mb-0 text-success text-uppercase ls-1 d-flex align-items-center">
+                                    <i className="bi bi-magic me-2 fs-5"></i> Smart RRSP Meltdown & Tax Optimizer
+                                </h6>
+                                <InfoBtn 
+                                    align="right" 
+                                    title="Smart RRSP Meltdown & Tax Optimizer" 
+                                    text="Overrides your default retirement decumulation order to mathematically minimize lifetime taxes. Proactively draws down RRSP/RRIF funds early during lower-income retirement years to fill lower marginal tax brackets before mandatory RRIF minimums start at age 72." 
+                                />
+                            </div>
                             <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
                                 Overrides your retirement decumulation order to mathematically minimize lifetime taxes. Proactively draws down RRSPs early to perfectly fill lower brackets.
                             </p>
@@ -502,35 +510,63 @@ export default function StrategyTab() {
                         </div>
                     </div>
 
+                    {/* 2. AVOID OAS CLAWBACKS */}
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-info">
                         <div className="flex-grow-1 pe-md-3">
-                            <h6 className="fw-bold mb-2 text-info text-uppercase ls-1 d-flex align-items-center">
-                                <i className="bi bi-shield-check me-2 fs-5"></i> Avoid OAS Clawbacks
-                            </h6>
+                            <div className="d-flex align-items-center mb-1">
+                                <h6 className="fw-bold mb-0 text-info text-uppercase ls-1 d-flex align-items-center">
+                                    <i className="bi bi-shield-check me-2 fs-5"></i> Avoid OAS Clawbacks
+                                </h6>
+                                <InfoBtn 
+                                    align="right" 
+                                    title="Avoid OAS Clawbacks" 
+                                    text="Dynamically limits taxable registered withdrawals (RRSP/RRIF) to keep your net annual income below the CRA Old Age Security pension recovery threshold, preventing painful OAS benefit clawbacks." 
+                                />
+                            </div>
+                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
+                                Automatically caps taxable withdrawals to keep net income below the CRA recovery threshold and preserve your full OAS pension.
+                            </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
                             <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.oas_clawback_optimize ?? false} onChange={(e) => updateInput('oas_clawback_optimize', e.target.checked)} />
                         </div>
                     </div>
 
+                    {/* 3. VARIABLE SPENDING GUARDRAILS */}
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-warning">
                         <div className="flex-grow-1 pe-md-3">
-                            <h6 className="fw-bold mb-2 text-warning text-uppercase ls-1 d-flex align-items-center">
-                                <i className="bi bi-arrow-down-up me-2 fs-5"></i> Variable Spending (Guardrails)
-                            </h6>
+                            <div className="d-flex align-items-center mb-1">
+                                <h6 className="fw-bold mb-0 text-warning text-uppercase ls-1 d-flex align-items-center">
+                                    <i className="bi bi-arrow-down-up me-2 fs-5"></i> Variable Spending (Guardrails)
+                                </h6>
+                                <InfoBtn 
+                                    align="right" 
+                                    title="Variable Spending (Guardrails)" 
+                                    text="Applies dynamic Guyton-Klinger style spending guardrails. When portfolio capital dips under market distress, discretionary lifestyle spending is trimmed by 10% to protect portfolio longevity, and automatically restored once markets recover." 
+                                />
+                            </div>
+                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
+                                Implements dynamic spending guardrails by temporarily trimming lifestyle spending during bear markets and restoring it upon recovery.
+                            </p>
                         </div>
                         <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
                             <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.enable_guardrails ?? false} onChange={(e) => updateInput('enable_guardrails', e.target.checked)} />
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-primary">
+                    {/* 4. ANNUAL LIF-TO-RRIF TRANSFER */}
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-primary">
                         <div className="flex-grow-1 pe-md-3">
-                            <h6 className="fw-bold mb-2 text-primary text-uppercase ls-1 d-flex align-items-center">
-                                <i className="bi bi-unlock me-2 fs-5"></i> Annual LIF-to-RRIF Transfer
-                            </h6>
+                            <div className="d-flex align-items-center mb-1">
+                                <h6 className="fw-bold mb-0 text-primary text-uppercase ls-1 d-flex align-items-center">
+                                    <i className="bi bi-unlock me-2 fs-5"></i> Annual LIF-to-RRIF Transfer
+                                </h6>
+                                <InfoBtn 
+                                    align="right" 
+                                    title="Annual LIF-to-RRIF Transfer" 
+                                    text="Transfers the annual difference between your LIF statutory maximum and mandatory minimum directly into your unlocked RRIF. This transfer is tax-deferred under CRA ITA 60(l) (Form T2033, offset on Line 23200), steadily shifting locked-in funds into regular RRIF assets that have no future maximum withdrawal ceiling." 
+                                />
+                            </div>
                             <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
                                 Transfers the annual difference between your LIF statutory maximum and minimum into your unlocked RRIF (tax-deferred under ITA 60(l)), steadily unlocking future liquidity.
                             </p>
@@ -539,6 +575,7 @@ export default function StrategyTab() {
                             <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.lif_to_rrif_transfer ?? false} onChange={(e) => updateInput('lif_to_rrif_transfer', e.target.checked)} />
                         </div>
                     </div>
+                </div>
 
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1 d-flex flex-column">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card flex-shrink-0">
