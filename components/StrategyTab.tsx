@@ -480,7 +480,7 @@ export default function StrategyTab() {
             </div>
         </div>
 
-        {/* --- SECTION 4 & 5: OPTIMIZATIONS & EXCEPTIONS --- */}
+       {/* --- SECTION 4 & 5: OPTIMIZATIONS & EXCEPTIONS --- */}
         <div className="col-12 col-xl-7 d-flex flex-column gap-4">
             <div className="rp-card border border-secondary rounded-4 shadow-sm">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
@@ -576,6 +576,7 @@ export default function StrategyTab() {
                         </div>
                     </div>
                 </div>
+            </div>
 
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1 d-flex flex-column">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card flex-shrink-0">
