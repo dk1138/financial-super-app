@@ -26,9 +26,8 @@ const CarLease = dynamic(() => import('./optimizers/CarLease'), { ssr: false });
 const MortgageAffordability = dynamic(() => import('./optimizers/MortgageAffordability'), { ssr: false });
 const CPPImporter = dynamic(() => import('./optimizers/CPPImporter'), { ssr: false });
 const BuyVsRentAnalyzer = dynamic(() => import('./optimizers/BuyVsRentAnalyzer'), { ssr: false });
-
-// NEW IMPORT
 const ReverseMortgage = dynamic(() => import('./optimizers/ReverseMortgage'), { ssr: false });
+const LIFtoRRIFOptimizer = dynamic(() => import('./optimizers/LIFtoRRIFOptimizer'), { ssr: false });
 
 export default function OptimizersTab() {
   const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash');
@@ -36,8 +35,7 @@ export default function OptimizersTab() {
   
   const toolCategories = [
     { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv', 'pensionbb'] },
-    // ADDED 'tfsa-room' TO THIS CATEGORY
-    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'ccb', 'fhsa', 'resp', 'medical'] },
+    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'lif-unlock', 'ccb', 'fhsa', 'resp', 'medical'] },
     { title: "Business & Income", keys: ['sidehustle'] },
     { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal', 'reversemortgage'] },
     { title: "Data Importers", keys: ['cppimport'] }
@@ -57,8 +55,8 @@ export default function OptimizersTab() {
           case 'sweetspot': ContentComponent = <RRSPSweetSpot />; break;
           case 'grossup': ContentComponent = <RRSPGrossUp />; break;
           case 'tfsavsrrsp': ContentComponent = <TFSAvsRRSP />; break;
-          // NEW CASE
           case 'tfsa-room': ContentComponent = <TFSARoomCalculator />; break;
+          case 'lif-unlock': ContentComponent = <LIFtoRRIFOptimizer />; break;
           case 'ccb': ContentComponent = <CCBMaximizer />; break;
           case 'resp': ContentComponent = <RESPMaximizer />; break;
           case 'fhsa': ContentComponent = <FHSAvsRRSP />; break;

@@ -526,6 +526,20 @@ export default function StrategyTab() {
                 </div>
             </div>
 
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start align-items-lg-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-4 transition-all hover-border-primary">
+                        <div className="flex-grow-1 pe-md-3">
+                            <h6 className="fw-bold mb-2 text-primary text-uppercase ls-1 d-flex align-items-center">
+                                <i className="bi bi-unlock me-2 fs-5"></i> Annual LIF-to-RRIF Transfer
+                            </h6>
+                            <p className="small text-muted mb-0" style={{lineHeight: 1.5}}>
+                                Transfers the annual difference between your LIF statutory maximum and minimum into your unlocked RRIF (tax-deferred under ITA 60(l)), steadily unlocking future liquidity.
+                            </p>
+                        </div>
+                        <div className="form-check form-switch mb-0 flex-shrink-0 mt-2 mt-md-0 d-flex align-items-center justify-content-end">
+                            <input className="form-check-input mt-0 cursor-pointer shadow-none border-secondary" style={{width: '3em', height: '1.5em'}} type="checkbox" checked={data.inputs.lif_to_rrif_transfer ?? false} onChange={(e) => updateInput('lif_to_rrif_transfer', e.target.checked)} />
+                        </div>
+                    </div>
+
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1 d-flex flex-column">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card flex-shrink-0">
                     <i className="bi bi-x-octagon text-danger fs-4 me-3"></i>

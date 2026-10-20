@@ -788,6 +788,41 @@ export class FinanceEngine {
             let lifMax2 = (preGrowthLirf2 + preGrowthLif2) * getLifMaxFactor(age2 - 1, provinceStr);
             lifMax1 = Math.max(0, lifMax1 - regMins.lifTaken1); lifMax2 = Math.max(0, lifMax2 - regMins.lifTaken2);
 
+            if (this.inputs.lif_to_rrif_transfer) {
+                if (alive1 && age1 >= 55 && lifMax1 > 0) {
+                    let availLif1 = (person1.lif || 0) + (age1 >= rrifStartAge ? (person1.lirf || 0) : 0);
+                    let transfer1 = Math.min(availLif1, lifMax1);
+                    if (transfer1 > 0) {
+                        let fromLif = Math.min(person1.lif || 0, transfer1);
+                        person1.lif -= fromLif;
+                        let fromLirf = transfer1 - fromLif;
+                        if (fromLirf > 0) person1.lirf -= fromLirf;
+                        person1.rrif_acct = (person1.rrif_acct || 0) + transfer1;
+                        lifMax1 -= transfer1;
+                        if (detailed && !trackedEvents.has('LIF Unlocked to RRIF (P1)')) {
+                            trackedEvents.add('LIF Unlocked to RRIF (P1)');
+                            inflows.events.push('LIF Unlocked to RRIF (P1)');
+                        }
+                    }
+                }
+                if (alive2 && age2 >= 55 && lifMax2 > 0) {
+                    let availLif2 = (person2.lif || 0) + (age2 >= rrifStartAge ? (person2.lirf || 0) : 0);
+                    let transfer2 = Math.min(availLif2, lifMax2);
+                    if (transfer2 > 0) {
+                        let fromLif = Math.min(person2.lif || 0, transfer2);
+                        person2.lif -= fromLif;
+                        let fromLirf = transfer2 - fromLif;
+                        if (fromLirf > 0) person2.lirf -= fromLirf;
+                        person2.rrif_acct = (person2.rrif_acct || 0) + transfer2;
+                        lifMax2 -= transfer2;
+                        if (detailed && !trackedEvents.has('LIF Unlocked to RRIF (P2)')) {
+                            trackedEvents.add('LIF Unlocked to RRIF (P2)');
+                            inflows.events.push('LIF Unlocked to RRIF (P2)');
+                        }
+                    }
+                }
+            }
+            
             const outflowsObj = this.calcOutflows(yr, i, age1, baseInflation, isRet1, isRet2, simContext, currentExpenseHaircut);
             let expenses = outflowsObj.total; const activeExpensePhases = outflowsObj.activePhases;
 
