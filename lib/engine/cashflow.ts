@@ -1,28 +1,72 @@
-export function applyPensionSplitting(ti1: number, ti2: number, inflows: any, regMins: any, age1: number, age2: number, applyFn: Function) {
-    let p1Eligible = inflows.p1.pension + (age1 >= 65 ? regMins.p1 + regMins.lifTaken1 : 0);
-    let p2Eligible = inflows.p2.pension + (age2 >= 65 ? regMins.p2 + regMins.lifTaken2 : 0);
+export function calcTaxableCapitalGain(gain: number, priorGainInYear: number = 0): number {
+    if (gain <= 0) return 0;
+    const threshold = 250000;
+    const start = priorGainInYear;
+    const end = priorGainInYear + gain;
 
-    if (ti1 >= ti2 && p1Eligible > 0) {
-        let maxTransfer = p1Eligible * 0.50; 
-        let diff = ti1 - ti2;
-        let transferToEqualize = diff / 2; 
-        
-        let p2Shortfall = Math.max(0, 2000 - p2Eligible);
-        let optimalTransfer = Math.max(transferToEqualize, p2Shortfall);
-        
-        let transfer = Math.min(maxTransfer, optimalTransfer);
-        if (transfer > 0) applyFn(ti1 - transfer, ti2 + transfer, transfer, 'p1_to_p2');
-        
-    } else if (ti2 >= ti1 && p2Eligible > 0) {
-        let maxTransfer = p2Eligible * 0.50; 
-        let diff = ti2 - ti1;
-        let transferToEqualize = diff / 2; 
-        
-        let p1Shortfall = Math.max(0, 2000 - p1Eligible);
-        let optimalTransfer = Math.max(transferToEqualize, p1Shortfall);
+    if (end <= threshold) {
+        return gain * 0.50;
+    } else if (start >= threshold) {
+        return gain * (2 / 3);
+    } else {
+        const tier1Gain = threshold - start;
+        const tier2Gain = end - threshold;
+        return (tier1Gain * 0.50) + (tier2Gain * (2 / 3));
+    }
+}
 
-        let transfer = Math.min(maxTransfer, optimalTransfer);
-        if (transfer > 0) applyFn(ti1 + transfer, ti2 - transfer, transfer, 'p2_to_p1');
+export function applyPensionSplitting(
+    ti1: number, ti2: number, inflows: any, regMins: any, 
+    age1: number, age2: number, applyFn: Function,
+    wdBreakdown?: any
+) {
+    // Eligible pension income under CRA rules (ITA s. 60.03):
+    // 1. Lifetime DB company pensions (any age / 55+)
+    // 2. RRIF & LIF withdrawals (strictly age 65 or older)
+    const p1RrifLif = age1 >= 65 
+        ? ((regMins?.p1 || 0) + (regMins?.lifTaken1 || 0) + (wdBreakdown?.p1?.RRIF || 0) + (wdBreakdown?.p1?.LIF || 0)) 
+        : 0;
+    const p2RrifLif = age2 >= 65 
+        ? ((regMins?.p2 || 0) + (regMins?.lifTaken2 || 0) + (wdBreakdown?.p2?.RRIF || 0) + (wdBreakdown?.p2?.LIF || 0)) 
+        : 0;
+
+    let p1Eligible = (inflows?.p1?.pension || 0) + p1RrifLif;
+    let p2Eligible = (inflows?.p2?.pension || 0) + p2RrifLif;
+
+    if (ti1 > ti2 && p1Eligible > 0) {
+        let maxTransfer = p1Eligible * 0.50; // CRA statutory 50% maximum limit
+        let incomeDiff = ti1 - ti2;
+        let transferToEqualize = incomeDiff / 2;
+        
+        // Target \$2,000 of pension income for P2 to unlock the federal Pension Income Tax Credit (Line 31400)
+        let p2CreditTarget = p2Eligible < 2000 ? (2000 - p2Eligible) : 0;
+        let optimalTransfer = Math.max(transferToEqualize, p2CreditTarget);
+
+        // Never transfer so much that P2 ends up with higher taxable income than P1
+        if (ti1 - optimalTransfer < ti2 + optimalTransfer) {
+            optimalTransfer = Math.max(0, transferToEqualize);
+        }
+        optimalTransfer = Math.min(maxTransfer, Math.max(0, optimalTransfer));
+
+        if (optimalTransfer > 0) {
+            applyFn(ti1 - optimalTransfer, ti2 + optimalTransfer, optimalTransfer, 'p1_to_p2');
+        }
+    } else if (ti2 > ti1 && p2Eligible > 0) {
+        let maxTransfer = p2Eligible * 0.50;
+        let incomeDiff = ti2 - ti1;
+        let transferToEqualize = incomeDiff / 2;
+        
+        let p1CreditTarget = p1Eligible < 2000 ? (2000 - p1Eligible) : 0;
+        let optimalTransfer = Math.max(transferToEqualize, p1CreditTarget);
+
+        if (ti2 - optimalTransfer < ti1 + optimalTransfer) {
+            optimalTransfer = Math.max(0, transferToEqualize);
+        }
+        optimalTransfer = Math.min(maxTransfer, Math.max(0, optimalTransfer));
+
+        if (optimalTransfer > 0) {
+            applyFn(ti1 + optimalTransfer, ti2 - optimalTransfer, optimalTransfer, 'p2_to_p1');
+        }
     }
 }
 
@@ -207,7 +251,7 @@ export function handleSurplus(
         if (acct === 'resp') {
             let target = respLim;
             if (alive1 && target > 0) { let take = Math.min(remaining, target); person1.resp += take; remaining -= take; target -= take; if (flowLog) flowLog.contributions.p1.resp = (flowLog.contributions.p1.resp || 0) + take; }
-            if (alive2 && target > 0 && remaining > 0) { let take = Math.min(remaining, target); person2.resp += take; remaining -= take; if (flowLog) flowLog.contributions.p2.resp = (flowLog.contributions.p2.resp || 0) + take; }
+            if (alive2 && target > 0 && remaining > 0) { let take = Math.min(remaining, target); person2.resp += take; remaining -= take; target -= take; if (flowLog) flowLog.contributions.p2.resp = (flowLog.contributions.p2.resp || 0) + take; }
             continue;
         }
 
@@ -310,6 +354,9 @@ export function handleDeficit(
     let householdCash = (alive1 ? person1.cash : 0) + (alive2 ? person2.cash : 0);
     let availableHouseholdCash = Math.max(0, householdCash - protectedCash);
 
+    // Track annual cumulative capital gains per person for the \$250k Budget 2024 inclusion threshold
+    let annualRealizedGains: Record<string, number> = { p1: 0, p2: 0 };
+
     const executePull = (p: any, prefix: string, acct: string, maxSlice?: number): number => {
         if (remainingDeficit <= 0) return 0;
         if (acct === 'rrsp') {
@@ -372,7 +419,11 @@ export function handleDeficit(
                 p[acbKey] = Math.max(0, currentAcb - acbDisposed);
                 wdBreakdown[prefix][logKey + '_math'].acb += acbDisposed;
                 wdBreakdown[prefix][logKey + '_math'].gain += gain;
-                let taxableGain = gain * 0.5;
+                
+                // CRA Budget 2024 Rule: 50% inclusion on first \$250k; 66.67% (2/3) on gains above \$250k
+                let taxableGain = calcTaxableCapitalGain(gain, annualRealizedGains[prefix] || 0);
+                annualRealizedGains[prefix] = (annualRealizedGains[prefix] || 0) + gain;
+                
                 wdBreakdown[prefix][logKey + '_math'].tax += taxableGain;
                 addTaxFn(prefix, taxableGain, pullAmount); 
             } else if (isTaxable) {

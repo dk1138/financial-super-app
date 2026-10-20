@@ -43,12 +43,32 @@ export function calculateProgressiveTax(income: number, brackets: number[], rate
     };
 }
 
-export function calculateTaxDetailed(craTaxableIncome: number, province: string, taxData: any, constants: any, oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, isEligibleDividend = true, credits: any = {}) {
+/**
+ * Estimates Alternative Minimum Tax (AMT) under Federal Bill C-59 rules:
+ * - Basic exemption indexed to federal 4th bracket (~$173,205)
+ * - 20.5% AMT flat tax rate
+ * - 100% capital gains inclusion
+ */
+export function estimateFederalAMT(craTaxableIncome: number, standardFedTax: number, baseInflation: number = 1, totalRealizedCapitalGains: number = 0): number {
+    const amtExemption = (173205) * baseInflation;
+    // Regular taxable income already includes 50% (or tiered) of capital gains; AMT includes 100%
+    const additionalGainUnderAMT = totalRealizedCapitalGains * 0.50; 
+    const amtBase = Math.max(0, (craTaxableIncome + additionalGainUnderAMT) - amtExemption);
+    const tentativeAMT = amtBase * 0.205;
+    return Math.max(0, tentativeAMT - standardFedTax);
+}
+
+export function calculateTaxDetailed(
+    craTaxableIncome: number, province: string, taxData: any, constants: any, 
+    oasReceived = 0, oasThreshold = 0, earnedIncome = 0, baseInflation = 1, 
+    actualDividendIncome = 0, age = 0, eligiblePension = 0, spouseIncome = -1, 
+    isEligibleDividend = true, credits: any = {}, totalRealizedCapitalGains = 0
+) {
     if (craTaxableIncome <= 0) {
         return { 
             fed: 0, prov: 0, cppPremium: 0, cpp2Premium: 0, eiPremium: 0, cpp_ei: 0, oas_clawback: 0, totalTax: 0, margRate: 0, 
             nrtc: { donations: 0, caregiver: 0, medical: 0, homeBuyer: 0, disability: 0, age: 0, pension: 0 }, 
-            rtc: { transit: 0 }, surtax: 0, ohp: 0,
+            rtc: { transit: 0 }, surtax: 0, ohp: 0, amt: 0,
             nrtcDetails: {}, rtcDetails: {},
             utilizedFedNrtc: 0, utilizedProvNrtc: 0, utilizedNrtcTotal: 0
         };
@@ -120,7 +140,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         fedBpa = Math.max(bpaMin, bpaMax - reduction);
     }
     
-    let provBpaAmounts = constants.PROV_BPA || { 'ON': 12399 }; 
+    let provBpaAmounts = constants.PROV_BPA || { 'ON': 12399, 'BC': 12580, 'AB': 21885 }; 
     let provBpa = (provBpaAmounts[province] || 15000) * baseInflation;
 
     let lowestFedRate = fedRates[0]; 
@@ -175,6 +195,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         provAgeCredit = provAgeAmt * provRateLowest; 
     }
     
+    // Pension Income Amount Credit (Line 31400): Up to $2,000 eligible pension
     let fedPensionCredit = 0; let provPensionCredit = 0;
     if (eligiblePension > 0) {
         fedPensionCredit = Math.min(eligiblePension, constants.FED_PENSION_AMOUNT || 2000) * lowestFedRate;
@@ -358,7 +379,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
 
     fedTax = Math.max(0, fedTax - fedDividendCredit);
     
-    if (province === 'QC' && taxData.QC.abatement) {
+    if (province === 'QC' && taxData.QC?.abatement) {
         fedTax = Math.max(0, fedTax - (fedTax * taxData.QC.abatement));
     }
 
@@ -369,6 +390,12 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         let eligibleTransit = Math.min(credits.transit * baseInflation, maxTransitExpense);
         provTransitCredit = eligibleTransit * (constants.ON_SENIORS_TRANSIT_RATE || 0.15);
         provTax -= provTransitCredit; 
+    }
+
+    // --- ALTERNATIVE MINIMUM TAX (AMT) ESTIMATION ---
+    const amtPayable = estimateFederalAMT(craTaxableIncome, fedTax, baseInflation, totalRealizedCapitalGains);
+    if (amtPayable > 0) {
+        fedTax += amtPayable;
     }
 
     let actualMargRate = fedMarginalRate + provMarginalRate;
@@ -386,6 +413,7 @@ export function calculateTaxDetailed(craTaxableIncome: number, province: string,
         oas_clawback: oasClawback, 
         surtax: ontarioSurtaxAmt, 
         ohp: ontarioHealthPremium, 
+        amt: amtPayable,
         totalTax: fedTax + provTax + cppBasePremium + cppEnhancedPremium + cppTier2Premium + eiPremium + oasClawback, 
         margRate: actualMargRate,
         utilizedFedNrtc,

@@ -1,3 +1,8 @@
+// lib/types.ts
+
+export type RegisteredAccountType = 'tfsa' | 'rrsp' | 'fhsa' | 'resp' | 'lirf' | 'lif' | 'rrif_acct';
+export type AccountType = RegisteredAccountType | 'nonreg' | 'cash' | 'crypto';
+
 export interface ExpenseItem {
     name: string;
     curr: number;
@@ -67,12 +72,23 @@ export interface AdditionalIncome {
 export interface CustomAsset {
     owner: 'p1' | 'p2';
     name: string;
-    type: 'tfsa' | 'rrsp' | 'fhsa' | 'nonreg' | 'cash' | 'crypto' | 'lirf' | 'lif' | 'rrif_acct' | 'resp';
+    type: AccountType;
     balance: number;
-    acb?: number; // Only relevant for nonreg and crypto
-    yield?: number; // Only relevant for nonreg and crypto
+    acb?: number;    // Relevant for nonreg and crypto
+    yield?: number;  // Relevant for nonreg and crypto
     rate: number;
     retireRate: number;
+}
+
+export interface PlanStrategies {
+    accum: string[];
+    shortfall: string[];
+    decum: string[];
+}
+
+export interface PensionSplitTransfer {
+    p1ToP2: number;
+    p2ToP1: number;
 }
 
 export interface PlanData {
@@ -87,11 +103,7 @@ export interface PlanData {
     leaves: any[];
     dependents: Dependent[];
     debt: Debt[];
-    strategies: {
-        accum: string[];
-        shortfall?: string[]; // Added to fix StrategyTab compilation error
-        decum: string[];
-    };
+    strategies: PlanStrategies;
     expensesByCategory: Record<string, ExpenseCategory>;
     constants?: any;
     taxCredits?: any; 
@@ -100,6 +112,8 @@ export interface PlanData {
 export interface SimulationDashboard {
     finalNetWorth: number;
     totalTax: number;
+    totalInflows?: number;
+    totalOutflows?: number;
 }
 
 export interface SimulationResult {
