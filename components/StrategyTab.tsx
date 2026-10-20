@@ -480,6 +480,7 @@ export default function StrategyTab() {
             </div>
         </div>
 
+
         {/* --- SECTION 4 & 5: OPTIMIZATIONS & EXCEPTIONS --- */}
         <div className="col-12 col-xl-7 d-flex flex-column gap-4">
             <div className="rp-card border border-secondary rounded-4 shadow-sm">
