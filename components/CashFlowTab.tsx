@@ -8,25 +8,26 @@ export default function CashFlowTab() {
   const { data, results } = useFinance();
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [isPlaying, setIsPlaying] = useState(false);
+  const [detailedMode, setDetailedMode] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{ id: string; x: number; y: number } | null>(null);
   const [viewMode, setViewMode] = useState<'sankey' | 'ledger'>('sankey');
-  const [detailedMode, setDetailedMode] = useState<boolean>(false);
-  
-  const [tooltip, setTooltip] = useState<{ id: string, x: number, y: number } | null>(null);
+
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
-  const isCouple = data.mode === 'Couple';
-
-  // Resolve dynamic custom player names
-  const p1Name = data.inputs.p1_name || 'Player 1';
-  const p2Name = data.inputs.p2_name || 'Player 2';
-  const p1Upper = p1Name.toUpperCase();
-  const p2Upper = p2Name.toUpperCase();
+  const startYear = results?.timeline?.[0]?.year || new Date().getFullYear();
+  const endYear = results?.timeline?.[results.timeline.length - 1]?.year || (startYear + 40);
 
   useEffect(() => {
-      let interval: any;
-      if (isPlaying && results?.timeline) {
-          const endYear = results.timeline[results.timeline.length - 1].year;
+      if (results?.timeline && results.timeline.length > 0) {
+          const valid = results.timeline.some((y: any) => y.year === selectedYear);
+          if (!valid) setSelectedYear(results.timeline[0].year);
+      }
+  }, [results, selectedYear]);
+
+  useEffect(() => {
+      let interval: NodeJS.Timeout;
+      if (isPlaying) {
           interval = setInterval(() => {
               setSelectedYear(prev => {
                   if (prev >= endYear) {
@@ -38,27 +39,28 @@ export default function CashFlowTab() {
           }, 800);
       }
       return () => clearInterval(interval);
-  }, [isPlaying, results]);
+  }, [isPlaying, endYear]);
 
   if (!results || !results.timeline || results.timeline.length === 0) {
-    return (
-      <div className="p-5 text-center text-muted">
-        <i className="bi bi-diagram-3 fs-1 mb-3 d-block text-primary opacity-50"></i>
-        <h5>Waiting for calculation...</h5>
-      </div>
-    );
+      return (
+          <div className="p-5 text-center text-muted">
+              <i className="bi bi-diagram-3 fs-1 mb-3 opacity-50 d-block"></i>
+              <h5>No Cash Flow Data Available</h5>
+              <p className="small">Please configure your plan parameters and check back.</p>
+          </div>
+      );
   }
 
-  const startYear = results.timeline[0].year;
-  const endYear = results.timeline[results.timeline.length - 1].year;
-  const currentVal = Math.max(startYear, Math.min(endYear, selectedYear));
+  const currentVal = selectedYear;
   const yData = results.timeline.find((y: any) => y.year === currentVal) || results.timeline[0];
 
-  const baseYear = startYear;
-  
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+  const isCouple = data.mode === 'Couple';
+
   const rawInf = data.inputs?.inflation_rate;
   const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
-  
+
   const useRealDollars = Boolean(
       data.useRealDollars === true || 
       data.inputs?.todays_dollars === true || 
@@ -68,35 +70,28 @@ export default function CashFlowTab() {
 
   const getRealValue = (nominalValue: number) => {
       if (!useRealDollars) return nominalValue;
-      const yearsOut = Math.max(0, yData.year - baseYear);
+      const yearsOut = Math.max(0, currentVal - startYear);
       return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
 
   const formatCurrency = (val: number) => {
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
+      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
   };
 
   const getPhaseBadge = () => {
-      const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-      const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
-      const p1Age = yData.p1Age || 0;
-      const p2Age = isCouple ? (yData.p2Age || 0) : p1Age;
+      const p1Ret = Number(data.inputs.p1_retireAge) || 60;
+      const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 60) : p1Ret;
+      const isP1Ret = (yData.p1Age || yData.ageP1) >= p1Ret;
+      const isP2Ret = isCouple ? (yData.p2Age || yData.ageP2) >= p2Ret : true;
 
-      const isP1Ret = p1Age >= p1Ret;
-      const isP2Ret = isCouple ? p2Age >= p2Ret : true;
-
-      if (!isP1Ret && !isP2Ret) {
-          return <span className="badge bg-secondary bg-opacity-25 text-secondary border border-secondary px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-briefcase-fill me-2"></i> Working</span>;
-      }
-      if (isCouple && (isP1Ret !== isP2Ret)) {
-          return <span className="badge bg-info bg-opacity-25 text-info border border-info px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-arrow-left-right me-2"></i> Transition</span>;
-      }
+      if (!isP1Ret && !isP2Ret) return <span className="badge bg-primary bg-opacity-25 text-primary border border-primary px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-briefcase-fill me-2"></i> Accumulation Phase</span>;
+      if (isP1Ret !== isP2Ret) return <span className="badge bg-info bg-opacity-25 text-info border border-info px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-hourglass-split me-2"></i> Semi-Retired Transition</span>;
+      
+      const maxAge = isCouple ? Math.max(yData.p1Age || 0, yData.p2Age || 0) : (yData.p1Age || yData.ageP1);
+      const gogo = Number(data.inputs.exp_gogo_age) || 75;
+      const slowgo = Number(data.inputs.exp_slow_age) || 85;
 
       if (data.expenseMode === 'Advanced') {
-          const maxAge = isCouple ? Math.max(p1Age, p2Age) : p1Age;
-          const gogo = Number(data.inputs.exp_gogo_age) || 75;
-          const slowgo = Number(data.inputs.exp_slow_age) || 85;
-
           if (maxAge <= gogo) return <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-airplane-fill me-2"></i> Go-Go Phase</span>;
           if (maxAge <= slowgo) return <span className="badge bg-warning bg-opacity-25 text-warning border border-warning px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-car-front-fill me-2"></i> Slow-Go Phase</span>;
           return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2 rounded-1 shadow-sm d-flex align-items-center"><i className="bi bi-house-heart-fill me-2"></i> No-Go Phase</span>;
@@ -423,7 +418,8 @@ export default function CashFlowTab() {
           top: Math.max(10, tooltip.y - 30),
           left: isRightHalf ? 'auto' : tooltip.x + 20,
           right: isRightHalf ? chartWidth - tooltip.x + 20 : 'auto',
-          minWidth: '250px',
+          minWidth: '260px',
+          maxWidth: '340px',
           backgroundColor: 'var(--bg-card)',
           zIndex: 1050,
           pointerEvents: 'none',
@@ -432,21 +428,197 @@ export default function CashFlowTab() {
       };
 
       const lookUpKey = meta.parentId || meta.id;
-      let items = nodeBreakdowns[lookUpKey]?.filter((b: any) => b.isDivider || b.isHeader || Math.abs(b.val) > 1) || [];
-      
-      if (detailedMode && meta.parentId) {
-          items = items.filter((b: any) => b.label === meta.label);
-      }
+      let items: any[] = [];
 
-      let completeTaxItems = [...taxItems];
-      if (savingsItems.length > 0) {
-          completeTaxItems.push({ isDivider: true });
-          completeTaxItems.push({ label: 'Tax Reductions Applied', isHeader: true });
-          completeTaxItems = completeTaxItems.concat(savingsItems);
+      if (detailedMode && (meta.parentId === 'exp' || meta.id.startsWith('exp') || meta.label === 'Base Lifestyle')) {
+          // 1. In detailed mode, break down Base Lifestyle into its constituent budget categories & active phases
+          const p1Ret = Number(data.inputs?.p1_retireAge) || 60;
+          const p2Ret = isCouple ? (Number(data.inputs?.p2_retireAge) || 60) : p1Ret;
+          const isRet1 = (yData.p1Age || yData.ageP1) >= p1Ret;
+          const isRet2 = isCouple ? (yData.p2Age || yData.ageP2) >= p2Ret : true;
+          const isFullyRet = isRet1 && isRet2;
+          const maxAge = isCouple ? Math.max(yData.p1Age || 0, yData.p2Age || 0) : (yData.p1Age || yData.ageP1);
+          const gogoLimit = parseInt(data.inputs?.exp_gogo_age) || 75;
+          const slowLimit = parseInt(data.inputs?.exp_slow_age) || 85;
+
+          let expPhaseKey: 'curr' | 'ret' | 'gogo' | 'slow' | 'nogo' = 'curr';
+          if (data.expenseMode === 'Simple') {
+              expPhaseKey = isFullyRet ? 'ret' : 'curr';
+          } else {
+              if (!isFullyRet) expPhaseKey = 'curr';
+              else if (maxAge <= gogoLimit) expPhaseKey = 'gogo';
+              else if (maxAge <= slowLimit) expPhaseKey = 'slow';
+              else expPhaseKey = 'nogo';
+          }
+
+          const yearsFromStart = Math.max(0, currentVal - startYear);
+          const nominalInfFactor = Math.pow(1 + inflation, yearsFromStart);
+
+          const catLabels: Record<string, string> = {
+              housing: 'Housing & Utilities',
+              transport: 'Transportation',
+              lifestyle: 'Lifestyle & Leisure',
+              essentials: 'Essentials & Groceries',
+              other: 'Miscellaneous / Other'
+          };
+
+          items.push({ label: 'Budget Category Breakdown', isHeader: true });
+
+          Object.entries(data.expensesByCategory || {}).forEach(([catKey, cat]: [string, any]) => {
+              let catAnnual = 0;
+              if (cat?.items && Array.isArray(cat.items)) {
+                  cat.items.forEach((item: any) => {
+                      const freq = Number(item.freq) || 12;
+                      const amt = (Number(item[expPhaseKey]) || 0) * freq;
+                      catAnnual += amt;
+                  });
+              }
+              if (catAnnual > 0) {
+                  const nominalCatVal = catAnnual * nominalInfFactor;
+                  items.push({
+                      label: catLabels[catKey] || (catKey.charAt(0).toUpperCase() + catKey.slice(1)),
+                      val: nominalCatVal
+                  });
+              }
+          });
+
+          if (yData.activeExpensePhases && Array.isArray(yData.activeExpensePhases) && yData.activeExpensePhases.length > 0) {
+              items.push({ isDivider: true });
+              items.push({ label: 'Active Expense Phases', isHeader: true });
+              yData.activeExpensePhases.forEach((p: any) => {
+                  if (p.amount > 0) {
+                      items.push({
+                          label: p.name || 'Expense Phase',
+                          val: p.amount
+                      });
+                  }
+              });
+          }
+      } else if (detailedMode && meta.parentId === 'wds') {
+          // 2. In detailed mode, break down account withdrawals into capital vs taxable gain
+          const isP2 = isCouple && meta.label.includes(p2Name);
+          const playerKey = isP2 ? 'p2' : 'p1';
+          const mathKey = meta.label.match(/Non-?Reg/i) ? 'Non-Reg' : (meta.label.match(/Crypto/i) ? 'Crypto' : (meta.label.match(/RRIF/i) ? 'RRIF' : (meta.label.match(/LIF/i) ? 'LIF' : '')));
+          const mathObj = yData.wdBreakdown?.[playerKey]?.[`${mathKey}_math`];
+
+          if (mathObj) {
+              items.push({ label: 'Tax & Capital Composition', isHeader: true });
+              if (mathKey === 'Non-Reg' || mathKey === 'Crypto') {
+                  items.push({ label: 'Gross Withdrawal', val: mathObj.wd });
+                  items.push({ label: 'Return of Capital (Tax-Free)', val: mathObj.acb, isSavings: true });
+                  items.push({ label: 'Realized Capital Gain', val: mathObj.gain });
+                  items.push({ isDivider: true });
+                  items.push({ label: 'Taxable Portion (50% Inclusion)', val: mathObj.tax, isDeduction: true, badge: '50% Taxable' });
+              } else if (mathKey === 'RRIF' || mathKey === 'LIF') {
+                  if ((mathObj.priorBal || 0) > 0) {
+                      items.push({ label: 'Prior Year Balance', val: mathObj.priorBal });
+                      items.push({ label: 'Prescribed Min Factor', val: 0, textRight: `${((mathObj.factor || 0) * 100).toFixed(2)}%` });
+                      items.push({ label: 'Mandatory Minimum', val: mathObj.min || 0 });
+                      const extra = Math.max(0, mathObj.wd - (mathObj.min || 0));
+                      if (extra > 0) items.push({ label: 'Discretionary Top-up', val: extra });
+                      items.push({ isDivider: true });
+                  }
+                  items.push({ label: 'Taxable Income (100%)', val: mathObj.tax, isDeduction: true, badge: '100% Taxable' });
+              }
+          } else if (meta.label.match(/TFSA|FHSA|Cash/i)) {
+              items = [
+                  { label: 'Withdrawal Characterization', isHeader: true },
+                  { label: 'Gross Withdrawal', val: meta.value },
+                  { label: 'Taxable Portion', val: 0, textRight: '\$0', badge: '100% Tax-Free' }
+              ];
+          } else {
+              items = [{ label: meta.label, val: meta.value }];
+          }
+      } else if (detailedMode && meta.parentId === 'tax') {
+          // 3. In detailed mode, break down federal/provincial taxes into gross generated vs credits applied
+          if (meta.label === 'Federal Tax Paid') {
+              const fedGross = (yData.taxDetailsP1?.fed || 0) + (yData.taxDetailsP2?.fed || 0) + (yData.taxDetailsP1?.fedCredits || 0) + (yData.taxDetailsP2?.fedCredits || 0);
+              const fedCredits = (yData.taxDetailsP1?.fedCredits || 0) + (yData.taxDetailsP2?.fedCredits || 0);
+              const fedNet = (yData.taxDetailsP1?.fed || 0) + (yData.taxDetailsP2?.fed || 0);
+              items = [
+                  { label: 'Federal Tax Details', isHeader: true },
+                  { label: 'Gross Federal Tax', val: fedGross },
+                  ...(fedCredits > 0 ? [{ label: 'Federal Credits Applied', val: fedCredits, isSavings: true }] : []),
+                  { isDivider: true },
+                  { label: 'Net Federal Tax Paid', val: fedNet }
+              ];
+          } else if (meta.label === 'Provincial Tax Paid') {
+              const provGross = (yData.taxDetailsP1?.prov || 0) + (yData.taxDetailsP2?.prov || 0) + (yData.taxDetailsP1?.provCredits || 0) + (yData.taxDetailsP2?.provCredits || 0);
+              const provCredits = (yData.taxDetailsP1?.provCredits || 0) + (yData.taxDetailsP2?.provCredits || 0);
+              const provNet = (yData.taxDetailsP1?.prov || 0) + (yData.taxDetailsP2?.prov || 0);
+              items = [
+                  { label: 'Provincial Tax Details', isHeader: true },
+                  { label: 'Gross Provincial Tax', val: provGross },
+                  ...(provCredits > 0 ? [{ label: 'Provincial Credits Applied', val: provCredits, isSavings: true }] : []),
+                  { isDivider: true },
+                  { label: 'Net Provincial Tax Paid', val: provNet }
+              ];
+          } else if (meta.label === 'OAS Clawback') {
+              const claw = (yData.taxDetailsP1?.oas_clawback || 0) + (yData.taxDetailsP2?.oas_clawback || 0);
+              items = [
+                  { label: 'OAS Recovery Tax Details', isHeader: true },
+                  { label: 'CRA Clawback Threshold', val: yData.oasThreshold || 95323 },
+                  { label: 'Recovery Tax (15% Clawback)', val: claw, isDeduction: true }
+              ];
+          } else {
+              items = [{ label: meta.label, val: meta.value }];
+          }
+      } else if (detailedMode && meta.parentId === 'debt') {
+          // 4. In detailed mode, break down mortgage and debt items
+          if (meta.label === 'Mortgage Payments') {
+              items = [
+                  { label: 'Mortgage Details', isHeader: true },
+                  { label: 'Annual Payment (P+I)', val: yData.mortgagePay || 0 },
+                  { label: 'Remaining Year-End Balance', val: yData.mortgage || 0, badge: 'Balance' }
+              ];
+          } else {
+              items = [{ label: 'Debt & Purchase Breakdown', isHeader: true }];
+              if (yData.eduExpense > 0) items.push({ label: 'Education Costs', val: yData.eduExpense });
+              if (yData.debtRepayment > 0) items.push({ label: 'Debt Payments / Purchases', val: yData.debtRepayment });
+              if (items.length === 1) items.push({ label: meta.label, val: meta.value });
+          }
+      } else if (detailedMode && meta.parentId === 'govt') {
+          // 5. In detailed mode, break down government benefits
+          if (meta.label.includes('OAS')) {
+              const isP2 = isCouple && meta.label.includes(p2Name);
+              const grossOas = isP2 ? (yData.oasP2 || 0) : (yData.oasP1 || 0);
+              const oasClaw = isP2 ? (yData.taxDetailsP2?.oas_clawback || 0) : (yData.taxDetailsP1?.oas_clawback || 0);
+              items = [
+                  { label: 'OAS Pension Details', isHeader: true },
+                  { label: 'Gross OAS Entitlement', val: grossOas },
+                  ...(oasClaw > 0 ? [{ label: 'Recovery Clawback (15%)', val: oasClaw, isDeduction: true }] : []),
+                  { isDivider: true },
+                  { label: 'Net OAS Received', val: Math.max(0, grossOas - oasClaw) }
+              ];
+          } else if (meta.label.includes('CPP')) {
+              const isP2 = isCouple && meta.label.includes(p2Name);
+              const cppStart = isP2 ? (data.inputs?.p2_cpp_start || 65) : (data.inputs?.p1_cpp_start || 65);
+              items = [
+                  { label: 'CPP Benefit Details', isHeader: true },
+                  { label: 'Start Age', val: 0, textRight: `Age ${cppStart}` },
+                  { label: 'Annual Benefit', val: meta.value, badge: '100% Taxable' }
+              ];
+          } else {
+              items = [{ label: meta.label, val: meta.value }];
+          }
+      } else if (detailedMode && meta.parentId) {
+          items = nodeBreakdowns[meta.parentId]?.filter((b: any) => b.label === meta.label) || [{ label: meta.label, val: meta.value }];
+      } else {
+          // Summary mode
+          if (lookUpKey === 'tax') {
+              items = [...taxItems];
+              if (savingsItems.length > 0) {
+                  items.push({ isDivider: true });
+                  items.push({ label: 'Tax Reductions Applied', isHeader: true });
+                  items = items.concat(savingsItems);
+              }
+          } else {
+              items = nodeBreakdowns[lookUpKey]?.filter((b: any) => b.isDivider || b.isHeader || Math.abs(b.val) > 1) || [];
+          }
       }
 
       return (
-          <div className="rounded-1 p-3 transition-none" style={style}>
+          <div className="rounded-2 p-3 transition-none" style={style}>
               <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-50">
                   <div className="d-flex align-items-center gap-2">
                       <div style={{ width: '10px', height: '10px', backgroundColor: meta.color }} className="rounded-1"></div>
@@ -455,35 +627,29 @@ export default function CashFlowTab() {
                   <span className="fw-bolder text-main ms-3">{formatCurrency(meta.value)}</span>
               </div>
               <div className="d-flex flex-column gap-1">
-                  {lookUpKey === 'tax' && !detailedMode ? (
-                      completeTaxItems.map((b: any, i: number) => {
-                          if (b.isDivider) return <div key={i} className="border-bottom border-secondary border-opacity-50 my-1"></div>;
-                          if (b.isHeader) return <div key={i} className="fw-bold text-main small text-uppercase ls-1 mt-1" style={{fontSize: '0.7rem'}}>{b.label}</div>;
-                          return (
-                              <div className="d-flex justify-content-between align-items-center small" key={i}>
-                                  <span className={`fw-medium ${b.isSavings ? 'text-success' : 'text-muted'}`}>
-                                      {b.isSavings && <i className="bi bi-arrow-down-short me-1"></i>}
-                                      {b.label}
-                                  </span>
-                                  <span className={`fw-bold ms-3 ${b.isSavings ? 'text-success' : 'text-main'}`}>
-                                      {b.isSavings ? '-' : ''}{formatCurrency(getRealValue(b.val))}
+                  {items.map((b: any, i: number) => {
+                      if (b.isDivider) return <div key={i} className="border-bottom border-secondary border-opacity-50 my-1"></div>;
+                      if (b.isHeader) return <div key={i} className="fw-bold text-main small text-uppercase ls-1 mt-1 opacity-75" style={{fontSize: '0.7rem'}}>{b.label}</div>;
+                      return (
+                          <div className="d-flex justify-content-between align-items-center small" key={i}>
+                              <span className={`fw-medium ${b.isSavings ? 'text-success' : b.isDeduction ? 'text-danger' : 'text-muted'}`}>
+                                  {b.isSavings && <i className="bi bi-arrow-down-short me-1"></i>}
+                                  {b.label}
+                              </span>
+                              <div className="d-flex align-items-center gap-2 ms-3">
+                                  {b.badge && (
+                                      <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-0 px-1" style={{ fontSize: '0.65rem' }}>
+                                          {b.badge}
+                                      </span>
+                                  )}
+                                  <span className={`fw-bold ${b.isSavings ? 'text-success' : b.isDeduction ? 'text-danger' : 'text-main'}`}>
+                                      {b.textRight !== undefined ? b.textRight : ((b.isSavings || b.isDeduction ? '-' : '') + formatCurrency(getRealValue(b.val)))}
                                   </span>
                               </div>
-                          );
-                      })
-                  ) : (
-                      items.map((b: any, i: number) => {
-                          if (b.isDivider) return <div key={i} className="border-bottom border-secondary border-opacity-50 my-1"></div>;
-                          if (b.isHeader) return <div key={i} className="fw-bold text-main small text-uppercase ls-1 mt-1" style={{fontSize: '0.7rem'}}>{b.label}</div>;
-                          return (
-                              <div className="d-flex justify-content-between align-items-center small" key={i}>
-                                  <span className={`fw-medium ${b.isSavings ? 'text-success' : 'text-muted'}`}>{b.label}</span>
-                                  <span className="fw-bold text-main ms-3">{formatCurrency(getRealValue(b.val))}</span>
-                              </div>
-                          );
-                      })
-                  )}
-                  {items.length === 0 && lookUpKey !== 'tax' && (
+                          </div>
+                      );
+                  })}
+                  {items.length === 0 && (
                       <span className="text-muted small fst-italic">No sub-items this year.</span>
                   )}
               </div>
@@ -533,64 +699,85 @@ export default function CashFlowTab() {
           </div>
       </div>
 
-      <div className="rp-card border border-secondary rounded-4 shadow-sm p-3 p-md-4 mb-4">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-2 border-bottom border-secondary gap-3">
-              <h5 className="fw-bold text-uppercase ls-1 text-info mb-0">
-                  <i className="bi bi-water me-2"></i> Cash Flow Engine
-              </h5>
-              
-              <div className="d-flex flex-wrap align-items-center gap-3">
-                  <div className="d-flex align-items-center gap-2">
-                      <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
-                          <button 
-                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${!detailedMode ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
-                              onClick={() => setDetailedMode(false)}
-                          >
-                              Simple View
-                          </button>
-                          <button 
-                              className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${detailedMode ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
-                              onClick={() => setDetailedMode(true)}
-                          >
-                              Detailed Streams
-                          </button>
-                      </div>
-                      <InfoBtn title="Detailed Streams Mode" text={`Toggle between grouped category aggregates (e.g., Govt Benefits) and broken out individual cash streams (e.g., ${p1Name} CPP, ${p2Name} OAS, CCB).`} />
-                  </div>
+      <div className="row g-3 mb-4 text-center">
+          <div className="col-6 col-md-3">
+              <div className="rp-card p-3 border-secondary rounded-4 surface-card shadow-sm h-100 d-flex flex-column justify-content-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Top Inflow</span>
+                  <span className="fs-6 fw-bold text-info text-truncate" title={topInflowNode.label}>{topInflowNode.label}</span>
+                  <span className="text-main fw-bolder">{formatCurrency(topInflowNode.value)}</span>
+              </div>
+          </div>
+          <div className="col-6 col-md-3">
+              <div className="rp-card p-3 border-secondary rounded-4 surface-card shadow-sm h-100 d-flex flex-column justify-content-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Top Outflow</span>
+                  <span className="fs-6 fw-bold text-danger text-truncate" title={topOutflowNode.label}>{topOutflowNode.label}</span>
+                  <span className="text-main fw-bolder">{formatCurrency(topOutflowNode.value)}</span>
+              </div>
+          </div>
+          <div className="col-6 col-md-3">
+              <div className="rp-card p-3 border-secondary rounded-4 surface-card shadow-sm h-100 d-flex flex-column justify-content-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Savings Rate</span>
+                  <span className="fs-4 fw-bolder text-success">{savingsRate.toFixed(1)}%</span>
+                  <span className="text-muted small">{formatCurrency(getRealValue(contsRaw + unallocatedRaw))} saved</span>
+              </div>
+          </div>
+          <div className="col-6 col-md-3">
+              <div className="rp-card p-3 border-secondary rounded-4 surface-card shadow-sm h-100 d-flex flex-column justify-content-center">
+                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Effective Tax</span>
+                  <span className="fs-4 fw-bolder text-danger">{effectiveTax.toFixed(1)}%</span>
+                  <span className="text-muted small">{formatCurrency(getRealValue(taxRaw))} tax</span>
+              </div>
+          </div>
+      </div>
 
-                  <div className="d-flex bg-input rounded-1 p-1 border border-secondary shadow-sm">
+      <div className="rp-card p-3 p-md-4 surface-card border-secondary rounded-4 shadow-sm mb-4">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center pb-3 mb-3 border-bottom border-secondary gap-3">
+              <div className="d-flex align-items-center gap-2">
+                  <i className="bi bi-bezier2 fs-5 text-primary"></i>
+                  <h6 className="mb-0 fw-bold text-uppercase ls-1 text-main">Visual Cash Flow Dynamics</h6>
+                  <InfoBtn align="left" title="Cash Flow Dynamics" text="Left side represents total cash inflow sources (income, pensions, benefits, and required portfolio decumulation). Right side tracks destination of cash (living expenses, mortgage, taxes paid, and capital re-invested into savings)." />
+              </div>
+              <div className="d-flex align-items-center gap-3">
+                  <div className="form-check form-switch mb-0 d-flex align-items-center gap-2 cursor-pointer">
+                      <input 
+                          className="form-check-input cursor-pointer" 
+                          type="checkbox" 
+                          role="switch" 
+                          id="detailedToggle" 
+                          checked={detailedMode} 
+                          onChange={(e) => setDetailedMode(e.target.checked)} 
+                      />
+                      <label className="form-check-label small fw-bold text-muted cursor-pointer" htmlFor="detailedToggle">Detailed View</label>
+                  </div>
+                  <div className="btn-group btn-group-sm p-1 bg-black bg-opacity-25 rounded-pill border border-secondary shadow-inner">
                       <button 
-                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'sankey' ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                          className={`btn rounded-pill px-3 py-1 fw-bold ${viewMode === 'sankey' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} 
                           onClick={() => setViewMode('sankey')}
                       >
-                          Sankey Diagram
+                          <i className="bi bi-diagram-3 me-1"></i> Flow
                       </button>
                       <button 
-                          className={`btn btn-sm px-3 py-1 fw-bold rounded-1 transition-all border-0 ${viewMode === 'ledger' ? 'bg-primary text-white shadow' : 'text-muted hover-opacity-100 bg-transparent'}`}
+                          className={`btn rounded-pill px-3 py-1 fw-bold ${viewMode === 'ledger' ? 'btn-primary' : 'btn-link text-muted text-decoration-none'}`} 
                           onClick={() => setViewMode('ledger')}
                       >
-                          Stacked Ledger
+                          <i className="bi bi-table me-1"></i> Ledger
                       </button>
                   </div>
               </div>
           </div>
-          
-          <div className="w-100 position-relative" ref={chartContainerRef}>
-              
+
+          <div className="position-relative w-100 d-flex justify-content-center" ref={chartContainerRef} style={{ minHeight: '550px' }}>
               {viewMode === 'sankey' && (
-                  <div className="d-flex justify-content-center align-items-center fade-in" style={{ minHeight: '550px', height: '75vh' }}>
-                      <svg viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-                          
+                  <div className="w-100" style={{ maxWidth: '1200px', overflowX: 'auto' }}>
+                      <svg viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`} className="w-100 h-auto user-select-none" style={{ minWidth: '850px' }}>
                           {leftLinks.map((l, i) => (
-                              <path key={`LL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(2, l.h)} className="transition-all cursor-crosshair" 
-                                    style={{ opacity: getLinkOpacity(l.id) }} 
-                                    onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
+                              <path key={`LL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={l.h} strokeOpacity={getLinkOpacity(l.id)} 
+                                    className="transition-all cursor-crosshair" onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
                           ))}
 
                           {rightLinks.map((l, i) => (
-                              <path key={`RL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={Math.max(2, l.h)} className="transition-all cursor-crosshair" 
-                                    style={{ opacity: getLinkOpacity(l.id) }} 
-                                    onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
+                              <path key={`RL-${i}`} d={l.path} fill="none" stroke={l.color} strokeWidth={l.h} strokeOpacity={getLinkOpacity(l.id)} 
+                                    className="transition-all cursor-crosshair" onMouseMove={(e) => handleMouseMove(e, l.id)} onMouseLeave={handleMouseLeave} />
                           ))}
 
                           {leftNodes.map((n, i) => (
@@ -658,12 +845,14 @@ export default function CashFlowTab() {
                                         style={{opacity: getOpacity(d.id)}}
                                         onMouseMove={(e) => handleMouseMove(e, d.id)} onMouseLeave={handleMouseLeave}>
                                        <div className="d-flex align-items-center gap-3">
-                                           <div style={{width: '14px', height: '14px', backgroundColor: d.color}} className="rounded-1 shadow-sm"></div>
-                                           <span className="fw-bold text-main">{d.label}</span>
+                                           <div style={{width: '12px', height: '12px', backgroundColor: d.color}} className="rounded-1 flex-shrink-0"></div>
+                                           <span className="fw-bold text-main small">{d.label}</span>
                                        </div>
-                                       <div className="text-end">
-                                            <span className="fw-bold text-main">{formatCurrency(d.value)}</span>
-                                            <span className="text-muted fw-bold ms-2 small d-inline-block" style={{width: '45px'}}>{((d.value/MAX)*100).toFixed(1)}%</span>
+                                       <div className="d-flex align-items-center gap-3">
+                                           <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary px-2 py-1 font-monospace" style={{fontSize: '0.75rem'}}>
+                                               {((d.value/MAX)*100).toFixed(1)}%
+                                           </span>
+                                           <span className="fw-bolder text-main">{formatCurrency(d.value)}</span>
                                        </div>
                                    </div>
                               ))}
@@ -672,10 +861,10 @@ export default function CashFlowTab() {
 
                       <div className="col-12 col-lg-6 pe-0">
                           <div className="d-flex justify-content-between align-items-end mb-2">
-                              <h6 className="fw-bold text-warning text-uppercase ls-1 mb-0">Total Outflows</h6>
-                              <span className="fw-bolder fs-5 text-warning">{formatCurrency(totalRight)}</span>
+                              <h6 className="fw-bold text-danger text-uppercase ls-1 mb-0">Total Outflows & Allocations</h6>
+                              <span className="fw-bolder fs-5 text-danger">{formatCurrency(totalRight)}</span>
                           </div>
-                          
+
                           <div className="w-100 d-flex rounded-1 overflow-hidden mb-3 shadow-sm border border-secondary" style={{height: '35px'}}>
                               {rightData.map(d => (
                                   <div key={d.id} className="h-100 cursor-crosshair transition-all border-end border-black border-opacity-50" 
@@ -683,19 +872,21 @@ export default function CashFlowTab() {
                                        onMouseMove={(e) => handleMouseMove(e, d.id)} onMouseLeave={handleMouseLeave} />
                               ))}
                           </div>
-                          
+
                           <div className="d-flex flex-column gap-2 pe-1 custom-scrollbar overflow-auto" style={{maxHeight: '420px'}}>
                               {rightData.map(d => (
                                    <div key={d.id} className="d-flex justify-content-between align-items-center p-3 rounded-1 bg-input border border-secondary shadow-sm cursor-crosshair transition-all hover-bg-secondary" 
                                         style={{opacity: getOpacity(d.id)}}
                                         onMouseMove={(e) => handleMouseMove(e, d.id)} onMouseLeave={handleMouseLeave}>
                                        <div className="d-flex align-items-center gap-3">
-                                           <div style={{width: '14px', height: '14px', backgroundColor: d.color}} className="rounded-1 shadow-sm"></div>
-                                           <span className="fw-bold text-main">{d.label}</span>
+                                           <div style={{width: '12px', height: '12px', backgroundColor: d.color}} className="rounded-1 flex-shrink-0"></div>
+                                           <span className="fw-bold text-main small">{d.label}</span>
                                        </div>
-                                       <div className="text-end">
-                                            <span className="fw-bold text-main">{formatCurrency(d.value)}</span>
-                                            <span className="text-muted fw-bold ms-2 small d-inline-block" style={{width: '45px'}}>{((d.value/MAX)*100).toFixed(1)}%</span>
+                                       <div className="d-flex align-items-center gap-3">
+                                           <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary px-2 py-1 font-monospace" style={{fontSize: '0.75rem'}}>
+                                               {((d.value/MAX)*100).toFixed(1)}%
+                                           </span>
+                                           <span className="fw-bolder text-main">{formatCurrency(d.value)}</span>
                                        </div>
                                    </div>
                               ))}
@@ -707,36 +898,6 @@ export default function CashFlowTab() {
               {renderTooltip()}
           </div>
       </div>
-
-      <div className="row g-3">
-          <div className="col-12 col-md-3">
-              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
-                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Top Inflow</span>
-                  <span className="fw-bold text-info" style={{fontSize: '1.1rem'}}>{topInflowNode.label}</span>
-                  <span className="fw-bold fs-4 text-main mt-1">{formatCurrency(topInflowNode.value)}</span>
-              </div>
-          </div>
-          <div className="col-12 col-md-3">
-              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
-                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Top Outflow</span>
-                  <span className="fw-bold text-warning" style={{fontSize: '1.1rem'}}>{topOutflowNode.label}</span>
-                  <span className="fw-bold fs-4 text-main mt-1">{formatCurrency(topOutflowNode.value)}</span>
-              </div>
-          </div>
-          <div className="col-12 col-md-3">
-              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
-                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Savings Rate</span>
-                  <span className="fw-bold text-success mt-1" style={{fontSize: '1.75rem'}}>{savingsRate.toFixed(1)}%</span>
-              </div>
-          </div>
-          <div className="col-12 col-md-3">
-              <div className="rp-card border-secondary rounded-4 p-3 shadow-sm h-100 d-flex flex-column justify-content-center text-center">
-                  <span className="text-muted small fw-bold text-uppercase ls-1 mb-1">Effective Tax Rate</span>
-                  <span className="fw-bold text-danger mt-1" style={{fontSize: '1.75rem'}}>{effectiveTax.toFixed(1)}%</span>
-              </div>
-          </div>
-      </div>
-
     </div>
   );
 }
