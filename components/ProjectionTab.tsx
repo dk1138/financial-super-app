@@ -232,25 +232,24 @@ export default function ProjectionTab() {
   const getEventIcons = (events: string[], y?: any) => {
       let iconElements: any[] = [];
       const evList = events || [];
+      const currentYr = y?.year;
 
+      // 1. Process Standard Engine Events (Retirement, Guardrails, Windfall, Mortgage Paid, Downsize, Dies, Leave, FHSA)
       evList.forEach((ev, i) => {
           let colorClass = "text-secondary";
           let icon = "bi-info-circle-fill";
           const lower = ev.toLowerCase();
+
+          // Skip generic debt started/purchased events here since data.debt is handled explicitly below with clean Start & End icons
+          if (lower.startsWith('started:') || lower.startsWith('purchased:')) {
+              return;
+          }
 
           if (lower.includes('retires')) {
               colorClass = "text-primary"; icon = "bi-cup-hot-fill";
           } else if (lower.includes('guardrail')) {
               colorClass = lower.includes('cut') ? "text-warning" : "text-success";
               icon = "bi-shield-shaded";
-          } else if (lower.includes('student') || lower.includes('osap') || lower.includes('tuition')) {
-              colorClass = "text-warning"; icon = "bi-mortarboard-fill";
-          } else if (lower.includes('resp') || lower.includes('college') || lower.includes('university') || lower.includes('education')) {
-              colorClass = "text-info"; icon = "bi-backpack-fill";
-          } else if (lower.includes('debt') || lower.includes('loan') || lower.includes('credit')) {
-              colorClass = "text-warning"; icon = "bi-credit-card-2-front-fill";
-          } else if (lower.includes('purchased')) {
-              colorClass = "text-warning"; icon = "bi-bag-check-fill";
           } else if (lower.includes('mortgage paid')) {
               colorClass = "text-success"; icon = "bi-house-check-fill";
           } else if (lower.includes('sold')) {
@@ -267,6 +266,8 @@ export default function ProjectionTab() {
               colorClass = "text-info"; icon = "bi-house-heart-fill";
           } else if (lower.includes('rrsp')) {
               colorClass = "text-secondary"; icon = "bi-arrow-left-right";
+          } else {
+              return;
           }
 
           iconElements.push(
@@ -274,31 +275,109 @@ export default function ProjectionTab() {
           );
       });
 
-      // Contextual detections from data flows:
-      if (y) {
-          // Kids Registered Account Funding (RESP)
-          const respContrib = (y.flows?.contributions?.p1?.resp || 0) + (y.flows?.contributions?.p2?.resp || 0);
-          const hasRespIcon = evList.some(e => e.toLowerCase().includes('resp'));
-          if (respContrib > 0 && !hasRespIcon) {
-              iconElements.push(
-                  <i key="resp-funding" className="bi bi-backpack-fill text-info ms-1 fs-5" title={`Kids Registered Account (RESP) Funding: $${Math.round(respContrib).toLocaleString()}`} style={{cursor: 'help'}}></i>
-              );
-          }
+      if (!y || !currentYr) return iconElements.length > 0 ? iconElements : null;
 
-          // Student Loan / Education Expense
-          const hasStudentIcon = evList.some(e => e.toLowerCase().includes('student'));
-          const isStudentDebt = data.debt?.some((d: any) => d.name?.toLowerCase().includes('student') || d.name?.toLowerCase().includes('osap'));
-          if (((y.eduExpense || 0) > 0 || (isStudentDebt && (y.debtRepayment || 0) > 0)) && !hasStudentIcon) {
-              iconElements.push(
-                  <i key="student-loan" className="bi bi-mortarboard-fill text-warning ms-1 fs-5" title="Student Loan / Education Payment Active" style={{cursor: 'help'}}></i>
-              );
+      // 2. Future Expenses & Debts (data.debt) — ONLY SHOW ON START YEAR AND END/PAID OFF YEAR
+      if (data.debt && data.debt.length > 0) {
+          data.debt.forEach((d: any, dIdx: number) => {
+              const startYear = parseInt((d.start || '2026').split('-')[0]);
+              const dType = d.type || 'one';
+              const duration = dType === 'one' ? 1 : Math.max(1, parseInt(d.duration) || 1);
+              const endYear = startYear + duration - 1;
+              const lowerName = (d.name || '').toLowerCase();
+
+              const isStudent = lowerName.includes('student') || lowerName.includes('osap') || lowerName.includes('tuition');
+              const isCar = lowerName.includes('car') || lowerName.includes('auto') || lowerName.includes('vehicle');
+              const isWedding = lowerName.includes('wedding');
+              const isReno = lowerName.includes('reno') || lowerName.includes('home') || lowerName.includes('roof');
+
+              if (dType === 'one') {
+                  // One-time expense: only show in startYear
+                  if (currentYr === startYear) {
+                      let icon = 'bi-bag-check-fill';
+                      let color = 'text-warning';
+                      if (isStudent) icon = 'bi-mortarboard-fill';
+                      else if (isCar) { icon = 'bi-car-front-fill'; color = 'text-info'; }
+                      else if (isWedding) { icon = 'bi-gem'; color = 'text-primary'; }
+                      else if (isReno) icon = 'bi-tools';
+
+                      iconElements.push(
+                          <i key={`debt-one-${dIdx}`} className={`bi ${icon} ${color} ms-1 fs-5`} title={`${d.name || 'Expense'}: ${formatCurrency(d.amount, currentYr)}`} style={{cursor: 'help'}}></i>
+                      );
+                  }
+              } else {
+                  // Recurring Debt / Loan: Show START and END only
+                  if (currentYr === startYear) {
+                      let icon = 'bi-credit-card-2-front-fill';
+                      let color = 'text-warning';
+                      if (isStudent) icon = 'bi-mortarboard-fill';
+                      else if (isCar) { icon = 'bi-car-front-fill'; color = 'text-info'; }
+
+                      iconElements.push(
+                          <i key={`debt-start-${dIdx}`} className={`bi ${icon} ${color} ms-1 fs-5`} title={`${d.name || 'Loan'} Starts (${duration} yrs, ${formatCurrency(d.amount, currentYr)}/yr)`} style={{cursor: 'help'}}></i>
+                      );
+                  } else if (currentYr === endYear) {
+                      let icon = 'bi-check-circle-fill';
+                      let color = 'text-success';
+                      if (isStudent) icon = 'bi-mortarboard-fill';
+                      else if (isCar) icon = 'bi-car-front-fill';
+
+                      iconElements.push(
+                          <i key={`debt-end-${dIdx}`} className={`bi ${icon} ${color} ms-1 fs-5`} title={`${d.name || 'Loan'} Paid Off / Completed!`} style={{cursor: 'help'}}></i>
+                      );
+                  }
+              }
+          });
+      }
+
+      // 3. Kids Registered Account Funding (RESP) — ONLY SHOW ON START YEAR AND END YEAR
+      if (results.timeline && results.timeline.length > 0) {
+          const respYears = results.timeline
+              .filter((r: any) => ((r.flows?.contributions?.p1?.resp || 0) + (r.flows?.contributions?.p2?.resp || 0)) > 0)
+              .map((r: any) => r.year);
+
+          if (respYears.length > 0) {
+              const firstRespYear = respYears[0];
+              const lastRespYear = respYears[respYears.length - 1];
+
+              if (currentYr === firstRespYear) {
+                  iconElements.push(
+                      <i key="resp-start" className="bi bi-backpack-fill text-info ms-1 fs-5" title="Kids Registered Account (RESP) Funding Starts" style={{cursor: 'help'}}></i>
+                  );
+              } else if (currentYr === lastRespYear && lastRespYear !== firstRespYear) {
+                  iconElements.push(
+                      <i key="resp-end" className="bi bi-backpack-fill text-success ms-1 fs-5" title="Kids Registered Account (RESP) Funding Completed" style={{cursor: 'help'}}></i>
+                  );
+              }
           }
+      }
+
+      // 4. College / University Education (dep.hasEdu) — ONLY SHOW ON START AND END YEAR
+      if (data.dependents && data.dependents.length > 0) {
+          data.dependents.forEach((dep: any, kIdx: number) => {
+              if (dep.hasEdu) {
+                  const bYear = parseInt((dep.dob || '2020').split('-')[0]) || currentYr;
+                  const eduStart = bYear + (parseInt(dep.eduStart) || 18);
+                  const eduDur = parseInt(dep.eduDuration) || 4;
+                  const eduEnd = eduStart + eduDur - 1;
+
+                  if (currentYr === eduStart) {
+                      iconElements.push(
+                          <i key={`edu-start-${kIdx}`} className="bi bi-mortarboard-fill text-info ms-1 fs-5" title={`${dep.name || 'Child'} Starts College/University`} style={{cursor: 'help'}}></i>
+                      );
+                  } else if (currentYr === eduEnd) {
+                      iconElements.push(
+                          <i key={`edu-end-${kIdx}`} className="bi bi-mortarboard-fill text-success ms-1 fs-5" title={`${dep.name || 'Child'} Finishes College/University!`} style={{cursor: 'help'}}></i>
+                      );
+                  }
+              }
+          });
       }
 
       return iconElements.length > 0 ? iconElements : null;
   };
 
-  const renderAges = (y: any) => {
+    const renderAges = (y: any) => {
       let ages = [];
       ages.push(<span key="p1" className="text-info fw-bold">{y.p1Age || y.ageP1}</span>);
       if (isCouple && (y.p2Age !== null || y.ageP2 !== null)) {
