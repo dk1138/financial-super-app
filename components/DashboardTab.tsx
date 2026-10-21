@@ -935,5 +935,3 @@ export default function DashboardTab() {
     </div>
   );
 }
-
-```
