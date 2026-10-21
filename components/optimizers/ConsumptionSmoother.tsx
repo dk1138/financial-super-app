@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { FinanceEngine } from '../../lib/financeEngine';
 import { SegmentedControl, CurrencyInput, StepperInput, InfoBtn } from '../SharedUI';
@@ -8,8 +8,6 @@ import { SegmentedControl, CurrencyInput, StepperInput, InfoBtn } from '../Share
 export default function ConsumptionSmoother() {
     const { data } = useFinance();
     const isCouple = data.mode === 'Couple';
-    const p1Name = data.inputs.p1_name || 'Player 1';
-    const p2Name = data.inputs.p2_name || 'Player 2';
 
     const useRealDollars = Boolean(
         data.useRealDollars === true || 
@@ -159,14 +157,7 @@ export default function ConsumptionSmoother() {
                 </div>
                 <div className="flex-grow-1">
                     <div className="d-flex align-items-center justify-content-between">
-                        <div className="d-flex align-items-center gap-2">
-                            <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Consumption Smoothing (Living Standard Maximizer)</h5>
-                            {useRealDollars && (
-                                <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>
-                                    Today's \$
-                                </span>
-                            )}
-                        </div>
+                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Consumption Smoothing (Living Standard Maximizer)</h5>
                         <InfoBtn 
                             title="MaxiFi-Style Consumption Smoothing" 
                             text="Based on economic consumption smoothing principles. Instead of forcing you to guess a retirement budget, this solver works backward from your net worth, CPP, OAS, pensions, and Canadian tax brackets to find the <b>exact flat discretionary living standard</b> (in today's purchasing power) you can spend every year from retirement to age 95 without ever running out of money."

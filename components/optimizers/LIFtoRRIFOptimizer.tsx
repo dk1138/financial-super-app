@@ -114,14 +114,7 @@ export default function LIFtoRRIFOptimizer() {
                 </div>
                 <div className="flex-grow-1">
                     <div className="d-flex align-items-center justify-content-between">
-                        <div className="d-flex align-items-center gap-2">
-                            <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">LIF to RRIF Flexibility Optimizer</h5>
-                            {useRealDollars && (
-                                <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>
-                                    Today's \$
-                                </span>
-                            )}
-                        </div>
+                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">LIF to RRIF Flexibility Optimizer</h5>
                         <InfoBtn 
                             title="LIF to RRIF Unlocking Transfer"
                             text="Life Income Funds (LIFs) enforce both minimum and maximum annual withdrawal limits. Under Canadian tax law (ITA 60(l)), you can take the mandatory minimum in taxable cash and transfer the difference between the maximum and minimum directly into an unlocked RRIF without triggering immediate tax or consuming RRSP room.<br><br>This unlocks future liquidity since RRIFs have no maximum withdrawal ceiling."
@@ -188,7 +181,7 @@ export default function LIFtoRRIFOptimizer() {
                     onChange={(val: any) => setViewMode(val)}
                     options={[
                         { value: 'summary', label: 'Annual Snapshot' },
-                        { value: 'schedule', label: `10-Year Unlocking Schedule ${useRealDollars ? "(Today's $)" : "(Nominal)"}` }
+                        { value: 'schedule', label: '10-Year Unlocking Schedule' }
                     ]}
                 />
             </div>
