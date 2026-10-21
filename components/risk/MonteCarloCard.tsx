@@ -40,8 +40,6 @@ function invNorm(p: number): number {
 
 /**
  * Latin Hypercube Sampling (LHS) Generator.
- * Stratifies the probability distribution into N equal intervals per year,
- * ensuring uniform coverage across market crashes, normal years, and booms without clustering.
  */
 function generateLHSShocks(runs: number, years: number, volatility: number): number[][] {
     const matrix: number[][] = Array.from({ length: runs }, () => new Array(years).fill(0));
@@ -49,12 +47,11 @@ function generateLHSShocks(runs: number, years: number, volatility: number): num
     for (let y = 0; y < years; y++) {
         const yearSamples: number[] = [];
         for (let i = 0; i < runs; i++) {
-            // Draw one stratified sample per bucket [i/runs, (i+1)/runs]
             const u = (i + Math.random()) / runs;
             yearSamples.push(invNorm(u) * volatility);
         }
 
-        // Independent Fisher-Yates permutation across runs for each year
+        // Independent Fisher-Yates permutation
         for (let i = runs - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             const temp = yearSamples[i];
@@ -70,7 +67,7 @@ function generateLHSShocks(runs: number, years: number, volatility: number): num
     return matrix;
 }
 
-// Low-discrepancy prime bases for Halton Quasi-Monte Carlo sequence
+// Low-discrepancy prime bases for Halton sequence
 const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
 function getPrime(idx: number): number {
     if (idx < PRIMES.length) return PRIMES[idx];
@@ -126,18 +123,20 @@ export default function MonteCarloCard() {
     const [method, setMethod] = useState<'lhs' | 'qhs' | 'random' | 'historical'>(mcResults?.method || 'lhs');
     const [volatility, setVolatility] = useState<number>(mcResults?.volatility || 0.12);
     const [isCalculating, setIsCalculating] = useState<boolean>(false);
+    const [progress, setProgress] = useState<number>(0);
 
     const runMonteCarlo = () => {
         setIsCalculating(true);
+        setProgress(0);
+
         setTimeout(() => {
           try {
             const trajectories: number[][] = [];
             const p1Age = data.inputs.p1_age || 38;
             const inflationRate = (data.inputs.inflation_rate || 2.1) / 100;
-            
             let successCount = 0;
             
-            // Pre-generate stratified or quasi-random shocks if selected
+            // Pre-generate structured shocks if selected
             let structuredShocks: number[][] | null = null;
             if (method === 'lhs') {
                 structuredShocks = generateLHSShocks(simCount, 100, volatility);
@@ -145,77 +144,95 @@ export default function MonteCarloCard() {
                 structuredShocks = generateQHSShocks(simCount, 100, volatility);
             }
 
-            for (let i = 0; i < simCount; i++) {
-              const engine = new FinanceEngine(JSON.parse(JSON.stringify(data)));
-              let simContext: any = { method };
-              
-              if (method === 'historical') {
-                 const sp500 = FINANCIAL_CONSTANTS.SP500_HISTORICAL;
-                 const startIdx = Math.floor(Math.random() * sp500.length);
-                 simContext.shockSequence = []; 
-                 
-                 for (let y = 0; y < 100; y++) { 
-                     // S&P 500 long-term average is ~9%. Subtract 0.09 to isolate variance shock
-                     const historicalReturn = sp500[(startIdx + y) % sp500.length];
-                     const shock = historicalReturn - 0.09; 
-                     simContext.shockSequence.push(shock); 
-                 }
-              } else if ((method === 'lhs' || method === 'qhs') && structuredShocks) {
-                 simContext.shockSequence = structuredShocks[i];
-              } else {
-                 // Standard Pseudo-Random
-                 simContext.volatility = volatility;
-              }
-              
-              const detailedResult = engine.runSimulation(true, simContext);
-              
-              // Extract Liquid Net Worth trajectory
-              const liquidTrajectory = detailedResult.map((y: any) => y.liquidNW);
-              trajectories.push(liquidTrajectory);
+            // Non-blocking asynchronous batching to prevent UI thread freezing
+            const BATCH_SIZE = 25;
+            let currentIdx = 0;
 
-              // Run succeeds if liquid portfolio outlasts the plan
-              if (liquidTrajectory[liquidTrajectory.length - 1] > 0) {
-                  successCount++;
-              }
-            }
-            
-            const runs = trajectories.length;
-            const finalSuccessRate = Number(((successCount / runs) * 100).toFixed(1));
-            const discount = (val: number, idx: number) => Math.max(0, Math.round(val / Math.pow(1 + inflationRate, idx)));
-            
-            const yearsCount = trajectories[0].length;
-            const formattedData = [];
+            const runBatch = () => {
+                const endIdx = Math.min(currentIdx + BATCH_SIZE, simCount);
 
-            // Cross-Sectional Percentiles (10th, 50th, 90th percentile at each year)
-            for (let y = 0; y < yearsCount; y++) {
-                const yearValues = trajectories.map(t => t[y]).sort((a, b) => a - b);
-                
-                const pesVal = yearValues[Math.floor(runs * 0.10)];
-                const medVal = yearValues[Math.floor(runs * 0.50)];
-                const optVal = yearValues[Math.floor(runs * 0.90)];
-                
-                formattedData.push({
-                    age: p1Age + y,
-                    optimistic: discount(optVal, y),
-                    median: discount(medVal, y),
-                    pessimistic: discount(pesVal, y)
-                });
-            }
-            
-            setMcResults({
-                chartData: formattedData,
-                successRate: finalSuccessRate,
-                simCount,
-                method,
-                volatility
-            });
-            
+                for (let i = currentIdx; i < endIdx; i++) {
+                    const engine = new FinanceEngine(JSON.parse(JSON.stringify(data)));
+                    let simContext: any = { method };
+                    
+                    if (method === 'historical') {
+                       const sp500 = FINANCIAL_CONSTANTS.SP500_HISTORICAL;
+                       const startIdx = Math.floor(Math.random() * sp500.length);
+                       simContext.shockSequence = []; 
+                       
+                       for (let y = 0; y < 100; y++) { 
+                           const historicalReturn = sp500[(startIdx + y) % sp500.length];
+                           const shock = historicalReturn - 0.09; 
+                           simContext.shockSequence.push(shock); 
+                       }
+                    } else if ((method === 'lhs' || method === 'qhs') && structuredShocks) {
+                       simContext.shockSequence = structuredShocks[i];
+                    } else {
+                       simContext.volatility = volatility;
+                    }
+                    
+                    const detailedResult = engine.runSimulation(true, simContext);
+                    const liquidTrajectory = detailedResult.map((y: any) => y.liquidNW);
+                    trajectories.push(liquidTrajectory);
+
+                    if (liquidTrajectory[liquidTrajectory.length - 1] > 0) {
+                        successCount++;
+                    }
+                }
+
+                currentIdx = endIdx;
+                const currentPct = Math.round((currentIdx / simCount) * 100);
+                setProgress(currentPct);
+
+                if (currentIdx < simCount) {
+                    // Yield to browser thread to keep UI interactive and animate progress
+                    setTimeout(runBatch, 0);
+                } else {
+                    // All batches finished -> compute percentiles
+                    const runs = trajectories.length;
+                    const finalSuccessRate = Number(((successCount / runs) * 100).toFixed(1));
+                    const discount = (val: number, idx: number) => Math.max(0, Math.round(val / Math.pow(1 + inflationRate, idx)));
+                    
+                    const yearsCount = trajectories[0].length;
+                    const formattedData = [];
+
+                    for (let y = 0; y < yearsCount; y++) {
+                        const yearValues = trajectories.map(t => t[y]).sort((a, b) => a - b);
+                        
+                        const pesVal = yearValues[Math.floor(runs * 0.10)];
+                        const medVal = yearValues[Math.floor(runs * 0.50)];
+                        const optVal = yearValues[Math.floor(runs * 0.90)];
+                        
+                        formattedData.push({
+                            age: p1Age + y,
+                            optimistic: discount(optVal, y),
+                            median: discount(medVal, y),
+                            pessimistic: discount(pesVal, y)
+                        });
+                    }
+                    
+                    setMcResults({
+                        chartData: formattedData,
+                        successRate: finalSuccessRate,
+                        simCount,
+                        method,
+                        volatility
+                    });
+
+                    setIsCalculating(false);
+                    setProgress(0);
+                }
+            };
+
+            runBatch();
+
           } catch(err) { 
               console.error(err); 
               alert("Simulation failed."); 
+              setIsCalculating(false);
+              setProgress(0);
           }
-          setIsCalculating(false);
-        }, 50);
+        }, 20);
     };
 
     const formatCurrencyAxis = (val: number) => {
@@ -336,17 +353,53 @@ export default function MonteCarloCard() {
                         </>
                     )}
 
-                    <button 
-                        className="btn btn-primary w-100 fw-bold py-2 mt-4 shadow rounded-pill" 
-                        onClick={runMonteCarlo} 
-                        disabled={isCalculating}
-                    >
-                        {isCalculating ? (
-                            <><span className="spinner-border spinner-border-sm me-2"></span>Simulating {simCount} Paths...</>
-                        ) : (
-                            <><i className="bi bi-play-circle-fill me-2"></i> Run Monte Carlo</>
+                    {/* Button with integrated background progress track */}
+                    <div className="position-relative mt-4">
+                        <button 
+                            className="btn btn-primary w-100 fw-bold py-2 shadow rounded-pill position-relative overflow-hidden border-0" 
+                            onClick={runMonteCarlo} 
+                            disabled={isCalculating}
+                            style={{ minHeight: '44px' }}
+                        >
+                            {/* Filling Background Progress Track */}
+                            {isCalculating && (
+                                <div 
+                                    className="position-absolute top-0 start-0 h-100"
+                                    style={{ 
+                                        width: `${progress}%`, 
+                                        backgroundColor: 'rgba(255, 255, 255, 0.28)', 
+                                        transition: 'width 0.1s linear',
+                                        zIndex: 1 
+                                    }}
+                                />
+                            )}
+
+                            {/* Button Text & Counter */}
+                            <span className="position-relative d-flex align-items-center justify-content-center gap-2" style={{ zIndex: 2 }}>
+                                {isCalculating ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm"></span>
+                                        <span>Simulating... {progress}%</span>
+                                        <span className="small opacity-75">({Math.round((progress / 100) * simCount)}/{simCount})</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="bi bi-play-circle-fill me-1"></i> Run Monte Carlo
+                                    </>
+                                )}
+                            </span>
+                        </button>
+
+                        {/* Subtle Mini Progress Line under the button */}
+                        {isCalculating && (
+                            <div className="progress mt-2 rounded-pill bg-secondary bg-opacity-25" style={{ height: '4px' }}>
+                                <div 
+                                    className="progress-bar bg-success rounded-pill" 
+                                    style={{ width: `${progress}%`, transition: 'width 0.1s linear' }}
+                                />
+                            </div>
                         )}
-                    </button>
+                    </div>
                 </div>
 
                 <div className="rp-card p-4 text-center surface-card border-secondary rounded-4 shadow-sm align-items-center">
