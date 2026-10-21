@@ -389,16 +389,6 @@ export default function MonteCarloCard() {
                                 )}
                             </span>
                         </button>
-
-                        {/* Subtle Mini Progress Line under the button */}
-                        {isCalculating && (
-                            <div className="progress mt-2 rounded-pill bg-secondary bg-opacity-25" style={{ height: '4px' }}>
-                                <div 
-                                    className="progress-bar bg-success rounded-pill" 
-                                    style={{ width: `${progress}%`, transition: 'width 0.1s linear' }}
-                                />
-                            </div>
-                        )}
                     </div>
                 </div>
 
