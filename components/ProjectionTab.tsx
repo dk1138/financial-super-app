@@ -3,95 +3,112 @@
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
-import { calculateTaxDetailed, getInflatedTaxData, getRrifFactor } from '../lib/taxEngine';
-import { toPng } from 'html-to-image';
+import html2canvas from 'html2canvas';
+
+const getRrifFactor = (age: number) => {
+    if (age < 71) return 1 / (90 - age);
+    const f: Record<number, number> = {
+        71: 0.0528, 72: 0.0540, 73: 0.0553, 74: 0.0567, 75: 0.0582,
+        76: 0.0598, 77: 0.0617, 78: 0.0636, 79: 0.0658, 80: 0.0682,
+        81: 0.0708, 82: 0.0738, 83: 0.0771, 84: 0.0808, 85: 0.0851,
+        86: 0.0899, 87: 0.0955, 88: 0.1021, 89: 0.1099, 90: 0.1192,
+        91: 0.1306, 92: 0.1449, 93: 0.1634, 94: 0.1879
+    };
+    return f[age] || 0.20;
+};
 
 export default function ProjectionTab() {
-  const { data, results, useRealDollars } = useFinance();
+  const { data, results } = useFinance();
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
-  const [isExporting, setIsExporting] = useState<boolean>(false);
+  
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
+
+  const isCouple = data.mode === 'Couple';
+
+  // Resolve dynamic custom player names
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+  const p1Upper = p1Name.toUpperCase();
+  const p2Upper = p2Name.toUpperCase();
+
+  const showToast = (msg: string) => {
+      setToastMsg(msg);
+      setTimeout(() => setToastMsg(''), 4000);
+  };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
     return (
-      <div className="text-center p-5 text-muted">
-        <i className="bi bi-clock-history fs-1 mb-3 opacity-50 d-block"></i>
-        <h5>No Projection Data Available</h5>
-        <p className="small">Please configure your plan parameters and check back.</p>
+      <div className="p-5 text-center text-muted">
+        <i className="bi bi-hourglass-split fs-1 mb-3 d-block text-primary opacity-50"></i>
+        <h5>Waiting for calculation...</h5>
+        <p className="small">Please ensure your inputs are correct and the simulation has run.</p>
       </div>
     );
   }
 
-  const p1Name = data.inputs.p1_name || 'Player 1';
-  const p2Name = data.inputs.p2_name || 'Player 2';
-  const isCouple = data.mode === 'Couple';
-  const inflationRate = (data.inputs.inflation_rate || 2.1) / 100;
-  const startYear = results.timeline[0]?.year || new Date().getFullYear();
+  const baseYear = results.timeline[0]?.year || new Date().getFullYear();
+  
+  // Safe parsing for inflation rate
+  const rawInf = data.inputs?.inflation_rate;
+  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
 
-  const getRealValue = (val: number, year: number) => {
-    if (!useRealDollars) return val;
-    const yearsOut = Math.max(0, year - startYear);
-    return val / Math.pow(1 + inflationRate, yearsOut);
+  // Safe parsing for Today's Dollars toggle
+  const useRealDollars = Boolean(
+      data.useRealDollars === true || 
+      data.inputs?.todays_dollars === true || 
+      data.inputs?.use_real_dollars === true ||
+      data.inputs?.useRealDollars === true
+  );
+
+  const getRealValue = (nominalValue: number, year?: number) => {
+      if (!useRealDollars || year === undefined) return nominalValue;
+      const yearsOut = Math.max(0, year - baseYear);
+      return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
 
-  const formatCurrency = (val: number, year: number) => {
-    const adjusted = getRealValue(val, year);
-    return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(adjusted);
+  const formatCurrency = (val: number, year?: number) => {
+      const realVal = getRealValue(val, year);
+      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(realVal || 0);
   };
 
-  const formatStr = (val: number, year: number) => {
-      const adjusted = getRealValue(val, year);
-      return Math.round(adjusted).toLocaleString();
+  const formatStr = (val: number, year?: number) => {
+      return Math.round(getRealValue(val, year) || 0).toLocaleString('en-US');
   };
 
-  const getPhaseBadge = (y: any) => {
-    const p1Age = y.p1Age || y.ageP1;
-    const p1Ret = data.inputs.p1_retireAge || 60;
-    
-    if (p1Age < p1Ret) {
-      return <span className="badge bg-primary bg-opacity-25 text-primary border border-primary fw-medium px-2 py-1">Accumulation</span>;
-    }
-    
-    const gogoAge = data.inputs.exp_gogo_age || 75;
-    const slowgoAge = data.inputs.exp_slow_age || 85;
-    
-    if (p1Age <= gogoAge) {
-      return <span className="badge bg-success bg-opacity-25 text-success border border-success fw-medium px-2 py-1">Go-Go</span>;
-    }
-    if (p1Age <= slowgoAge) {
-      return <span className="badge bg-warning bg-opacity-25 text-warning border border-warning fw-medium px-2 py-1">Slow-Go</span>;
-    }
-    return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger fw-medium px-2 py-1">No-Go</span>;
-  };
-
-  const handleExportCSV = () => {
+  const exportToCSV = () => {
       if (!results || !results.timeline) return;
 
       const headers = [
           "Year", `${p1Name} Age`, isCouple ? `${p2Name} Age` : "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
-          "Living Expenses", "Debt/Mortgage Payments", "Education Expenses", "Lifestyle Outflow", "Portfolio Savings", 
-          "Portfolio Withdrawals", "Liquid Net Worth", "Real Estate Equity", "Estate After Tax"
+          "Living Expenses", "Mortgage & Debt", "Education Costs", "Lifestyle Spending Cash", "Contributions", "Withdrawals",
+          "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
 
       const rows = results.timeline.map((y: any) => {
-          const p1Age = y.p1Age || y.ageP1;
-          const p1Ret = data.inputs.p1_retireAge || 60;
-          let phase = "Accumulation";
-          if (p1Age >= p1Ret) {
-              const gogoAge = data.inputs.exp_gogo_age || 75;
-              const slowgoAge = data.inputs.exp_slow_age || 85;
-              if (p1Age <= gogoAge) phase = "Go-Go";
-              else if (p1Age <= slowgoAge) phase = "Slow-Go";
+          const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+          const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
+          const isP1Ret = (y.p1Age || y.ageP1) >= p1Ret;
+          const isP2Ret = isCouple ? (y.p2Age || y.ageP2) >= p2Ret : true;
+          
+          let phase = "Working";
+          if (isP1Ret && isP2Ret) {
+              const maxAge = isCouple ? Math.max(y.p1Age, y.p2Age) : y.p1Age;
+              if (maxAge <= (Number(data.inputs.exp_gogo_age) || 75)) phase = "Go-Go";
+              else if (maxAge <= (Number(data.inputs.exp_slow_age) || 85)) phase = "Slow-Go";
               else phase = "No-Go";
+          } else if (isP1Ret !== isP2Ret) {
+              phase = "Transition";
           }
 
+          const totalWithdrawals = y.flows?.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
           let engineContributions = 0;
           if (y.flows && y.flows.contributions) {
               engineContributions += Object.entries(y.flows.contributions.p1 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
               if (isCouple) engineContributions += Object.entries(y.flows.contributions.p2 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
           }
-
-          const totalWithdrawals = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
 
           const lifestyleSpendingCash = y.flows?.contributions?.shared?.spending_cash || 0;
 
@@ -124,86 +141,77 @@ export default function ProjectionTab() {
       document.body.removeChild(link);
   };
 
-  const handleExportPNG = async () => {
+  const exportToPNG = async () => {
       if (!tableRef.current) return;
       setIsExporting(true);
-      
-      const scrollContainer = tableRef.current.querySelector('.table-responsive') as HTMLElement;
-      let originalMaxHeight = '';
-      let originalOverflow = '';
-      
+      showToast('Generating high-res image of the full table...');
+
+      const targetEl = tableRef.current;
+      const scrollContainer = targetEl.querySelector('.table-responsive') as HTMLElement;
+      const originalStyle = scrollContainer ? scrollContainer.getAttribute('style') : null;
+
       if (scrollContainer) {
-          originalMaxHeight = scrollContainer.style.maxHeight;
-          originalOverflow = scrollContainer.style.overflow;
           scrollContainer.style.maxHeight = 'none';
           scrollContainer.style.overflow = 'visible';
       }
 
-      try {
-          const dataUrl = await toPng(tableRef.current, {
-              backgroundColor: '#16181d',
-              pixelRatio: 2,
-              style: {
-                  margin: '0',
-                  borderRadius: '0'
+      setTimeout(async () => {
+          try {
+              const canvas = await html2canvas(targetEl, { 
+                  backgroundColor: '#16181d', 
+                  scale: 2,
+                  windowHeight: targetEl.scrollHeight + 100 
+              });
+              
+              if (scrollContainer) {
+                  if (originalStyle !== null) {
+                      scrollContainer.setAttribute('style', originalStyle);
+                  } else {
+                      scrollContainer.removeAttribute('style');
+                  }
               }
-          });
-          
-          const link = document.createElement('a');
-          link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
-          link.href = dataUrl;
-          link.click();
-      } catch (err) {
-          console.error("Export PNG Failed:", err);
-          alert("Failed to export table as PNG. Try standard browser print.");
-      } finally {
-          if (scrollContainer) {
-              scrollContainer.style.maxHeight = originalMaxHeight;
-              scrollContainer.style.overflow = originalOverflow;
+
+              const dataUrl = canvas.toDataURL('image/png');
+              const link = document.createElement('a');
+              link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
+              link.href = dataUrl;
+              link.click();
+              showToast('Export complete!');
+          } catch (err) {
+              console.error("Export PNG Failed:", err);
+              showToast('Export failed. Please try CSV or standard print.');
+          } finally {
+              setIsExporting(false);
           }
-          setIsExporting(false);
-      }
+      }, 100);
   };
-
-  let totalGrossInflow = 0;
-  let totalTaxPaid = 0;
-  let totalExpensesSum = 0;
-  let totalSaved = 0;
-  let totalWithdrawn = 0;
-  let retYears = 0;
-  let hasShortfall = false;
-
-  results.timeline.forEach((y: any) => {
-      const wdsRaw = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number : 0;
-      const yrInflowRaw = (y.incomeP1||0) + (y.incomeP2||0) + (y.cppP1||0) + (y.cppP2||0) + (y.oasP1||0) + (y.oasP2||0) + (y.dbP1||0) + (y.dbP2||0) + (y.windfall||0) + (y.invIncP1||0) + (y.invIncP2||0) + (y.rrspRefundP1||0) + (y.rrspRefundP2||0);
-      
-      totalGrossInflow += getRealValue(yrInflowRaw + wdsRaw, y.year);
-      totalTaxPaid += getRealValue((y.taxP1||0) + (y.taxP2||0), y.year);
-      totalExpensesSum += getRealValue((y.expenses||0) + (y.mortgagePay||0) + (y.debtRepayment||0), y.year);
-      totalWithdrawn += getRealValue(wdsRaw, y.year);
-
-      let contsRaw = 0;
-      if (y.flows && y.flows.contributions) {
-          contsRaw += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-          if (isCouple) contsRaw += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-          if (y.flows.contributions.shared) contsRaw += Object.values(y.flows.contributions.shared).reduce((a: any, b: any) => a + b, 0) as number;
-      }
-
-      const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
-      const totalSourced = y.grossInflow || 0;
-      const totalSpent = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0) + contsRaw;
-      
-      if (totalSourced < totalSpent - 1) {
-          hasShortfall = true;
-      }
-
-      if (y.p1Age >= (data.inputs.p1_retireAge || 65)) {
-          retYears++;
-      }
-  });
 
   const toggleRow = (year: number) => {
     setExpandedYear(expandedYear === year ? null : year);
+  };
+
+  const getPhaseBadge = (y: any) => {
+    const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+    const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
+    const isP1Ret = (y.p1Age || y.ageP1) >= p1Ret;
+    const isP2Ret = isCouple ? (y.p2Age || y.ageP2) >= p2Ret : true;
+
+    if (isP1Ret && isP2Ret) {
+        const maxAge = isCouple ? Math.max(y.p1Age, y.p2Age) : y.p1Age;
+        if (maxAge <= (Number(data.inputs.exp_gogo_age) || 75)) {
+            return <span className="badge bg-success bg-opacity-25 text-success border border-success fw-normal px-2 py-1"><i className="bi bi-airplane-fill me-1"></i>Go-Go</span>;
+        }
+        if (maxAge <= (Number(data.inputs.exp_slow_age) || 85)) {
+            return <span className="badge bg-warning bg-opacity-25 text-warning border border-warning fw-normal px-2 py-1"><i className="bi bi-car-front-fill me-1"></i>Slow-Go</span>;
+        }
+        return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger fw-normal px-2 py-1"><i className="bi bi-house-heart-fill me-1"></i>No-Go</span>;
+    }
+
+    if (isP1Ret || isP2Ret) {
+        return <span className="badge bg-info bg-opacity-25 text-info border border-info fw-normal px-2 py-1"><i className="bi bi-hourglass-split me-1"></i>Transition</span>;
+    }
+
+    return <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal px-2 py-1"><i className="bi bi-briefcase-fill me-1"></i>Working</span>;
   };
 
   const getEventIcons = (rawEvents: string[] | undefined, y?: any, index?: number, timeline?: any[]) => {
@@ -663,28 +671,58 @@ export default function ProjectionTab() {
   return (
     <div className="fade-in">
       
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-          <div>
-              <h5 className="text-main fw-bold mb-1">Annual Cash Flow & Net Worth Ledger</h5>
-              <div className="text-muted small">
-                  Comprehensive year-by-year chronological audit of your gross incomes, statutory taxes, lifestyle expenses, and total asset accumulation.
+      {/* Toast Notification Container */}
+      {toastMsg && (
+          <div className="position-fixed bottom-0 end-0 p-3" style={{ zIndex: 1050 }}>
+              <div className="toast show align-items-center text-white bg-dark border border-secondary shadow-lg rounded-3" role="alert">
+                  <div className="d-flex">
+                      <div className="toast-body small py-2 px-3">
+                          <i className="bi bi-info-circle text-info me-2"></i>{toastMsg}
+                      </div>
+                  </div>
               </div>
           </div>
-          
-          <div className="d-flex gap-2">
+      )}
+
+      {/* Header Actions */}
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+              <h5 className="text-main fw-bold mb-0">Retirement Projection Ledger</h5>
+              <span className="text-muted small">Year-by-year cash flows, tax details, and net worth growth</span>
+          </div>
+
+          <div className="position-relative">
               <button 
-                  className="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm"
-                  onClick={handleExportCSV}
-              >
-                  <i className="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Export CSV
-              </button>
-              <button 
-                  className="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm"
-                  onClick={handleExportPNG}
+                  className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 rounded-2"
+                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
                   disabled={isExporting}
               >
-                  <i className="bi bi-image me-2"></i> Export PNG
+                  <i className="bi bi-download"></i>
+                  <span>Export</span>
+                  <i className={`bi bi-chevron-${exportMenuOpen ? 'up' : 'down'} small`}></i>
               </button>
+
+              {exportMenuOpen && (
+                  <div 
+                      className="position-absolute end-0 mt-1 surface-card border border-secondary rounded-2 shadow-lg py-1"
+                      style={{ minWidth: '150px', zIndex: 100 }}
+                  >
+                      <button 
+                          className="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 hover-bg-secondary w-100 text-start border-0 bg-transparent text-main"
+                          onClick={() => { setExportMenuOpen(false); exportToCSV(); }}
+                      >
+                          <i className="bi bi-file-earmark-spreadsheet text-success"></i>
+                          <span>Export to CSV</span>
+                      </button>
+                      <button 
+                          className="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 hover-bg-secondary w-100 text-start border-0 bg-transparent text-main"
+                          onClick={() => { setExportMenuOpen(false); exportToPNG(); }}
+                      >
+                          <i className="bi bi-file-earmark-image text-primary"></i>
+                          <span>Export to PNG</span>
+                      </button>
+                  </div>
+              )}
           </div>
       </div>
 
