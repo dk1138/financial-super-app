@@ -10,7 +10,7 @@ import CashFlowTab from '../../components/CashFlowTab';
 import OptimizersTab from '../../components/OptimizersTab';
 import CompareTab from '../../components/CompareTab';
 import { useFinance } from '../../lib/FinanceContext';
-import { StepperInput } from '../../components/SharedUI'; 
+import { StepperInput, PercentInput } from '../../components/SharedUI'; 
 
 import SplashScreen from '../../components/SplashScreen';
 import { sampleProfile } from '../../lib/sampleData';
@@ -216,7 +216,7 @@ export default function PlannerPage() {
                   <textarea 
                     className="form-control bg-input border-secondary mb-3 rounded-3 text-sm" 
                     rows={5} 
-                    placeholder="Found a bug? Have a feature request? Let us know..."
+                    placeholder="Found a bug? Have a feature request? Let us know..." 
                     required
                     value={feedbackText}
                     onChange={(e) => setFeedbackText(e.target.value)}
@@ -264,6 +264,10 @@ export default function PlannerPage() {
                           <div style={{width: '120px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={data.inputs.p2_lifeExp ?? 90} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p2', val)} /></div>
                       </div>
                   )}
+                  <div className="d-flex justify-content-between align-items-center gap-2 pt-1 border-top border-secondary border-opacity-50">
+                      <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>Inflation Rate</span>
+                      <div style={{width: '120px'}}><PercentInput className="form-control form-control-sm text-end" value={data.inputs.inflation_rate ?? 2.1} onChange={(val: any) => updateInput('inflation_rate', val)} /></div>
+                  </div>
               </div>
           </div>
       )}
@@ -276,12 +280,12 @@ export default function PlannerPage() {
               width: '48px', 
               height: '48px', 
               bottom: '30px', 
-              right: '90px', // Positioned to the left of the Quick Adjust button
+              right: '90px', 
               zIndex: 1050,
-              backgroundColor: '#6366f1', // Vibrant Indigo (Distinct from Primary Blue)
+              backgroundColor: '#6366f1', 
               color: 'white'
           }} 
-          title="Send Feedback"
+          title="Send Feedback" 
       >
           <i className="bi bi-chat-left-dots fs-5"></i>
       </button>
