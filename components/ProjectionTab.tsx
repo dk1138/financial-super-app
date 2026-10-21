@@ -1,112 +1,97 @@
+'use client';
+
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
-import html2canvas from 'html2canvas';
-
-const getRrifFactor = (age: number) => {
-    if (age < 71) return 1 / (90 - age);
-    const f: Record<number, number> = {
-        71: 0.0528, 72: 0.0540, 73: 0.0553, 74: 0.0567, 75: 0.0582,
-        76: 0.0598, 77: 0.0617, 78: 0.0636, 79: 0.0658, 80: 0.0682,
-        81: 0.0708, 82: 0.0738, 83: 0.0771, 84: 0.0808, 85: 0.0851,
-        86: 0.0899, 87: 0.0955, 88: 0.1021, 89: 0.1099, 90: 0.1192,
-        91: 0.1306, 92: 0.1449, 93: 0.1634, 94: 0.1879
-    };
-    return f[age] || 0.20;
-};
+import { calculateTaxDetailed, getInflatedTaxData, getRrifFactor } from '../lib/taxEngine';
+import { toPng } from 'html-to-image';
 
 export default function ProjectionTab() {
-  const { data, results } = useFinance();
+  const { data, results, useRealDollars } = useFinance();
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
-  
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
+  const [isExporting, setIsExporting] = useState<boolean>(false);
   const tableRef = useRef<HTMLDivElement>(null);
-
-  const isCouple = data.mode === 'Couple';
-
-  // Resolve dynamic custom player names
-  const p1Name = data.inputs.p1_name || 'Player 1';
-  const p2Name = data.inputs.p2_name || 'Player 2';
-  const p1Upper = p1Name.toUpperCase();
-  const p2Upper = p2Name.toUpperCase();
-
-  const showToast = (msg: string) => {
-      setToastMsg(msg);
-      setTimeout(() => setToastMsg(''), 4000);
-  };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
     return (
-      <div className="p-5 text-center text-muted">
-        <i className="bi bi-hourglass-split fs-1 mb-3 d-block text-primary opacity-50"></i>
-        <h5>Waiting for calculation...</h5>
-        <p className="small">Please ensure your inputs are correct and the simulation has run.</p>
+      <div className="text-center p-5 text-muted">
+        <i className="bi bi-clock-history fs-1 mb-3 opacity-50 d-block"></i>
+        <h5>No Projection Data Available</h5>
+        <p className="small">Please configure your plan parameters and check back.</p>
       </div>
     );
   }
 
-  const baseYear = results.timeline[0]?.year || new Date().getFullYear();
-  
-  // Safe parsing for inflation rate
-  const rawInf = data.inputs?.inflation_rate;
-  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
+  const p1Name = data.inputs.p1_name || 'Player 1';
+  const p2Name = data.inputs.p2_name || 'Player 2';
+  const isCouple = data.mode === 'Couple';
+  const inflationRate = (data.inputs.inflation_rate || 2.1) / 100;
+  const startYear = results.timeline[0]?.year || new Date().getFullYear();
 
-  // Safe parsing for Today's Dollars toggle
-  const useRealDollars = Boolean(
-      data.useRealDollars === true || 
-      data.inputs?.todays_dollars === true || 
-      data.inputs?.use_real_dollars === true ||
-      data.inputs?.useRealDollars === true
-  );
-
-  const getRealValue = (nominalValue: number, year?: number) => {
-      if (!useRealDollars || year === undefined) return nominalValue;
-      const yearsOut = Math.max(0, year - baseYear);
-      return nominalValue / Math.pow(1 + inflation, yearsOut);
+  const getRealValue = (val: number, year: number) => {
+    if (!useRealDollars) return val;
+    const yearsOut = Math.max(0, year - startYear);
+    return val / Math.pow(1 + inflationRate, yearsOut);
   };
 
-  const formatCurrency = (val: number, year?: number) => {
-      const realVal = getRealValue(val, year);
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(realVal || 0);
+  const formatCurrency = (val: number, year: number) => {
+    const adjusted = getRealValue(val, year);
+    return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(adjusted);
   };
 
-  const formatStr = (val: number, year?: number) => {
-      return Math.round(getRealValue(val, year) || 0).toLocaleString('en-US');
+  const formatStr = (val: number, year: number) => {
+      const adjusted = getRealValue(val, year);
+      return Math.round(adjusted).toLocaleString();
   };
 
-  const exportToCSV = () => {
+  const getPhaseBadge = (y: any) => {
+    const p1Age = y.p1Age || y.ageP1;
+    const p1Ret = data.inputs.p1_retireAge || 60;
+    
+    if (p1Age < p1Ret) {
+      return <span className="badge bg-primary bg-opacity-25 text-primary border border-primary fw-medium px-2 py-1">Accumulation</span>;
+    }
+    
+    const gogoAge = data.inputs.exp_gogo_age || 75;
+    const slowgoAge = data.inputs.exp_slow_age || 85;
+    
+    if (p1Age <= gogoAge) {
+      return <span className="badge bg-success bg-opacity-25 text-success border border-success fw-medium px-2 py-1">Go-Go</span>;
+    }
+    if (p1Age <= slowgoAge) {
+      return <span className="badge bg-warning bg-opacity-25 text-warning border border-warning fw-medium px-2 py-1">Slow-Go</span>;
+    }
+    return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger fw-medium px-2 py-1">No-Go</span>;
+  };
+
+  const handleExportCSV = () => {
       if (!results || !results.timeline) return;
 
       const headers = [
           "Year", `${p1Name} Age`, isCouple ? `${p2Name} Age` : "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
-          "Living Expenses", "Mortgage & Debt", "Education Costs", "Lifestyle Spending Cash", "Contributions", "Withdrawals",
-          "Liquid Net Worth", "Real Estate Equity", "Total Estate"
+          "Living Expenses", "Debt/Mortgage Payments", "Education Expenses", "Lifestyle Outflow", "Portfolio Savings", 
+          "Portfolio Withdrawals", "Liquid Net Worth", "Real Estate Equity", "Estate After Tax"
       ];
 
       const rows = results.timeline.map((y: any) => {
-          const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-          const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
-          const isP1Ret = (y.p1Age || y.ageP1) >= p1Ret;
-          const isP2Ret = isCouple ? (y.p2Age || y.ageP2) >= p2Ret : true;
-          
-          let phase = "Working";
-          if (isP1Ret && isP2Ret) {
-              const maxAge = isCouple ? Math.max(y.p1Age, y.p2Age) : y.p1Age;
-              if (maxAge <= (Number(data.inputs.exp_gogo_age) || 75)) phase = "Go-Go";
-              else if (maxAge <= (Number(data.inputs.exp_slow_age) || 85)) phase = "Slow-Go";
+          const p1Age = y.p1Age || y.ageP1;
+          const p1Ret = data.inputs.p1_retireAge || 60;
+          let phase = "Accumulation";
+          if (p1Age >= p1Ret) {
+              const gogoAge = data.inputs.exp_gogo_age || 75;
+              const slowgoAge = data.inputs.exp_slow_age || 85;
+              if (p1Age <= gogoAge) phase = "Go-Go";
+              else if (p1Age <= slowgoAge) phase = "Slow-Go";
               else phase = "No-Go";
-          } else if (isP1Ret !== isP2Ret) {
-              phase = "Transition";
           }
 
-          const totalWithdrawals = y.flows?.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
           let engineContributions = 0;
           if (y.flows && y.flows.contributions) {
               engineContributions += Object.entries(y.flows.contributions.p1 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
               if (isCouple) engineContributions += Object.entries(y.flows.contributions.p2 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
           }
+
+          const totalWithdrawals = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
 
           const lifestyleSpendingCash = y.flows?.contributions?.shared?.spending_cash || 0;
 
@@ -139,78 +124,64 @@ export default function ProjectionTab() {
       document.body.removeChild(link);
   };
 
-  const exportToPNG = async () => {
+  const handleExportPNG = async () => {
       if (!tableRef.current) return;
       setIsExporting(true);
-      showToast('Generating high-res image of the full table...');
-
-      const targetEl = tableRef.current;
-      const scrollContainer = targetEl.querySelector('.table-responsive') as HTMLElement;
-      const originalStyle = scrollContainer ? scrollContainer.getAttribute('style') : null;
-
+      
+      const scrollContainer = tableRef.current.querySelector('.table-responsive') as HTMLElement;
+      let originalMaxHeight = '';
+      let originalOverflow = '';
+      
       if (scrollContainer) {
+          originalMaxHeight = scrollContainer.style.maxHeight;
+          originalOverflow = scrollContainer.style.overflow;
           scrollContainer.style.maxHeight = 'none';
           scrollContainer.style.overflow = 'visible';
       }
 
-      setTimeout(async () => {
-          try {
-              const canvas = await html2canvas(targetEl, { 
-                  backgroundColor: '#16181d', 
-                  scale: 2,
-                  windowHeight: targetEl.scrollHeight + 100 
-              });
-              
-              if (scrollContainer) {
-                  if (originalStyle !== null) {
-                      scrollContainer.setAttribute('style', originalStyle);
-                  } else {
-                      scrollContainer.removeAttribute('style');
-                  }
+      try {
+          const dataUrl = await toPng(tableRef.current, {
+              backgroundColor: '#16181d',
+              pixelRatio: 2,
+              style: {
+                  margin: '0',
+                  borderRadius: '0'
               }
-
-              const url = canvas.toDataURL('image/png');
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
-              link.click();
-              showToast('✅ Table image downloaded successfully!');
-          } catch (err) {
-              console.error(err);
-              if (scrollContainer) {
-                  if (originalStyle !== null) {
-                      scrollContainer.setAttribute('style', originalStyle);
-                  } else {
-                      scrollContainer.removeAttribute('style');
-                  }
-              }
-              showToast('❌ Failed to download image.');
-          } finally {
-              setIsExporting(false);
+          });
+          
+          const link = document.createElement('a');
+          link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
+          link.href = dataUrl;
+          link.click();
+      } catch (err) {
+          console.error("Export PNG Failed:", err);
+          alert("Failed to export table as PNG. Try standard browser print.");
+      } finally {
+          if (scrollContainer) {
+              scrollContainer.style.maxHeight = originalMaxHeight;
+              scrollContainer.style.overflow = originalOverflow;
           }
-      }, 500); 
+          setIsExporting(false);
+      }
   };
 
+  let totalGrossInflow = 0;
   let totalTaxPaid = 0;
-  let peakNW = 0;
-  let peakAge = 0;
-  let hasShortfall = false;
+  let totalExpensesSum = 0;
+  let totalSaved = 0;
+  let totalWithdrawn = 0;
   let retYears = 0;
+  let hasShortfall = false;
 
   results.timeline.forEach((y: any) => {
-      const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
-      const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
-      const totalClawback = p1Clawback + p2Clawback;
-
-      const realTax = getRealValue((y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback, y.year);
-      totalTaxPaid += realTax;
-
-      const realNW = getRealValue(y.liquidNW + (y.reIncludedEq || 0), y.year);
-      if (realNW > peakNW) {
-          peakNW = realNW;
-          peakAge = y.p1Age;
-      }
+      const wdsRaw = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number : 0;
+      const yrInflowRaw = (y.incomeP1||0) + (y.incomeP2||0) + (y.cppP1||0) + (y.cppP2||0) + (y.oasP1||0) + (y.oasP2||0) + (y.dbP1||0) + (y.dbP2||0) + (y.windfall||0) + (y.invIncP1||0) + (y.invIncP2||0) + (y.rrspRefundP1||0) + (y.rrspRefundP2||0);
       
+      totalGrossInflow += getRealValue(yrInflowRaw + wdsRaw, y.year);
+      totalTaxPaid += getRealValue((y.taxP1||0) + (y.taxP2||0), y.year);
+      totalExpensesSum += getRealValue((y.expenses||0) + (y.mortgagePay||0) + (y.debtRepayment||0), y.year);
+      totalWithdrawn += getRealValue(wdsRaw, y.year);
+
       let contsRaw = 0;
       if (y.flows && y.flows.contributions) {
           contsRaw += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
@@ -235,27 +206,120 @@ export default function ProjectionTab() {
     setExpandedYear(expandedYear === year ? null : year);
   };
 
-  const getEventIcons = (events: string[]) => {
-      if (!events || events.length === 0) return null;
-      return events.map((ev, i) => {
-          let colorClass = "text-secondary";
-          let icon = "bi-info-circle-fill";
-          if (ev.includes('Retires')) { colorClass = "text-primary"; icon = "bi-cup-hot-fill"; }
-          else if (ev.includes('Windfall')) { colorClass = "text-success"; icon = "bi-cash-coin"; }
-          else if (ev.includes('Mortgage Paid')) { colorClass = "text-primary"; icon = "bi-house-check-fill"; }
-          else if (ev.includes('Dies')) { colorClass = "text-danger"; icon = "bi-heartbreak-fill"; }
-          else if (ev.includes('Leave')) { colorClass = "text-info"; icon = "bi-person-hearts"; }
-          else if (ev.includes('Downsize')) { colorClass = "text-danger"; icon = "bi-house-down-fill"; }
-          else if (ev.includes('RRSP')) { colorClass = "text-secondary"; icon = "bi-arrow-left-right"; }
-          
-          const dynamicText = ev
-              .replace(/\bP1\b/g, p1Name)
-              .replace(/\bP2\b/g, p2Name);
+  const getEventIcons = (rawEvents: string[] | undefined, y?: any, index?: number, timeline?: any[]) => {
+      const eventList: string[] = [...(rawEvents || [])];
 
-          return (
-              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={dynamicText} style={{cursor: 'help'}}></i>
-          );
-      });
+      if (y) {
+          const p1Age = y.p1Age || y.ageP1;
+          const p2Age = y.p2Age || y.ageP2;
+          const prevY = (index !== undefined && index > 0 && timeline) ? timeline[index - 1] : null;
+
+          // 1. Retirement start
+          const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+          if (p1Age === p1Ret && !eventList.some(e => e.includes('P1') && e.includes('Retire'))) {
+              eventList.push('P1 Retires');
+          }
+          if (isCouple && p2Age === (Number(data.inputs.p2_retireAge) || 65) && !eventList.some(e => e.includes('P2') && e.includes('Retire'))) {
+              eventList.push('P2 Retires');
+          }
+
+          // 2. CPP start
+          const p1CppStart = Number(data.inputs.p1_cpp_start) || 65;
+          if (data.inputs.p1_cpp_enabled && p1Age === p1CppStart && !eventList.some(e => e.includes('P1') && e.includes('CPP'))) {
+              eventList.push('P1 Starts CPP');
+          }
+          if (isCouple && data.inputs.p2_cpp_enabled && p2Age === (Number(data.inputs.p2_cpp_start) || 65) && !eventList.some(e => e.includes('P2') && e.includes('CPP'))) {
+              eventList.push('P2 Starts CPP');
+          }
+
+          // 3. OAS start
+          const p1OasStart = Number(data.inputs.p1_oas_start) || 65;
+          if (data.inputs.p1_oas_enabled && p1Age === p1OasStart && !eventList.some(e => e.includes('P1') && e.includes('OAS'))) {
+              eventList.push('P1 Starts OAS');
+          }
+          if (isCouple && data.inputs.p2_oas_enabled && p2Age === (Number(data.inputs.p2_oas_start) || 65) && !eventList.some(e => e.includes('P2') && e.includes('OAS'))) {
+              eventList.push('P2 Starts OAS');
+          }
+
+          // 4. RRIF mandatory conversion (age 71 year-end / age 72 mandatory minimum)
+          const rrifAge = 72;
+          if (p1Age === rrifAge && !eventList.some(e => e.includes('P1') && e.includes('RRIF'))) {
+              eventList.push('P1 RRIF Conversion');
+          }
+          if (isCouple && p2Age === rrifAge && !eventList.some(e => e.includes('P2') && e.includes('RRIF'))) {
+              eventList.push('P2 RRIF Conversion');
+          }
+
+          // 5. Mortgage paid off
+          if (prevY && (prevY.mortgage || 0) > 0 && (y.mortgage || 0) === 0 && !eventList.some(e => e.includes('Mortgage Paid'))) {
+              eventList.push('Mortgage Paid');
+          }
+      }
+
+      if (eventList.length === 0) return null;
+
+      return (
+          <div className="d-inline-flex align-items-center gap-1 ms-2 flex-wrap">
+              {eventList.map((ev, i) => {
+                  let colorClass = "text-secondary";
+                  let icon = "bi-info-circle-fill";
+
+                  if (ev.includes('Retire')) {
+                      colorClass = "text-primary";
+                      icon = "bi-cup-hot-fill";
+                  } else if (ev.includes('CPP')) {
+                      colorClass = "text-success";
+                      icon = "bi-shield-fill-check";
+                  } else if (ev.includes('OAS')) {
+                      colorClass = "text-warning";
+                      icon = "bi-sun-fill";
+                  } else if (ev.includes('RRIF') || ev.includes('LIF Unlocked')) {
+                      colorClass = "text-info";
+                      icon = "bi-arrow-repeat";
+                  } else if (ev.includes('Mortgage Paid')) {
+                      colorClass = "text-success";
+                      icon = "bi-house-check-fill";
+                  } else if (ev.includes('Windfall')) {
+                      colorClass = "text-success";
+                      icon = "bi-cash-coin";
+                  } else if (ev.includes('Purchased') || ev.includes('Property')) {
+                      colorClass = "text-info";
+                      icon = "bi-house-add-fill";
+                  } else if (ev.includes('Sold') || ev.includes('Downsize')) {
+                      colorClass = "text-danger";
+                      icon = "bi-house-down-fill";
+                  } else if (ev.includes('Kept Previous')) {
+                      colorClass = "text-primary";
+                      icon = "bi-houses-fill";
+                  } else if (ev.includes('Dies')) {
+                      colorClass = "text-danger";
+                      icon = "bi-heartbreak-fill";
+                  } else if (ev.includes('Leave')) {
+                      colorClass = "text-info";
+                      icon = "bi-person-hearts";
+                  } else if (ev.includes('Guardrail')) {
+                      colorClass = "text-warning";
+                      icon = "bi-shield-exclamation";
+                  } else if (ev.includes('RRSP')) {
+                      colorClass = "text-secondary";
+                      icon = "bi-arrow-left-right";
+                  }
+
+                  const dynamicText = ev
+                      .replace(/\bP1\b/g, p1Name)
+                      .replace(/\bP2\b/g, p2Name);
+
+                  return (
+                      <i 
+                          key={i} 
+                          className={`bi ${icon} ${colorClass}`} 
+                          title={dynamicText} 
+                          style={{ cursor: 'help', fontSize: '0.95rem' }}
+                      />
+                  );
+              })}
+          </div>
+      );
   };
 
   const renderAges = (y: any) => {
@@ -272,70 +336,49 @@ export default function ProjectionTab() {
           });
           ages.push(<span key="kids" className="d-block text-muted fw-medium mt-1" style={{fontSize: '0.7rem'}}>Kids: {childAges.join(', ')}</span>);
       }
-      return ages;
-  };
-
-  const getPhaseBadge = (y: any) => {
-      const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-      const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
-      const p1Age = y.p1Age || y.ageP1;
-      const p2Age = isCouple ? (y.p2Age || y.ageP2) : p1Age;
-
-      const isP1Ret = p1Age >= p1Ret;
-      const isP2Ret = isCouple ? p2Age >= p2Ret : true;
-
-      if (!isP1Ret && !isP2Ret) return <span className="badge bg-secondary bg-opacity-25 text-secondary border border-secondary w-100 py-2">Working</span>;
-      if (isCouple && (isP1Ret !== isP2Ret)) return <span className="badge bg-info bg-opacity-25 text-info border border-info w-100 py-2">Transition</span>;
-
-      const maxAge = isCouple ? Math.max(p1Age, p2Age) : p1Age;
-      const gogo = Number(data.inputs.exp_gogo_age) || 75;
-      const slowgo = Number(data.inputs.exp_slow_age) || 85;
-
-      if (maxAge <= gogo) return <span className="badge bg-success bg-opacity-25 text-success border border-success w-100 py-2">Go-Go Phase</span>;
-      if (maxAge <= slowgo) return <span className="badge bg-opacity-25 border w-100 py-2" style={{ backgroundColor: 'rgba(217, 119, 6, 0.15)', color: '#d97706', borderColor: '#d97706' }}>Slow-Go Phase</span>;
-      return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger w-100 py-2">No-Go Phase</span>;
+      return <div className="d-flex flex-column align-items-center justify-content-center"><div>{ages}</div></div>;
   };
 
   const sumAccounts = (assets: any) => {
-      if (!assets) return 0;
-      return (assets.cash||0) + (assets.tfsa||0) + (assets.fhsa||0) + (assets.rrsp||0) + (assets.lirf||0) + (assets.lif||0) + (assets.rrif_acct||0) + (assets.nonreg||0) + (assets.crypto||0);
+    if (!assets) return 0;
+    return (assets.tfsa || 0) + (assets.tfsa_successor || 0) + (assets.fhsa || 0) + (assets.rrsp || 0) + (assets.rrif_acct || 0) + (assets.lirf || 0) + (assets.lif || 0) + (assets.nonreg || 0) + (assets.cash || 0) + (assets.crypto || 0);
   };
 
-  const getAccountFlow = (y: any, player: 'p1' | 'p2', acctKeys: string[], wdKeys: string[], year: number) => {
-      let added = 0;
+  const getAccountFlow = (y: any, player: 'p1'|'p2', contribKeys: string[], wdMatchKeys: string[], year: number) => {
+      let deposited = 0;
       let withdrawn = 0;
+      const prefix = player.toUpperCase() + ' ';
+      
       if (y.flows && y.flows.contributions && y.flows.contributions[player]) {
-          acctKeys.forEach(k => added += (y.flows.contributions[player][k] || 0));
+          contribKeys.forEach(k => deposited += (y.flows.contributions[player][k] || 0));
       }
       if (y.flows && y.flows.withdrawals) {
-          const prefix = player === 'p1' ? 'P1 ' : 'P2 ';
-          wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[`${prefix}${k}`] || 0));
+          const wdKeys = Object.keys(y.flows.withdrawals).filter(k => k.startsWith(prefix) && wdMatchKeys.some(m => k.includes(m)));
+          wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[k] || 0));
+          if (wdMatchKeys.includes('RESP') && y.flows.withdrawals[`${prefix}RESP`]) {
+              withdrawn += y.flows.withdrawals[`${prefix}RESP`];
+          }
       }
-      let net = added - withdrawn;
-      if (Math.abs(net) < 1) return <span className="flex-shrink-0" style={{minWidth: '45px', display: 'inline-block'}}></span>; 
-      
-      net = getRealValue(net, year);
+      const net = deposited - withdrawn;
+      if (Math.abs(net) < 1) return null;
       const isPos = net > 0;
-      const absNet = Math.abs(net);
+      const absNet = Math.abs(getRealValue(net, year));
       const formatted = absNet >= 1000 ? `${(absNet/1000).toFixed(1).replace('.0', '')}k` : Math.round(absNet);
       
       return (
           <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2 text-nowrap flex-shrink-0`} style={{fontSize: '0.65rem', minWidth: '45px', display: 'inline-block'}}>
-              ({isPos ? '+' : '-'}{formatted})
+              {isPos ? `+${formatted}` : `-${formatted}`}
           </span>
       );
   };
 
-  const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxIncAfter: number, taxIncBefore: number, year: number) => {
-      if (!taxData) return "No tax generated.";
+  const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxableIncome: number, actualGross: number, year: number) => {
+      if (!taxData) return "No tax details available.";
       
       const isP1 = player === 'p1';
-      const nameRef = isP1 ? p1Name : p2Name;
       const prefix = isP1 ? 'P1 ' : 'P2 ';
-
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
-      const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
-      
+      const match = isP1 ? y.rrspMatchP1 : y.rrspMatchP2;
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
       const db = isP1 ? y.dbP1 : y.dbP2;
@@ -343,28 +386,24 @@ export default function ProjectionTab() {
       
       let breakdownStr = '';
       let sum = 0;
-      
       if (salary > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Salary:</span> <span>$${formatStr(salary, year)}</span></div>`; sum += salary; }
       if (match > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Employer Match:</span> <span>$${formatStr(match, year)}</span></div>`; sum += match; }
       if (cpp > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>CPP:</span> <span>$${formatStr(cpp, year)}</span></div>`; sum += cpp; }
       if (oas > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>OAS:</span> <span>$${formatStr(oas, year)}</span></div>`; sum += oas; }
       if (db > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Pension:</span> <span>$${formatStr(db, year)}</span></div>`; sum += db; }
       if (invInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Inv. Yield:</span> <span>$${formatStr(invInc, year)}</span></div>`; sum += invInc; }
-
+      
       const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(prefix) && y.flows.withdrawals[k] > 0);
-      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
-
-      taxableWds.forEach(k => {
+      wdKeys.forEach(k => {
+          const amt = y.flows.withdrawals[k];
           const cleanName = k.replace(prefix, '');
-          if (k.includes('RRIF') || k.includes('LIF') || k.includes('RRSP') || k.includes('LIRF')) {
-              const amt = y.flows.withdrawals[k];
+          if (cleanName.includes('RRSP') || cleanName.includes('RRIF') || cleanName.includes('LIF')) {
               breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} W/D:</span> <span>$${formatStr(amt, year)}</span></div>`;
               sum += amt;
-          } else if (k.match(/Non-?Reg/i) || k.match(/Crypto/i) || k.match(/NONREG/i)) {
+          } else if (cleanName.match(/Non-?Reg/i) || cleanName.match(/Crypto/i) || cleanName.match(/NONREG/i)) {
               const breakdown = y.wdBreakdown || y.withdrawalBreakdown;
-              const targetKey = k.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
+              const targetKey = cleanName.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
               const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
-              
               if (mathObj && mathObj.tax > 0) {
                   breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} Taxable:</span> <span>$${formatStr(mathObj.tax, year)}</span></div>`;
                   sum += mathObj.tax;
@@ -372,26 +411,22 @@ export default function ProjectionTab() {
           }
       });
 
-      let actualGross = sum; 
-      
       let incStr = `<b>Gross Income:</b> $${formatStr(actualGross, year)}<br>`;
       if (breakdownStr) {
            incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
-
-      const rrspCont = y.flows?.contributions?.[player]?.rrsp || 0;
-      const fhsaCont = y.flows?.contributions?.[player]?.fhsa || 0;
+      
+      const rrspCont = isP1 ? y.flows?.contributions?.p1?.rrsp || 0 : y.flows?.contributions?.p2?.rrsp || 0;
+      const fhsaCont = isP1 ? y.flows?.contributions?.p1?.fhsa || 0 : y.flows?.contributions?.p2?.fhsa || 0;
+      const empMatch = isP1 ? y.rrspMatchP1 || 0 : y.rrspMatchP2 || 0;
       const totalDeductions = rrspCont + fhsaCont;
-
+      
       if (totalDeductions > 0) {
           incStr += `<b>Total Deductions:</b> -$${formatStr(totalDeductions, year)}<br>`;
           let dedStr = '';
-          
           if (rrspCont > 0) {
-              const empMatch = match; 
-              const ownCont = rrspCont - empMatch;
-              
               if (empMatch > 0) {
+                  const ownCont = Math.max(0, rrspCont - empMatch);
                   dedStr += `<div class="d-flex justify-content-between"><span>RRSP (Employer Match):</span> <span>-$${formatStr(empMatch, year)}</span></div>`;
                   if (ownCont > 0) {
                       dedStr += `<div class="d-flex justify-content-between"><span>RRSP (Own Contrib):</span> <span>-$${formatStr(ownCont, year)}</span></div>`;
@@ -400,64 +435,70 @@ export default function ProjectionTab() {
                   dedStr += `<div class="d-flex justify-content-between"><span>RRSP Contributions:</span> <span>-$${formatStr(rrspCont, year)}</span></div>`;
               }
           }
-
           if (fhsaCont > 0) {
               dedStr += `<div class="d-flex justify-content-between"><span>FHSA Contributions:</span> <span>-$${formatStr(fhsaCont, year)}</span></div>`;
           }
-
           incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${dedStr}</div>`;
       }
-
-      if (Math.abs(taxIncAfter - taxIncBefore) > 1) {
-          let splitAmt = taxIncAfter - taxIncBefore;
+      
+      const splitAmt = isP1 ? (y.pensionSplit?.p2ToP1 || 0) - (y.pensionSplit?.p1ToP2 || 0) : (y.pensionSplit?.p1ToP2 || 0) - (y.pensionSplit?.p2ToP1 || 0);
+      if (Math.abs(splitAmt) > 0) {
           incStr += `<b>Pension Split:</b> ${splitAmt > 0 ? '+' : '-'}$${formatStr(Math.abs(splitAmt), year)}<br>`;
       }
+      const taxIncAfter = taxableIncome;
       incStr += `<b>Net Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
 
       let clawbackStr = taxData.oas_clawback > 0 ? `<br><b>OAS Clawback:</b> $${formatStr(taxData.oas_clawback, year)}` : '';
       
-      const utilizedNrtcTotal = taxData.utilizedNrtcTotal || 0;
-      const transitRefund = taxData.rtc?.transit || 0;
-      const rrspMatchSavings = isP1 ? (y.matchTaxSavingsP1 || 0) : (y.matchTaxSavingsP2 || 0);
-      const totalCurrentReductions = utilizedNrtcTotal + transitRefund + rrspMatchSavings;
+      const baseFedTax = (taxData.fed || 0) + (taxData.fedCredits || 0);
+      const baseProvTax = (taxData.prov || 0) + (taxData.provCredits || 0);
+      const preCreditTaxTotal = baseFedTax + baseProvTax + (taxData.cpp_ei || 0) + (taxData.oas_clawback || 0);
+
+      const nrtcObj = taxData.nrtcDetails || {};
+      let reductionsList: string[] = [];
+      let totalCurrentReductions = (taxData.fedCredits || 0) + (taxData.provCredits || 0);
       
-      const baseFedTax = taxData.fed + (taxData.utilizedFedNrtc || 0);
-      const baseProvTax = taxData.prov + (taxData.utilizedProvNrtc || 0);
-      const preCreditTaxTotal = baseFedTax + baseProvTax + taxData.cpp_ei + (taxData.oas_clawback || 0);
-
       let mathStr = `${incStr}<b>Federal Tax:</b> $${formatStr(baseFedTax, year)}<br><b>Provincial Tax:</b> $${formatStr(baseProvTax, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Gross Tax Generated:</b> $${formatStr(preCreditTaxTotal, year)}<br>`;
-
+      
       if (totalCurrentReductions > 0) {
           mathStr += `<b>Tax Reductions Applied:</b> <span class="text-success">-$${formatStr(totalCurrentReductions, year)}</span><hr class="my-1 border-secondary">`;
       }
-
+      
       mathStr += `<b>Net Tax Paid:</b> <span class="text-danger">$${formatStr(taxData.totalTax, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
-
       return mathStr;
   };
 
-  const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
-      if (!math) return "No yield.";
-      if (useRealDollars) {
-          return `<span class="text-muted small">Nominal Math:</span><br><b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>Balance (Today's $):</b> $${formatStr(math.bal, year)}<br><b>Cash (Today's $):</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+  const buildContributionTooltip = (flows: any, couple: boolean, year: number) => {
+      if (!flows || !flows.contributions) return "No savings breakdown available.";
+      let text = "<b>Invested Breakdown:</b><hr class='my-1 border-secondary'>";
+      const p1Conts = flows.contributions.p1 || {};
+      Object.entries(p1Conts).forEach(([k, v]) => {
+          if ((v as number) > 0 && k !== 'spending_cash') text += `<div class="d-flex justify-content-between"><span>${p1Name} ${k.toUpperCase()}:</span><span>$${formatStr(v as number, year)}</span></div>`;
+      });
+      if (couple) {
+          const p2Conts = flows.contributions.p2 || {};
+          Object.entries(p2Conts).forEach(([k, v]) => {
+              if ((v as number) > 0 && k !== 'spending_cash') text += `<div class="d-flex justify-content-between"><span>${p2Name} ${k.toUpperCase()}:</span><span>$${formatStr(v as number, year)}</span></div>`;
+          });
       }
-      return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+      return text;
   };
 
-  const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number, threshold: number) => {
-      const eliminationThreshold = threshold + (gross / 0.15);
-      const isFullyEliminated = clawback >= (gross - 0.01);
-
-      return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br>` + 
-      (clawback <= 0 ? `No clawback applied.` : `<span class="text-danger"><b>Clawback Penalty:</b> -$${formatStr(clawback, year)}${isFullyEliminated ? ' <br><i>(OAS Fully Eliminated)</i>' : ''}</span><br><b>Net OAS Received:</b> $${formatStr(Math.max(0, gross - clawback), year)}`);
+  const buildYieldTooltip = (math: any, year: number, isReal: boolean) => {
+      if (!math || !math.bal) return "Yield calculated from portfolio holdings.";
+      const rateStr = `${(math.rate * 100).toFixed(1)}%`;
+      if (isReal) {
+          return `Nominal Math: $${Math.round(math.bal).toLocaleString()} × ${rateStr} = $${Math.round(math.amt).toLocaleString()}<br><b>Portfolio Balance (Today's $):</b> $${formatStr(math.bal, year)}<br><b>Yield Payout (Today's $):</b> $${formatStr(math.amt, year)}`;
+      }
+      return `Holdings Balance: $${formatStr(math.bal, year)}<br>Yield Rate: ${rateStr}<br><b>Annual Yield:</b> $${formatStr(math.amt, year)}`;
   };
 
-  const buildContributionTooltip = (flows: any, isCouple: boolean, year: number) => {
-      if (!flows || !flows.contributions) return "No contributions.";
-      let lines: string[] = [];
-      Object.entries(flows.contributions.p1).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`${p1Name} ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
-      if (isCouple) Object.entries(flows.contributions.p2).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`${p2Name} ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
-      return lines.length > 0 ? lines.join('<br>') : "No contributions.";
+  const buildOasTooltip = (oasGross: number, oasClawback: number, taxInc: number, year: number, thresh: number) => {
+      if (oasClawback > 0) {
+          const diff = Math.max(0, taxInc - thresh);
+          return `<b>Gross OAS:</b> $${formatStr(oasGross, year)}<br><b>CRA Threshold:</b> $${formatStr(thresh, year)}<br><b>Income Excess:</b> $${formatStr(diff, year)}<br><b>Clawback (15%):</b> <span class="text-danger">-$${formatStr(oasClawback, year)}</span><hr class="my-1 border-secondary"><b>Net OAS Received:</b> <span class="text-success">$${formatStr(oasGross - oasClawback, year)}</span>`;
+      }
+      return `<span class='text-info fw-bold'>100% Taxable.</span><br>Base OAS: $${formatStr(oasGross, year)}<br>Income is below the recovery threshold ($${formatStr(thresh, year)}).<br><b>Net Received:</b> $${formatStr(oasGross, year)}`;
   };
 
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
@@ -620,33 +661,26 @@ export default function ProjectionTab() {
   };
 
   return (
-    <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
-        
-      {toastMsg && (
-          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
-              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
-                  {isExporting && <span className="spinner-border spinner-border-sm me-2"></span>}
-                  {toastMsg}
+    <div className="fade-in">
+      
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+          <div>
+              <h5 className="text-main fw-bold mb-1">Annual Cash Flow & Net Worth Ledger</h5>
+              <div className="text-muted small">
+                  Comprehensive year-by-year chronological audit of your gross incomes, statutory taxes, lifestyle expenses, and total asset accumulation.
               </div>
           </div>
-      )}
-
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-          <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
-              <i className="bi bi-table me-2"></i> Timeline Projection
-          </h5>
           
-          <div className="d-flex gap-2" data-html2canvas-ignore>
+          <div className="d-flex gap-2">
               <button 
-                  className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
-                  onClick={exportToCSV}
-                  disabled={isExporting}
+                  className="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm"
+                  onClick={handleExportCSV}
               >
-                  <i className="bi bi-filetype-csv me-2"></i> Export CSV
+                  <i className="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Export CSV
               </button>
               <button 
-                  className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
-                  onClick={exportToPNG}
+                  className="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm"
+                  onClick={handleExportPNG}
                   disabled={isExporting}
               >
                   <i className="bi bi-image me-2"></i> Export PNG
@@ -727,7 +761,7 @@ export default function ProjectionTab() {
                       <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
                         <div className="d-flex align-items-center">
                             <span className="fs-6">{y.year}</span>
-                            {getEventIcons(y.events)}
+                            {getEventIcons(y.events, y, index, results.timeline)}
                         </div>
                       </td>
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
@@ -850,16 +884,16 @@ export default function ProjectionTab() {
                                 </div>
 
                                 <div className="col-12 col-lg-4 p-3 p-md-4 d-flex flex-column">
-                                    <h6 className="text-primary fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center">
-                                        <i className="bi bi-piggy-bank me-2"></i>
-                                        <span className="text-uppercase">End of Year Balances</span>
-                                        <InfoBtn align="right" title="Account Balances" text="Values represent the portfolio balance at the <b>end of the year</b>, after accounting for market growth, contributions, and withdrawals." />
+                                    <h6 className="text-info fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center">
+                                        <i className="bi bi-wallet2 me-2"></i>
+                                        <span className="text-uppercase">Portfolio & Net Worth</span>
+                                        <InfoBtn align="right" title="Portfolio & Net Worth" text="End-of-year balances for registered, non-registered, and family accounts, including property equity." />
                                     </h6>
                                     
                                     <div className="flex-grow-1">
                                         {y.p1Alive && (
-                                            <div className="mb-3">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>{p1Name} Portfolio</span><span className="text-info fw-bold text-nowrap">{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
+                                            <div className="mb-2">
+                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-info)'}}>{p1Name} Portfolio</span><span className="fw-bold text-nowrap" style={{color: 'var(--bs-info)'}}>{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
@@ -881,7 +915,7 @@ export default function ProjectionTab() {
 
                                                 {((y.p1Age || y.ageP1) < 72 && (y.assetsP1?.rrsp > 0 || y.flows?.contributions?.p1?.rrsp > 0)) && (
                                                     <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                        <span className="text-muted ms-2 d-flex align-items-center">RRSP</span>
+                                                        <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['rrsp'], ['RRSP'], y.year)}
                                                             <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
