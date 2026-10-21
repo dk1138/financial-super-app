@@ -9,6 +9,19 @@ import { CurrencyInput, InfoBtn, SegmentedControl } from '../SharedUI';
 const OAS_THRESHOLD_2026 = 95323;
 const OAS_MAX_RECOVERY_2026 = 154708;
 
+const PROVINCES = [
+    { id: 'ON', label: 'Ontario (ON)' },
+    { id: 'BC', label: 'British Columbia (BC)' },
+    { id: 'AB', label: 'Alberta (AB)' },
+    { id: 'QC', label: 'Quebec (QC)' },
+    { id: 'MB', label: 'Manitoba (MB)' },
+    { id: 'SK', label: 'Saskatchewan (SK)' },
+    { id: 'NS', label: 'Nova Scotia (NS)' },
+    { id: 'NB', label: 'New Brunswick (NB)' },
+    { id: 'NL', label: 'Newfoundland (NL)' },
+    { id: 'PE', label: 'PEI (PE)' }
+];
+
 interface TaxBreakdown {
     income: number;
     baseFedRate: number;
@@ -115,7 +128,7 @@ function getMarginalBreakdown(income: number, province: string, isSenior: boolea
 export default function MarginalTaxCurve() {
     const { data } = useFinance();
     const isCouple = data.mode === 'Couple';
-    const province = data.inputs.tax_province || data.inputs.province || 'ON';
+    const initialProvince = data.inputs.tax_province || data.inputs.province || 'ON';
 
     const p1Name = data.inputs.p1_name || 'Player 1';
     const p2Name = data.inputs.p2_name || 'Player 2';
@@ -124,18 +137,20 @@ export default function MarginalTaxCurve() {
     const [targetPlayer, setTargetPlayer] = useState<'p1' | 'p2'>('p1');
     const selectedPlayer = targetPlayer === 'p1' ? p1Name : p2Name;
 
-    // Simulation inputs
+    // State
+    const [selectedProvince, setSelectedProvince] = useState<string>(initialProvince);
     const defaultInc = Number(data.inputs[`${targetPlayer}_income`]) || 95000;
     const [customIncome, setCustomIncome] = useState<number>(defaultInc);
     const [isSenior, setIsSenior] = useState<boolean>(true); // Age 65+
     const [hasOas, setHasOas] = useState<boolean>(true);
     const [hasGis, setHasGis] = useState<boolean>(false);
+    const [takeawaysOpen, setTakeawaysOpen] = useState<boolean>(false);
 
     // Generate Curve Data (\$10,000 to \$200,000 sampled at \$2,500 intervals)
     const curveData = useMemo(() => {
         const points: any[] = [];
         for (let inc = 10000; inc <= 200000; inc += 2500) {
-            const b = getMarginalBreakdown(inc, province, isSenior, hasOas, hasGis);
+            const b = getMarginalBreakdown(inc, selectedProvince, isSenior, hasOas, hasGis);
             points.push({
                 income: inc,
                 formattedInc: `$${(inc / 1000).toFixed(0)}k`,
@@ -147,12 +162,12 @@ export default function MarginalTaxCurve() {
             });
         }
         return points;
-    }, [province, isSenior, hasOas, hasGis]);
+    }, [selectedProvince, isSenior, hasOas, hasGis]);
 
     // Current point breakdown
     const currentBreakdown = useMemo(() => {
-        return getMarginalBreakdown(customIncome, province, isSenior, hasOas, hasGis);
-    }, [customIncome, province, isSenior, hasOas, hasGis]);
+        return getMarginalBreakdown(customIncome, selectedProvince, isSenior, hasOas, hasGis);
+    }, [customIncome, selectedProvince, isSenior, hasOas, hasGis]);
 
     // Headroom calculation
     const isInsideOasTrap = customIncome >= OAS_THRESHOLD_2026 && customIncome <= OAS_MAX_RECOVERY_2026;
@@ -163,49 +178,55 @@ export default function MarginalTaxCurve() {
     const next1000Keep = 1000 - next1000Tax;
 
     return (
-        <div className="surface-card border border-secondary rounded-4 p-4 shadow-sm">
-            {/* Header */}
-            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom border-secondary pb-3 mb-4">
-                <div>
-                    <h5 className="fw-bold mb-1 d-flex align-items-center gap-2">
-                        <i className="bi bi-graph-up text-primary"></i>
-                        Marginal Tax Rate & Clawback Curve
+        <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+            {/* Header matching standard optimizer cards */}
+            <div className="d-flex align-items-center mb-3">
+                <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3 flex-shrink-0" style={{width: '45px', height: '45px'}}>
+                    <i className="bi bi-graph-up fs-4"></i>
+                </div>
+                <div className="flex-grow-1">
+                    <div className="d-flex align-items-center justify-content-between">
+                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1" style={{ fontSize: '1rem' }}>
+                            Marginal Tax Rate & Clawback Curve
+                        </h5>
                         <InfoBtn 
                             title="Effective Marginal Tax Rate (EMTR)" 
                             text="Shows the percentage of your next dollar of income lost to combined federal tax, provincial tax, provincial surtaxes, and federal benefit clawbacks (like the 15% OAS Recovery Tax)." 
-                        />
-                    </h5>
-                    <p className="text-muted small mb-0">
-                        Model exact marginal tax cliffs, Ontario surtaxes, and the CRA OAS recovery tax zone (\$95k–\$155k).
-                    </p>
-                </div>
-
-                {isCouple && (
-                    <div style={{ minWidth: '220px' }}>
-                        <SegmentedControl 
-                            value={targetPlayer}
-                            onChange={(val: any) => {
-                                setTargetPlayer(val);
-                                const newInc = Number(data.inputs[`${val}_income`]) || 95000;
-                                setCustomIncome(newInc);
-                            }}
-                            options={[
-                                { value: 'p1', label: p1Name },
-                                { value: 'p2', label: p2Name }
-                            ]}
+                            align="right"
                         />
                     </div>
-                )}
+                    <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
+                        Model exact marginal tax cliffs, Ontario surtaxes, and the CRA OAS recovery tax zone (\$95k–\$155k).
+                    </span>
+                </div>
             </div>
 
-            {/* Controls Bar */}
-            <div className="row g-3 mb-4 p-3 bg-input border border-secondary rounded-4 shadow-inner">
+            {/* Target Selector for Couples */}
+            {isCouple && (
+                <div className="border-bottom border-secondary border-opacity-25 pb-3 mb-3">
+                    <SegmentedControl 
+                        value={targetPlayer}
+                        onChange={(val: any) => {
+                            setTargetPlayer(val);
+                            const newInc = Number(data.inputs[`${val}_income`]) || 95000;
+                            setCustomIncome(newInc);
+                        }}
+                        options={[
+                            { value: 'p1', label: p1Name },
+                            { value: 'p2', label: p2Name }
+                        ]}
+                    />
+                </div>
+            )}
+
+            {/* Controls Bar with Province Dropdown & Vertically Stacked Toggles */}
+            <div className="row g-3 mb-3 p-3 bg-input border border-secondary rounded-4 shadow-inner">
                 <div className="col-12 col-md-4">
-                    <label className="form-label small fw-bold text-muted mb-1">
+                    <label className="form-label small fw-bold text-muted text-uppercase ls-1 mb-1" style={{ fontSize: '0.7rem' }}>
                         Tested Taxable Income (\$)
                     </label>
                     <CurrencyInput 
-                        className="form-control"
+                        className="form-control form-control-sm"
                         value={customIncome}
                         onChange={(val: any) => setCustomIncome(Number(val) || 0)}
                         placeholder="Enter income..."
@@ -213,71 +234,80 @@ export default function MarginalTaxCurve() {
                 </div>
 
                 <div className="col-12 col-md-4">
-                    <label className="form-label small fw-bold text-muted mb-1">Province</label>
-                    <input 
-                        type="text" 
-                        readOnly 
-                        className="form-control text-muted bg-transparent border border-secondary fw-bold"
-                        value={province === 'ON' ? 'Ontario (ON)' : province === 'BC' ? 'British Columbia (BC)' : 'Alberta (AB)'}
-                    />
+                    <label className="form-label small fw-bold text-muted text-uppercase ls-1 mb-1" style={{ fontSize: '0.7rem' }}>
+                        Province / Territory
+                    </label>
+                    <select 
+                        className="form-select form-select-sm bg-input border-secondary text-main shadow-none fw-bold"
+                        style={{ fontSize: '0.8rem' }}
+                        value={selectedProvince}
+                        onChange={(e) => setSelectedProvince(e.target.value)}
+                    >
+                        {PROVINCES.map(p => (
+                            <option key={p.id} value={p.id} className="bg-body text-main">
+                                {p.label}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
-                <div className="col-12 col-md-4 d-flex align-items-end gap-3 pb-1">
-                    <div className="form-check form-switch mb-0">
+                {/* Vertically Stacked Toggles (No text squishing) */}
+                <div className="col-12 col-md-4 d-flex flex-column justify-content-center gap-2 pt-1">
+                    <div className="form-check form-switch mb-0 d-flex align-items-center">
                         <input 
-                            className="form-check-input cursor-pointer" 
+                            className="form-check-input cursor-pointer me-2 mt-0" 
                             type="checkbox" 
                             id="seniorToggle" 
                             checked={isSenior} 
                             onChange={e => setIsSenior(e.target.checked)} 
                         />
-                        <label className="form-check-label small fw-bold text-main cursor-pointer" htmlFor="seniorToggle">
+                        <label className="form-check-label small fw-bold text-main cursor-pointer user-select-none" htmlFor="seniorToggle" style={{ fontSize: '0.78rem' }}>
                             Age 65+ (OAS Eligible)
                         </label>
                     </div>
 
                     {isSenior && (
-                        <div className="form-check form-switch mb-0">
+                        <div className="form-check form-switch mb-0 d-flex align-items-center">
                             <input 
-                                className="form-check-input cursor-pointer" 
+                                className="form-check-input cursor-pointer me-2 mt-0" 
                                 type="checkbox" 
                                 id="oasToggle" 
                                 checked={hasOas} 
                                 onChange={e => setHasOas(e.target.checked)} 
                             />
-                            <label className="form-check-label small fw-bold text-muted cursor-pointer" htmlFor="oasToggle">
-                                Receive OAS
+                            <label className="form-check-label small fw-bold text-muted cursor-pointer user-select-none" htmlFor="oasToggle" style={{ fontSize: '0.78rem' }}>
+                                Receive OAS (\$95k Clawback Active)
                             </label>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="row g-3 mb-4">
+            {/* KPI Cards (Standardized font scale) */}
+            <div className="row g-3 mb-3">
                 <div className="col-12 col-md-4">
                     <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm h-100">
-                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1">
+                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
                             Effective Marginal Rate
                         </span>
-                        <div className={`display-6 fw-bold ${currentBreakdown.totalMarginalRate >= 50 ? 'text-danger' : currentBreakdown.totalMarginalRate >= 40 ? 'text-warning' : 'text-primary'}`}>
+                        <div className={`fs-3 fw-bold mb-1 ${currentBreakdown.totalMarginalRate >= 50 ? 'text-danger' : currentBreakdown.totalMarginalRate >= 40 ? 'text-warning' : 'text-primary'}`}>
                             {currentBreakdown.totalMarginalRate.toFixed(1)}%
                         </div>
-                        <span className="small text-muted">
-                            Statutory Rate: {currentBreakdown.statutoryRate.toFixed(1)}% {currentBreakdown.surtaxRate > 0 && `(+${currentBreakdown.surtaxRate}% Surtax)`}
+                        <span className="small text-muted" style={{ fontSize: '0.72rem' }}>
+                            Base Tax: {currentBreakdown.statutoryRate.toFixed(1)}% {currentBreakdown.surtaxRate > 0 && `(+${currentBreakdown.surtaxRate}% Surtax)`}
                         </span>
                     </div>
                 </div>
 
                 <div className="col-12 col-md-4">
                     <div className={`p-3 border rounded-4 shadow-sm h-100 ${isInsideOasTrap ? 'border-danger bg-danger bg-opacity-10' : 'border-secondary bg-body'}`}>
-                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1">
+                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
                             OAS Clawback Status
                         </span>
-                        <div className={`fs-4 fw-bold ${isInsideOasTrap ? 'text-danger' : 'text-success'}`}>
-                            {isInsideOasTrap ? 'Inside Clawback Zone' : (oasHeadroom > 0 ? 'Safe (Under Threshold)' : 'OAS Fully Clawed Back')}
+                        <div className={`fs-5 fw-bold mb-1 ${isInsideOasTrap ? 'text-danger' : 'text-success'}`}>
+                            {isInsideOasTrap ? 'Inside Clawback Zone' : (oasHeadroom > 0 ? 'Safe (Under Limit)' : 'OAS Fully Eliminated')}
                         </div>
-                        <span className="small text-muted">
+                        <span className="small text-muted" style={{ fontSize: '0.72rem' }}>
                             {oasHeadroom > 0 
                                 ? `$${oasHeadroom.toLocaleString()} room before 15% clawback` 
                                 : isInsideOasTrap 
@@ -289,30 +319,30 @@ export default function MarginalTaxCurve() {
 
                 <div className="col-12 col-md-4">
                     <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm h-100">
-                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1">
+                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
                             Next \$1,000 Withdrawn
                         </span>
-                        <div className="fs-4 fw-bold text-main">
-                            Keep: <span className="text-success">\${next1000Keep}</span> <span className="small text-muted fw-normal fs-6">/ Pay: <span className="text-danger">\${next1000Tax}</span></span>
+                        <div className="fs-5 fw-bold text-main mb-1">
+                            Keep: <span className="text-success">\${next1000Keep}</span> <span className="small text-muted fw-normal" style={{ fontSize: '0.8rem' }}>/ Pay: <span className="text-danger">\${next1000Tax}</span></span>
                         </div>
-                        <span className="small text-muted">
-                            Net keep rate: {(100 - currentBreakdown.totalMarginalRate).toFixed(1)}% on your next dollar
+                        <span className="small text-muted" style={{ fontSize: '0.72rem' }}>
+                            Keep rate: {(100 - currentBreakdown.totalMarginalRate).toFixed(1)}% on your next dollar
                         </span>
                     </div>
                 </div>
             </div>
 
-            {/* Interactive Visual Step Chart */}
-            <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <span className="small fw-bold text-uppercase ls-1 text-muted">
-                        Effective Marginal Tax Rate vs. Taxable Income
+            {/* Interactive Visual Step Chart (Compact & calibrated) */}
+            <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="small fw-bold text-uppercase ls-1 text-muted" style={{ fontSize: '0.72rem' }}>
+                        Marginal Rate vs. Taxable Income
                     </span>
-                    <div className="d-flex align-items-center gap-3 small">
+                    <div className="d-flex align-items-center gap-3 small" style={{ fontSize: '0.72rem' }}>
                         <span className="d-flex align-items-center gap-1">
                             <span className="badge rounded-circle p-1 bg-primary"> </span> Base Tax
                         </span>
-                        {province === 'ON' && (
+                        {selectedProvince === 'ON' && (
                             <span className="d-flex align-items-center gap-1">
                                 <span className="badge rounded-circle p-1 bg-warning"> </span> ON Surtax
                             </span>
@@ -323,9 +353,9 @@ export default function MarginalTaxCurve() {
                     </div>
                 </div>
 
-                <div style={{ height: '320px', width: '100%' }}>
+                <div style={{ height: '260px', width: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={curveData} margin={{ top: 15, right: 25, left: 0, bottom: 5 }}>
+                        <AreaChart data={curveData} margin={{ top: 12, right: 20, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                             <XAxis 
                                 dataKey="formattedInc" 
@@ -346,55 +376,71 @@ export default function MarginalTaxCurve() {
                                 labelFormatter={(label: any) => `Taxable Income: ${label}`}
                             />
                             
-                            {/* Stacking the layers */}
                             <Area type="stepAfter" dataKey="baseTax" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} name="Base Federal & Provincial" />
                             <Area type="stepAfter" dataKey="surtax" stackId="1" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6} name="Ontario Surtax" />
                             <Area type="stepAfter" dataKey="oasClawback" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="OAS Clawback (+15%)" />
 
-                            {/* Reference line for Tested Income */}
                             <ReferenceLine 
                                 x={`$${(Math.round(customIncome / 2500) * 2.5).toFixed(0)}k`} 
                                 stroke="#38bdf8" 
                                 strokeWidth={2}
                                 strokeDasharray="4 4"
-                                label={{ value: `Tested: $${(customIncome / 1000).toFixed(0)}k`, position: 'top', fill: '#38bdf8', fontSize: 11, fontWeight: 'bold' }} 
+                                label={{ value: `Tested: $${(customIncome / 1000).toFixed(0)}k`, position: 'top', fill: '#38bdf8', fontSize: 10, fontWeight: 'bold' }} 
                             />
-                            {/* OAS Threshold Reference */}
                             <ReferenceLine 
                                 x="\$95k" 
                                 stroke="#ef4444" 
                                 strokeDasharray="3 3" 
-                                label={{ value: 'OAS Threshold (\$95.3k)', position: 'insideTopLeft', fill: '#ef4444', fontSize: 10 }} 
+                                label={{ value: 'OAS Threshold (\$95.3k)', position: 'insideTopLeft', fill: '#ef4444', fontSize: 9 }} 
                             />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* Strategic Advice Card */}
-            <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm">
-                <h6 className="fw-bold mb-2 text-main d-flex align-items-center gap-2">
-                    <i className="bi bi-lightbulb-fill text-warning"></i>
-                    Planning Strategy Takeaways
-                </h6>
-                <div className="row g-3 small text-muted">
-                    <div className="col-12 col-md-6">
-                        <div className="p-3 border border-secondary rounded-3 bg-input h-100">
-                            <span className="fw-bold text-main d-block mb-1">
-                                Early RRSP / RRIF Meltdown Window (Age 60–64)
-                            </span>
-                            If you wait until age 71 to convert your RRSP to a RRIF, mandatory minimum withdrawals combined with CPP and OAS will often push you directly into the <strong>53% to 60%</strong> clawback zone. Meltdown strategies between ages 60–64 allow you to draw down RRSP assets while your tax bracket is in the <strong>20% to 30%</strong> range, before OAS clawback begins.
-                        </div>
-                    </div>
-                    <div className="col-12 col-md-6">
-                        <div className="p-3 border border-secondary rounded-3 bg-input h-100">
-                            <span className="fw-bold text-main d-block mb-1">
-                                TFSA & Pension Splitting Shields
-                            </span>
-                            TFSA withdrawals do not count toward Net World Income ([Line 23600](https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-23600-net-income.html)) and never trigger OAS recovery tax. If your household is a couple, utilizing Section 60.03 pension splitting on up to 50% of eligible RRIF/LIF income allows you to keep both partners under the <strong>\$95,323</strong> threshold.
-                        </div>
-                    </div>
+            {/* Collapsible Strategy Takeaways with Chevron Button */}
+            <div className="border border-secondary rounded-4 bg-body shadow-sm p-3">
+                <div 
+                    className="d-flex justify-content-between align-items-center cursor-pointer user-select-none"
+                    onClick={() => setTakeawaysOpen(!takeawaysOpen)}
+                >
+                    <h6 className="fw-bold mb-0 text-main d-flex align-items-center gap-2" style={{ fontSize: '0.82rem' }}>
+                        <i className="bi bi-lightbulb-fill text-warning"></i>
+                        Planning Strategy Takeaways
+                    </h6>
+                    <button 
+                        type="button" 
+                        className="btn btn-sm btn-link text-muted p-0"
+                        title={takeawaysOpen ? "Collapse takeaways" : "Expand takeaways"}
+                    >
+                        <i className={`bi bi-chevron-${takeawaysOpen ? 'up' : 'down'} fs-5`}></i>
+                    </button>
                 </div>
+
+                {takeawaysOpen && (
+                    <div className="row g-3 small text-muted mt-2 pt-2 border-top border-secondary border-opacity-25">
+                        <div className="col-12 col-md-6">
+                            <div className="p-3 border border-secondary rounded-3 bg-input h-100">
+                                <span className="fw-bold text-main d-block mb-1" style={{ fontSize: '0.8rem' }}>
+                                    Early RRSP / RRIF Meltdown Window (Age 60–64)
+                                </span>
+                                <span style={{ fontSize: '0.75rem', lineHeight: '1.4' }}>
+                                    If you wait until age 71 to convert your RRSP to a RRIF, mandatory minimum withdrawals combined with CPP and OAS will often push you directly into the <strong>53% to 60%</strong> clawback zone. Meltdown strategies between ages 60–64 allow you to draw down RRSP assets while your tax bracket is in the <strong>20% to 30%</strong> range, before OAS clawback begins.
+                                </span>
+                            </div>
+                        </div>
+                        <div className="col-12 col-md-6">
+                            <div className="p-3 border border-secondary rounded-3 bg-input h-100">
+                                <span className="fw-bold text-main d-block mb-1" style={{ fontSize: '0.8rem' }}>
+                                    TFSA & Pension Splitting Shields
+                                </span>
+                                <span style={{ fontSize: '0.75rem', lineHeight: '1.4' }}>
+                                    TFSA withdrawals do not count toward Net World Income (Line 23600) and never trigger OAS recovery tax. If your household is a couple, Section 60.03 pension splitting on up to 50% of eligible RRIF/LIF income allows you to keep both partners under the <strong>\$95,323</strong> threshold.
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
