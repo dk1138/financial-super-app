@@ -18,7 +18,6 @@ export default function PlanTab() {
 
   // Collapsed state map for the 10 sections
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
-  const [isLiveBarMinimized, setIsLiveBarMinimized] = useState<boolean>(false);
 
   const toggleSection = (id: string) => {
     setCollapsedMap(prev => ({ ...prev, [id]: !prev[id] }));
@@ -272,6 +271,15 @@ export default function PlanTab() {
         .plan-card-wrapper.is-collapsed .rp-card {
             margin-bottom: 0.75rem !important;
         }
+
+        /* Floating Readiness Island styling */
+        .floating-readiness-island {
+            max-width: 680px;
+            width: 100%;
+            background-color: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
       `}</style>
 
       {/* --- TOP TOOLBAR: EXPAND / COLLAPSE ALL --- */}
@@ -479,72 +487,50 @@ export default function PlanTab() {
 
       </form>
 
-      {/* --- STICKY LIVE READINESS BAR --- */}
+      {/* --- CENTERED FLOATING READINESS ISLAND (Option 1) --- */}
       {liveStats && (
         <div 
-          className="position-sticky bottom-0 z-3 mt-4 pt-2"
-          style={{ bottom: '1rem', transition: 'all 0.3s ease' }}
+          className="position-sticky bottom-0 z-3 mt-4 pt-2 d-flex justify-content-center"
+          style={{ bottom: '1.25rem', transition: 'all 0.3s ease', pointerEvents: 'none' }}
         >
-          <div className="surface-card border border-primary border-opacity-50 rounded-4 shadow-lg p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(30, 41, 59, 0.92)' }}>
-            
-            {/* Left: Health Indicator */}
-            <div className="d-flex align-items-center gap-3">
-              <div className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${liveStats.isFullyFunded ? 'bg-success bg-opacity-25 text-success' : 'bg-warning bg-opacity-25 text-warning'}`} style={{ width: '40px', height: '40px' }}>
-                <i className={`bi ${liveStats.isFullyFunded ? 'bi-shield-check-fill fs-4' : 'bi-exclamation-triangle-fill fs-5'}`}></i>
+          <div 
+            className="floating-readiness-island border border-primary border-opacity-50 rounded-pill py-2 px-3 d-flex align-items-center justify-content-between gap-3 text-nowrap"
+            style={{ pointerEvents: 'auto' }}
+          >
+            {/* Left: Health Status */}
+            <div className="d-flex align-items-center gap-2 overflow-hidden">
+              <div 
+                className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${liveStats.isFullyFunded ? 'bg-success bg-opacity-25 text-success' : 'bg-warning bg-opacity-25 text-warning'}`} 
+                style={{ width: '28px', height: '28px' }}
+              >
+                <i className={`bi ${liveStats.isFullyFunded ? 'bi-shield-check-fill fs-6' : 'bi-exclamation-triangle-fill fs-6'}`}></i>
               </div>
-              <div>
-                <div className="d-flex align-items-center gap-2">
-                  <span className={`fw-bold text-uppercase ls-1 ${liveStats.isFullyFunded ? 'text-success' : 'text-warning'}`} style={{ fontSize: '0.8rem' }}>
-                    {liveStats.isFullyFunded ? 'Fully Funded to Life Expectancy' : `Portfolio Depletes at Age ${liveStats.failureAge}`}
+              <div className="d-flex align-items-center gap-2 overflow-hidden">
+                <span className={`fw-bold text-uppercase ls-1 text-truncate ${liveStats.isFullyFunded ? 'text-success' : 'text-warning'}`} style={{ fontSize: '0.78rem' }}>
+                  {liveStats.isFullyFunded ? `Fully Funded (to Age ${liveStats.lifeExp})` : `Depletes at Age ${liveStats.failureAge}`}
+                </span>
+                {liveStats.useRealDollars && (
+                  <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 d-none d-sm-inline-block" style={{ fontSize: '0.62rem' }}>
+                    Real \$
                   </span>
-                  {liveStats.useRealDollars && (
-                    <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{ fontSize: '0.65rem' }}>
-                      Real \$
-                    </span>
-                  )}
-                </div>
-                <div className="text-muted small" style={{ fontSize: '0.72rem' }}>
-                  {liveStats.isFullyFunded 
-                    ? `Zero projected shortfalls across entire horizon (to age ${liveStats.lifeExp})` 
-                    : `Needs trimming or higher savings to eliminate late-retirement deficit`}
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Right: Key Figures & Quick Action */}
-            {!isLiveBarMinimized ? (
-              <div className="d-flex align-items-center justify-content-between justify-content-md-end gap-3 flex-wrap">
-                <div className="text-end">
-                  <span className="small text-muted fw-bold d-block" style={{ fontSize: '0.68rem' }}>LIQUID AT AGE {liveStats.retAge}</span>
-                  <span className="fw-bold text-main" style={{ fontSize: '0.95rem' }}>{formatShort(liveStats.liquidAtRet)}</span>
-                </div>
-
-                <div className="border-start border-secondary opacity-50" style={{ height: '24px' }}></div>
-
-                <div className="text-end">
-                  <span className="small text-muted fw-bold d-block" style={{ fontSize: '0.68rem' }}>ESTATE AT AGE {liveStats.lifeExp}</span>
-                  <span className="fw-bold text-success" style={{ fontSize: '0.95rem' }}>{formatShort(liveStats.finalEstate)}</span>
-                </div>
-
-                <button 
-                  type="button" 
-                  className="btn btn-sm btn-link text-muted p-1 ms-1 text-decoration-none"
-                  onClick={() => setIsLiveBarMinimized(true)}
-                  title="Minimize bar"
-                >
-                  <i className="bi bi-chevron-down"></i>
-                </button>
+            {/* Right: Key Financial Metrics */}
+            <div className="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
+              <div className="border-start border-secondary opacity-50" style={{ height: '18px' }}></div>
+              <div className="d-flex align-items-baseline gap-1">
+                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>LIQ @ {liveStats.retAge}:</span>
+                <span className="fw-bold text-main" style={{ fontSize: '0.85rem' }}>{formatShort(liveStats.liquidAtRet)}</span>
               </div>
-            ) : (
-              <button 
-                type="button" 
-                className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold"
-                onClick={() => setIsLiveBarMinimized(false)}
-                style={{ fontSize: '0.75rem' }}
-              >
-                <i className="bi bi-chevron-up me-1"></i> Show Numbers
-              </button>
-            )}
+
+              <div className="border-start border-secondary opacity-50" style={{ height: '18px' }}></div>
+              <div className="d-flex align-items-baseline gap-1">
+                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>ESTATE:</span>
+                <span className="fw-bold text-success" style={{ fontSize: '0.85rem' }}>{formatShort(liveStats.finalEstate)}</span>
+              </div>
+            </div>
 
           </div>
         </div>
