@@ -85,7 +85,7 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
 
     return (
         <div className="position-relative w-100 d-flex align-items-center" style={{ minWidth: 0 }}>
-            <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '8px', fontSize: '0.85em', pointerEvents: 'none', zIndex: 5 }}>\$</span>
+            <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '8px', fontSize: '0.85em', pointerEvents: 'none', zIndex: 5 }}>$</span>
             <input 
                 type="text" 
                 maxLength={15} 

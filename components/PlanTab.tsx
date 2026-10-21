@@ -110,26 +110,27 @@ export default function PlanTab() {
             position: relative;
         }
         .plan-card-wrapper .card-header {
-            padding-right: 52px !important;
+            padding-right: 48px !important;
         }
         .collapse-chevron-btn {
             position: absolute;
-            top: 14px;
-            right: 14px;
-            z-index: 20;
-            width: 32px;
-            height: 32px;
+            top: 0;
+            right: 18px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            transition: all 0.2s ease;
+            z-index: 20;
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            color: var(--bs-secondary-color, #94a3b8) !important;
+            cursor: pointer;
+            transition: color 0.15s ease-in-out;
         }
         .collapse-chevron-btn:hover {
-            background: var(--primary);
-            color: #fff !important;
-            border-color: var(--primary);
+            color: var(--bs-primary, #3b82f6) !important;
         }
         .plan-card-wrapper.is-collapsed .card-body {
             display: none !important;
@@ -143,7 +144,7 @@ export default function PlanTab() {
       `}</style>
 
       {/* --- TOP TOOLBAR: EXPAND / COLLAPSE ALL --- */}
-      <div className="d-flex justify-content-end align-items-center gap-2 mb-4 pb-2 border-bottom border-secondary border-opacity-50">
+      <div className="d-flex align-items-center justify-content-end gap-2 mb-3">
         <button 
           type="button" 
           className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
@@ -169,11 +170,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['personal'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('personal')}
             title={collapsedMap['personal'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['personal'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['personal'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <PersonalInformationCard />
         </div>
@@ -182,11 +183,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['dependents'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('dependents')}
             title={collapsedMap['dependents'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['dependents'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['dependents'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <DependentsCard />
         </div>
@@ -195,11 +196,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['portfolio'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('portfolio')}
             title={collapsedMap['portfolio'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['portfolio'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['portfolio'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <PortfolioAssetsCard />
         </div>
@@ -208,11 +209,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['realestate'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('realestate')}
             title={collapsedMap['realestate'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['realestate'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['realestate'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <LivingCostCard />
         </div>
@@ -221,11 +222,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['tax'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('tax')}
             title={collapsedMap['tax'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['tax'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['tax'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <IncomeTaxCard />
         </div>
@@ -234,11 +235,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['living'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('living')}
             title={collapsedMap['living'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['living'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['living'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <LivingExpensesCard />
         </div>
@@ -247,11 +248,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['future'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('future')}
             title={collapsedMap['future'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['future'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['future'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <FutureExpensesCard />
         </div>
@@ -260,11 +261,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['windfalls'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('windfalls')}
             title={collapsedMap['windfalls'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['windfalls'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['windfalls'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <WindfallsCard />
         </div>
@@ -273,11 +274,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['govt'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('govt')}
             title={collapsedMap['govt'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['govt'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['govt'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <GovtBenefitsCard />
         </div>
@@ -286,11 +287,11 @@ export default function PlanTab() {
         <div className={`plan-card-wrapper ${collapsedMap['economic'] ? 'is-collapsed' : ''}`}>
           <button 
             type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
             onClick={() => toggleSection('economic')}
             title={collapsedMap['economic'] ? "Expand section" : "Collapse section"}
           >
-            <i className={`bi bi-chevron-${collapsedMap['economic'] ? 'down' : 'up'}`}></i>
+            <i className={`bi bi-chevron-${collapsedMap['economic'] ? 'down' : 'up'} fs-5`}></i>
           </button>
           <EconomicAssumptionsCard />
         </div>
