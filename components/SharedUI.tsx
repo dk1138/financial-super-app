@@ -27,22 +27,93 @@ export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: {
     );
 };
 
+// Helper to parse financial inputs with 'k' (thousands) and 'm' (millions) shorthand
+export const parseFinancialInput = (raw: string): number | '' => {
+    const cleaned = raw.trim().toLowerCase().replace(/[\$,]/g, '');
+    if (cleaned === '') return '';
+    
+    // Match e.g. "85k", "1.2m", "500", "1500.50"
+    const match = cleaned.match(/^([0-9]+(?:\.[0-9]+)?)\s*([km])?\$/);
+    if (match) {
+        const num = parseFloat(match[1]);
+        if (isNaN(num)) return '';
+        const unit = match[2];
+        if (unit === 'k') return Math.round(num * 1000);
+        if (unit === 'm') return Math.round(num * 1000000);
+        return Math.round(num);
+    }
+    
+    const digits = cleaned.replace(/[^0-9]/g, '');
+    return digits === '' ? '' : parseInt(digits, 10);
+};
+
 // --- DATA INPUTS ---
 export const CurrencyInput = ({ value, onChange, className, placeholder, style, disabled, suffix, noBg }: any) => {
-    const [localValue, setLocalValue] = useState('');
+    const [isFocused, setIsFocused] = useState(false);
+    const [displayVal, setDisplayVal] = useState('');
+
     useEffect(() => {
-        if (value !== undefined && value !== '' && value !== null) { setLocalValue(Number(Math.round(value)).toLocaleString('en-US')); } else { setLocalValue(''); }
-    }, [value]);
+        if (!isFocused) {
+            if (value !== undefined && value !== '' && value !== null) {
+                setDisplayVal(Number(Math.round(value)).toLocaleString('en-US'));
+            } else {
+                setDisplayVal('');
+            }
+        }
+    }, [value, isFocused]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let rawStr = e.target.value;
         if (rawStr.length > 15) rawStr = rawStr.substring(0, 15);
-        const rawValue = rawStr.replace(/[^0-9]/g, ''); 
-        if (rawValue === '') onChange(''); else onChange(parseInt(rawValue, 10));
+        setDisplayVal(rawStr);
+
+        // If the user types pure digits/commas, update onChange in real-time
+        if (/^[0-9,]*\$/.test(rawStr)) {
+            const digits = rawStr.replace(/[^0-9]/g, '');
+            if (digits === '') onChange('');
+            else onChange(parseInt(digits, 10));
+        }
     };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        const parsed = parseFinancialInput(displayVal);
+        if (parsed === '') {
+            setDisplayVal('');
+            onChange('');
+        } else {
+            setDisplayVal(parsed.toLocaleString('en-US'));
+            onChange(parsed);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            (e.target as HTMLInputElement).blur();
+        }
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(true);
+        e.target.select();
+    };
+
     return (
         <div className="position-relative w-100 d-flex align-items-center" style={{ minWidth: 0 }}>
-            <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '8px', fontSize: '0.85em', pointerEvents: 'none', zIndex: 5 }}>$</span>
-            <input type="text" maxLength={15} className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50' : ''}`} style={{ ...style, minWidth: 0, paddingLeft: noBg ? '16px' : '28px', paddingRight: suffix ? '45px' : '12px', fontWeight: '600', outline: 'none' }} value={localValue} onChange={handleChange} placeholder={placeholder} disabled={disabled} />
+            <span className="position-absolute text-muted fw-bold" style={{ left: noBg ? '4px' : '8px', fontSize: '0.85em', pointerEvents: 'none', zIndex: 5 }}>\$</span>
+            <input 
+                type="text" 
+                maxLength={15} 
+                className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50' : ''}`} 
+                style={{ ...style, minWidth: 0, paddingLeft: noBg ? '16px' : '28px', paddingRight: suffix ? '45px' : '12px', fontWeight: '600', outline: 'none' }} 
+                value={displayVal} 
+                onChange={handleChange} 
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder} 
+                disabled={disabled} 
+            />
             {suffix && <span className="position-absolute text-muted small fw-bold" style={{ right: '10px', pointerEvents: 'none', zIndex: 5 }}>{suffix}</span>}
         </div>
     );
@@ -61,7 +132,20 @@ export const PercentInput = ({ value, onChange, className, placeholder, noBg, di
 
     return (
         <div className="position-relative w-100 d-flex align-items-center" style={{ minWidth: 0 }}>
-            <input type="number" step="0.01" max={1000} min={-100} className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50 bg-secondary bg-opacity-25' : ''}`} style={{ minWidth: 0, paddingLeft: '6px', paddingRight: '28px', fontWeight: '600', outline: 'none' }} value={focused ? (value ?? '') : displayValue} onChange={handleChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder={placeholder} disabled={disabled} />
+            <input 
+                type="number" 
+                step="0.01" 
+                max={1000} 
+                min={-100} 
+                className={`w-100 ${className} text-start ${noBg ? 'bg-transparent border-0' : 'shadow-sm border border-secondary bg-input text-main'} ${disabled ? 'opacity-50 bg-secondary bg-opacity-25' : ''}`} 
+                style={{ minWidth: 0, paddingLeft: '6px', paddingRight: '28px', fontWeight: '600', outline: 'none' }} 
+                value={focused ? (value ?? '') : displayValue} 
+                onChange={handleChange} 
+                onFocus={(e) => { setFocused(true); e.target.select(); }} 
+                onBlur={() => setFocused(false)} 
+                placeholder={placeholder} 
+                disabled={disabled} 
+            />
             <span className="position-absolute text-muted fw-bold" style={{ right: '12px', fontSize: '0.85em', pointerEvents: 'none', zIndex: 5 }}>%</span>
         </div>
     );
@@ -111,7 +195,17 @@ export const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) =>
         <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm w-100 justify-content-between">
             <button type="button" className="btn btn-sm btn-link text-muted p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
             <div className="d-flex align-items-center justify-content-center flex-grow-1">
-                <input type="text" maxLength={4} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0 w-100" style={{ outline: 'none', boxShadow: 'none', fontSize: '0.95rem' }} value={textVal} onChange={(e) => setTextVal(e.target.value)} onBlur={handleBlur} onKeyDown={handleKeyDown} />
+                <input 
+                    type="text" 
+                    maxLength={4} 
+                    className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0 w-100" 
+                    style={{ outline: 'none', boxShadow: 'none', fontSize: '0.95rem' }} 
+                    value={textVal} 
+                    onChange={(e) => setTextVal(e.target.value)} 
+                    onFocus={(e) => e.target.select()}
+                    onBlur={handleBlur} 
+                    onKeyDown={handleKeyDown} 
+                />
                 {suffix && <span className="text-muted fw-bold pe-1" style={{fontSize: '0.95rem'}}>{suffix}</span>}
             </div>
             <button type="button" className="btn btn-sm btn-link text-primary p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
