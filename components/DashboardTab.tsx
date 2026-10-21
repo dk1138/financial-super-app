@@ -1,7 +1,3 @@
-The crash happened because the previous snippet contained an outdated scorecard reference (`planScore.pillars.savings.score`). In your calculation engine (`lib/engine/scoring.ts`), `planScore` provides direct properties (`planScore.retirementReadiness`, `planScore.debtHealth`, `planScore.savingsRate`, and `planScore.emergencyFund`). Because `planScore.pillars` was undefined, accessing `.savings` threw a `TypeError: Cannot read properties of undefined` in React.
-
-Here is the exact, clean version based directly on your source code. It preserves all of your original charts and metrics while cleanly adding the **Milestones & Estate** breakdown and shortfall tracking:
-
 ```tsx
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
