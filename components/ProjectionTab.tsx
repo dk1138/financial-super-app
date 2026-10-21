@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
@@ -28,12 +26,6 @@ export default function ProjectionTab() {
 
   const isCouple = data.mode === 'Couple';
 
-  // Resolve dynamic custom player names
-  const p1Name = data.inputs.p1_name || 'Player 1';
-  const p2Name = data.inputs.p2_name || 'Player 2';
-  const p1Upper = p1Name.toUpperCase();
-  const p2Upper = p2Name.toUpperCase();
-
   const showToast = (msg: string) => {
       setToastMsg(msg);
       setTimeout(() => setToastMsg(''), 4000);
@@ -50,21 +42,10 @@ export default function ProjectionTab() {
   }
 
   const baseYear = results.timeline[0]?.year || new Date().getFullYear();
-  
-  // Safe parsing for inflation rate
-  const rawInf = data.inputs?.inflation_rate;
-  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
-
-  // Safe parsing for Today's Dollars toggle
-  const useRealDollars = Boolean(
-      data.useRealDollars === true || 
-      data.inputs?.todays_dollars === true || 
-      data.inputs?.use_real_dollars === true ||
-      data.inputs?.useRealDollars === true
-  );
+  const inflation = (data.inputs.inflation_rate || 2.1) / 100;
 
   const getRealValue = (nominalValue: number, year?: number) => {
-      if (!useRealDollars || year === undefined) return nominalValue;
+      if (!data.useRealDollars || year === undefined) return nominalValue;
       const yearsOut = Math.max(0, year - baseYear);
       return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
@@ -82,8 +63,8 @@ export default function ProjectionTab() {
       if (!results || !results.timeline) return;
 
       const headers = [
-          "Year", `${p1Name} Age`, isCouple ? `${p2Name} Age` : "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
-          "Living Expenses", "Mortgage & Debt", "Education Costs", "Lifestyle Spending Cash", "Contributions", "Withdrawals",
+          "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
+          "Living Expenses", "Mortgage & Debt", "Education Costs", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
 
@@ -106,28 +87,36 @@ export default function ProjectionTab() {
           const totalWithdrawals = y.flows?.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) : 0;
           let engineContributions = 0;
           if (y.flows && y.flows.contributions) {
-              engineContributions += Object.entries(y.flows.contributions.p1 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
-              if (isCouple) engineContributions += Object.entries(y.flows.contributions.p2 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
+              engineContributions += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+              if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
           }
 
-          const lifestyleSpendingCash = y.flows?.contributions?.shared?.spending_cash || 0;
+          const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
+          const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
+          const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
+
+          const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
+          const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
+          const totalClawback = p1Clawback + p2Clawback;
+
+          const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
+          const totalEstate = (y.afterTaxEstate !== undefined ? y.afterTaxEstate : (y.liquidNW + (y.reIncludedEq || 0)));
 
           return [
               y.year,
               y.p1Age || y.ageP1 || '',
               isCouple ? (y.p2Age || y.ageP2 || '') : 'N/A',
               phase,
-              Math.round(getRealValue((y.grossInflow || 0) - ((y.taxDetailsP1?.oas_clawback || 0) + (y.taxDetailsP2?.oas_clawback || 0)), y.year)),
-              Math.round(getRealValue((y.taxP1 || 0) + (y.taxP2 || 0) - ((y.taxDetailsP1?.oas_clawback || 0) + (y.taxDetailsP2?.oas_clawback || 0)), y.year)),
+              Math.round(getRealValue((y.grossInflow || 0) - totalClawback, y.year)),
+              Math.round(getRealValue(totalTaxes, y.year)),
               Math.round(getRealValue(y.expenses || 0, y.year)),
-              Math.round(getRealValue((y.mortgagePay || 0) + Math.max(0, (y.debtRepayment || 0) - Math.max(0, (y.eduExpense || 0) - ((y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0)))), y.year)),
+              Math.round(getRealValue((y.mortgagePay || 0) + baseDebtRepayment, y.year)),
               Math.round(getRealValue(y.eduExpense || 0, y.year)),
-              Math.round(getRealValue(lifestyleSpendingCash, y.year)),
               Math.round(getRealValue(engineContributions, y.year)),
               Math.round(getRealValue(totalWithdrawals as number, y.year)),
               Math.round(getRealValue(y.liquidNW || 0, y.year)),
               Math.round(getRealValue((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)),
-              Math.round(getRealValue((y.afterTaxEstate !== undefined ? y.afterTaxEstate : (y.liquidNW + (y.reIncludedEq || 0))), y.year))
+              Math.round(getRealValue(totalEstate, y.year))
           ].join(",");
       });
 
@@ -171,163 +160,92 @@ export default function ProjectionTab() {
                   }
               }
 
-              const dataUrl = canvas.toDataURL('image/png');
+              const url = canvas.toDataURL('image/png');
               const link = document.createElement('a');
+              link.href = url;
               link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
-              link.href = dataUrl;
               link.click();
-              showToast('Export complete!');
+              showToast('✅ Table image downloaded successfully!');
           } catch (err) {
-              console.error("Export PNG Failed:", err);
-              showToast('Export failed. Please try CSV or standard print.');
+              console.error(err);
+              if (scrollContainer) {
+                  if (originalStyle !== null) {
+                      scrollContainer.setAttribute('style', originalStyle);
+                  } else {
+                      scrollContainer.removeAttribute('style');
+                  }
+              }
+              showToast('❌ Failed to download image.');
           } finally {
               setIsExporting(false);
           }
-      }, 100);
+      }, 500); 
   };
+
+  let totalTaxPaid = 0;
+  let peakNW = 0;
+  let peakAge = 0;
+  let hasShortfall = false;
+  let retYears = 0;
+
+  results.timeline.forEach((y: any) => {
+      const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
+      const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
+      const totalClawback = p1Clawback + p2Clawback;
+
+      const realTax = getRealValue((y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback, y.year);
+      totalTaxPaid += realTax;
+
+      const realNW = getRealValue(y.liquidNW + (y.reIncludedEq || 0), y.year);
+      if (realNW > peakNW) {
+          peakNW = realNW;
+          peakAge = y.p1Age;
+      }
+      
+      let contsRaw = 0;
+      if (y.flows && y.flows.contributions) {
+          contsRaw += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+          if (isCouple) contsRaw += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+      }
+
+      const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
+      const totalSourced = y.grossInflow || 0;
+      const mandatoryBills = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0);
+      
+      if (totalSourced < mandatoryBills - 1) {
+          hasShortfall = true;
+      }
+
+      if (y.p1Age >= (data.inputs.p1_retireAge || 65)) {
+          retYears++;
+      }
+  });
+
+  const planSuccess = !hasShortfall;
+  const finalYear = results.timeline[results.timeline.length - 1];
+  const finalEstate = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
 
   const toggleRow = (year: number) => {
     setExpandedYear(expandedYear === year ? null : year);
   };
 
-  const getPhaseBadge = (y: any) => {
-    const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-    const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
-    const isP1Ret = (y.p1Age || y.ageP1) >= p1Ret;
-    const isP2Ret = isCouple ? (y.p2Age || y.ageP2) >= p2Ret : true;
-
-    if (isP1Ret && isP2Ret) {
-        const maxAge = isCouple ? Math.max(y.p1Age, y.p2Age) : y.p1Age;
-        if (maxAge <= (Number(data.inputs.exp_gogo_age) || 75)) {
-            return <span className="badge bg-success bg-opacity-25 text-success border border-success fw-normal px-2 py-1"><i className="bi bi-airplane-fill me-1"></i>Go-Go</span>;
-        }
-        if (maxAge <= (Number(data.inputs.exp_slow_age) || 85)) {
-            return <span className="badge bg-warning bg-opacity-25 text-warning border border-warning fw-normal px-2 py-1"><i className="bi bi-car-front-fill me-1"></i>Slow-Go</span>;
-        }
-        return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger fw-normal px-2 py-1"><i className="bi bi-house-heart-fill me-1"></i>No-Go</span>;
-    }
-
-    if (isP1Ret || isP2Ret) {
-        return <span className="badge bg-info bg-opacity-25 text-info border border-info fw-normal px-2 py-1"><i className="bi bi-hourglass-split me-1"></i>Transition</span>;
-    }
-
-    return <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal px-2 py-1"><i className="bi bi-briefcase-fill me-1"></i>Working</span>;
-  };
-
-  const getEventIcons = (rawEvents: string[] | undefined, y?: any, index?: number, timeline?: any[]) => {
-      const eventList: string[] = [...(rawEvents || [])];
-
-      if (y) {
-          const p1Age = y.p1Age || y.ageP1;
-          const p2Age = y.p2Age || y.ageP2;
-          const prevY = (index !== undefined && index > 0 && timeline) ? timeline[index - 1] : null;
-
-          // 1. Retirement start
-          const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-          if (p1Age === p1Ret && !eventList.some(e => e.includes('P1') && e.includes('Retire'))) {
-              eventList.push('P1 Retires');
-          }
-          if (isCouple && p2Age === (Number(data.inputs.p2_retireAge) || 65) && !eventList.some(e => e.includes('P2') && e.includes('Retire'))) {
-              eventList.push('P2 Retires');
-          }
-
-          // 2. CPP start
-          const p1CppStart = Number(data.inputs.p1_cpp_start) || 65;
-          if (data.inputs.p1_cpp_enabled && p1Age === p1CppStart && !eventList.some(e => e.includes('P1') && e.includes('CPP'))) {
-              eventList.push('P1 Starts CPP');
-          }
-          if (isCouple && data.inputs.p2_cpp_enabled && p2Age === (Number(data.inputs.p2_cpp_start) || 65) && !eventList.some(e => e.includes('P2') && e.includes('CPP'))) {
-              eventList.push('P2 Starts CPP');
-          }
-
-          // 3. OAS start
-          const p1OasStart = Number(data.inputs.p1_oas_start) || 65;
-          if (data.inputs.p1_oas_enabled && p1Age === p1OasStart && !eventList.some(e => e.includes('P1') && e.includes('OAS'))) {
-              eventList.push('P1 Starts OAS');
-          }
-          if (isCouple && data.inputs.p2_oas_enabled && p2Age === (Number(data.inputs.p2_oas_start) || 65) && !eventList.some(e => e.includes('P2') && e.includes('OAS'))) {
-              eventList.push('P2 Starts OAS');
-          }
-
-          // 4. RRIF mandatory conversion (age 71 year-end / age 72 mandatory minimum)
-          const rrifAge = 72;
-          if (p1Age === rrifAge && !eventList.some(e => e.includes('P1') && e.includes('RRIF'))) {
-              eventList.push('P1 RRIF Conversion');
-          }
-          if (isCouple && p2Age === rrifAge && !eventList.some(e => e.includes('P2') && e.includes('RRIF'))) {
-              eventList.push('P2 RRIF Conversion');
-          }
-
-          // 5. Mortgage paid off
-          if (prevY && (prevY.mortgage || 0) > 0 && (y.mortgage || 0) === 0 && !eventList.some(e => e.includes('Mortgage Paid'))) {
-              eventList.push('Mortgage Paid');
-          }
-      }
-
-      if (eventList.length === 0) return null;
-
-      return (
-          <div className="d-inline-flex align-items-center gap-1 ms-2 flex-wrap">
-              {eventList.map((ev, i) => {
-                  let colorClass = "text-secondary";
-                  let icon = "bi-info-circle-fill";
-
-                  if (ev.includes('Retire')) {
-                      colorClass = "text-primary";
-                      icon = "bi-cup-hot-fill";
-                  } else if (ev.includes('CPP')) {
-                      colorClass = "text-success";
-                      icon = "bi-shield-fill-check";
-                  } else if (ev.includes('OAS')) {
-                      colorClass = "text-warning";
-                      icon = "bi-sun-fill";
-                  } else if (ev.includes('RRIF') || ev.includes('LIF Unlocked')) {
-                      colorClass = "text-info";
-                      icon = "bi-arrow-repeat";
-                  } else if (ev.includes('Mortgage Paid')) {
-                      colorClass = "text-success";
-                      icon = "bi-house-check-fill";
-                  } else if (ev.includes('Windfall')) {
-                      colorClass = "text-success";
-                      icon = "bi-cash-coin";
-                  } else if (ev.includes('Purchased') || ev.includes('Property')) {
-                      colorClass = "text-info";
-                      icon = "bi-house-add-fill";
-                  } else if (ev.includes('Sold') || ev.includes('Downsize')) {
-                      colorClass = "text-danger";
-                      icon = "bi-house-down-fill";
-                  } else if (ev.includes('Kept Previous')) {
-                      colorClass = "text-primary";
-                      icon = "bi-houses-fill";
-                  } else if (ev.includes('Dies')) {
-                      colorClass = "text-danger";
-                      icon = "bi-heartbreak-fill";
-                  } else if (ev.includes('Leave')) {
-                      colorClass = "text-info";
-                      icon = "bi-person-hearts";
-                  } else if (ev.includes('Guardrail')) {
-                      colorClass = "text-warning";
-                      icon = "bi-shield-exclamation";
-                  } else if (ev.includes('RRSP')) {
-                      colorClass = "text-secondary";
-                      icon = "bi-arrow-left-right";
-                  }
-
-                  const dynamicText = ev
-                      .replace(/\bP1\b/g, p1Name)
-                      .replace(/\bP2\b/g, p2Name);
-
-                  return (
-                      <i 
-                          key={i} 
-                          className={`bi ${icon} ${colorClass}`} 
-                          title={dynamicText} 
-                          style={{ cursor: 'help', fontSize: '0.95rem' }}
-                      />
-                  );
-              })}
-          </div>
-      );
+  const getEventIcons = (events: string[]) => {
+      if (!events || events.length === 0) return null;
+      return events.map((ev, i) => {
+          let colorClass = "text-secondary";
+          let icon = "bi-info-circle-fill";
+          if (ev.includes('Retires')) { colorClass = "text-primary"; icon = "bi-cup-hot-fill"; }
+          else if (ev.includes('Windfall')) { colorClass = "text-success"; icon = "bi-cash-coin"; }
+          else if (ev.includes('Mortgage Paid')) { colorClass = "text-primary"; icon = "bi-house-check-fill"; }
+          else if (ev.includes('Dies')) { colorClass = "text-danger"; icon = "bi-heartbreak-fill"; }
+          else if (ev.includes('Leave')) { colorClass = "text-info"; icon = "bi-person-hearts"; }
+          else if (ev.includes('Downsize')) { colorClass = "text-danger"; icon = "bi-house-down-fill"; }
+          else if (ev.includes('RRSP')) { colorClass = "text-secondary"; icon = "bi-arrow-left-right"; }
+          
+          return (
+              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={ev} style={{cursor: 'help'}}></i>
+          );
+      });
   };
 
   const renderAges = (y: any) => {
@@ -344,49 +262,69 @@ export default function ProjectionTab() {
           });
           ages.push(<span key="kids" className="d-block text-muted fw-medium mt-1" style={{fontSize: '0.7rem'}}>Kids: {childAges.join(', ')}</span>);
       }
-      return <div className="d-flex flex-column align-items-center justify-content-center"><div>{ages}</div></div>;
+      return ages;
+  };
+
+  const getPhaseBadge = (y: any) => {
+      const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+      const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
+      const p1Age = y.p1Age || y.ageP1;
+      const p2Age = isCouple ? (y.p2Age || y.ageP2) : p1Age;
+
+      const isP1Ret = p1Age >= p1Ret;
+      const isP2Ret = isCouple ? p2Age >= p2Ret : true;
+
+      if (!isP1Ret && !isP2Ret) return <span className="badge bg-secondary bg-opacity-25 text-secondary border border-secondary w-100 py-2">Working</span>;
+      if (isCouple && (isP1Ret !== isP2Ret)) return <span className="badge bg-info bg-opacity-25 text-info border border-info w-100 py-2">Transition</span>;
+
+      const maxAge = isCouple ? Math.max(p1Age, p2Age) : p1Age;
+      const gogo = Number(data.inputs.exp_gogo_age) || 75;
+      const slowgo = Number(data.inputs.exp_slow_age) || 85;
+
+      if (maxAge <= gogo) return <span className="badge bg-success bg-opacity-25 text-success border border-success w-100 py-2">Go-Go Phase</span>;
+      if (maxAge <= slowgo) return <span className="badge bg-opacity-25 border w-100 py-2" style={{ backgroundColor: 'rgba(217, 119, 6, 0.15)', color: '#d97706', borderColor: '#d97706' }}>Slow-Go Phase</span>;
+      return <span className="badge bg-danger bg-opacity-25 text-danger border border-danger w-100 py-2">No-Go Phase</span>;
   };
 
   const sumAccounts = (assets: any) => {
-    if (!assets) return 0;
-    return (assets.tfsa || 0) + (assets.tfsa_successor || 0) + (assets.fhsa || 0) + (assets.rrsp || 0) + (assets.rrif_acct || 0) + (assets.lirf || 0) + (assets.lif || 0) + (assets.nonreg || 0) + (assets.cash || 0) + (assets.crypto || 0);
+      if (!assets) return 0;
+      return (assets.cash||0) + (assets.tfsa||0) + (assets.fhsa||0) + (assets.rrsp||0) + (assets.lirf||0) + (assets.lif||0) + (assets.rrif_acct||0) + (assets.nonreg||0) + (assets.crypto||0);
   };
 
-  const getAccountFlow = (y: any, player: 'p1'|'p2', contribKeys: string[], wdMatchKeys: string[], year: number) => {
-      let deposited = 0;
+  const getAccountFlow = (y: any, player: string, acctKeys: string[], wdKeys: string[], year: number) => {
+      let added = 0;
       let withdrawn = 0;
-      const prefix = player.toUpperCase() + ' ';
-      
       if (y.flows && y.flows.contributions && y.flows.contributions[player]) {
-          contribKeys.forEach(k => deposited += (y.flows.contributions[player][k] || 0));
+          acctKeys.forEach(k => added += (y.flows.contributions[player][k] || 0));
       }
       if (y.flows && y.flows.withdrawals) {
-          const wdKeys = Object.keys(y.flows.withdrawals).filter(k => k.startsWith(prefix) && wdMatchKeys.some(m => k.includes(m)));
-          wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[k] || 0));
-          if (wdMatchKeys.includes('RESP') && y.flows.withdrawals[`${prefix}RESP`]) {
-              withdrawn += y.flows.withdrawals[`${prefix}RESP`];
-          }
+          const pUpper = player.toUpperCase();
+          wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[`${pUpper} ${k}`] || 0));
       }
-      const net = deposited - withdrawn;
-      if (Math.abs(net) < 1) return null;
+      let net = added - withdrawn;
+      if (Math.abs(net) < 1) return <span style={{width: '45px', display: 'inline-block'}}></span>; 
+      
+      net = getRealValue(net, year);
       const isPos = net > 0;
-      const absNet = Math.abs(getRealValue(net, year));
+      const absNet = Math.abs(net);
       const formatted = absNet >= 1000 ? `${(absNet/1000).toFixed(1).replace('.0', '')}k` : Math.round(absNet);
       
       return (
-          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2 text-nowrap flex-shrink-0`} style={{fontSize: '0.65rem', minWidth: '45px', display: 'inline-block'}}>
-              {isPos ? `+${formatted}` : `-${formatted}`}
+          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2`} style={{fontSize: '0.65rem', width: '45px', display: 'inline-block'}}>
+              ({isPos ? '+' : '-'}{formatted})
           </span>
       );
   };
 
-  const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxableIncome: number, actualGross: number, year: number) => {
-      if (!taxData) return "No tax details available.";
+  const buildTaxTooltip = (y: any, player: 'p1'|'p2', taxData: any, taxIncAfter: number, taxIncBefore: number, refund: number, year: number) => {
+      if (!taxData) return "No tax generated.";
       
       const isP1 = player === 'p1';
-      const prefix = isP1 ? 'P1 ' : 'P2 ';
+      const pUpper = player.toUpperCase();
+
       const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
-      const match = isP1 ? y.rrspMatchP1 : y.rrspMatchP2;
+      const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
+      
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
       const db = isP1 ? y.dbP1 : y.dbP2;
@@ -394,24 +332,25 @@ export default function ProjectionTab() {
       
       let breakdownStr = '';
       let sum = 0;
+      
       if (salary > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Salary:</span> <span>$${formatStr(salary, year)}</span></div>`; sum += salary; }
       if (match > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Employer Match:</span> <span>$${formatStr(match, year)}</span></div>`; sum += match; }
       if (cpp > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>CPP:</span> <span>$${formatStr(cpp, year)}</span></div>`; sum += cpp; }
       if (oas > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>OAS:</span> <span>$${formatStr(oas, year)}</span></div>`; sum += oas; }
       if (db > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Pension:</span> <span>$${formatStr(db, year)}</span></div>`; sum += db; }
       if (invInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Inv. Yield:</span> <span>$${formatStr(invInc, year)}</span></div>`; sum += invInc; }
-      
-      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(prefix) && y.flows.withdrawals[k] > 0);
-      wdKeys.forEach(k => {
-          const amt = y.flows.withdrawals[k];
-          const cleanName = k.replace(prefix, '');
-          if (cleanName.includes('RRSP') || cleanName.includes('RRIF') || cleanName.includes('LIF')) {
+
+      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
+      const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
+
+      taxableWds.forEach(k => {
+          const cleanName = k.replace(`${pUpper} `, '');
+          if (k.includes('RRIF') || k.includes('LIF') || k.includes('RRSP') || k.includes('LIRF')) {
+              const amt = y.flows.withdrawals[k];
               breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} W/D:</span> <span>$${formatStr(amt, year)}</span></div>`;
               sum += amt;
-          } else if (cleanName.match(/Non-?Reg/i) || cleanName.match(/Crypto/i) || cleanName.match(/NONREG/i)) {
-              const breakdown = y.wdBreakdown || y.withdrawalBreakdown;
-              const targetKey = cleanName.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
-              const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
+          } else if (k.includes('Non-Reg') || k.includes('Crypto')) {
+              const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
               if (mathObj && mathObj.tax > 0) {
                   breakdownStr += `<div class="d-flex justify-content-between"><span>${cleanName} Taxable:</span> <span>$${formatStr(mathObj.tax, year)}</span></div>`;
                   sum += mathObj.tax;
@@ -419,22 +358,26 @@ export default function ProjectionTab() {
           }
       });
 
+      let actualGross = sum; 
+      
       let incStr = `<b>Gross Income:</b> $${formatStr(actualGross, year)}<br>`;
       if (breakdownStr) {
            incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${breakdownStr}</div>`;
       }
-      
-      const rrspCont = isP1 ? y.flows?.contributions?.p1?.rrsp || 0 : y.flows?.contributions?.p2?.rrsp || 0;
-      const fhsaCont = isP1 ? y.flows?.contributions?.p1?.fhsa || 0 : y.flows?.contributions?.p2?.fhsa || 0;
-      const empMatch = isP1 ? y.rrspMatchP1 || 0 : y.rrspMatchP2 || 0;
+
+      const rrspCont = y.flows?.contributions?.[player]?.rrsp || 0;
+      const fhsaCont = y.flows?.contributions?.[player]?.fhsa || 0;
       const totalDeductions = rrspCont + fhsaCont;
-      
+
       if (totalDeductions > 0) {
           incStr += `<b>Total Deductions:</b> -$${formatStr(totalDeductions, year)}<br>`;
           let dedStr = '';
+          
           if (rrspCont > 0) {
+              const empMatch = match; 
+              const ownCont = rrspCont - empMatch;
+              
               if (empMatch > 0) {
-                  const ownCont = Math.max(0, rrspCont - empMatch);
                   dedStr += `<div class="d-flex justify-content-between"><span>RRSP (Employer Match):</span> <span>-$${formatStr(empMatch, year)}</span></div>`;
                   if (ownCont > 0) {
                       dedStr += `<div class="d-flex justify-content-between"><span>RRSP (Own Contrib):</span> <span>-$${formatStr(ownCont, year)}</span></div>`;
@@ -443,76 +386,55 @@ export default function ProjectionTab() {
                   dedStr += `<div class="d-flex justify-content-between"><span>RRSP Contributions:</span> <span>-$${formatStr(rrspCont, year)}</span></div>`;
               }
           }
+
           if (fhsaCont > 0) {
               dedStr += `<div class="d-flex justify-content-between"><span>FHSA Contributions:</span> <span>-$${formatStr(fhsaCont, year)}</span></div>`;
           }
+
           incStr += `<div class="text-muted border-start border-2 border-secondary ms-1 ps-2 my-2" style="font-size: 0.75rem; line-height: 1.4;">${dedStr}</div>`;
       }
-      
-      const splitAmt = isP1 ? (y.pensionSplit?.p2ToP1 || 0) - (y.pensionSplit?.p1ToP2 || 0) : (y.pensionSplit?.p1ToP2 || 0) - (y.pensionSplit?.p2ToP1 || 0);
-      if (Math.abs(splitAmt) > 0) {
+
+      if (Math.abs(taxIncAfter - taxIncBefore) > 1) {
+          let splitAmt = taxIncAfter - taxIncBefore;
           incStr += `<b>Pension Split:</b> ${splitAmt > 0 ? '+' : '-'}$${formatStr(Math.abs(splitAmt), year)}<br>`;
       }
-      const taxIncAfter = taxableIncome;
       incStr += `<b>Net Taxable Income:</b> $${formatStr(taxIncAfter, year)}<hr class="my-1 border-secondary">`;
 
       let clawbackStr = taxData.oas_clawback > 0 ? `<br><b>OAS Clawback:</b> $${formatStr(taxData.oas_clawback, year)}` : '';
-      
-      const baseFedTax = (taxData.fed || 0) + (taxData.fedCredits || 0);
-      const baseProvTax = (taxData.prov || 0) + (taxData.provCredits || 0);
-      const preCreditTaxTotal = baseFedTax + baseProvTax + (taxData.cpp_ei || 0) + (taxData.oas_clawback || 0);
 
-      const nrtcObj = taxData.nrtcDetails || {};
-      let reductionsList: string[] = [];
-      let totalCurrentReductions = (taxData.fedCredits || 0) + (taxData.provCredits || 0);
-      
-      let mathStr = `${incStr}<b>Federal Tax:</b> $${formatStr(baseFedTax, year)}<br><b>Provincial Tax:</b> $${formatStr(baseProvTax, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Gross Tax Generated:</b> $${formatStr(preCreditTaxTotal, year)}<br>`;
-      
-      if (totalCurrentReductions > 0) {
-          mathStr += `<b>Tax Reductions Applied:</b> <span class="text-success">-$${formatStr(totalCurrentReductions, year)}</span><hr class="my-1 border-secondary">`;
-      }
-      
-      mathStr += `<b>Net Tax Paid:</b> <span class="text-danger">$${formatStr(taxData.totalTax, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
-      return mathStr;
+      return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
   };
 
-  const buildContributionTooltip = (flows: any, couple: boolean, year: number) => {
-      if (!flows || !flows.contributions) return "No savings breakdown available.";
-      let text = "<b>Invested Breakdown:</b><hr class='my-1 border-secondary'>";
-      const p1Conts = flows.contributions.p1 || {};
-      Object.entries(p1Conts).forEach(([k, v]) => {
-          if ((v as number) > 0 && k !== 'spending_cash') text += `<div class="d-flex justify-content-between"><span>${p1Name} ${k.toUpperCase()}:</span><span>$${formatStr(v as number, year)}</span></div>`;
-      });
-      if (couple) {
-          const p2Conts = flows.contributions.p2 || {};
-          Object.entries(p2Conts).forEach(([k, v]) => {
-              if ((v as number) > 0 && k !== 'spending_cash') text += `<div class="d-flex justify-content-between"><span>${p2Name} ${k.toUpperCase()}:</span><span>$${formatStr(v as number, year)}</span></div>`;
-          });
+  const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
+      if (!math) return "No yield.";
+      if (useRealDollars) {
+          return `<b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>In Today's $:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
       }
-      return text;
+      return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
   };
 
-  const buildYieldTooltip = (math: any, year: number, isReal: boolean) => {
-      if (!math || !math.bal) return "Yield calculated from portfolio holdings.";
-      const rateStr = `${(math.rate * 100).toFixed(1)}%`;
-      if (isReal) {
-          return `Nominal Math: $${Math.round(math.bal).toLocaleString()} × ${rateStr} = $${Math.round(math.amt).toLocaleString()}<br><b>Portfolio Balance (Today's $):</b> $${formatStr(math.bal, year)}<br><b>Yield Payout (Today's $):</b> $${formatStr(math.amt, year)}`;
+  const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number, threshold: number) => {
+      const eliminationThreshold = threshold + (gross / 0.15);
+      const isFullyEliminated = clawback >= (gross - 0.01);
+
+      if (clawback <= 0) {
+          return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br>No clawback applied.`;
       }
-      return `Holdings Balance: $${formatStr(math.bal, year)}<br>Yield Rate: ${rateStr}<br><b>Annual Yield:</b> $${formatStr(math.amt, year)}`;
+      
+      return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br><span class="text-danger"><b>Clawback Penalty:</b> -$${formatStr(clawback, year)}${isFullyEliminated ? ' <br><i>(OAS Fully Eliminated)</i>' : ''}</span><br><b>Net OAS Received:</b> $${formatStr(Math.max(0, gross - clawback), year)}`;
   };
 
-  const buildOasTooltip = (oasGross: number, oasClawback: number, taxInc: number, year: number, thresh: number) => {
-      if (oasClawback > 0) {
-          const diff = Math.max(0, taxInc - thresh);
-          return `<b>Gross OAS:</b> $${formatStr(oasGross, year)}<br><b>CRA Threshold:</b> $${formatStr(thresh, year)}<br><b>Income Excess:</b> $${formatStr(diff, year)}<br><b>Clawback (15%):</b> <span class="text-danger">-$${formatStr(oasClawback, year)}</span><hr class="my-1 border-secondary"><b>Net OAS Received:</b> <span class="text-success">$${formatStr(oasGross - oasClawback, year)}</span>`;
-      }
-      return `<span class='text-info fw-bold'>100% Taxable.</span><br>Base OAS: $${formatStr(oasGross, year)}<br>Income is below the recovery threshold ($${formatStr(thresh, year)}).<br><b>Net Received:</b> $${formatStr(oasGross, year)}`;
+  const buildContributionTooltip = (flows: any, isCouple: boolean, year: number) => {
+      if (!flows || !flows.contributions) return "No contributions.";
+      let lines: string[] = [];
+      Object.entries(flows.contributions.p1).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`P1 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
+      if (isCouple) Object.entries(flows.contributions.p2).forEach(([k, v]) => { if ((v as number) > 0) lines.push(`P2 ${k.toUpperCase()}: $${formatStr(v as number, year)}`); });
+      return lines.length > 0 ? lines.join('<br>') : "No contributions.";
   };
 
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
       const isP1 = player === 'p1';
-      const nameRef = isP1 ? p1Name : p2Name;
-      const prefix = isP1 ? 'P1 ' : 'P2 ';
+      const pUpper = player.toUpperCase();
       const age = isP1 ? (y.p1Age || y.ageP1) : (y.p2Age || y.ageP2);
       
       const salary = isP1 ? y.incomeP1 - (y.rrspMatchP1 || 0) : y.incomeP2 - (y.rrspMatchP2 || 0);
@@ -523,84 +445,84 @@ export default function ProjectionTab() {
       const ccb = isP1 ? (y.ccbP1 || 0) : 0;
       const invInc = isP1 ? y.invIncP1 : y.invIncP2;
       const taxInc = isP1 ? y.taxIncP1 : y.taxIncP2;
+      const taxDetails = isP1 ? y.taxDetailsP1 : y.taxDetailsP2;
       const invYieldMath = isP1 ? y.invYieldMathP1 : y.invYieldMathP2;
       const cppStart = isP1 ? data.inputs.p1_cpp_start : data.inputs.p2_cpp_start;
       const refund = isP1 ? y.rrspRefundP1 : y.rrspRefundP2;
 
-      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(prefix) && y.flows.withdrawals[k] > 0);
+      const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
       const nonTaxWds = wdKeys.filter(k => k.includes('TFSA') || k.includes('FHSA') || k.includes('Cash') || k.includes('RESP'));
 
-      const taxDetails = isP1 ? y.taxDetailsP1 : y.taxDetailsP2;
       const oasClawback = taxDetails?.oas_clawback || 0;
-      const netOas = Math.max(0, oas - oasClawback);
+      const oasGross = oas;
+      const netOas = Math.max(0, oasGross - oasClawback);
 
       let priorRrifBal = 0;
       const prevYear = index > 0 ? timeline[index - 1] : null;
-      const assetKey = isP1 ? 'assetsP1' : 'assetsP2';
       if (prevYear) {
-          priorRrifBal = (prevYear[assetKey]?.rrif_acct || 0) + (prevYear[assetKey]?.rrsp || 0);
+          priorRrifBal = (prevYear[`assets${pUpper}`]?.rrif_acct || 0) + (prevYear[`assets${pUpper}`]?.rrsp || 0);
       } else {
           priorRrifBal = (Number(data.inputs[`${player}_rrif_acct`]) || 0) + (Number(data.inputs[`${player}_rrsp`]) || 0);
       }
 
       return (
           <div className="mb-3 pb-2 border-bottom border-secondary border-opacity-25">
-              <div className="fw-bold text-uppercase ls-1 mb-2" style={{fontSize: '0.75rem', color: isP1 ? 'var(--bs-info)' : 'var(--bs-purple)'}}>{nameRef} Inflows</div>
+              <div className="fw-bold text-uppercase ls-1 mb-2" style={{fontSize: '0.75rem', color: isP1 ? 'var(--bs-info)' : 'var(--bs-purple)'}}>{pUpper} Inflows</div>
               
               {salary > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment/other income." align="left" /></span>
-                      <span className="fw-medium text-nowrap">{formatCurrency(salary, year)}</span>
+                      <span className="fw-medium">{formatCurrency(salary, year)}</span>
                   </div>
               )}
               {match > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Employer Match <InfoBtn title="Employer Match" text="<span class='text-info fw-bold'>Taxable Benefit.</span><br>Offset by RRSP deduction." align="left" /></span>
-                      <span className="text-success text-nowrap">+{formatCurrency(match, year)}</span>
+                      <span className="text-success">+{formatCurrency(match, year)}</span>
                   </div>
               )}
               {cpp > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">CPP <InfoBtn title="CPP Benefit" text={`<span class='text-info fw-bold'>100% Taxable.</span><br>Base CPP adjusted for start age (${cppStart}).`} align="left" /></span>
-                      <span className="text-nowrap">{formatCurrency(cpp, year)}</span>
+                      <span>{formatCurrency(cpp, year)}</span>
                   </div>
               )}
-              {oas > 0 && (
+              {oasGross > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">OAS <InfoBtn title="OAS Math" text={buildOasTooltip(oas, oasClawback, taxInc, year, y.oasThreshold)} align="left" /></span>
-                      <span className="text-nowrap">{formatCurrency(netOas, year)}</span>
+                      <span className="text-muted ms-2 d-flex align-items-center">OAS <InfoBtn title="OAS Math" text={buildOasTooltip(oasGross, oasClawback, taxInc, year, y.oasThreshold)} align="left" /></span>
+                      <span>{formatCurrency(netOas, year)}</span>
                   </div>
               )}
               {db > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">Pension (DB) <InfoBtn title="Pension" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Defined Benefit Pension payout." align="left" /></span>
-                      <span className="text-nowrap">{formatCurrency(db, year)}</span>
+                      <span>{formatCurrency(db, year)}</span>
                   </div>
               )}
               {ccb > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
                       <span className="text-muted ms-2 d-flex align-items-center">CCB <InfoBtn title="Canada Child Benefit" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Tax-free monthly payment for eligible children." align="left" /></span>
-                      <span className="text-success text-nowrap">+{formatCurrency(ccb, year)}</span>
+                      <span className="text-success">+{formatCurrency(ccb, year)}</span>
                   </div>
               )}
               {invInc > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, useRealDollars)}`} align="left" /></span>
-                      <span className="text-success text-nowrap">+{formatCurrency(invInc, year)}</span>
+                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, data.useRealDollars)}`} align="left" /></span>
+                      <span className="text-success">+{formatCurrency(invInc, year)}</span>
                   </div>
               )}
 
               {taxableWds.map(k => {
                   const val = y.flows.withdrawals[k];
-                  const cleanName = k.replace(prefix, '');
+                  const cleanName = k.replace(`${pUpper} `, '');
                   let info = "";
                   
                   if (k.includes('RRIF')) {
                       const factor = getRrifFactor(age - 1);
                       const minAmount = priorRrifBal * factor;
-                      if (useRealDollars) {
-                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorRrifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>Balance (Today's $):</b> $${formatStr(priorRrifBal, year)}<br><b>Withdrawal (Today's $):</b> $${formatStr(minAmount, year)}`;
+                      if (data.useRealDollars) {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorRrifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>In Today's $:</b> $${formatStr(minAmount, year)}`;
                       } else {
                           info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor*100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorRrifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>`;
                       }
@@ -611,13 +533,10 @@ export default function ProjectionTab() {
                   else if (k.includes('RRSP')) {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Added directly to taxable income.`;
                   }
-                  else if (k.match(/Non-?Reg/i) || k.match(/Crypto/i) || k.match(/NONREG/i)) {
-                      const breakdown = y.wdBreakdown || y.withdrawalBreakdown;
-                      const targetKey = k.match(/Crypto/i) ? 'Crypto' : 'Non-Reg';
-                      const mathObj = breakdown?.[player]?.[`${targetKey}_math`] || breakdown?.[player]?.[`NONREG_math`];
-                      
+                  else if (k.includes('Non-Reg') || k.includes('Crypto')) {
+                      const mathObj = y.wdBreakdown?.[player]?.[`${cleanName}_math`];
                       if (mathObj) {
-                          if (useRealDollars) {
+                          if (data.useRealDollars) {
                               info = `<span class='text-info fw-bold'>Partially Taxable.</span><br><span class='text-muted small'>Nominal Math:</span><br><div class="d-flex justify-content-between text-muted small"><span>Gross W/D:</span><span>$${Math.round(mathObj.wd).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small"><span>ACB Disposed:</span><span>-$${Math.round(mathObj.acb).toLocaleString()}</span></div><hr class="my-1 border-secondary"><div class="d-flex justify-content-between text-muted small"><span>Nominal Gain:</span><span>$${Math.round(mathObj.gain).toLocaleString()}</span></div><div class="d-flex justify-content-between text-muted small mb-1"><span>Nominal Taxable (50%):</span><span>$${Math.round(mathObj.tax).toLocaleString()}</span></div><hr class="my-1 border-secondary"><b>Taxable in Today's $:</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
                           } else {
                               info = `<span class='text-info fw-bold'>Partially Taxable.</span><br>Gross Withdrawal: $${formatStr(mathObj.wd, year)}<br>ACB Withdrawn: -$${formatStr(mathObj.acb, year)}<hr class="my-1 border-secondary"><b>Capital Gain:</b> $${formatStr(mathObj.gain, year)}<br><b>Taxable (50% Inclusion):</b> <span class="text-danger">+$${formatStr(mathObj.tax, year)}</span>`;
@@ -630,7 +549,7 @@ export default function ProjectionTab() {
                   return (
                       <div className="d-flex justify-content-between small mb-1 align-items-center" key={k}>
                           <span className="text-muted ms-2 d-flex align-items-center">{cleanName} W/D <InfoBtn align="left" title={`${cleanName} Math`} text={info} /></span>
-                          <span className="text-primary text-nowrap">+{formatCurrency(val, year)}</span>
+                          <span className="text-primary">+{formatCurrency(val, year)}</span>
                       </div>
                   );
               })}
@@ -641,14 +560,14 @@ export default function ProjectionTab() {
                       
                       {refund > 0 && (
                           <div className="d-flex justify-content-between small mb-1 align-items-center">
-                              <span className="text-muted ms-2 d-flex align-items-center">Tax Refund <InfoBtn align="left" title="Tax Refund" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Refund generated from prior year RRSP/FHSA contributions." /></span>
-                              <span className="text-success text-nowrap">+{formatCurrency(refund, year)}</span>
+                              <span className="text-muted ms-2 d-flex align-items-center">Tax Refund <InfoBtn align="left" title="Tax Refund" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Refund generated from prior year RRSP contributions." /></span>
+                              <span className="text-success">+{formatCurrency(refund, year)}</span>
                           </div>
                       )}
 
                       {nonTaxWds.map(k => {
                           const val = y.flows.withdrawals[k];
-                          const cleanName = k.replace(prefix, '');
+                          const cleanName = k.replace(`${pUpper} `, '');
                           let info = `<span class='text-info fw-bold'>0% Taxable.</span><br>Tax-free withdrawal. Does not affect taxable income.`;
                           
                           if (k.includes('RESP')) {
@@ -658,7 +577,7 @@ export default function ProjectionTab() {
                           return (
                               <div className="d-flex justify-content-between small mb-1 align-items-center" key={k}>
                                   <span className="text-muted ms-2 d-flex align-items-center">{cleanName} W/D <InfoBtn align="left" title={`${cleanName} Withdrawal`} text={info} /></span>
-                                  <span className="text-primary text-nowrap">+{formatCurrency(val, year)}</span>
+                                  <span className="text-primary">+{formatCurrency(val, year)}</span>
                               </div>
                           );
                       })}
@@ -669,59 +588,83 @@ export default function ProjectionTab() {
   };
 
   return (
-    <div className="fade-in">
+    <div className="p-3 p-md-4">
       
-      {/* Toast Notification Container */}
       {toastMsg && (
-          <div className="position-fixed bottom-0 end-0 p-3" style={{ zIndex: 1050 }}>
-              <div className="toast show align-items-center text-white bg-dark border border-secondary shadow-lg rounded-3" role="alert">
-                  <div className="d-flex">
-                      <div className="toast-body small py-2 px-3">
-                          <i className="bi bi-info-circle text-info me-2"></i>{toastMsg}
-                      </div>
-                  </div>
+          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
+              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
+                  {isExporting && <span className="spinner-border spinner-border-sm me-2"></span>}
+                  {toastMsg}
               </div>
           </div>
       )}
 
-      {/* Header Actions */}
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <div>
-              <h5 className="text-main fw-bold mb-0">Retirement Projection Ledger</h5>
-              <span className="text-muted small">Year-by-year cash flows, tax details, and net worth growth</span>
+      <div className="row g-2 g-md-3 mb-4">
+          <div className="col-12 col-md-4 col-xl">
+              <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
+                  <span className="small fw-bold text-uppercase ls-1 me-2" style={{color: planSuccess ? 'var(--bs-success)' : 'var(--bs-danger)'}}>Status</span>
+                  <span className={`fw-bold text-nowrap ${planSuccess ? 'text-success' : 'text-danger'}`}>
+                      {planSuccess ? <><i className="bi bi-check-circle-fill me-1"></i> SUCCESS</> : <><i className="bi bi-exclamation-triangle-fill me-1"></i> FAILED</>}
+                  </span>
+              </div>
           </div>
 
-          <div className="position-relative">
-              <button 
-                  className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 rounded-2"
-                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
-                  disabled={isExporting}
-              >
-                  <i className="bi bi-download"></i>
-                  <span>Export</span>
-                  <i className={`bi bi-chevron-${exportMenuOpen ? 'up' : 'down'} small`}></i>
-              </button>
+          <div className="col-12 col-md-4 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100" title={`Reached at Age ${peakAge}`}>
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Peak NW <span className="d-none d-xxl-inline text-opacity-50">({peakAge})</span></span>
+                  <span className="fs-6 fw-bold text-info text-nowrap">{formatCurrency(peakNW)}</span>
+              </div>
+          </div>
 
+          <div className="col-12 col-md-4 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Ret. Years</span>
+                  <span className="fs-6 fw-bold text-primary text-nowrap">{retYears} Yrs</span>
+              </div>
+          </div>
+
+          <div className="col-12 col-md-4 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Tax Paid</span>
+                  <span className="fs-6 fw-bold text-danger text-nowrap">{formatCurrency(totalTaxPaid)}</span>
+              </div>
+          </div>
+
+          <div className="col-12 col-md-4 col-xl">
+              <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2 d-flex align-items-center">
+                      Estate <InfoBtn title="After-Tax Estate" text="The final value of your portfolio after applying terminal taxes to remaining RRSPs and Capital Gains." />
+                  </span>
+                  <span className="fs-6 fw-bold text-success text-nowrap">{formatCurrency(finalEstate, finalYear.year)}</span>
+              </div>
+          </div>
+
+          <div className="col-12 col-md-4 col-xl position-relative">
+              <div 
+                  className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75 cursor-pointer"
+                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
+              >
+                  <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap">
+                      {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download fs-5 me-2"></i>}
+                      Export
+                  </span>
+              </div>
               {exportMenuOpen && (
-                  <div 
-                      className="position-absolute end-0 mt-1 surface-card border border-secondary rounded-2 shadow-lg py-1"
-                      style={{ minWidth: '150px', zIndex: 100 }}
-                  >
-                      <button 
-                          className="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 hover-bg-secondary w-100 text-start border-0 bg-transparent text-main"
-                          onClick={() => { setExportMenuOpen(false); exportToCSV(); }}
-                      >
-                          <i className="bi bi-file-earmark-spreadsheet text-success"></i>
-                          <span>Export to CSV</span>
-                      </button>
-                      <button 
-                          className="dropdown-item py-2 px-3 small d-flex align-items-center gap-2 hover-bg-secondary w-100 text-start border-0 bg-transparent text-main"
-                          onClick={() => { setExportMenuOpen(false); exportToPNG(); }}
-                      >
-                          <i className="bi bi-file-earmark-image text-primary"></i>
-                          <span>Export to PNG</span>
-                      </button>
-                  </div>
+                  <>
+                      <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
+                      <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '150px'}}>
+                          <li>
+                              <button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
+                                  <i className="bi bi-filetype-csv me-2"></i> Export to CSV
+                              </button>
+                          </li>
+                          <li>
+                              <button className="dropdown-item py-2 fw-bold text-success" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
+                                  <i className="bi bi-image me-2"></i> Export to PNG
+                              </button>
+                          </li>
+                      </ul>
+                  </>
               )}
           </div>
       </div>
@@ -733,11 +676,11 @@ export default function ProjectionTab() {
             
             <thead className="surface-card" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
               <tr style={{ fontSize: '0.75rem', letterSpacing: '0.05em' }}>
-                <th className="py-3 ps-3 text-center text-primary border-bottom border-secondary" style={{ width: '4%' }}></th>
+                <th className="py-3 ps-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '4%' }}></th>
                 <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '16%' }}>Year & Events</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages ({p1Name}{isCouple ? ` / ${p2Name}` : ''})</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Gross Income</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>
                 <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>
                 <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>
                 <th className="py-3 pe-4 text-muted text-uppercase text-center border-bottom border-secondary text-success" style={{ width: '14%' }}>Net Worth</th>
@@ -760,8 +703,6 @@ export default function ProjectionTab() {
                 const respWd = (y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0);
                 const unfundedEdu = Math.max(0, (y.eduExpense || 0) - respWd);
                 const baseDebtRepayment = Math.max(0, (y.debtRepayment || 0) - unfundedEdu);
-                
-                // Exclude lifestyleSpendingCash from the generic 'Expenses' column
                 const totalExpenses = (y.expenses || 0) + (y.mortgagePay || 0) + baseDebtRepayment + (y.eduExpense || 0);
 
                 const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
@@ -769,22 +710,30 @@ export default function ProjectionTab() {
                 
                 let engineContributions = 0;
                 if (y.flows && y.flows.contributions) {
-                    engineContributions += Object.entries(y.flows.contributions.p1 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
-                    if (isCouple) engineContributions += Object.entries(y.flows.contributions.p2 || {}).filter(([k]) => k !== 'spending_cash').reduce((a: any, [, b]: any) => a + b, 0) as number;
+                    engineContributions += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+                    if (isCouple) engineContributions += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
                 }
 
-                const lifestyleSpendingCash = y.flows?.contributions?.shared?.spending_cash || 0;
-
                 const totalSourcedRaw = totalIncome + (totalWithdrawals as number);
-                const totalSpentRaw = totalExpenses + totalTaxes + engineContributions + lifestyleSpendingCash;
+                const mandatoryBills = totalExpenses + totalTaxes;
+                const netCashAvailable = totalSourcedRaw - mandatoryBills;
                 
                 let shortfall = 0;
+                let actualInvested = engineContributions;
                 let unallocated = 0;
                 
-                if (totalSourcedRaw < totalSpentRaw - 0.5) shortfall = totalSpentRaw - totalSourcedRaw;
-                else if (totalSourcedRaw > totalSpentRaw + 0.5) unallocated = totalSourcedRaw - totalSpentRaw;
+                if (netCashAvailable < -0.5) {
+                    shortfall = Math.abs(netCashAvailable);
+                    actualInvested = 0;
+                } else {
+                    shortfall = 0;
+                    actualInvested = Math.min(engineContributions, Math.max(0, netCashAvailable));
+                    if (netCashAvailable > actualInvested + 0.5) {
+                        unallocated = netCashAvailable - actualInvested;
+                    }
+                }
 
-                const finalBalancedTotal = Math.max(totalSourcedRaw, totalSpentRaw);
+                const finalBalancedTotal = totalSourcedRaw + shortfall;
 
                 const p1BeforeSplit = y.taxIncP1 + (y.pensionSplit?.p1ToP2 || 0) - (y.pensionSplit?.p2ToP1 || 0);
                 const p2BeforeSplit = y.taxIncP2 + (y.pensionSplit?.p2ToP1 || 0) - (y.pensionSplit?.p1ToP2 || 0);
@@ -799,7 +748,7 @@ export default function ProjectionTab() {
                       <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
                         <div className="d-flex align-items-center">
                             <span className="fs-6">{y.year}</span>
-                            {getEventIcons(y.events, y, index, results.timeline)}
+                            {getEventIcons(y.events)}
                         </div>
                       </td>
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
@@ -808,10 +757,10 @@ export default function ProjectionTab() {
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25">
                         {renderAges(y)}
                       </td>
-                      <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
-                      <td className="py-3 text-center text-danger fw-medium text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
-                      <td className="py-3 text-center fw-medium text-nowrap border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses + lifestyleSpendingCash, y.year)}</td>
-                      <td className="py-3 pe-4 text-center text-success fw-bold fs-6 text-nowrap border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
+                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
+                      <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
+                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
+                      <td className="py-3 pe-4 text-center text-success fw-bold fs-6 border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
                     </tr>
 
                     {isExpanded && (
@@ -835,14 +784,14 @@ export default function ProjectionTab() {
                                         {y.windfall > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2">
                                                 <span className="text-muted fw-bold text-success d-flex align-items-center">Windfalls / Property Sale <InfoBtn align="left" title="Windfalls" text="Taxable status depends on the source. Mapped accordingly in Net Worth." /></span>
-                                                <span className="fw-medium text-success text-nowrap">{formatCurrency(y.windfall, y.year)}</span>
+                                                <span className="fw-medium text-success">{formatCurrency(y.windfall, y.year)}</span>
                                             </div>
                                         )}
                                         
                                         {shortfall > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
                                                 <span className="text-danger fw-bold d-flex align-items-center">Shortfall (Cash Deficit) <InfoBtn align="left" title="Shortfall" text="Expenses exceeded total available cash flow and withdrawals. The simulation mathematically borrows this to keep running." /></span>
-                                                <span className="fw-medium text-danger text-nowrap">+{formatCurrency(shortfall, y.year)}</span>
+                                                <span className="fw-medium text-danger">+{formatCurrency(shortfall, y.year)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -854,67 +803,54 @@ export default function ProjectionTab() {
                                     <h6 className="fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center" style={{ color: '#d97706' }}>
                                         <i className="bi bi-box-arrow-right me-2"></i>
                                         <span className="text-uppercase">Cash Outflows</span>
-                                        <InfoBtn align="center" title="Cash Outflows" text="All cash spent or allocated during the year, including living expenses, taxes, mortgage payments, education costs, and lifestyle spending items." />
+                                        <InfoBtn align="center" title="Cash Outflows" text="All cash spent or allocated during the year, including living expenses, taxes, mortgage payments, education costs, and surplus cash saved into the portfolio." />
                                     </h6>
                                     
                                     <div className="flex-grow-1">
-                                        <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Living Expenses</span><span className="fw-medium text-nowrap">{formatCurrency(y.expenses, y.year)}</span></div>
-                                        
-                                        {/* Breakout Lifestyle Spending Row Block */}
-                                        {lifestyleSpendingCash > 0 && (
-                                            <div className="d-flex justify-content-between small mb-1 align-items-center bg-warning bg-opacity-10 px-2 py-1 rounded-2 my-2 border border-warning border-opacity-25">
-                                                <span className="d-flex align-items-center text-warning-emphasis fw-bold">
-                                                    <i className="bi bi-bag-heart-fill me-2 text-warning"></i>
-                                                    Lifestyle Spending Cash 
-                                                    <InfoBtn align="center" title="Lifestyle Cash Outflow" text="Discretionary cash drawn sequentially from accumulation funds to process unbudgeted cash items." />
-                                                </span>
-                                                <span className="text-warning-emphasis fw-bold text-nowrap">{formatCurrency(lifestyleSpendingCash, y.year)}</span>
-                                            </div>
-                                        )}
-
+                                        <div className="d-flex justify-content-between small mb-1"><span className="text-muted fw-bold">Living Expenses</span><span className="fw-medium">{formatCurrency(y.expenses, y.year)}</span></div>
                                         {y.mortgagePay > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="d-flex align-items-center text-muted ms-2">Mortgage Payments <InfoBtn align="right" title="Mortgage" text="Principal and interest payments for the year based on your amortization schedule."/></span>
-                                                <span className="text-nowrap">{formatCurrency(y.mortgagePay, y.year)}</span>
+                                                <span>{formatCurrency(y.mortgagePay, y.year)}</span>
                                             </div>
                                         )}
                                         {y.eduExpense > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold text-info">Education Costs</span>
-                                                <span className="fw-medium text-info text-nowrap">{formatCurrency(y.eduExpense, y.year)}</span>
+                                                <span className="fw-medium text-info">{formatCurrency(y.eduExpense, y.year)}</span>
                                             </div>
                                         )}
                                         {baseDebtRepayment > 0 && (
                                             <div className="d-flex justify-content-between small mb-1">
                                                 <span className="text-muted ms-2 fw-bold" style={{ color: '#d97706' }}>Large Purchases/Debt</span>
-                                                <span className="fw-medium text-nowrap" style={{ color: '#d97706' }}>{formatCurrency(baseDebtRepayment, y.year)}</span>
+                                                <span className="fw-medium" style={{ color: '#d97706' }}>{formatCurrency(baseDebtRepayment, y.year)}</span>
                                             </div>
                                         )}
                                         
                                         <div className="mb-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">{p1Name} Taxes <InfoBtn align="right" title={`${p1Name} Tax Breakdown`} text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, y.year)} /></span>
-                                                <span className="text-danger fw-medium text-nowrap">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
+                                                <span className="d-flex align-items-center text-muted fw-bold text-danger">P1 Taxes <InfoBtn align="right" title="P1 Tax Breakdown" text={buildTaxTooltip(y, 'p1', y.taxDetailsP1, y.taxIncP1, p1BeforeSplit, (y.discTaxSavingsP1||0) + (y.matchTaxSavingsP1||0), y.year)} /></span>
+                                                <span className="text-danger fw-medium">{formatCurrency(y.taxP1 - (y.taxDetailsP1?.oas_clawback || 0), y.year)}</span>
                                             </div>
                                             {isCouple && (
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">{p2Name} Taxes <InfoBtn align="right" title={`${p2Name} Tax Breakdown`} text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, y.year)} /></span>
-                                                    <span className="text-danger fw-medium text-nowrap">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
+                                                    <span className="d-flex align-items-center text-muted fw-bold text-danger">P2 Taxes <InfoBtn align="right" title="P2 Tax Breakdown" text={buildTaxTooltip(y, 'p2', y.taxDetailsP2, y.taxIncP2, p2BeforeSplit, (y.discTaxSavingsP2||0) + (y.matchTaxSavingsP2||0), y.year)} /></span>
+                                                    <span className="text-danger fw-medium">{formatCurrency(y.taxP2 - (y.taxDetailsP2?.oas_clawback || 0), y.year)}</span>
                                                 </div>
                                             )}
                                         </div>
 
-                                        {engineContributions > 0 && (
+                                        {actualInvested > 0 && (
                                             <div className="d-flex justify-content-between small mb-1 align-items-center mt-2 pt-2 border-top border-secondary border-opacity-25">
-                                                <span className="d-flex align-items-center text-primary fw-bold">Surplus Invested <InfoBtn align="right" title="Contributions" text={buildContributionTooltip(y.flows, isCouple, y.year)} /></span>
-                                                <span className="text-primary fw-medium text-nowrap">{formatCurrency(engineContributions, y.year)}</span>
+                                                <span className="d-flex align-items-center text-muted fw-bold text-primary">Surplus Invested <InfoBtn align="right" title="Contributions" text={buildContributionTooltip(y.flows, isCouple, y.year)} /></span>
+                                                <span className="text-primary fw-medium">{formatCurrency(actualInvested, y.year)}</span>
                                             </div>
                                         )}
                                         
                                         {unallocated > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
                                                 <span className="text-success fw-bold d-flex align-items-center">Unallocated Surplus <InfoBtn align="right" title="Surplus" text="Cash generated that wasn't spent or automatically routed into a tracked investment account." /></span>
-                                                <span className="fw-medium text-success text-nowrap">+{formatCurrency(unallocated, y.year)}</span>
+                                                <span className="fw-medium text-success">+{formatCurrency(unallocated, y.year)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -922,22 +858,22 @@ export default function ProjectionTab() {
                                 </div>
 
                                 <div className="col-12 col-lg-4 p-3 p-md-4 d-flex flex-column">
-                                    <h6 className="text-info fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center">
-                                        <i className="bi bi-wallet2 me-2"></i>
-                                        <span className="text-uppercase">Portfolio & Net Worth</span>
-                                        <InfoBtn align="right" title="Portfolio & Net Worth" text="End-of-year balances for registered, non-registered, and family accounts, including property equity." />
+                                    <h6 className="text-primary fw-bold ls-1 mb-3 border-bottom border-secondary pb-2 d-flex align-items-center">
+                                        <i className="bi bi-piggy-bank me-2"></i>
+                                        <span className="text-uppercase">End of Year Balances</span>
+                                        <InfoBtn align="right" title="Account Balances" text="Values represent the portfolio balance at the <b>end of the year</b>, after accounting for market growth, contributions, and withdrawals." />
                                     </h6>
                                     
                                     <div className="flex-grow-1">
                                         {y.p1Alive && (
-                                            <div className="mb-2">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-info)'}}>{p1Name} Portfolio</span><span className="fw-bold text-nowrap" style={{color: 'var(--bs-info)'}}>{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
+                                            <div className="mb-3">
+                                                <div className="d-flex justify-content-between small mb-1"><span className="text-info fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem'}}>P1 Portfolio</span><span className="text-info fw-bold">{formatCurrency(sumAccounts(y.assetsP1), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['tfsa'], ['TFSA', 'TFSA (Successor)'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency((y.assetsP1?.tfsa||0) + (y.assetsP1?.tfsa_successor||0), y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency((y.assetsP1?.tfsa||0) + (y.assetsP1?.tfsa_successor||0), y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -946,7 +882,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">FHSA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['fhsa'], ['FHSA'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.fhsa||0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.fhsa||0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -956,7 +892,7 @@ export default function ProjectionTab() {
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['rrsp'], ['RRSP'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.rrsp || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -966,7 +902,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2 d-flex align-items-center">RRIF <InfoBtn title="RRIF" text="Registered Retirement Income Fund.<br>Converted from RRSP at age 71." align="left" /></span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['RRIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.rrif_acct || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.rrif_acct || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -976,7 +912,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIRA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['LIRF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.lirf || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.lirf || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -986,7 +922,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', [], ['LIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.lif || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.lif || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -995,7 +931,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['nonreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1003,7 +939,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['cash'], ['Cash'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1012,7 +948,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">Crypto</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p1', ['crypto'], ['Crypto'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP1?.crypto || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.crypto || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1021,13 +957,13 @@ export default function ProjectionTab() {
 
                                         {isCouple && y.p2Alive && (
                                             <div className="mb-2 border-top border-secondary border-opacity-25 pt-2">
-                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>{p2Name} Portfolio</span><span className="fw-bold text-nowrap" style={{color: 'var(--bs-purple)'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
+                                                <div className="d-flex justify-content-between small mb-1"><span className="fw-bold text-uppercase ls-1" style={{fontSize: '0.75rem', color: 'var(--bs-purple)'}}>P2 Portfolio</span><span className="fw-bold" style={{color: 'var(--bs-purple)'}}>{formatCurrency(sumAccounts(y.assetsP2), y.year)}</span></div>
                                                 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">TFSA</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['tfsa'], ['TFSA', 'TFSA (Successor)'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency((y.assetsP2?.tfsa||0) + (y.assetsP2?.tfsa_successor||0), y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency((y.assetsP2?.tfsa||0) + (y.assetsP2?.tfsa_successor||0), y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1036,7 +972,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">FHSA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['fhsa'], ['FHSA'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.fhsa||0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.fhsa||0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1046,7 +982,7 @@ export default function ProjectionTab() {
                                                         <span className="d-flex align-items-center text-muted ms-2">RRSP</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['rrsp'], ['RRSP'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.rrsp || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.rrsp || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1056,7 +992,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2 d-flex align-items-center">RRIF <InfoBtn title="RRIF" text="Registered Retirement Income Fund.<br>Converted from RRSP at age 71." align="left" /></span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['RRIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.rrif_acct || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.rrif_acct || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1066,7 +1002,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIRA</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['LIRF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.lirf || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.lirf || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1076,7 +1012,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', [], ['LIF'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.lif || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.lif || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1085,7 +1021,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Non-Reg</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['nonreg'], ['Non-Reg'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1093,7 +1029,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['cash'], ['Cash'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
+                                                        <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
 
@@ -1102,7 +1038,7 @@ export default function ProjectionTab() {
                                                         <span className="text-muted ms-2">Crypto</span>
                                                         <div className="d-flex justify-content-end align-items-center">
                                                             {getAccountFlow(y, 'p2', ['crypto'], ['Crypto'], y.year)}
-                                                            <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(y.assetsP2?.crypto || 0, y.year)}</span>
+                                                            <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.crypto || 0, y.year)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1115,7 +1051,7 @@ export default function ProjectionTab() {
                                                     <span className="text-muted fw-bold d-flex align-items-center">Family RESP</span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year)}
-                                                        <span className="text-end text-nowrap flex-shrink-0" style={{minWidth: '75px'}}>{formatCurrency(respBal, y.year)}</span>
+                                                        <span className="text-info fw-bold text-end" style={{width: '75px'}}>{formatCurrency(respBal, y.year)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1123,27 +1059,16 @@ export default function ProjectionTab() {
 
                                         <div className="d-flex justify-content-between small mb-1 mt-3">
                                             <span className="text-muted fw-bold">Liquid Portfolio Assets</span>
-                                            <span className="fw-medium text-nowrap">{formatCurrency(y.liquidNW, y.year)}</span>
+                                            <span className="fw-medium">{formatCurrency(y.liquidNW, y.year)}</span>
                                         </div>
                                         
-                                        {y.reIncludedEq > 0 && (
-                                            <div className="d-flex justify-content-between small mb-1">
-                                                <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
-                                                <span className="d-flex align-items-center">
-                                                    <span className="badge bg-success bg-opacity-25 text-success border border-success fw-normal py-0 px-1 me-2" style={{fontSize: '0.55rem'}}>IN NW</span>
-                                                    <span className="text-nowrap">{formatCurrency(y.reIncludedEq, y.year)}</span>
-                                                </span>
-                                            </div>
-                                        )}
-                                        {y.reExcludedEq > 0 && (
-                                            <div className="d-flex justify-content-between small mb-1">
-                                                <span className="text-muted d-flex align-items-center">Excluded RE Equity <InfoBtn align="right" title="Excluded Equity" text="Property equity that is tracked but explicitly toggled off from being included in your net worth."/></span>
-                                                <span className="d-flex align-items-center opacity-75">
-                                                    <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-0 px-1 me-2" style={{fontSize: '0.55rem'}}>HIDDEN</span>
-                                                    <span className="text-nowrap">{formatCurrency(y.reExcludedEq, y.year)}</span>
-                                                </span>
-                                            </div>
-                                        )}
+                                        <div className="d-flex justify-content-between small mb-1">
+                                            <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
+                                            <span className="d-flex align-items-center">
+                                                {y.reIncludedEq > 0 && <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-1 me-2" style={{fontSize: '0.6rem'}}>INCLUDED</span>}
+                                                {formatCurrency((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="mt-3"></div>
                                 </div>
@@ -1152,15 +1077,15 @@ export default function ProjectionTab() {
                             <div className="row g-0 bg-black bg-opacity-25 border-top border-secondary mt-auto" style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Sourced</span>
-                                    <span className="text-main fw-bold text-nowrap">{formatCurrency(finalBalancedTotal, y.year)}</span>
+                                    <span className="text-main fw-bold">{formatCurrency(finalBalancedTotal, y.year)}</span>
                                 </div>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center border-end border-secondary border-opacity-50">
                                     <span className="text-main fw-bold small">Total Cash Spent/Saved</span>
-                                    <span className="text-main fw-bold text-nowrap">{formatCurrency(finalBalancedTotal, y.year)}</span>
+                                    <span className="text-main fw-bold">{formatCurrency(finalBalancedTotal, y.year)}</span>
                                 </div>
                                 <div className="col-12 col-lg-4 p-3 px-md-4 d-flex justify-content-between align-items-center">
                                     <span className="text-main fw-bold small">Total Net Worth</span>
-                                    <span className="text-success fw-bold fs-6 text-nowrap">{formatCurrency(totalNW, y.year)}</span>
+                                    <span className="text-success fw-bold fs-6">{formatCurrency(totalNW, y.year)}</span>
                                 </div>
                             </div>
 

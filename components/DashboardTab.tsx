@@ -175,9 +175,10 @@ export default function DashboardTab() {
       totalContributions += getRealValue(contsRaw, y.year);
       totalWithdrawals += getRealValue(wdsRaw, y.year);
 
+      // SHORTFALL CHECK: You only fail if income and withdrawals cannot cover mandatory living expenses, debt, and taxes
       const totalSourcedRaw = y.grossInflow || 0;
-      const totalSpentRaw = yrExpRaw + yrTaxRaw + contsRaw;
-      if (totalSourcedRaw < totalSpentRaw - 1) {
+      const mandatoryBillsRaw = yrExpRaw + yrTaxRaw;
+      if (totalSourcedRaw < mandatoryBillsRaw - 1) {
           hasShortfall = true;
           if (firstShortfallYear === null) {
               firstShortfallYear = y.year;
