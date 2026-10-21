@@ -196,7 +196,7 @@ export default function MarginalTaxCurve() {
                         />
                     </div>
                     <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
-                        Model exact marginal tax cliffs, Ontario surtaxes, and the CRA OAS recovery tax zone (\$95k–\$155k).
+                        Model exact marginal tax cliffs, Ontario surtaxes, and the CRA OAS recovery tax zone ($95k–$155k).
                     </span>
                 </div>
             </div>
@@ -330,11 +330,11 @@ export default function MarginalTaxCurve() {
                             <div className="d-flex flex-column gap-1 mb-2">
                                 <div className="fs-5 fw-bold d-flex justify-content-between align-items-center">
                                     <span className="text-muted fw-semibold">Keep:</span>
-                                    <span className="text-success">\${next1000Keep}</span>
+                                    <span className="text-success">${next1000Keep}</span>
                                 </div>
                                 <div className="fs-5 fw-bold d-flex justify-content-between align-items-center">
                                     <span className="text-muted fw-semibold">Pay:</span>
-                                    <span className="text-danger">\${next1000Tax}</span>
+                                    <span className="text-danger">${next1000Tax}</span>
                                 </div>
                             </div>
                         </div>
