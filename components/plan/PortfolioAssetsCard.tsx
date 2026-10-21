@@ -162,7 +162,7 @@ export default function PortfolioAssetsCard() {
                 <div className="card-body p-3 p-md-4">
                   
                   <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary cursor-pointer user-select-none" onClick={() => setAssetsOpen(!assetsOpen)}>
-                      <h6 className={`fw-bold text-uppercase ls-1 mb-0 ${isP1 ? 'text-info' : ''}`} style={!isP1 ? {color: 'var(--bs-purple)'} : {}}>{currentName} Asset Mix</h6>
+                      <h6 className={`fw-bold text-uppercase ls-1 mb-0 ${isP1 ? 'text-info' : ''}`} style={!isP1 ? {color: 'var(--bs-purple)'} : {}}>{currentName} Asset Mix (\$)</h6>
                       <button type="button" className="btn btn-sm btn-link text-muted p-0"><i className={`bi bi-chevron-${assetsOpen ? 'up' : 'down'} fs-5`}></i></button>
                   </div>
 

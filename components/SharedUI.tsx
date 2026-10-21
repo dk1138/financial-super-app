@@ -29,18 +29,18 @@ export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: {
 
 // Helper to parse financial inputs with 'k' (thousands) and 'm' (millions) shorthand
 export const parseFinancialInput = (raw: string): number | '' => {
-    const cleaned = String(raw).trim().toLowerCase().replace(/[\$,]/g, '');
+    if (!raw && raw !== '0') return '';
+    const cleaned = String(raw).trim().toLowerCase().replace(/[\$,\s]/g, '');
     if (cleaned === '') return '';
     
     // Match e.g. "85k", "1.2m", "500", "1500.50"
-    const match = cleaned.match(/^([0-9]+(?:\.[0-9]+)?)\s*([km])\$/);
+    const match = cleaned.match(/^([0-9]+(?:\.[0-9]+)?)([km])\$/);
     if (match) {
         const num = parseFloat(match[1]);
         if (isNaN(num)) return '';
         const unit = match[2];
-        if (unit === 'k') return Math.round(num * 1000);
-        if (unit === 'm') return Math.round(num * 1000000);
-        return Math.round(num);
+        const multiplier = unit === 'm' ? 1000000 : 1000;
+        return Math.round(num * multiplier);
     }
     
     const digits = cleaned.replace(/[^0-9]/g, '');
@@ -66,10 +66,9 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
         let rawStr = e.target.value;
         if (rawStr.length > 15) rawStr = rawStr.substring(0, 15);
 
-        // INSTANT SHORTHAND EXPANSION:
-        // As soon as the user types 'k' or 'm' (e.g. "50k", "1.5m"), immediately expand to formatted numbers!
-        const hasShorthand = /[km]\$/i.test(rawStr.trim());
-        if (hasShorthand) {
+        // Immediate shorthand expansion on keypress for k (thousands) and m (millions)
+        const cleanShorthand = rawStr.replace(/[\$,\s]/g, '');
+        if (/[0-9]+(?:\.[0-9]+)?[km]\$/i.test(cleanShorthand)) {
             const parsed = parseFinancialInput(rawStr);
             if (typeof parsed === 'number' && !isNaN(parsed)) {
                 setDisplayVal(parsed.toLocaleString('en-US'));
@@ -80,18 +79,20 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
 
         setDisplayVal(rawStr);
 
-        // If the user is typing standard numbers/commas, update onChange live
+        // Live update for standard numeric typing
+        const cleanedDigits = rawStr.replace(/[^0-9]/g, '');
         if (/^[0-9,]*\$/.test(rawStr)) {
-            const digits = rawStr.replace(/[^0-9]/g, '');
-            if (digits === '') onChange('');
-            else onChange(parseInt(digits, 10));
+            if (cleanedDigits === '') onChange('');
+            else onChange(parseInt(cleanedDigits, 10));
         }
     };
 
-    const handleBlur = () => {
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
         setIsFocused(false);
-        const parsed = parseFinancialInput(displayVal);
-        if (parsed === '') {
+        // Read directly from DOM input event (e.target.value) to avoid stale closure state
+        const targetVal = e.target.value;
+        const parsed = parseFinancialInput(targetVal);
+        if (parsed === '' || typeof parsed !== 'number' || isNaN(parsed)) {
             setDisplayVal('');
             onChange('');
         } else {
@@ -102,13 +103,12 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            (e.target as HTMLInputElement).blur();
+            e.currentTarget.blur();
         }
     };
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
         setIsFocused(true);
-        // Use a 10ms microtask so mouseup doesn't cancel selection on desktop click
         const target = e.target;
         setTimeout(() => {
             if (target) target.select();
@@ -127,7 +127,7 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
                 onChange={handleChange} 
                 onFocus={handleFocus}
                 onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
+                onKeyDown={handleKeyDown} 
                 placeholder={placeholder} 
                 disabled={disabled} 
             />
