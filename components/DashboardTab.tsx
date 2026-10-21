@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { InfoBtn } from './SharedUI';
 
 function ScoreCard({ title, score, max, tooltip }: { title: string, score: number, max: number, tooltip?: string }) {
@@ -38,67 +38,129 @@ function ScoreCard({ title, score, max, tooltip }: { title: string, score: numbe
 export default function DashboardTab() {
   const { data, results, planScore } = useFinance();
   const dashboardRef = useRef<HTMLDivElement>(null);
-
-  const [activeAssetView, setActiveAssetView] = useState<'nominal' | 'real'>('real');
-  const [activeSpendView, setActiveSpendView] = useState<'nominal' | 'real'>('real');
-  const [chartView, setChartView] = useState<'stacked' | 'total'>('stacked');
   const [isExporting, setIsExporting] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
 
-  const formatCurrency = (val: number) => {
-    if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
-    if (val >= 10000) return `$${(val / 1000).toFixed(0)}k`;
-    return `$${Math.round(val)}`;
+  const showToast = (msg: string) => {
+      setToastMsg(msg);
+      setTimeout(() => setToastMsg(''), 4000);
   };
 
-  const formatExact = (val: number) => {
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
+  const handleCopyToClipboard = async () => {
+      if (!dashboardRef.current) return;
+      setIsExporting(true);
+      showToast('Generating high-res image...');
+      try {
+          setTimeout(async () => {
+              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+              canvas.toBlob(async (blob) => {
+                  if (blob) {
+                      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                      showToast('✅ Copied to clipboard! Ready to paste (Ctrl+V) into Reddit/Discord.');
+                  }
+              });
+              setIsExporting(false);
+          }, 300);
+      } catch (err) {
+          console.error(err);
+          showToast('❌ Failed to copy image.');
+          setIsExporting(false);
+      }
   };
 
-  const handleExportPNG = async () => {
-    if (!dashboardRef.current) return;
-    setIsExporting(true);
-    try {
-        const canvas = await html2canvas(dashboardRef.current, {
-            backgroundColor: '#0f172a',
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            ignoreElements: (el) => el.classList.contains('no-export')
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `Retirement_Executive_Summary_${new Date().toISOString().split('T')[0]}.png`;
-        link.href = imgData;
-        link.click();
-    } catch (err) {
-        console.error("Export failed", err);
-        alert("Failed to export summary. Please try again.");
-    } finally {
-        setIsExporting(false);
-    }
+  const handleDownloadPNG = async () => {
+      if (!dashboardRef.current) return;
+      setIsExporting(true);
+      showToast('Generating high-res image...');
+      try {
+          setTimeout(async () => {
+              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+              const url = canvas.toDataURL('image/png');
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'Retirement_Summary.png';
+              link.click();
+              showToast('✅ Image downloaded successfully!');
+              setIsExporting(false);
+          }, 300);
+      } catch (err) {
+          console.error(err);
+          showToast('❌ Failed to download image.');
+          setIsExporting(false);
+      }
   };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
     return (
-      <div className="p-4 text-center text-muted">
-        <i className="bi bi-hourglass-split fs-1 mb-3 d-block text-primary"></i>
-        <h5>Calculating Projections...</h5>
+      <div className="p-5 text-center text-muted">
+        <i className="bi bi-hourglass-split fs-1 mb-3 d-block text-primary opacity-50"></i>
+        <h5>Waiting for calculation...</h5>
       </div>
     );
   }
 
-  const getRealValue = (val: number, year: number) => {
-      if (!data.useRealDollars) return val;
-      const yrIndex = year - results.timeline[0].year;
-      const infRate = (data.inputs.inflation || 2.0) / 100;
-      return val / Math.pow(1 + infRate, yrIndex);
+  const baseYear = results.timeline[0]?.year || new Date().getFullYear();
+  const inflation = (data.inputs.inflation_rate || 2.1) / 100;
+
+  const getRealValue = (nominalValue: number, year?: number) => {
+      if (!data.useRealDollars || year === undefined) return nominalValue;
+      const yearsOut = Math.max(0, year - baseYear);
+      return nominalValue / Math.pow(1 + inflation, yearsOut);
   };
 
-  const getCustomRealValue = (val: number, year: number, forceReal: boolean) => {
-      if (!forceReal) return val;
-      const yrIndex = year - results.timeline[0].year;
-      const infRate = (data.inputs.inflation || 2.0) / 100;
-      return val / Math.pow(1 + infRate, yrIndex);
+  const formatCurrency = (val: number) => {
+      if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
+      if (val >= 10000) return `$${(val / 1000).toFixed(0)}k`;
+      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
+  };
+
+  const formatExact = (val: number) => {
+      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
+  };
+
+  const formatYAxis = (val: number) => {
+      if (val === 0) return "$0";
+      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+      if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
+      return `$${Math.round(val)}`;
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+          const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
+          const dataObj = payload[0]?.payload;
+          return (
+              <div className="bg-input border border-secondary p-3 rounded-4 shadow-lg" style={{ minWidth: '220px' }}>
+                  {label && <p className="fw-bold mb-2 border-bottom border-secondary pb-2 text-muted text-uppercase ls-1" style={{fontSize: '0.75rem'}}>Year: {label} {dataObj?.age ? `(Age ${dataObj.age})` : ''}</p>}
+                  {dataObj?.isDepleted && (
+                      <div className="bg-danger bg-opacity-25 text-danger px-2 py-1 rounded small fw-bold mb-2 text-center" style={{ fontSize: '0.7rem' }}>
+                          <i className="bi bi-exclamation-triangle-fill me-1"></i>Liquid Portfolio Depleted
+                      </div>
+                  )}
+                  <div className="d-flex flex-column gap-1 mb-2">
+                      {[...payload].reverse().map((entry: any, index: number) => {
+                          if (entry.value === 0) return null;
+                          return (
+                              <div key={index} className="d-flex justify-content-between align-items-center gap-4">
+                                  <div className="d-flex align-items-center">
+                                      <span className="rounded-circle me-2" style={{width: '8px', height: '8px', backgroundColor: entry.color}}></span>
+                                      <span className="fw-medium small text-muted">{entry.name}</span>
+                                  </div>
+                                  <span className="fw-bold text-main small">{formatExact(entry.value)}</span>
+                              </div>
+                          );
+                      })}
+                  </div>
+                  {payload.length > 1 && (
+                      <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
+                          <span className="fw-bold small text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>Total</span>
+                          <span className="fw-bolder text-main">{formatExact(total)}</span>
+                      </div>
+                  )}
+              </div>
+          );
+      }
+      return null;
   };
 
   const getScoreColorText = (score: number) => {
@@ -108,32 +170,17 @@ export default function DashboardTab() {
   };
 
   const getScoreGradient = (score: number) => {
-      if (score >= 80) return 'linear-gradient(90deg, #10b981 0%, #059669 100%)';
-      if (score >= 60) return 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
-      return 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)';
+      if (score >= 80) return 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'; // Green
+      if (score >= 60) return 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'; // Yellow
+      return 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)'; // Red
   };
 
   const getScoreShadow = (score: number) => {
-      if (score >= 80) return '0 0 15px rgba(16, 185, 129, 0.4)';
+      if (score >= 80) return '0 0 15px rgba(52, 211, 153, 0.4)';
       if (score >= 60) return '0 0 15px rgba(245, 158, 11, 0.4)';
       return '0 0 15px rgba(239, 68, 68, 0.4)';
   };
 
-  // --- FI TARGET CALCULATION (Rule of 25) ---
-  const currentLiquidNW = results.timeline[0].liquidNW;
-  
-  let targetAnnualRetireSpend = 0;
-  const retYear = results.timeline.find((y: any) => y.p1Age === data.inputs.p1_retireAge);
-  if (retYear) {
-      targetAnnualRetireSpend = getRealValue(retYear.expenses + retYear.mortgagePay, retYear.year);
-  } else {
-      targetAnnualRetireSpend = getRealValue(results.timeline[0].expenses + results.timeline[0].mortgagePay, results.timeline[0].year);
-  }
-  const fiTarget = targetAnnualRetireSpend * 25;
-  const fiPercent = fiTarget > 0 ? (currentLiquidNW / fiTarget) * 100 : 0;
-  const isFI = currentLiquidNW >= fiTarget;
-
-  // --- LIFETIME AGGREGATES & ADVANCED METRICS ---
   let totalGrossInflow = 0;
   let totalTaxPaid = 0;
   let totalExpenses = 0;
@@ -175,7 +222,6 @@ export default function DashboardTab() {
       totalContributions += getRealValue(contsRaw, y.year);
       totalWithdrawals += getRealValue(wdsRaw, y.year);
 
-      // SHORTFALL CHECK: You only fail if income and withdrawals cannot cover mandatory living expenses, debt, and taxes
       const totalSourcedRaw = y.grossInflow || 0;
       const mandatoryBillsRaw = yrExpRaw + yrTaxRaw;
       if (totalSourcedRaw < mandatoryBillsRaw - 1) {
@@ -262,78 +308,94 @@ export default function DashboardTab() {
       { key: 'tfsa', label: 'TFSA', color: '#3b82f6' }
   ];
 
+  let liquidDepleted = false;
+  let firstDepletedYear: number | null = null;
+  let firstDepletedAge: number | null = null;
+
   const chartData = results.timeline.map((y: any) => {
       const p1 = y.assetsP1 || {};
       const p2 = y.assetsP2 || {};
-      
-      const tfsa = Math.max(0, getRealValue((p1.tfsa||0) + (p1.tfsa_successor||0) + (p2.tfsa||0) + (p2.tfsa_successor||0), y.year) || 0);
-      const fhsa = Math.max(0, getRealValue((p1.fhsa||0) + (p2.fhsa||0), y.year) || 0);
-      const rrsp_rrif = Math.max(0, getRealValue((p1.rrsp||0) + (p1.rrif_acct||0) + (p2.rrsp||0) + (p2.rrif_acct||0), y.year) || 0);
-      const lira_lif = Math.max(0, getRealValue((p1.lirf||0) + (p1.lif||0) + (p2.lirf||0) + (p2.lif||0), y.year) || 0);
-      const nreg = Math.max(0, getRealValue((p1.nonreg||0) + (p2.nonreg||0), y.year) || 0);
-      const cash = Math.max(0, getRealValue((p1.cash||0) + (p2.cash||0), y.year) || 0);
-      const crypto = Math.max(0, getRealValue((p1.crypto||0) + (p2.crypto||0), y.year) || 0);
+      const isRetired = y.p1Age >= (data.inputs.p1_retireAge || 65);
+
+      const rawLiquid = (p1.tfsa||0) + (p1.tfsa_successor||0) + (p2.tfsa||0) + (p2.tfsa_successor||0) +
+                        (p1.fhsa||0) + (p2.fhsa||0) +
+                        (p1.rrsp||0) + (p1.rrif_acct||0) + (p2.rrsp||0) + (p2.rrif_acct||0) +
+                        (p1.lirf||0) + (p1.lif||0) + (p2.lirf||0) + (p2.lif||0) +
+                        (p1.nonreg||0) + (p2.nonreg||0) +
+                        (p1.cash||0) + (p2.cash||0) +
+                        (p1.crypto||0) + (p2.crypto||0);
+
+      if (isRetired && rawLiquid <= 1) {
+          liquidDepleted = true;
+          if (firstDepletedYear === null) {
+              firstDepletedYear = y.year;
+              firstDepletedAge = y.p1Age;
+          }
+      }
+
+      // If liquid money ran out in retirement, don't show phantom non-reg accumulation from CPP/OAS
+      const tfsa = liquidDepleted ? 0 : Math.max(0, getRealValue((p1.tfsa||0) + (p1.tfsa_successor||0) + (p2.tfsa||0) + (p2.tfsa_successor||0), y.year) || 0);
+      const fhsa = liquidDepleted ? 0 : Math.max(0, getRealValue((p1.fhsa||0) + (p2.fhsa||0), y.year) || 0);
+      const rrsp_rrif = liquidDepleted ? 0 : Math.max(0, getRealValue((p1.rrsp||0) + (p1.rrif_acct||0) + (p2.rrsp||0) + (p2.rrif_acct||0), y.year) || 0);
+      const lira_lif = liquidDepleted ? 0 : Math.max(0, getRealValue((p1.lirf||0) + (p1.lif||0) + (p2.lirf||0) + (p2.lif||0), y.year) || 0);
+      const nreg = liquidDepleted ? 0 : Math.max(0, getRealValue((p1.nonreg||0) + (p2.nonreg||0), y.year) || 0);
+      const cash = liquidDepleted ? 0 : Math.max(0, getRealValue((p1.cash||0) + (p2.cash||0), y.year) || 0);
+      const crypto = liquidDepleted ? 0 : Math.max(0, getRealValue((p1.crypto||0) + (p2.crypto||0), y.year) || 0);
       const realEstate = Math.max(0, getRealValue(y.reIncludedEq || 0, y.year) || 0);
       
       const total = tfsa + fhsa + rrsp_rrif + lira_lif + nreg + cash + crypto + realEstate;
 
-      return {
-          year: y.year,
-          age: y.p1Age,
-          tfsa, fhsa, rrsp_rrif, lira_lif, nreg, cash, crypto, realEstate,
-          total
-      };
+      return { year: y.year, age: y.p1Age, tfsa, fhsa, rrsp_rrif, lira_lif, nreg, cash, crypto, realEstate, total, isDepleted: liquidDepleted };
   });
 
-  const spendCategories = [
-      { key: 'debt', label: 'Debt Payments', color: '#ef4444' },
-      { key: 'mortgage', label: 'Mortgage', color: '#f59e0b' },
-      { key: 'living', label: 'Living & Lifestyle', color: '#3b82f6' },
-      { key: 'savings', label: 'Savings & Invest', color: '#10b981' }
-  ];
+  const activeCategories = categories.filter(c => chartData.some((d: any) => d[c.key] > 0));
 
-  const spendChartData = results.timeline.map((y: any) => {
-      const isReal = activeSpendView === 'real';
-      const living = Math.max(0, getCustomRealValue(y.expenses || 0, y.year, isReal));
-      const mortgage = Math.max(0, getCustomRealValue(y.mortgagePay || 0, y.year, isReal));
-      const debt = Math.max(0, getCustomRealValue(y.debtRepayment || 0, y.year, isReal));
-      
-      let conts = 0;
-      if (y.flows && y.flows.contributions) {
-          conts += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-          if (data.mode === 'Couple') conts += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-      }
-      const savings = Math.max(0, getCustomRealValue(conts, y.year, isReal));
-      const total = living + mortgage + debt + savings;
+  const rawMaxNW = Math.max(1, ...chartData.map((d: any) => d.total));
+  const maxTotalNW = rawMaxNW * 1.05; 
+  const yAxisTicks = [1, 0.75, 0.5, 0.25, 0].map(f => maxTotalNW * f);
 
-      return {
-          year: y.year,
-          age: y.p1Age,
-          living, mortgage, debt, savings, total
-      };
-  });
+  // --- FI Readiness Math ---
+  const firstRetYearObj = results.timeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || results.timeline[results.timeline.length - 1];
+  const firstRetNominalSpend = (firstRetYearObj.expenses || 0) + (firstRetYearObj.mortgagePay || 0);
+  const yearsToRet = Math.max(0, firstRetYearObj.year - baseYear);
+  const firstRetRealSpend = firstRetNominalSpend / Math.pow(1 + inflation, yearsToRet);
+  
+  const fiTarget = firstRetRealSpend * 25;
+  const currentLiquidNW = results.timeline[0].liquidNW; 
+  const fiPercent = fiTarget > 0 ? (currentLiquidNW / fiTarget) * 100 : 0;
+  const isFI = fiPercent >= 100;
 
   return (
-    <div className="p-3 p-md-4">
-      
-      {/* Header with Title and Export Button */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 no-export">
-          <div>
-              <h4 className="fw-bold mb-1 d-flex align-items-center">
-                  <i className="bi bi-clipboard2-data text-primary me-2"></i>Executive Summary
-              </h4>
-              <p className="text-muted small mb-0">High-level overview of your retirement feasibility, tax efficiency, and lifetime cash flow.</p>
+    <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
+        
+      {toastMsg && (
+          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
+              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
+                  {toastMsg}
+              </div>
           </div>
+      )}
+
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+          <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
+              <i className="bi bi-clipboard2-data me-2"></i> Executive Summary
+          </h5>
           
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2" data-html2canvas-ignore>
               <button 
-                  type="button" 
-                  className="btn btn-outline-secondary btn-sm bg-input d-flex align-items-center rounded-pill px-3 shadow-sm"
-                  onClick={handleExportPNG}
+                  className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  onClick={handleCopyToClipboard}
                   disabled={isExporting}
               >
-                  <i className="bi bi-camera-fill me-2 text-info"></i>
-                  {isExporting ? 'Generating Image...' : 'Save as Image'}
+                  {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-clipboard me-2"></i>}
+                  Copy Image to Clipboard
+              </button>
+              <button 
+                  className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  onClick={handleDownloadPNG}
+                  disabled={isExporting}
+              >
+                  <i className="bi bi-download me-2"></i> Save PNG
               </button>
           </div>
       </div>
@@ -440,37 +502,40 @@ export default function DashboardTab() {
                       <div className="fs-3 fw-bold text-main" title={formatExact(totalGrossInflow)}>{formatCurrency(totalGrossInflow)}</div>
                   </div>
               </div>
-
+              
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-graph-up-arrow text-primary me-2"></i>
-                          <span className="me-1">Total Compounding Growth</span>
-                          <InfoBtn align="center" title="Compounding Growth" text="Total investment returns generated across all accounts above and beyond your contributions." />
+                          <span className="me-1">Investment Growth</span>
+                          <InfoBtn align="center" title="Investment Growth" text="Total compound interest and market growth generated by your portfolio over the entire simulation." />
                       </div>
-                      <div className="fs-3 fw-bold text-success" title={formatExact(totalInvestmentGrowth)}>{formatCurrency(totalInvestmentGrowth)}</div>
+                      <div className="fs-3 fw-bold text-primary" title={formatExact(totalInvestmentGrowth)}>{formatCurrency(totalInvestmentGrowth)}</div>
                   </div>
               </div>
 
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                          <i className="bi bi-receipt-cutoff text-danger me-2"></i>
-                          <span className="me-1">Total Taxes Paid</span>
-                          <InfoBtn align="center" title="Taxes Paid" text="Cumulative income taxes paid to CRA and provincial governments over the projection." />
+                          <i className="bi bi-bank text-purple me-2" style={{color:'var(--bs-purple)'}}></i>
+                          <span className="me-1" style={{color:'var(--bs-purple)'}}>Govt Benefits Collected</span>
+                          <InfoBtn align="center" title="Govt Benefits" text="Total CPP and OAS collected over your lifetime." />
                       </div>
-                      <div className="fs-3 fw-bold text-danger" title={formatExact(totalTaxPaid)}>{formatCurrency(totalTaxPaid)}</div>
+                      <div className="fs-3 fw-bold" style={{color:'var(--bs-purple)'}} title={formatExact(totalBenefits)}>{formatCurrency(totalBenefits)}</div>
                   </div>
               </div>
 
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                          <i className="bi bi-percent text-purple me-2"></i>
-                          <span className="me-1">Lifetime Effective Tax</span>
-                          <InfoBtn align="center" title="Effective Tax" text="Average proportion of your total lifetime gross inflow that went directly toward taxes." />
+                          <i className="bi bi-receipt text-danger me-2"></i>
+                          <span className="me-1">Lifetime Tax Paid</span>
+                          <InfoBtn align="center" title="Lifetime Tax" text="Total federal and provincial tax paid, including capital gains taxes and OAS clawbacks." />
                       </div>
-                      <div className="fs-3 fw-bold text-purple">{effTaxRate.toFixed(1)}%</div>
+                      <div className="fs-3 fw-bold text-danger" title={formatExact(totalTaxPaid)}>
+                          {formatCurrency(totalTaxPaid)} 
+                          <span className="fs-6 text-muted ms-2 fw-medium">({effTaxRate.toFixed(1)}% Eff.)</span>
+                      </div>
                   </div>
               </div>
 
@@ -569,7 +634,7 @@ export default function DashboardTab() {
                                           Liquid assets depleted at <strong>Age {firstShortfallAge} ({firstShortfallYear})</strong>.
                                           {isHouseRichCashPoor ? (
                                               <div className="text-warning-emphasis fst-italic mt-0.5">
-                                                  House-rich, cash-poor: Portfolio hit \$0 while real estate equity remains.
+                                                  House-rich, cash-poor: Portfolio hit $0 while real estate equity remains.
                                               </div>
                                           ) : (
                                               <div className="text-muted mt-0.5">
@@ -608,49 +673,46 @@ export default function DashboardTab() {
                                                           paddingAngle={4} 
                                                           dataKey="value" 
                                                           stroke="none"
+                                                          isAnimationActive={!isExporting}
                                                       >
                                                           {pieData.map((entry, index) => (
                                                               <Cell key={`cell-${index}`} fill={entry.color} />
                                                           ))}
                                                       </Pie>
-                                                      <Tooltip 
-                                                          formatter={(value: any) => [formatCurrency(Number(value)), 'Amount']}
-                                                          contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', fontWeight: 'bold' }}
-                                                          itemStyle={{ color: '#f8fafc' }}
-                                                      />
+                                                      <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} offset={20} wrapperStyle={{ zIndex: 1000 }} />
                                                   </PieChart>
                                               </ResponsiveContainer>
                                           </div>
                                       </div>
-
-                                      <div className="d-flex flex-column gap-2 w-100 px-3">
-                                          {pieData.map(d => (
-                                              <div key={d.name} className="d-flex justify-content-between align-items-center small">
-                                                  <span className="d-flex align-items-center text-muted fw-bold">
-                                                      <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: d.color }}></span>
-                                                      {d.name}
-                                                  </span>
-                                                  <span className="fw-bold text-main">{((d.value / totalPie) * 100).toFixed(1)}%</span>
+                                      
+                                      <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
+                                          {pieData.map((d, i) => (
+                                              <div className="d-flex justify-content-between align-items-center" key={i}>
+                                                  <div className="d-flex align-items-center">
+                                                      <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
+                                                      <span className="small text-muted fw-bold">{d.name}</span>
+                                                  </div>
+                                                  <span className="fw-bold text-main small">{((d.value / totalPie) * 100).toFixed(1)}%</span>
                                               </div>
                                           ))}
                                       </div>
                                   </div>
                               ) : (
-                                  <div className="text-muted small py-5">No distribution data available.</div>
+                                  <div className="text-center text-muted fst-italic py-4">Not enough data.</div>
                               )}
                           </div>
                       </div>
 
                       <div className="col-12 col-md-6">
                           <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
-                              <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-wallet2 text-info me-2"></i>Retirement Sourcing</h6>
+                              <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-wallet-fill text-info me-2"></i>Retirement Funding</h6>
                               
                               {totalFund > 1 ? (
                                   <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
                                       <div className="position-relative d-flex align-items-center justify-content-center w-100" style={{height: '200px'}}>
                                           <div className="position-absolute d-flex flex-column align-items-center justify-content-center pointer-events-none text-center" style={{ zIndex: 1 }}>
-                                              <span className="small text-muted fw-bold" style={{fontSize: '0.65rem'}}>SOURCED</span>
-                                              <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(retSpent)}</span>
+                                              <span className="small text-muted fw-bold text-center lh-1 mb-1" style={{fontSize: '0.65rem'}}>RETIREMENT<br/>INCOME</span>
+                                              <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalFund)}</span>
                                           </div>
                                           <div className="w-100 h-100 position-relative" style={{ zIndex: 2 }}>
                                               <ResponsiveContainer width="100%" height="100%">
@@ -662,275 +724,122 @@ export default function DashboardTab() {
                                                           paddingAngle={4} 
                                                           dataKey="value" 
                                                           stroke="none"
+                                                          isAnimationActive={!isExporting}
                                                       >
                                                           {fundData.map((entry, index) => (
-                                                              <Cell key={`cell-fund-${index}`} fill={entry.color} />
+                                                              <Cell key={`cell-${index}`} fill={entry.color} />
                                                           ))}
                                                       </Pie>
-                                                      <Tooltip 
-                                                          formatter={(value: any) => [formatCurrency(Number(value)), 'Amount']}
-                                                          contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', fontWeight: 'bold' }}
-                                                          itemStyle={{ color: '#f8fafc' }}
-                                                      />
+                                                      <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} offset={20} wrapperStyle={{ zIndex: 1000 }} />
                                                   </PieChart>
                                               </ResponsiveContainer>
                                           </div>
                                       </div>
-
-                                      <div className="d-flex flex-column gap-2 w-100 px-3">
-                                          {fundData.map(d => (
-                                              <div key={d.name} className="d-flex justify-content-between align-items-center small">
-                                                  <span className="d-flex align-items-center text-muted fw-bold">
-                                                      <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: d.color }}></span>
-                                                      {d.name}
-                                                  </span>
-                                                  <span className="fw-bold text-main">{((d.value / totalFund) * 100).toFixed(1)}%</span>
+                                      
+                                      <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
+                                          {fundData.map((d, i) => (
+                                              <div className="d-flex justify-content-between align-items-center" key={i}>
+                                                  <div className="d-flex align-items-center">
+                                                      <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
+                                                      <span className="small text-muted fw-bold">{d.name}</span>
+                                                  </div>
+                                                  <span className="fw-bold text-main small">{((d.value / totalFund) * 100).toFixed(1)}%</span>
                                               </div>
                                           ))}
                                       </div>
                                   </div>
                               ) : (
-                                  <div className="text-muted small py-5">No retirement funding data yet.</div>
+                                  <div className="text-center text-muted fst-italic py-4">No retirement data.</div>
                               )}
                           </div>
                       </div>
 
                   </div>
               </div>
+
           </div>
 
-          {/* NET WORTH ACCUMULATION / DECUMULATION TRAJECTORY */}
-          <div className="rp-card border-secondary rounded-4 p-4 shadow-sm mb-4">
-              <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-                  <div>
-                      <h6 className="fw-bold text-uppercase ls-1 text-muted mb-1 d-flex align-items-center">
-                          <i className="bi bi-graph-up text-primary me-2"></i>Net Worth Trajectory
-                      </h6>
-                      <span className="text-muted small">Visualizing portfolio drawdown and asset allocation shifts over time.</span>
+          <div className="row mt-2">
+              <div className="col-12">
+                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm d-flex flex-column" style={{ height: '600px' }}>
+                      <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-bar-chart-line-fill text-primary me-2"></i>Net Worth Composition Over Time</h6>
+                      
+                      {maxTotalNW > 1 ? (
+                          <>
+                              <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4 pb-3 border-bottom border-secondary flex-shrink-0">
+                                  {[...activeCategories].reverse().map(c => (
+                                      <div className="d-flex align-items-center" key={c.key}>
+                                          <span className="rounded-circle me-2 shadow-sm border border-secondary border-opacity-25" style={{width: '12px', height: '12px', backgroundColor: c.color, display: 'inline-block'}}></span>
+                                          <span className="small text-muted fw-bold ls-1" style={{fontSize: '0.75rem'}}>{c.label}</span>
+                                      </div>
+                                  ))}
+                                  {firstDepletedYear && (
+                                      <div className="d-flex align-items-center ms-2 ps-2 border-start border-secondary">
+                                          <span className="rounded-circle me-2 shadow-sm border border-secondary" style={{width: '12px', height: '12px', backgroundColor: '#334155', display: 'inline-block'}}></span>
+                                          <span className="small text-danger fw-bold ls-1" style={{fontSize: '0.75rem'}}>Greyed Out = Liquid Depleted</span>
+                                      </div>
+                                  )}
+                              </div>
+
+                              <div className="w-100 flex-grow-1" style={{ minHeight: 0 }}>
+                                  <ResponsiveContainer width="100%" height="100%">
+                                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.4} />
+                                          <XAxis 
+                                              dataKey="year" 
+                                              stroke="#888" 
+                                              tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} 
+                                              tickMargin={12} 
+                                              minTickGap={25} 
+                                          />
+                                          <YAxis 
+                                              tickFormatter={(val) => formatYAxis(val)} 
+                                              stroke="#888" 
+                                              tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} 
+                                              width={65} 
+                                              axisLine={false}
+                                              tickLine={false}
+                                          />
+                                          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bs-primary)', opacity: 0.1 }} offset={20} wrapperStyle={{ zIndex: 1000 }} />
+                                          
+                                          {firstDepletedYear && (
+                                              <ReferenceLine 
+                                                  x={firstDepletedYear} 
+                                                  stroke="#ef4444" 
+                                                  strokeWidth={2} 
+                                                  strokeDasharray="4 4" 
+                                                  label={{ value: `Depleted (Age ${firstDepletedAge})`, fill: '#ef4444', fontSize: 11, position: 'top', fontWeight: 600 }} 
+                                              />
+                                          )}
+                                          {[...activeCategories].map(c => (
+                                              <Bar 
+                                                  key={c.key} 
+                                                  dataKey={c.key} 
+                                                  name={c.label} 
+                                                  stackId="a" 
+                                                  fill={c.color} 
+                                                  isAnimationActive={!isExporting} 
+                                              >
+                                                  {chartData.map((entry: any, index: number) => (
+                                                      <Cell 
+                                                          key={`cell-${c.key}-${index}`} 
+                                                          fill={entry.isDepleted ? (c.key === 'realEstate' ? '#475569' : '#334155') : c.color} 
+                                                          opacity={entry.isDepleted ? 0.45 : 1}
+                                                      />
+                                                  ))}
+                                              </Bar>
+                                          ))}
+                                      </BarChart>
+                                  </ResponsiveContainer>
+                              </div>
+                          </>
+                      ) : (
+                          <div className="text-center text-muted fst-italic py-5 my-auto">No assets tracked.</div>
+                      )}
                   </div>
-
-                  <div className="d-flex gap-2">
-                      <div className="btn-group btn-group-sm bg-input border border-secondary rounded-pill p-1 shadow-sm">
-                          <button 
-                              className={`btn btn-sm rounded-pill fw-bold px-3 ${chartView === 'stacked' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
-                              onClick={() => setChartView('stacked')}
-                          >
-                              Asset Breakdown
-                          </button>
-                          <button 
-                              className={`btn btn-sm rounded-pill fw-bold px-3 ${chartView === 'total' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
-                              onClick={() => setChartView('total')}
-                          >
-                              Total Trajectory
-                          </button>
-                      </div>
-
-                      <div className="btn-group btn-group-sm bg-input border border-secondary rounded-pill p-1 shadow-sm">
-                          <button 
-                              className={`btn btn-sm rounded-pill fw-bold px-3 ${activeAssetView === 'real' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
-                              onClick={() => setActiveAssetView('real')}
-                          >
-                              Today's \$
-                          </button>
-                          <button 
-                              className={`btn btn-sm rounded-pill fw-bold px-3 ${activeAssetView === 'nominal' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
-                              onClick={() => setActiveAssetView('nominal')}
-                          >
-                              Future \$
-                          </button>
-                      </div>
-                  </div>
-              </div>
-
-              <div style={{ width: '100%', height: 350 }}>
-                  <ResponsiveContainer>
-                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} vertical={false} />
-                          <XAxis 
-                              dataKey="age" 
-                              stroke="#94a3b8" 
-                              fontSize={12} 
-                              tickLine={false}
-                              tickFormatter={(age) => `Age ${age}`}
-                          />
-                          <YAxis 
-                              stroke="#94a3b8" 
-                              fontSize={12} 
-                              tickLine={false}
-                              tickFormatter={(val) => formatCurrency(val)}
-                          />
-                          <Tooltip 
-                              content={({ active, payload, label }) => {
-                                  if (active && payload && payload.length) {
-                                      const dataObj = payload[0].payload;
-                                      return (
-                                          <div className="p-3 border border-secondary rounded-3 shadow-lg" style={{ backgroundColor: '#1e293b', minWidth: '220px' }}>
-                                              <div className="fw-bold text-main border-bottom border-secondary pb-1 mb-2 d-flex justify-content-between">
-                                                  <span>Age {label}</span>
-                                                  <span className="text-muted">{dataObj.year}</span>
-                                              </div>
-                                              {chartView === 'stacked' ? (
-                                                  <>
-                                                      {categories.map(c => {
-                                                          const val = dataObj[c.key] || 0;
-                                                          if (val <= 0) return null;
-                                                          return (
-                                                              <div key={c.key} className="d-flex justify-content-between small py-0.5">
-                                                                  <span style={{ color: c.color }} className="fw-bold">{c.label}:</span>
-                                                                  <span className="text-main fw-bold">{formatCurrency(val)}</span>
-                                                              </div>
-                                                          );
-                                                      })}
-                                                      <div className="border-top border-secondary pt-1 mt-2 d-flex justify-content-between fw-bold text-main">
-                                                          <span>Total:</span>
-                                                          <span className="text-info">{formatCurrency(dataObj.total)}</span>
-                                                      </div>
-                                                  </>
-                                              ) : (
-                                                  <div className="d-flex justify-content-between fw-bold text-main py-1">
-                                                      <span>Net Worth:</span>
-                                                      <span className="text-info">{formatCurrency(dataObj.total)}</span>
-                                                  </div>
-                                              )}
-                                          </div>
-                                      );
-                                  }
-                                  return null;
-                              }}
-                          />
-                          
-                          {chartView === 'stacked' ? (
-                              categories.map((c) => (
-                                  <Bar 
-                                      key={c.key} 
-                                      dataKey={c.key} 
-                                      stackId="a" 
-                                      fill={c.color} 
-                                      radius={c.key === 'realEstate' ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                                  />
-                              ))
-                          ) : (
-                              <Bar 
-                                  dataKey="total" 
-                                  fill="#0ea5e9" 
-                                  radius={[6, 6, 0, 0]}
-                              />
-                          )}
-                      </BarChart>
-                  </ResponsiveContainer>
-              </div>
-
-              {chartView === 'stacked' && (
-                  <div className="d-flex flex-wrap justify-content-center gap-3 mt-4 pt-2 border-top border-secondary border-opacity-25">
-                      {categories.map(c => (
-                          <div key={c.key} className="d-flex align-items-center small text-muted">
-                              <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: c.color }}></span>
-                              <span className="fw-bold">{c.label}</span>
-                          </div>
-                      ))}
-                  </div>
-              )}
-          </div>
-
-          {/* ANNUAL CASH OUTFLOWS & SAVINGS PROFILE */}
-          <div className="rp-card border-secondary rounded-4 p-4 shadow-sm">
-              <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-                  <div>
-                      <h6 className="fw-bold text-uppercase ls-1 text-muted mb-1 d-flex align-items-center">
-                          <i className="bi bi-cart-check text-warning me-2"></i>Annual Outflows & Savings Profile
-                      </h6>
-                      <span className="text-muted small">Tracking living costs, mortgage payments, debt repayment, and portfolio additions.</span>
-                  </div>
-
-                  <div className="d-flex gap-2">
-                      <div className="btn-group btn-group-sm bg-input border border-secondary rounded-pill p-1 shadow-sm">
-                          <button 
-                              className={`btn btn-sm rounded-pill fw-bold px-3 ${activeSpendView === 'real' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
-                              onClick={() => setActiveSpendView('real')}
-                          >
-                              Today's $
-                          </button>
-                          <button 
-                              className={`btn btn-sm rounded-pill fw-bold px-3 ${activeSpendView === 'nominal' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
-                              onClick={() => setActiveSpendView('nominal')}
-                          >
-                              Future $
-                          </button>
-                      </div>
-                  </div>
-              </div>
-
-              <div style={{ width: '100%', height: 350 }}>
-                  <ResponsiveContainer>
-                      <BarChart data={spendChartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} vertical={false} />
-                          <XAxis 
-                              dataKey="age" 
-                              stroke="#94a3b8" 
-                              fontSize={12} 
-                              tickLine={false}
-                              tickFormatter={(age) => `Age ${age}`}
-                          />
-                          <YAxis 
-                              stroke="#94a3b8" 
-                              fontSize={12} 
-                              tickLine={false}
-                              tickFormatter={(val) => formatCurrency(val)}
-                          />
-                          <Tooltip 
-                              content={({ active, payload, label }) => {
-                                  if (active && payload && payload.length) {
-                                      const dataObj = payload[0].payload;
-                                      return (
-                                          <div className="p-3 border border-secondary rounded-3 shadow-lg" style={{ backgroundColor: '#1e293b', minWidth: '220px' }}>
-                                              <div className="fw-bold text-main border-bottom border-secondary pb-1 mb-2 d-flex justify-content-between">
-                                                  <span>Age {label}</span>
-                                                  <span className="text-muted">{dataObj.year}</span>
-                                              </div>
-                                              {spendCategories.map(c => {
-                                                  const val = dataObj[c.key] || 0;
-                                                  if (val <= 0) return null;
-                                                  return (
-                                                      <div key={c.key} className="d-flex justify-content-between small py-0.5">
-                                                          <span style={{ color: c.color }} className="fw-bold">{c.label}:</span>
-                                                          <span className="text-main fw-bold">{formatCurrency(val)}</span>
-                                                      </div>
-                                                  );
-                                              })}
-                                              <div className="border-top border-secondary pt-1 mt-2 d-flex justify-content-between fw-bold text-main">
-                                                  <span>Total Outflow:</span>
-                                                  <span className="text-warning">{formatCurrency(dataObj.total)}</span>
-                                              </div>
-                                          </div>
-                                      );
-                                  }
-                                  return null;
-                              }}
-                          />
-                          
-                          {spendCategories.map((c) => (
-                              <Bar 
-                                  key={c.key} 
-                                  dataKey={c.key} 
-                                  stackId="a" 
-                                  fill={c.color} 
-                                  radius={c.key === 'savings' ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                              />
-                          ))}
-                      </BarChart>
-                  </ResponsiveContainer>
-              </div>
-
-              <div className="d-flex flex-wrap justify-content-center gap-3 mt-4 pt-2 border-top border-secondary border-opacity-25">
-                  {spendCategories.map(c => (
-                      <div key={c.key} className="d-flex align-items-center small text-muted">
-                          <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: c.color }}></span>
-                          <span className="fw-bold">{c.label}</span>
-                      </div>
-                  ))}
               </div>
           </div>
-
+          
       </div>
 
     </div>
