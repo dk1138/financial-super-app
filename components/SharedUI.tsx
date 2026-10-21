@@ -27,26 +27,6 @@ export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: {
     );
 };
 
-// Helper to parse financial inputs with 'k' (thousands) and 'm' (millions) shorthand
-export const parseFinancialInput = (raw: string): number | '' => {
-    if (!raw && raw !== '0') return '';
-    const cleaned = String(raw).trim().toLowerCase().replace(/[\$,\s]/g, '');
-    if (cleaned === '') return '';
-    
-    // Match e.g. "85k", "1.2m", "500", "1500.50"
-    const match = cleaned.match(/^([0-9]+(?:\.[0-9]+)?)([km])\$/);
-    if (match) {
-        const num = parseFloat(match[1]);
-        if (isNaN(num)) return '';
-        const unit = match[2];
-        const multiplier = unit === 'm' ? 1000000 : 1000;
-        return Math.round(num * multiplier);
-    }
-    
-    const digits = cleaned.replace(/[^0-9]/g, '');
-    return digits === '' ? '' : parseInt(digits, 10);
-};
-
 // --- DATA INPUTS ---
 export const CurrencyInput = ({ value, onChange, className, placeholder, style, disabled, suffix, noBg }: any) => {
     const [isFocused, setIsFocused] = useState(false);
@@ -65,39 +45,27 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let rawStr = e.target.value;
         if (rawStr.length > 15) rawStr = rawStr.substring(0, 15);
-
-        // Immediate shorthand expansion on keypress for k (thousands) and m (millions)
-        const cleanShorthand = rawStr.replace(/[\$,\s]/g, '');
-        if (/[0-9]+(?:\.[0-9]+)?[km]\$/i.test(cleanShorthand)) {
-            const parsed = parseFinancialInput(rawStr);
-            if (typeof parsed === 'number' && !isNaN(parsed)) {
-                setDisplayVal(parsed.toLocaleString('en-US'));
-                onChange(parsed);
-                return;
-            }
-        }
-
+        
         setDisplayVal(rawStr);
 
-        // Live update for standard numeric typing
-        const cleanedDigits = rawStr.replace(/[^0-9]/g, '');
-        if (/^[0-9,]*\$/.test(rawStr)) {
-            if (cleanedDigits === '') onChange('');
-            else onChange(parseInt(cleanedDigits, 10));
+        const digits = rawStr.replace(/[^0-9]/g, '');
+        if (digits === '') {
+            onChange('');
+        } else {
+            onChange(parseInt(digits, 10));
         }
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
         setIsFocused(false);
-        // Read directly from DOM input event (e.target.value) to avoid stale closure state
-        const targetVal = e.target.value;
-        const parsed = parseFinancialInput(targetVal);
-        if (parsed === '' || typeof parsed !== 'number' || isNaN(parsed)) {
+        const digits = e.target.value.replace(/[^0-9]/g, '');
+        if (digits === '') {
             setDisplayVal('');
             onChange('');
         } else {
-            setDisplayVal(parsed.toLocaleString('en-US'));
-            onChange(parsed);
+            const num = parseInt(digits, 10);
+            setDisplayVal(num.toLocaleString('en-US'));
+            onChange(num);
         }
     };
 
