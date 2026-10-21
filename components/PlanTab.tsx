@@ -47,8 +47,21 @@ export default function PlanTab() {
   };
 
   // --- SMART COLLAPSED CARD SUMMARIES ---
-  const sectionSummaries = useMemo<Record<string, string>>(() => {
-    if (!data || !data.inputs) return {};
+  const sectionSummaries = useMemo(() => {
+    const fallback = {
+      personal: '',
+      dependents: '',
+      portfolio: '',
+      realestate: '',
+      tax: '',
+      living: '',
+      future: '',
+      windfalls: '',
+      govt: '',
+      economic: ''
+    };
+
+    if (!data || !data.inputs) return fallback;
     const isCouple = data.mode === 'Couple';
     const p1Name = data.inputs.p1_name || 'Player 1';
     const p2Name = data.inputs.p2_name || 'Player 2';
