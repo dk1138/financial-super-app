@@ -173,7 +173,7 @@ export default function MarginalTaxCurve() {
     const isInsideOasTrap = customIncome >= OAS_THRESHOLD_2026 && customIncome <= OAS_MAX_RECOVERY_2026;
     const oasHeadroom = OAS_THRESHOLD_2026 - customIncome;
 
-    // What you keep from next \$1,000
+    // What you keep from next $1,000
     const next1000Tax = Math.round(1000 * (currentBreakdown.totalMarginalRate / 100));
     const next1000Keep = 1000 - next1000Tax;
 
@@ -276,7 +276,7 @@ export default function MarginalTaxCurve() {
                                 onChange={e => setHasOas(e.target.checked)} 
                             />
                             <label className="form-check-label small fw-bold text-muted cursor-pointer user-select-none" htmlFor="oasToggle" style={{ fontSize: '0.78rem' }}>
-                                Receive OAS (\$95k Clawback Active)
+                                Receive OAS ($95k Clawback Active)
                             </label>
                         </div>
                     )}
@@ -448,7 +448,7 @@ export default function MarginalTaxCurve() {
                                     TFSA & Pension Splitting Shields
                                 </span>
                                 <span style={{ fontSize: '0.75rem', lineHeight: '1.4' }}>
-                                    TFSA withdrawals do not count toward Net World Income (Line 23600) and never trigger OAS recovery tax. If your household is a couple, Section 60.03 pension splitting on up to 50% of eligible RRIF/LIF income allows you to keep both partners under the <strong>\$95,323</strong> threshold.
+                                    TFSA withdrawals do not count toward Net World Income (Line 23600) and never trigger OAS recovery tax. If your household is a couple, Section 60.03 pension splitting on up to 50% of eligible RRIF/LIF income allows you to keep both partners under the <strong>$95,323</strong> threshold.
                                 </span>
                             </div>
                         </div>
