@@ -11,6 +11,14 @@ export default function LIFtoRRIFOptimizer() {
     const p1Name = data.inputs.p1_name || 'Player 1';
     const p2Name = data.inputs.p2_name || 'Player 2';
 
+    const useRealDollars = Boolean(
+        data.useRealDollars === true || 
+        data.inputs?.todays_dollars === true || 
+        data.inputs?.use_real_dollars === true ||
+        data.inputs?.useRealDollars === true
+    );
+    const inflationRate = (data.inputs?.inflation_rate !== undefined && data.inputs?.inflation_rate !== '' ? Number(data.inputs.inflation_rate) : 2.1) / 100;
+
     const [activeTarget, setActiveTarget] = useState<'p1' | 'p2'>('p1');
     const [overrideBalance, setOverrideBalance] = useState<number | ''>('');
     const [overrideAge, setOverrideAge] = useState<number | ''>('');
@@ -64,15 +72,19 @@ export default function LIFtoRRIFOptimizer() {
             simLif = remainingLif * (1 + r);
             simRrif = (simRrif + yTransfer) * (1 + r);
 
+            // If "Today's \$" mode is active, deflate future values to constant purchasing power
+            const deflator = useRealDollars ? Math.pow(1 + inflationRate, y - 1) : 1;
+            const openNominal = simLif / (1 + r) + yMin + yTransfer;
+
             schedule.push({
                 year: y,
                 age: ageYear,
-                openingLif: Math.round(simLif / (1 + r) + yMin + yTransfer),
-                minWithdrawal: Math.round(yMin),
-                transferredToRrif: Math.round(yTransfer),
-                closingLif: Math.round(simLif),
-                rrifFromTransfers: Math.round(simRrif),
-                cumulativeUnlocked: Math.round(cumUnlocked)
+                openingLif: Math.round(openNominal / deflator),
+                minWithdrawal: Math.round(yMin / deflator),
+                transferredToRrif: Math.round(yTransfer / deflator),
+                closingLif: Math.round(simLif / deflator),
+                rrifFromTransfers: Math.round(simRrif / deflator),
+                cumulativeUnlocked: Math.round(cumUnlocked / deflator)
             });
 
             if (simLif <= 0 && y >= 3) break;
@@ -87,7 +99,7 @@ export default function LIFtoRRIFOptimizer() {
             schedule,
             totalUnlocked10Yr: cumUnlocked
         };
-    }, [currentAge, currentBalance, province, growthRate]);
+    }, [currentAge, currentBalance, province, growthRate, useRealDollars, inflationRate]);
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
@@ -102,7 +114,14 @@ export default function LIFtoRRIFOptimizer() {
                 </div>
                 <div className="flex-grow-1">
                     <div className="d-flex align-items-center justify-content-between">
-                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">LIF to RRIF Flexibility Optimizer</h5>
+                        <div className="d-flex align-items-center gap-2">
+                            <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">LIF to RRIF Flexibility Optimizer</h5>
+                            {useRealDollars && (
+                                <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>
+                                    Today's \$
+                                </span>
+                            )}
+                        </div>
                         <InfoBtn 
                             title="LIF to RRIF Unlocking Transfer"
                             text="Life Income Funds (LIFs) enforce both minimum and maximum annual withdrawal limits. Under Canadian tax law (ITA 60(l)), you can take the mandatory minimum in taxable cash and transfer the difference between the maximum and minimum directly into an unlocked RRIF without triggering immediate tax or consuming RRSP room.<br><br>This unlocks future liquidity since RRIFs have no maximum withdrawal ceiling."
@@ -169,7 +188,7 @@ export default function LIFtoRRIFOptimizer() {
                     onChange={(val: any) => setViewMode(val)}
                     options={[
                         { value: 'summary', label: 'Annual Snapshot' },
-                        { value: 'schedule', label: '10-Year Unlocking Schedule' }
+                        { value: 'schedule', label: `10-Year Unlocking Schedule ${useRealDollars ? "(Today's $)" : "(Nominal)"}` }
                     ]}
                 />
             </div>

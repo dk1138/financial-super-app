@@ -11,6 +11,13 @@ export default function ConsumptionSmoother() {
     const p1Name = data.inputs.p1_name || 'Player 1';
     const p2Name = data.inputs.p2_name || 'Player 2';
 
+    const useRealDollars = Boolean(
+        data.useRealDollars === true || 
+        data.inputs?.todays_dollars === true || 
+        data.inputs?.use_real_dollars === true ||
+        data.inputs?.useRealDollars === true
+    );
+
     const defaultRetAge = Number(data.inputs.p1_retireAge) || 65;
     const currentAge = Number(data.inputs.p1_age) || 35;
     const lifeExpectancy = Number(data.inputs.p1_lifeExp) || 90;
@@ -26,8 +33,8 @@ export default function ConsumptionSmoother() {
     };
 
     const getRealValue = (nominalValue: number, startYear: number, endYear: number) => {
-        if (!data.useRealDollars) return nominalValue;
-        const inflation = (data.inputs.inflation_rate || 2.1) / 100;
+        if (!useRealDollars) return nominalValue;
+        const inflation = (data.inputs?.inflation_rate !== undefined && data.inputs?.inflation_rate !== '' ? Number(data.inputs.inflation_rate) : 2.1) / 100;
         const yearsOut = Math.max(0, endYear - startYear);
         return nominalValue / Math.pow(1 + inflation, yearsOut);
     };
@@ -119,7 +126,8 @@ export default function ConsumptionSmoother() {
                 const baseEngine = new FinanceEngine(JSON.parse(JSON.stringify(data)));
                 const defaultTimeline = baseEngine.runSimulation(true, null);
                 const retYearItem = defaultTimeline.find((y: any) => y.p1Age >= defaultRetAge) || defaultTimeline[defaultTimeline.length - 1];
-                const baselineCurrentSpend = retYearItem ? (retYearItem.expenses || 60000) : 60000;
+                const startYear = defaultTimeline[0].year;
+                const baselineCurrentSpend = retYearItem ? getRealValue(retYearItem.expenses || 60000, startYear, retYearItem.year) : 60000;
 
                 setSmoothResult({
                     annualSpend: baseOptimal.annualSpend,
@@ -140,7 +148,7 @@ export default function ConsumptionSmoother() {
         }, 60);
 
         return () => clearTimeout(timer);
-    }, [JSON.stringify(data.inputs), JSON.stringify(data.expensesByCategory), testRetAge, targetLegacy]);
+    }, [JSON.stringify(data.inputs), JSON.stringify(data.expensesByCategory), testRetAge, targetLegacy, useRealDollars]);
 
     return (
         <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
@@ -151,7 +159,14 @@ export default function ConsumptionSmoother() {
                 </div>
                 <div className="flex-grow-1">
                     <div className="d-flex align-items-center justify-content-between">
-                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Consumption Smoothing (Living Standard Maximizer)</h5>
+                        <div className="d-flex align-items-center gap-2">
+                            <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Consumption Smoothing (Living Standard Maximizer)</h5>
+                            {useRealDollars && (
+                                <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem'}}>
+                                    Today's \$
+                                </span>
+                            )}
+                        </div>
                         <InfoBtn 
                             title="MaxiFi-Style Consumption Smoothing" 
                             text="Based on economic consumption smoothing principles. Instead of forcing you to guess a retirement budget, this solver works backward from your net worth, CPP, OAS, pensions, and Canadian tax brackets to find the <b>exact flat discretionary living standard</b> (in today's purchasing power) you can spend every year from retirement to age 95 without ever running out of money."
