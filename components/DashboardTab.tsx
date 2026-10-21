@@ -783,7 +783,7 @@ export default function DashboardTab() {
 
                               <div className="w-100 flex-grow-1" style={{ minHeight: 0 }}>
                                   <ResponsiveContainer width="100%" height="100%">
-                                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                      <BarChart data={chartData} margin={{ top: 38, right: 15, left: 0, bottom: 0 }}>
                                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.4} />
                                           <XAxis 
                                               dataKey="year" 
@@ -808,7 +808,7 @@ export default function DashboardTab() {
                                                   stroke="#ef4444" 
                                                   strokeWidth={2} 
                                                   strokeDasharray="4 4" 
-                                                  label={{ value: `Depleted (Age ${firstDepletedAge})`, fill: '#ef4444', fontSize: 11, position: 'top', fontWeight: 600 }} 
+                                                  label={{ value: `Depleted (Age ${firstDepletedAge})`, fill: '#ef4444', fontSize: 11, position: 'top', fontWeight: 700, dy: -6 }} 
                                               />
                                           )}
                                           {[...activeCategories].map(c => (

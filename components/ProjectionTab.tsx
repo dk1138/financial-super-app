@@ -229,23 +229,73 @@ export default function ProjectionTab() {
     setExpandedYear(expandedYear === year ? null : year);
   };
 
-  const getEventIcons = (events: string[]) => {
-      if (!events || events.length === 0) return null;
-      return events.map((ev, i) => {
+  const getEventIcons = (events: string[], y?: any) => {
+      let iconElements: any[] = [];
+      const evList = events || [];
+
+      evList.forEach((ev, i) => {
           let colorClass = "text-secondary";
           let icon = "bi-info-circle-fill";
-          if (ev.includes('Retires')) { colorClass = "text-primary"; icon = "bi-cup-hot-fill"; }
-          else if (ev.includes('Windfall')) { colorClass = "text-success"; icon = "bi-cash-coin"; }
-          else if (ev.includes('Mortgage Paid')) { colorClass = "text-primary"; icon = "bi-house-check-fill"; }
-          else if (ev.includes('Dies')) { colorClass = "text-danger"; icon = "bi-heartbreak-fill"; }
-          else if (ev.includes('Leave')) { colorClass = "text-info"; icon = "bi-person-hearts"; }
-          else if (ev.includes('Downsize')) { colorClass = "text-danger"; icon = "bi-house-down-fill"; }
-          else if (ev.includes('RRSP')) { colorClass = "text-secondary"; icon = "bi-arrow-left-right"; }
-          
-          return (
-              <i key={i} className={`bi ${icon} ${colorClass} ms-2 fs-5`} title={ev} style={{cursor: 'help'}}></i>
+          const lower = ev.toLowerCase();
+
+          if (lower.includes('retires')) {
+              colorClass = "text-primary"; icon = "bi-cup-hot-fill";
+          } else if (lower.includes('guardrail')) {
+              colorClass = lower.includes('cut') ? "text-warning" : "text-success";
+              icon = "bi-shield-shaded";
+          } else if (lower.includes('student') || lower.includes('osap') || lower.includes('tuition')) {
+              colorClass = "text-warning"; icon = "bi-mortarboard-fill";
+          } else if (lower.includes('resp') || lower.includes('college') || lower.includes('university') || lower.includes('education')) {
+              colorClass = "text-info"; icon = "bi-backpack-fill";
+          } else if (lower.includes('debt') || lower.includes('loan') || lower.includes('credit')) {
+              colorClass = "text-warning"; icon = "bi-credit-card-2-front-fill";
+          } else if (lower.includes('purchased')) {
+              colorClass = "text-warning"; icon = "bi-bag-check-fill";
+          } else if (lower.includes('mortgage paid')) {
+              colorClass = "text-success"; icon = "bi-house-check-fill";
+          } else if (lower.includes('sold')) {
+              colorClass = "text-success"; icon = "bi-cash-coin";
+          } else if (lower.includes('windfall')) {
+              colorClass = "text-success"; icon = "bi-cash-coin";
+          } else if (lower.includes('downsize')) {
+              colorClass = "text-info"; icon = "bi-house-down-fill";
+          } else if (lower.includes('dies')) {
+              colorClass = "text-danger"; icon = "bi-heartbreak-fill";
+          } else if (lower.includes('leave')) {
+              colorClass = "text-info"; icon = "bi-person-hearts";
+          } else if (lower.includes('fhsa')) {
+              colorClass = "text-info"; icon = "bi-house-heart-fill";
+          } else if (lower.includes('rrsp')) {
+              colorClass = "text-secondary"; icon = "bi-arrow-left-right";
+          }
+
+          iconElements.push(
+              <i key={`ev-${i}`} className={`bi ${icon} ${colorClass} ms-1 fs-5`} title={ev} style={{cursor: 'help'}}></i>
           );
       });
+
+      // Contextual detections from data flows:
+      if (y) {
+          // Kids Registered Account Funding (RESP)
+          const respContrib = (y.flows?.contributions?.p1?.resp || 0) + (y.flows?.contributions?.p2?.resp || 0);
+          const hasRespIcon = evList.some(e => e.toLowerCase().includes('resp'));
+          if (respContrib > 0 && !hasRespIcon) {
+              iconElements.push(
+                  <i key="resp-funding" className="bi bi-backpack-fill text-info ms-1 fs-5" title={`Kids Registered Account (RESP) Funding: $${Math.round(respContrib).toLocaleString()}`} style={{cursor: 'help'}}></i>
+              );
+          }
+
+          // Student Loan / Education Expense
+          const hasStudentIcon = evList.some(e => e.toLowerCase().includes('student'));
+          const isStudentDebt = data.debt?.some((d: any) => d.name?.toLowerCase().includes('student') || d.name?.toLowerCase().includes('osap'));
+          if (((y.eduExpense || 0) > 0 || (isStudentDebt && (y.debtRepayment || 0) > 0)) && !hasStudentIcon) {
+              iconElements.push(
+                  <i key="student-loan" className="bi bi-mortarboard-fill text-warning ms-1 fs-5" title="Student Loan / Education Payment Active" style={{cursor: 'help'}}></i>
+              );
+          }
+      }
+
+      return iconElements.length > 0 ? iconElements : null;
   };
 
   const renderAges = (y: any) => {
@@ -688,7 +738,12 @@ export default function ProjectionTab() {
             </thead>
             
             <tbody>
-              {results.timeline.map((y: any, index: number) => {
+              {(() => {
+                const retAgeVal = Number(data.inputs.p1_retireAge) || 65;
+                const firstDepYearObj = results.timeline.find((y: any) => y.p1Age >= retAgeVal && (y.liquidNW || 0) <= 1);
+                const firstDepYear = firstDepYearObj ? firstDepYearObj.year : null;
+
+                return results.timeline.map((y: any, index: number) => {
                 const isExpanded = expandedYear === y.year;
                 
                 const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
@@ -738,17 +793,32 @@ export default function ProjectionTab() {
                 const p1BeforeSplit = y.taxIncP1 + (y.pensionSplit?.p1ToP2 || 0) - (y.pensionSplit?.p2ToP1 || 0);
                 const p2BeforeSplit = y.taxIncP2 + (y.pensionSplit?.p2ToP1 || 0) - (y.pensionSplit?.p1ToP2 || 0);
 
+                const isRetAge = y.p1Age >= (Number(data.inputs.p1_retireAge) || 65);
+                const isLiquidDepleted = isRetAge && (y.liquidNW || 0) <= 1;
+
                 return (
                   <React.Fragment key={y.year}>
-                    
-                    <tr className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : ''}`} onClick={() => toggleRow(y.year)}>
+                    {y.year === firstDepYear && (
+                      <tr key={`depleted-milestone-${y.year}`} className="bg-danger bg-opacity-20 border-top border-bottom border-danger">
+                        <td colSpan={8} className="py-2 px-3 text-center text-danger fw-bold small">
+                          <i className="bi bi-exclamation-triangle-fill text-warning me-2 fs-6"></i>
+                          <span>PORTFOLIO DEPLETED AT AGE {y.p1Age} ({y.year}) — From this point forward, remaining Net Worth is 100% Real Estate Equity.</span>
+                        </td>
+                      </tr>
+                    )}
+                    <tr className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : (isLiquidDepleted ? 'bg-danger bg-opacity-5' : '')}`} onClick={() => toggleRow(y.year)}>
                       <td className="py-3 ps-3 text-center text-primary border-bottom border-secondary border-opacity-25">
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} transition-all`}></i>
                       </td>
                       <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
-                        <div className="d-flex align-items-center">
-                            <span className="fs-6">{y.year}</span>
-                            {getEventIcons(y.events)}
+                        <div className="d-flex align-items-center flex-wrap">
+                            <span className="fs-6 me-1">{y.year}</span>
+                            {isLiquidDepleted && (
+                                <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-1 py-0.5 me-1" style={{ fontSize: '0.65rem' }}>
+                                    Depleted
+                                </span>
+                            )}
+                            {getEventIcons(y.events, y)}
                         </div>
                       </td>
                       <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
@@ -760,7 +830,16 @@ export default function ProjectionTab() {
                       <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
                       <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
                       <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
-                      <td className="py-3 pe-4 text-center text-success fw-bold fs-6 border-bottom border-secondary border-opacity-25">{formatCurrency(totalNW, y.year)}</td>
+                      <td className="py-3 pe-4 text-center border-bottom border-secondary border-opacity-25">
+                        {isLiquidDepleted ? (
+                            <div className="d-flex flex-column align-items-center lh-sm">
+                                <span className="text-info fw-bold">{formatCurrency(totalNW, y.year)}</span>
+                                <span className="text-danger fw-bold" style={{ fontSize: '0.65rem' }}>Liquid $0 (House Only)</span>
+                            </div>
+                        ) : (
+                            <span className="text-success fw-bold fs-6">{formatCurrency(totalNW, y.year)}</span>
+                        )}
+                      </td>
                     </tr>
 
                     {isExpanded && (
@@ -1095,7 +1174,8 @@ export default function ProjectionTab() {
                     )}
                   </React.Fragment>
                 );
-              })}
+              });
+              })()}
             </tbody>
           </table>
         </div>
