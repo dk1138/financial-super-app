@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 const MedicalExpenseOptimizer = dynamic(() => import('./optimizers/MedicalExpenseOptimizer'), { ssr: false });
 const SideHustleROI = dynamic(() => import('./optimizers/SideHustleROI'), { ssr: false });
 const DieWithZero = dynamic(() => import('./optimizers/DieWithZero'), { ssr: false });
+const ConsumptionSmoother = dynamic(() => import('./optimizers/ConsumptionSmoother'), { ssr: false });
 const CPPGridSearch = dynamic(() => import('./optimizers/CPPGridSearch'), { ssr: false });
 const PensionBuyback = dynamic(() => import('./optimizers/PensionBuyback'), { ssr: false });
 const RRSPSweetSpot = dynamic(() => import('./optimizers/RRSPSweetSpot'), { ssr: false });
@@ -30,14 +31,15 @@ const ReverseMortgage = dynamic(() => import('./optimizers/ReverseMortgage'), { 
 const LIFtoRRIFOptimizer = dynamic(() => import('./optimizers/LIFtoRRIFOptimizer'), { ssr: false });
 const GISMaximizer = dynamic(() => import('./optimizers/GISMaximizer'), { ssr: false });
 const EstateTaxCalculator = dynamic(() => import('./optimizers/EstateTaxCalculator'), { ssr: false });
+const AssetLocationOptimizer = dynamic(() => import('./optimizers/AssetLocationOptimizer'), { ssr: false });
 
 export default function OptimizersTab() {
   const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash');
   const [expandedTool, setExpandedTool] = useState<string | null>(null);
   
   const toolCategories = [
-    { title: "Master Simulations", keys: ['dwz', 'cpp', 'pensioncv', 'pensionbb'] },
-    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'lif-unlock', 'gis-maximizer', 'estate-tax', 'ccb', 'fhsa', 'resp', 'medical'] },
+    { title: "Master Simulations", keys: ['dwz', 'smoother', 'cpp', 'pensioncv', 'pensionbb'] },
+    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'lif-unlock', 'gis-maximizer', 'estate-tax', 'asset-location', 'ccb', 'fhsa', 'resp', 'medical'] },
     { title: "Business & Income", keys: ['sidehustle'] },
     { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal', 'reversemortgage'] },
     { title: "Data Importers", keys: ['cppimport'] }
@@ -52,6 +54,7 @@ export default function OptimizersTab() {
           case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
           case 'sidehustle': ContentComponent = <SideHustleROI />; break;
           case 'dwz': ContentComponent = <DieWithZero />; break;
+          case 'smoother': ContentComponent = <ConsumptionSmoother />; break;
           case 'cpp': ContentComponent = <CPPGridSearch />; break;
           case 'pensionbb': ContentComponent = <PensionBuyback />; break;
           case 'sweetspot': ContentComponent = <RRSPSweetSpot />; break;
@@ -60,8 +63,9 @@ export default function OptimizersTab() {
           case 'tfsa-room': ContentComponent = <TFSARoomCalculator />; break;
           case 'lif-unlock': ContentComponent = <LIFtoRRIFOptimizer />; break;
           case 'gis-maximizer': ContentComponent = <GISMaximizer />; break;
-          case 'ccb': ContentComponent = <CCBMaximizer />; break;
           case 'estate-tax': ContentComponent = <EstateTaxCalculator />; break;
+          case 'asset-location': ContentComponent = <AssetLocationOptimizer />; break;
+          case 'ccb': ContentComponent = <CCBMaximizer />; break;
           case 'resp': ContentComponent = <RESPMaximizer />; break;
           case 'fhsa': ContentComponent = <FHSAvsRRSP />; break;
           case 'mvi': ContentComponent = <MortgageVsInvest />; break;
