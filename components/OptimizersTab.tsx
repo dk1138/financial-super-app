@@ -31,7 +31,6 @@ const ReverseMortgage = dynamic(() => import('./optimizers/ReverseMortgage'), { 
 const LIFtoRRIFOptimizer = dynamic(() => import('./optimizers/LIFtoRRIFOptimizer'), { ssr: false });
 const GISMaximizer = dynamic(() => import('./optimizers/GISMaximizer'), { ssr: false });
 const EstateTaxCalculator = dynamic(() => import('./optimizers/EstateTaxCalculator'), { ssr: false });
-const AssetLocationOptimizer = dynamic(() => import('./optimizers/AssetLocationOptimizer'), { ssr: false });
 
 export default function OptimizersTab() {
   const [activeCategory, setActiveCategory] = useState('Debt, Real Estate & Cash');
@@ -39,7 +38,7 @@ export default function OptimizersTab() {
   
   const toolCategories = [
     { title: "Master Simulations", keys: ['dwz', 'smoother', 'cpp', 'pensioncv', 'pensionbb'] },
-    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'lif-unlock', 'gis-maximizer', 'estate-tax', 'asset-location', 'ccb', 'fhsa', 'resp', 'medical'] },
+    { title: "Tax & Registered", keys: ['sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'lif-unlock', 'gis-maximizer', 'estate-tax', 'ccb', 'fhsa', 'resp', 'medical'] },
     { title: "Business & Income", keys: ['sidehustle'] },
     { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal', 'reversemortgage'] },
     { title: "Data Importers", keys: ['cppimport'] }
@@ -64,7 +63,6 @@ export default function OptimizersTab() {
           case 'lif-unlock': ContentComponent = <LIFtoRRIFOptimizer />; break;
           case 'gis-maximizer': ContentComponent = <GISMaximizer />; break;
           case 'estate-tax': ContentComponent = <EstateTaxCalculator />; break;
-          case 'asset-location': ContentComponent = <AssetLocationOptimizer />; break;
           case 'ccb': ContentComponent = <CCBMaximizer />; break;
           case 'resp': ContentComponent = <RESPMaximizer />; break;
           case 'fhsa': ContentComponent = <FHSAvsRRSP />; break;
