@@ -251,7 +251,7 @@ export default function MarginalTaxCurve() {
                     </select>
                 </div>
 
-                {/* Vertically Stacked Toggles (No text squishing) */}
+                {/* Vertically Stacked Toggles */}
                 <div className="col-12 col-md-4 d-flex flex-column justify-content-center gap-2 pt-1">
                     <div className="form-check form-switch mb-0 d-flex align-items-center">
                         <input 
@@ -283,31 +283,35 @@ export default function MarginalTaxCurve() {
                 </div>
             </div>
 
-            {/* KPI Cards (Standardized font scale) */}
+            {/* KPI Cards */}
             <div className="row g-3 mb-3">
                 <div className="col-12 col-md-4">
-                    <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm h-100">
-                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
-                            Effective Marginal Rate
-                        </span>
-                        <div className={`fs-3 fw-bold mb-1 ${currentBreakdown.totalMarginalRate >= 50 ? 'text-danger' : currentBreakdown.totalMarginalRate >= 40 ? 'text-warning' : 'text-primary'}`}>
-                            {currentBreakdown.totalMarginalRate.toFixed(1)}%
+                    <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
+                                Effective Marginal Rate
+                            </span>
+                            <div className={`fs-3 fw-bold mb-1 ${currentBreakdown.totalMarginalRate >= 50 ? 'text-danger' : currentBreakdown.totalMarginalRate >= 40 ? 'text-warning' : 'text-primary'}`}>
+                                {currentBreakdown.totalMarginalRate.toFixed(1)}%
+                            </div>
                         </div>
-                        <span className="small text-muted" style={{ fontSize: '0.72rem' }}>
+                        <span className="small text-muted border-top border-secondary border-opacity-25 pt-1 d-block" style={{ fontSize: '0.72rem' }}>
                             Base Tax: {currentBreakdown.statutoryRate.toFixed(1)}% {currentBreakdown.surtaxRate > 0 && `(+${currentBreakdown.surtaxRate}% Surtax)`}
                         </span>
                     </div>
                 </div>
 
                 <div className="col-12 col-md-4">
-                    <div className={`p-3 border rounded-4 shadow-sm h-100 ${isInsideOasTrap ? 'border-danger bg-danger bg-opacity-10' : 'border-secondary bg-body'}`}>
-                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
-                            OAS Clawback Status
-                        </span>
-                        <div className={`fs-5 fw-bold mb-1 ${isInsideOasTrap ? 'text-danger' : 'text-success'}`}>
-                            {isInsideOasTrap ? 'Inside Clawback Zone' : (oasHeadroom > 0 ? 'Safe (Under Limit)' : 'OAS Fully Eliminated')}
+                    <div className={`p-3 border rounded-4 shadow-sm h-100 d-flex flex-column justify-content-between ${isInsideOasTrap ? 'border-danger bg-danger bg-opacity-10' : 'border-secondary bg-body'}`}>
+                        <div>
+                            <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
+                                OAS Clawback Status
+                            </span>
+                            <div className={`fs-5 fw-bold mb-1 ${isInsideOasTrap ? 'text-danger' : 'text-success'}`}>
+                                {isInsideOasTrap ? 'Inside Clawback Zone' : (oasHeadroom > 0 ? 'Safe (Under Limit)' : 'OAS Fully Eliminated')}
+                            </div>
                         </div>
-                        <span className="small text-muted" style={{ fontSize: '0.72rem' }}>
+                        <span className="small text-muted border-top border-secondary border-opacity-25 pt-1 d-block" style={{ fontSize: '0.72rem' }}>
                             {oasHeadroom > 0 
                                 ? `$${oasHeadroom.toLocaleString()} room before 15% clawback` 
                                 : isInsideOasTrap 
@@ -318,14 +322,23 @@ export default function MarginalTaxCurve() {
                 </div>
 
                 <div className="col-12 col-md-4">
-                    <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm h-100">
-                        <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-1" style={{ fontSize: '0.68rem' }}>
-                            Next \$1,000 Withdrawn
-                        </span>
-                        <div className="fs-5 fw-bold text-main mb-1">
-                            Keep: <span className="text-success">\${next1000Keep}</span> <span className="small text-muted fw-normal" style={{ fontSize: '0.8rem' }}>/ Pay: <span className="text-danger">\${next1000Tax}</span></span>
+                    <div className="p-3 border border-secondary rounded-4 bg-body shadow-sm h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-2" style={{ fontSize: '0.68rem' }}>
+                                Next \$1,000 Withdrawn
+                            </span>
+                            <div className="d-flex flex-column gap-1 mb-2">
+                                <div className="fs-5 fw-bold d-flex justify-content-between align-items-center">
+                                    <span className="text-muted fw-semibold">Keep:</span>
+                                    <span className="text-success">\${next1000Keep}</span>
+                                </div>
+                                <div className="fs-5 fw-bold d-flex justify-content-between align-items-center">
+                                    <span className="text-muted fw-semibold">Pay:</span>
+                                    <span className="text-danger">\${next1000Tax}</span>
+                                </div>
+                            </div>
                         </div>
-                        <span className="small text-muted" style={{ fontSize: '0.72rem' }}>
+                        <span className="small text-muted border-top border-secondary border-opacity-25 pt-1 d-block" style={{ fontSize: '0.72rem' }}>
                             Keep rate: {(100 - currentBreakdown.totalMarginalRate).toFixed(1)}% on your next dollar
                         </span>
                     </div>
