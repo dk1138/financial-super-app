@@ -38,134 +38,67 @@ function ScoreCard({ title, score, max, tooltip }: { title: string, score: numbe
 export default function DashboardTab() {
   const { data, results, planScore } = useFinance();
   const dashboardRef = useRef<HTMLDivElement>(null);
+
+  const [activeAssetView, setActiveAssetView] = useState<'nominal' | 'real'>('real');
+  const [activeSpendView, setActiveSpendView] = useState<'nominal' | 'real'>('real');
+  const [chartView, setChartView] = useState<'stacked' | 'total'>('stacked');
   const [isExporting, setIsExporting] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
 
-  const showToast = (msg: string) => {
-      setToastMsg(msg);
-      setTimeout(() => setToastMsg(''), 4000);
+  const formatCurrency = (val: number) => {
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
+    if (val >= 10000) return `$${(val / 1000).toFixed(0)}k`;
+    return `$${Math.round(val)}`;
   };
 
-  const handleCopyToClipboard = async () => {
-      if (!dashboardRef.current) return;
-      setIsExporting(true);
-      showToast('Generating high-res image...');
-      try {
-          setTimeout(async () => {
-              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
-              canvas.toBlob(async (blob) => {
-                  if (blob) {
-                      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                      showToast('✅ Copied to clipboard! Ready to paste (Ctrl+V) into Reddit/Discord.');
-                  }
-              });
-              setIsExporting(false);
-          }, 300);
-      } catch (err) {
-          console.error(err);
-          showToast('❌ Failed to copy image.');
-          setIsExporting(false);
-      }
+  const formatExact = (val: number) => {
+      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
   };
 
-  const handleDownloadPNG = async () => {
-      if (!dashboardRef.current) return;
-      setIsExporting(true);
-      showToast('Generating high-res image...');
-      try {
-          setTimeout(async () => {
-              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
-              const url = canvas.toDataURL('image/png');
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = 'Retirement_Summary.png';
-              link.click();
-              showToast('✅ Image downloaded successfully!');
-              setIsExporting(false);
-          }, 300);
-      } catch (err) {
-          console.error(err);
-          showToast('❌ Failed to download image.');
-          setIsExporting(false);
-      }
+  const handleExportPNG = async () => {
+    if (!dashboardRef.current) return;
+    setIsExporting(true);
+    try {
+        const canvas = await html2canvas(dashboardRef.current, {
+            backgroundColor: '#0f172a',
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            ignoreElements: (el) => el.classList.contains('no-export')
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `Retirement_Executive_Summary_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = imgData;
+        link.click();
+    } catch (err) {
+        console.error("Export failed", err);
+        alert("Failed to export summary. Please try again.");
+    } finally {
+        setIsExporting(false);
+    }
   };
 
   if (!results || !results.timeline || results.timeline.length === 0) {
     return (
-      <div className="p-5 text-center text-muted">
-        <i className="bi bi-hourglass-split fs-1 mb-3 d-block text-primary opacity-50"></i>
-        <h5>Waiting for calculation...</h5>
+      <div className="p-4 text-center text-muted">
+        <i className="bi bi-hourglass-split fs-1 mb-3 d-block text-primary"></i>
+        <h5>Calculating Projections...</h5>
       </div>
     );
   }
 
-  const baseYear = results.timeline[0]?.year || new Date().getFullYear();
-  
-  // --- BUGFIX: Safe falsy check for 0% inflation ---
-  const rawInf = data.inputs?.inflation_rate;
-  const inflation = (rawInf !== undefined && rawInf !== null && rawInf !== '' ? Number(rawInf) : 2.1) / 100;
-  
-  // --- BUGFIX: Robust check for the "Today's Dollars" toggle state across possible keys ---
-  const useRealDollars = Boolean(
-      data.useRealDollars === true || 
-      data.inputs?.todays_dollars === true || 
-      data.inputs?.use_real_dollars === true ||
-      data.inputs?.useRealDollars === true
-  );
-
-  const getRealValue = (nominalValue: number, year?: number) => {
-      if (!useRealDollars || year === undefined) return nominalValue;
-      const yearsOut = Math.max(0, year - baseYear);
-      return nominalValue / Math.pow(1 + inflation, yearsOut);
+  const getRealValue = (val: number, year: number) => {
+      if (!data.useRealDollars) return val;
+      const yrIndex = year - results.timeline[0].year;
+      const infRate = (data.inputs.inflation || 2.0) / 100;
+      return val / Math.pow(1 + infRate, yrIndex);
   };
 
-  const formatCurrency = (val: number) => {
-      if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
-      if (val >= 10000) return `$${(val / 1000).toFixed(0)}k`;
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
-  };
-
-  const formatExact = (val: number) => {
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
-  };
-
-  const formatYAxis = (val: number) => {
-      if (val === 0) return "$0";
-      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-      if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-      return `$${Math.round(val)}`;
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-      if (active && payload && payload.length) {
-          const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
-          return (
-              <div className="bg-input border border-secondary p-3 rounded-4 shadow-lg" style={{ minWidth: '220px' }}>
-                  {label && <p className="fw-bold mb-2 border-bottom border-secondary pb-2 text-muted text-uppercase ls-1" style={{fontSize: '0.75rem'}}>Year: {label}</p>}
-                  <div className="d-flex flex-column gap-1 mb-2">
-                      {[...payload].reverse().map((entry: any, index: number) => {
-                          if (entry.value === 0) return null;
-                          return (
-                              <div key={index} className="d-flex justify-content-between align-items-center gap-4">
-                                  <div className="d-flex align-items-center">
-                                      <span className="rounded-circle me-2" style={{width: '8px', height: '8px', backgroundColor: entry.color}}></span>
-                                      <span className="fw-medium small text-muted">{entry.name}</span>
-                                  </div>
-                                  <span className="fw-bold text-main small">{formatExact(entry.value)}</span>
-                              </div>
-                          );
-                      })}
-                  </div>
-                  {payload.length > 1 && (
-                      <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
-                          <span className="fw-bold small text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>Total</span>
-                          <span className="fw-bolder text-main">{formatExact(total)}</span>
-                      </div>
-                  )}
-              </div>
-          );
-      }
-      return null;
+  const getCustomRealValue = (val: number, year: number, forceReal: boolean) => {
+      if (!forceReal) return val;
+      const yrIndex = year - results.timeline[0].year;
+      const infRate = (data.inputs.inflation || 2.0) / 100;
+      return val / Math.pow(1 + infRate, yrIndex);
   };
 
   const getScoreColorText = (score: number) => {
@@ -175,17 +108,31 @@ export default function DashboardTab() {
   };
 
   const getScoreGradient = (score: number) => {
-      if (score >= 80) return 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'; 
-      if (score >= 60) return 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'; 
-      return 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)'; 
+      if (score >= 80) return 'linear-gradient(90deg, #10b981 0%, #059669 100%)';
+      if (score >= 60) return 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
+      return 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)';
   };
 
   const getScoreShadow = (score: number) => {
-      if (score >= 80) return '0 0 15px rgba(52, 211, 153, 0.4)';
+      if (score >= 80) return '0 0 15px rgba(16, 185, 129, 0.4)';
       if (score >= 60) return '0 0 15px rgba(245, 158, 11, 0.4)';
       return '0 0 15px rgba(239, 68, 68, 0.4)';
   };
 
+  // --- FI TARGET CALCULATION (Rule of 25) ---
+  const currentLiquidNW = results.timeline[0].liquidNW;
+  
+  let targetAnnualRetireSpend = 0;
+  const retYear = results.timeline.find((y: any) => y.p1Age === data.inputs.p1_retireAge);
+  if (retYear) {
+      targetAnnualRetireSpend = getRealValue(retYear.expenses + retYear.mortgagePay, retYear.year);
+  } else {
+      targetAnnualRetireSpend = getRealValue(results.timeline[0].expenses + results.timeline[0].mortgagePay, results.timeline[0].year);
+  }
+  const fiTarget = targetAnnualRetireSpend * 25;
+  const fiReadinessPct = fiTarget > 0 ? Math.min(100, Math.max(0, (currentLiquidNW / fiTarget) * 100)) : 0;
+
+  // --- LIFETIME AGGREGATES & ADVANCED METRICS ---
   let totalGrossInflow = 0;
   let totalTaxPaid = 0;
   let totalExpenses = 0;
@@ -202,6 +149,8 @@ export default function DashboardTab() {
   let totalContributions = 0;
   let totalWithdrawals = 0;
   let hasShortfall = false;
+  let firstShortfallYear: number | null = null;
+  let firstShortfallAge: number | null = null;
 
   results.timeline.forEach((y: any) => {
       const wdsRaw = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number : 0;
@@ -229,6 +178,10 @@ export default function DashboardTab() {
       const totalSpentRaw = yrExpRaw + yrTaxRaw + contsRaw;
       if (totalSourcedRaw < totalSpentRaw - 1) {
           hasShortfall = true;
+          if (firstShortfallYear === null) {
+              firstShortfallYear = y.year;
+              firstShortfallAge = y.p1Age;
+          }
       }
 
       if (y.p1Age >= data.inputs.p1_retireAge) {
@@ -248,59 +201,14 @@ export default function DashboardTab() {
   const totalInvestmentGrowth = finalPort - initialPort - totalContributions + totalWithdrawals;
   const effTaxRate = totalGrossInflow > 0 ? (totalTaxPaid / totalGrossInflow) * 100 : 0;
 
-  // --- MILESTONES MATH ---
-  const retYearIndex = results.timeline.findIndex((y: any) => y.p1Age >= data.inputs.p1_retireAge);
-  const validRetYearIndex = retYearIndex >= 0 ? retYearIndex : 0;
-  const retYearData = results.timeline[validRetYearIndex];
-  
-  // 1. Initial Withdrawal Rate (First FULL year of retirement)
-  let initialWithdrawalRate = 0;
-  const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-  const p2Ret = data.mode === 'Couple' ? (Number(data.inputs.p2_retireAge) || 65) : p1Ret;
-  
-  const firstFullRetYearIdx = results.timeline.findIndex((y: any) => {
-      const p1FullyRet = y.p1Age > p1Ret;
-      const p2FullyRet = data.mode === 'Couple' ? y.p2Age > p2Ret : true;
-      return p1FullyRet && p2FullyRet;
-  });
-
-  if (firstFullRetYearIdx > 0) {
-      const targetYear = results.timeline[firstFullRetYearIdx];
-      const prevYear = results.timeline[firstFullRetYearIdx - 1];
-      const startNW = prevYear.liquidNW;
-      
-      const actualWds = Object.values(targetYear.flows?.withdrawals || {}).reduce((a: any, b: any) => a + b, 0) as number;
-      
-      let shortfall = 0;
-      const totalSourcedRaw = targetYear.grossInflow || 0;
-      let contsRaw = 0;
-      if (targetYear.flows?.contributions) {
-          contsRaw += Object.values(targetYear.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-          if (data.mode === 'Couple') contsRaw += Object.values(targetYear.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
-      }
-      const yrTaxRaw = (targetYear.taxP1||0) + (targetYear.taxP2||0);
-      const yrExpRaw = (targetYear.expenses||0) + (targetYear.mortgagePay||0) + (targetYear.debtRepayment||0);
-      const totalSpentRaw = yrExpRaw + yrTaxRaw + contsRaw;
-      
-      if (totalSourcedRaw < totalSpentRaw - 1) shortfall = totalSpentRaw - totalSourcedRaw;
-
-      const requiredWd = actualWds + shortfall;
-      initialWithdrawalRate = startNW > 0 ? (requiredWd / startNW) * 100 : 0;
-
-  } else if (firstFullRetYearIdx === 0) {
-      const targetYear = results.timeline[0];
-      let startNW = ['tfsa', 'fhsa', 'rrsp', 'lirf', 'lif', 'rrif_acct', 'nonreg', 'cash', 'crypto']
-          .reduce((sum, acct) => sum + (Number(data.inputs[`p1_${acct}`]) || 0) + (data.mode === 'Couple' ? (Number(data.inputs[`p2_${acct}`]) || 0) : 0), 0);
-      startNW += data.customAssets?.reduce((sum: number, a: any) => sum + (Number(a.balance) || 0), 0) || 0;
-      
-      const actualWds = Object.values(targetYear.flows?.withdrawals || {}).reduce((a: any, b: any) => a + b, 0) as number;
-      initialWithdrawalRate = startNW > 0 ? (actualWds / startNW) * 100 : 0;
-  }
-
-  // 2. Retirement Day Net Worth
+  const retYearData = results.timeline.find((y: any) => y.p1Age === data.inputs.p1_retireAge) || results.timeline[0];
   const retDayNW = getRealValue(retYearData.liquidNW + (retYearData.reIncludedEq || 0), retYearData.year);
+  const retYearWds = retYearData.flows && retYearData.flows.withdrawals 
+      ? (Object.values(retYearData.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number) 
+      : 0;
+  const retStartLiquid = (retYearData.liquidNW || 0) + retYearWds;
+  const initialWdRate = retStartLiquid > 0 ? (retYearWds / retStartLiquid) * 100 : 0;
 
-  // 3. Peak Net Worth
   let peakNW = 0;
   let peakAge = 0;
   results.timeline.forEach((y: any) => {
@@ -321,6 +229,9 @@ export default function DashboardTab() {
   const finalEstateObj = results.timeline[results.timeline.length - 1];
   const finalEstateRaw = finalEstateObj.afterTaxEstate !== undefined ? finalEstateObj.afterTaxEstate : (finalEstateObj.liquidNW + (finalEstateObj.reIncludedEq || 0));
   const finalEstate = getRealValue(finalEstateRaw, finalEstateObj.year);
+  const finalLiquidNW = getRealValue(Math.max(0, finalEstateObj.liquidNW || 0), finalEstateObj.year);
+  const finalReEquity = getRealValue(Math.max(0, finalEstateObj.reIncludedEq || 0), finalEstateObj.year);
+  const isHouseRichCashPoor = hasShortfall && finalReEquity > 0 && finalLiquidNW <= 0;
   const planHealth = hasShortfall ? "Failed" : "Success";
 
   const pieData = [
@@ -364,68 +275,97 @@ export default function DashboardTab() {
       
       const total = tfsa + fhsa + rrsp_rrif + lira_lif + nreg + cash + crypto + realEstate;
 
-      return { year: y.year, age: y.p1Age, tfsa, fhsa, rrsp_rrif, lira_lif, nreg, cash, crypto, realEstate, total };
+      return {
+          year: y.year,
+          age: y.p1Age,
+          tfsa, fhsa, rrsp_rrif, lira_lif, nreg, cash, crypto, realEstate,
+          total
+      };
   });
 
-  const activeCategories = categories.filter(c => chartData.some((d: any) => d[c.key] > 0));
+  const spendCategories = [
+      { key: 'debt', label: 'Debt Payments', color: '#ef4444' },
+      { key: 'mortgage', label: 'Mortgage', color: '#f59e0b' },
+      { key: 'living', label: 'Living & Lifestyle', color: '#3b82f6' },
+      { key: 'savings', label: 'Savings & Invest', color: '#10b981' }
+  ];
 
-  const rawMaxNW = Math.max(1, ...chartData.map((d: any) => d.total));
-  const maxTotalNW = rawMaxNW * 1.05; 
-  const yAxisTicks = [1, 0.75, 0.5, 0.25, 0].map(f => maxTotalNW * f);
+  const spendChartData = results.timeline.map((y: any) => {
+      const isReal = activeSpendView === 'real';
+      const living = Math.max(0, getCustomRealValue(y.expenses || 0, y.year, isReal));
+      const mortgage = Math.max(0, getCustomRealValue(y.mortgagePay || 0, y.year, isReal));
+      const debt = Math.max(0, getCustomRealValue(y.debtRepayment || 0, y.year, isReal));
+      
+      let conts = 0;
+      if (y.flows && y.flows.contributions) {
+          conts += Object.values(y.flows.contributions.p1 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+          if (data.mode === 'Couple') conts += Object.values(y.flows.contributions.p2 || {}).reduce((a: any, b: any) => a + b, 0) as number;
+      }
+      const savings = Math.max(0, getCustomRealValue(conts, y.year, isReal));
+      const total = living + mortgage + debt + savings;
 
-  const firstRetYearObj = results.timeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || results.timeline[results.timeline.length - 1];
-  const firstRetNominalSpend = (firstRetYearObj.expenses || 0) + (firstRetYearObj.mortgagePay || 0);
-  const yearsToRet = Math.max(0, firstRetYearObj.year - baseYear);
-  const firstRetRealSpend = firstRetNominalSpend / Math.pow(1 + inflation, yearsToRet);
-  
-  const fiTarget = firstRetRealSpend * 25;
-  const currentLiquidNW = results.timeline[0].liquidNW; 
-  const fiPercent = fiTarget > 0 ? (currentLiquidNW / fiTarget) * 100 : 0;
-  const isFI = fiPercent >= 100;
+      return {
+          year: y.year,
+          age: y.p1Age,
+          living, mortgage, debt, savings, total
+      };
+  });
 
   return (
-    <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
-        
-      {toastMsg && (
-          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
-              <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
-                  {toastMsg}
-              </div>
-          </div>
-      )}
-
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-          <h5 className="fw-bold text-uppercase ls-1 text-primary mb-0 d-flex align-items-center">
-              <i className="bi bi-clipboard2-data me-2"></i> Executive Summary
-          </h5>
-          
-          <div className="d-flex gap-2" data-html2canvas-ignore>
-              <button 
-                  className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
-                  onClick={handleCopyToClipboard}
-                  disabled={isExporting}
-              >
-                  {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-clipboard me-2"></i>}
-                  Copy Image to Clipboard
-              </button>
-              <button 
-                  className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
-                  onClick={handleDownloadPNG}
-                  disabled={isExporting}
-              >
-                  <i className="bi bi-download me-2"></i> Save PNG
-              </button>
-          </div>
+    <div className="p-3 p-md-4">
+      
+      <div className="d-flex justify-content-end mb-3 no-export">
+          <button 
+              className="btn btn-outline-primary btn-sm fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center"
+              onClick={handleExportPNG}
+              disabled={isExporting}
+          >
+              <i className="bi bi-camera-fill me-2"></i>
+              {isExporting ? 'Exporting...' : 'Save Summary as Image'}
+          </button>
       </div>
 
-      <div ref={dashboardRef}>
-          
-          {isExporting && (
-              <div className="text-center text-muted fw-bold small text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary">
-                  Generated by Retirement Planner Pro
+      <div ref={dashboardRef} className="p-2 rounded-4">
+
+          {/* FINANCIAL STRENGTH SCORECARDS */}
+          {planScore && (
+              <div className="row g-3 mb-4">
+                  <div className="col-6 col-md-3">
+                      <ScoreCard 
+                          title="Savings Velocity" 
+                          score={planScore.pillars.savings.score} 
+                          max={planScore.pillars.savings.max} 
+                          tooltip="Measures the proportion of gross income directed toward investments and retirement accounts. 20%+ earns top marks."
+                      />
+                  </div>
+                  <div className="col-6 col-md-3">
+                      <ScoreCard 
+                          title="Debt Freedom" 
+                          score={planScore.pillars.debt.score} 
+                          max={planScore.pillars.debt.max} 
+                          tooltip="Evaluates your total debt burden relative to income. Lower ratios protect cash flow and minimize structural risk."
+                      />
+                  </div>
+                  <div className="col-6 col-md-3">
+                      <ScoreCard 
+                          title="Safety Cushion" 
+                          score={planScore.pillars.emergency.score} 
+                          max={planScore.pillars.emergency.max} 
+                          tooltip="Evaluates cash reserves against monthly living costs. A 3-6 month liquid reserve ensures baseline stability."
+                      />
+                  </div>
+                  <div className="col-6 col-md-3">
+                      <ScoreCard 
+                          title="Retirement Horizon" 
+                          score={planScore.pillars.readiness.score} 
+                          max={planScore.pillars.readiness.max} 
+                          tooltip="Evaluates lifetime simulation solvency. Plans with zero projected cash-flow deficits achieve full score."
+                      />
+                  </div>
               </div>
           )}
 
+          {/* COMBINED PLAN HEALTH & FI READINESS OVERVIEW */}
           {planScore && (
             <div className="rp-card border-secondary rounded-4 p-4 shadow-sm mb-4">
               <h6 className="fw-bold text-uppercase ls-1 text-muted mb-4 d-flex align-items-center border-bottom border-secondary pb-3">
@@ -433,6 +373,7 @@ export default function DashboardTab() {
               </h6>
               
               <div className="row g-5 mb-2">
+                  {/* Overall Plan Health Pill */}
                   <div className="col-12 col-md-6 d-flex flex-column justify-content-center border-end-md border-secondary">
                       <div className="d-flex flex-column gap-1 mb-2">
                           <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-main">
@@ -458,6 +399,7 @@ export default function DashboardTab() {
                       </div>
                   </div>
 
+                  {/* FI Readiness Pill */}
                   <div className="col-12 col-md-6 d-flex flex-column justify-content-center">
                       <div className="d-flex flex-column gap-1 mb-2">
                           <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-primary">
@@ -476,99 +418,62 @@ export default function DashboardTab() {
                           <div 
                               className="h-100 rounded-pill d-flex align-items-center justify-content-end px-3 transition-all"
                               style={{ 
-                                  width: `${Math.min(Math.max(fiPercent, 2), 100)}%`, 
-                                  background: isFI ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' : 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)',
-                                  boxShadow: isFI ? '0 0 15px rgba(52, 211, 153, 0.4)' : '0 0 15px rgba(96, 165, 250, 0.4)',
+                                  width: `${Math.max(fiReadinessPct, 2)}%`, 
+                                  background: 'linear-gradient(90deg, #3b82f6 0%, #0ea5e9 100%)',
+                                  boxShadow: '0 0 15px rgba(59, 130, 246, 0.4)',
                               }} 
                           >
-                              {fiPercent >= 10 && <span className="fw-bolder text-white small" style={{textShadow: '0 1px 2px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>{fiPercent.toFixed(1)}%</span>}
+                              <span className="text-white small fw-bold lh-1">{Math.round(fiReadinessPct)}%</span>
                           </div>
                       </div>
-                  </div>
-              </div>
-
-              <div className="row g-3 pt-4 mt-1 border-top border-secondary border-opacity-50">
-                  <div className="col-6 col-md-3">
-                      <ScoreCard 
-                          title="Retirement Funding" 
-                          score={planScore.retirementReadiness} 
-                          max={50} 
-                          tooltip="Calculated based on your plan's ability to fund retirement without shortfalls and progress toward the FI target (25x annual retirement spend). Improve by ensuring your net worth stays above zero and aiming for the 25x FI milestone." 
-                      />
-                  </div>
-                  <div className="col-6 col-md-3">
-                      <ScoreCard 
-                          title="Debt Health" 
-                          score={planScore.debtHealth} 
-                          max={20} 
-                          tooltip="Calculated as your annual debt payments divided by your gross household income. Aim for a DTI ratio ≤ 20%. Improve by accelerating debt repayment or restructuring high-interest loans." 
-                      />
-                  </div>
-                  <div className="col-6 col-md-3">
-                      <ScoreCard 
-                          title="Savings Rate" 
-                          score={planScore.savingsRate} 
-                          max={20} 
-                          tooltip="Calculated as your total annual savings contributions divided by gross household income. Target is 20%+ of your income. Improve by increasing automated monthly investment transfers." 
-                      />
-                  </div>
-                  <div className="col-6 col-md-3">
-                      <ScoreCard 
-                          title="Emergency Fund" 
-                          score={planScore.emergencyFund} 
-                          max={10} 
-                          tooltip="Calculated by comparing your liquid assets (Cash + TFSA) against 6 months of baseline living expenses. Improve by building your buffer until you have 6 months of core expenses saved." 
-                      />
                   </div>
               </div>
             </div>
           )}
 
-          <div className="row g-4 mb-4">
+          {/* HIGH-LEVEL KPI TILES */}
+          <div className="row g-3 mb-4">
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                          <i className="bi bi-cash-stack text-success me-2"></i>
-                          <span className="me-1">Total Gross Inflow</span>
+                          <i className="bi bi-wallet2 text-primary me-2"></i>
+                          <span className="me-1">Lifetime Gross Inflow</span>
                           <InfoBtn align="center" title="Gross Inflow" text="All cash sourced over your lifetime, including salaries, pensions, benefits, and portfolio withdrawals." />
                       </div>
                       <div className="fs-3 fw-bold text-main" title={formatExact(totalGrossInflow)}>{formatCurrency(totalGrossInflow)}</div>
                   </div>
               </div>
-              
+
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                          <i className="bi bi-graph-up-arrow text-primary me-2"></i>
-                          <span className="me-1">Investment Growth</span>
-                          <InfoBtn align="center" title="Investment Growth" text="Total compound interest and market growth generated by your portfolio over the entire simulation." />
+                          <i className="bi bi-graph-up-arrow text-success me-2"></i>
+                          <span className="me-1">Portfolio Compounding</span>
+                          <InfoBtn align="center" title="Compounding" text="Total investment returns generated across all investment accounts above and beyond your contributions." />
                       </div>
-                      <div className="fs-3 fw-bold text-primary" title={formatExact(totalInvestmentGrowth)}>{formatCurrency(totalInvestmentGrowth)}</div>
+                      <div className="fs-3 fw-bold text-success" title={formatExact(totalInvestmentGrowth)}>{formatCurrency(totalInvestmentGrowth)}</div>
                   </div>
               </div>
 
               <div className="col-12 col-md-6 col-xl-4">
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                          <i className="bi bi-bank text-purple me-2" style={{color:'var(--bs-purple)'}}></i>
-                          <span className="me-1" style={{color:'var(--bs-purple)'}}>Govt Benefits Collected</span>
-                          <InfoBtn align="center" title="Govt Benefits" text="Total CPP and OAS collected over your lifetime." />
+                          <i className="bi bi-receipt-cutoff text-danger me-2"></i>
+                          <span className="me-1">Lifetime Taxes Paid</span>
+                          <InfoBtn align="center" title="Taxes Paid" text="Cumulative income taxes paid to CRA and provincial governments over the projection." />
                       </div>
-                      <div className="fs-3 fw-bold" style={{color:'var(--bs-purple)'}} title={formatExact(totalBenefits)}>{formatCurrency(totalBenefits)}</div>
+                      <div className="fs-3 fw-bold text-danger" title={formatExact(totalTaxPaid)}>{formatCurrency(totalTaxPaid)}</div>
                   </div>
               </div>
 
               <div className="col-12 col-md-6 col-xl-4">
-                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm tour-tax-breakdown">
+                  <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
-                          <i className="bi bi-receipt text-danger me-2"></i>
-                          <span className="me-1">Lifetime Tax Paid</span>
-                          <InfoBtn align="center" title="Lifetime Tax" text="Total federal and provincial tax paid, including capital gains taxes and OAS clawbacks." />
+                          <i className="bi bi-percent text-purple me-2"></i>
+                          <span className="me-1">Effective Tax Rate</span>
+                          <InfoBtn align="center" title="Effective Tax" text="Average proportion of your total lifetime gross inflow that went directly toward taxes." />
                       </div>
-                      <div className="fs-3 fw-bold text-danger" title={formatExact(totalTaxPaid)}>
-                          {formatCurrency(totalTaxPaid)} 
-                          <span className="fs-6 text-muted ms-2 fw-medium">({effTaxRate.toFixed(1)}% Eff.)</span>
-                      </div>
+                      <div className="fs-3 fw-bold text-purple">{effTaxRate.toFixed(1)}%</div>
                   </div>
               </div>
 
@@ -595,10 +500,10 @@ export default function DashboardTab() {
               </div>
           </div>
 
-          <div className="row mb-4">
-              <div className="col-12 col-xl-4 mb-4 mb-xl-0">
-                  <div className="rp-card border-secondary rounded-4 h-100 shadow-sm">
-                      <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3 rounded-top-4">
+          <div className="row g-4 mb-4">
+              <div className="col-12 col-xl-4">
+                  <div className="rp-card border-secondary rounded-4 h-100 overflow-hidden shadow-sm">
+                      <div className="card-header bg-black bg-opacity-25 border-bottom border-secondary p-3">
                           <h6 className="mb-0 fw-bold text-uppercase ls-1 text-center"><i className="bi bi-flag-fill text-warning me-2"></i>Milestones & Estate</h6>
                       </div>
                       <div className="card-body p-0">
@@ -606,20 +511,18 @@ export default function DashboardTab() {
                               <span className="text-muted fw-bold">Retirement Day NW <span className="small fw-normal ms-1">(Age {data.inputs.p1_retireAge})</span></span>
                               <span className="fw-bold text-info" title={formatExact(retDayNW)}>{formatCurrency(retDayNW)}</span>
                           </div>
-
-                          <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                              <span className="text-muted fw-bold d-flex align-items-center">
-                                  Initial Withdrawal Rate 
-                                  <InfoBtn title="Initial Withdrawal Rate" text="The percentage of your liquid portfolio withdrawn during your first FULL year of retirement (once all employment income has stopped).<br><br>The famous '4% Rule' suggests keeping this below 4% to minimize the risk of portfolio depletion over a 30-year retirement."/>
-                              </span>
-                              <span className={`fw-bold d-flex align-items-center ${initialWithdrawalRate > 4 ? 'text-warning' : 'text-info'}`}>
-                                  {initialWithdrawalRate > 4 && (
-                                      <i className="bi bi-exclamation-triangle-fill me-2" title={`Historically, withdrawal rates over 4% carry a higher risk of portfolio depletion over a 30+ year retirement. Your rate is ${initialWithdrawalRate.toFixed(1)}%.`} style={{cursor: 'help'}}></i>
-                                  )}
-                                  {initialWithdrawalRate.toFixed(1)}%
-                              </span>
-                          </div>
-
+                          {initialWdRate > 0 && (
+                              <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
+                                  <span className="text-muted fw-bold d-flex align-items-center">
+                                      Initial Withdrawal Rate 
+                                      <InfoBtn align="left" title="Initial Withdrawal Rate" text="Percentage of your liquid portfolio withdrawn in your first year of retirement. Rates above 5% significantly increase the risk of running out of money prematurely." />
+                                  </span>
+                                  <span className={`fw-bold ${initialWdRate > 5 ? 'text-warning' : 'text-success'}`}>
+                                      {initialWdRate > 5 && <i className="bi bi-exclamation-triangle-fill text-warning me-1"></i>}
+                                      {initialWdRate.toFixed(1)}%
+                                  </span>
+                              </div>
+                          )}
                           <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
                               <span className="text-muted fw-bold">Peak Net Worth</span>
                               <span className="fw-bold text-success" title={formatExact(peakNW)}>{formatCurrency(peakNW)} <span className="text-muted small fw-normal ms-1">(Age {peakAge})</span></span>
@@ -628,19 +531,57 @@ export default function DashboardTab() {
                               <span className="text-muted fw-bold">Mortgage Free</span>
                               <span className="fw-bold text-primary">{mortgageFreeYear}</span>
                           </div>
-                          <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-50">
-                              <span className="text-muted fw-bold d-flex align-items-center">
-                                  Final Estate Value 
-                                  <InfoBtn title="After-Tax Estate" text="The final value of your entire portfolio and real estate <b>after</b> applying the terminal tax on remaining RRSPs/RRIFs and Capital Gains at death."/>
-                              </span>
-                              <span className="fw-bold fs-5 text-success" title={formatExact(finalEstate)}>{formatCurrency(finalEstate)}</span>
+                          <div className="p-3 border-bottom border-secondary border-opacity-50">
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span className="text-muted fw-bold d-flex align-items-center">
+                                      Final Estate Value 
+                                      <InfoBtn align="left" title="After-Tax Estate" text="The final value of your entire portfolio and real estate <b>after</b> applying the terminal tax on remaining RRSPs/RRIFs and Capital Gains at death."/>
+                                  </span>
+                                  <span className="fw-bold fs-5 text-success" title={formatExact(finalEstate)}>{formatCurrency(finalEstate)}</span>
+                              </div>
+                              {finalReEquity > 0 && (
+                                  <div className="d-flex justify-content-between text-muted mt-2 pt-2 border-top border-secondary border-opacity-25 small" style={{ fontSize: '0.75rem' }}>
+                                      <span><i className="bi bi-wallet2 me-1"></i>Liquid: <strong className={finalLiquidNW <= 0 ? "text-danger" : "text-main"}>{formatCurrency(finalLiquidNW)}</strong></span>
+                                      <span><i className="bi bi-house-door me-1"></i>Real Estate: <strong className="text-info">{formatCurrency(finalReEquity)}</strong></span>
+                                  </div>
+                              )}
                           </div>
-                          <div className="d-flex justify-content-between align-items-center p-3 bg-black bg-opacity-10 rounded-bottom-4">
-                              <span className="text-muted fw-bold">Plan Health</span>
-                              {planHealth === "Success" 
-                                ? <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 fs-6 shadow-sm">SUCCESS</span>
-                                : <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2 fs-6 shadow-sm">FAILED</span>
-                              }
+                          <div className="p-3 bg-black bg-opacity-10">
+                              <div className="d-flex justify-content-between align-items-center">
+                                  <span className="text-muted fw-bold d-flex align-items-center">
+                                      Plan Health
+                                      <InfoBtn align="left" title="Plan Health Status" text={hasShortfall 
+                                          ? `A cash deficit occurred starting in ${firstShortfallYear} (Age ${firstShortfallAge}) because available income and portfolio withdrawals were insufficient to cover living expenses, debt, and taxes.`
+                                          : "All living expenses, debt payments, and taxes were successfully funded throughout retirement."} 
+                                      />
+                                  </span>
+                                  {planHealth === "Success" ? (
+                                      <span className="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2 fs-6 shadow-sm">
+                                          <i className="bi bi-check-circle-fill me-1"></i>SUCCESS
+                                      </span>
+                                  ) : (
+                                      <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2 fs-6 shadow-sm">
+                                          <i className="bi bi-x-circle-fill me-1"></i>FAILED
+                                      </span>
+                                  )}
+                              </div>
+                              {hasShortfall && firstShortfallAge && (
+                                  <div className="mt-2 text-danger small d-flex align-items-start gap-2 pt-2 border-top border-secondary border-opacity-25" style={{ fontSize: '0.75rem', lineHeight: '1.4' }}>
+                                      <i className="bi bi-exclamation-triangle-fill text-warning flex-shrink-0 mt-0.5"></i>
+                                      <div>
+                                          Liquid assets depleted at <strong>Age {firstShortfallAge} ({firstShortfallYear})</strong>.
+                                          {isHouseRichCashPoor ? (
+                                              <div className="text-warning-emphasis fst-italic mt-0.5">
+                                                  House-rich, cash-poor: Portfolio hit \$0 while real estate equity remains.
+                                              </div>
+                                          ) : (
+                                              <div className="text-muted mt-0.5">
+                                                  Annual cash inflows were insufficient to cover living expenses.
+                                              </div>
+                                          )}
+                                      </div>
+                                  </div>
+                              )}
                           </div>
                       </div>
                   </div>
@@ -670,46 +611,49 @@ export default function DashboardTab() {
                                                           paddingAngle={4} 
                                                           dataKey="value" 
                                                           stroke="none"
-                                                          isAnimationActive={!isExporting}
                                                       >
                                                           {pieData.map((entry, index) => (
                                                               <Cell key={`cell-${index}`} fill={entry.color} />
                                                           ))}
                                                       </Pie>
-                                                      <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} offset={20} wrapperStyle={{ zIndex: 1000 }} />
+                                                      <Tooltip 
+                                                          formatter={(value: any) => [formatCurrency(Number(value)), 'Amount']}
+                                                          contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', fontWeight: 'bold' }}
+                                                          itemStyle={{ color: '#f8fafc' }}
+                                                      />
                                                   </PieChart>
                                               </ResponsiveContainer>
                                           </div>
                                       </div>
-                                      
-                                      <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
-                                          {pieData.map((d, i) => (
-                                              <div className="d-flex justify-content-between align-items-center" key={i}>
-                                                  <div className="d-flex align-items-center">
-                                                      <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
-                                                      <span className="small text-muted fw-bold">{d.name}</span>
-                                                  </div>
-                                                  <span className="fw-bold text-main small">{((d.value / totalPie) * 100).toFixed(1)}%</span>
+
+                                      <div className="d-flex flex-column gap-2 w-100 px-3">
+                                          {pieData.map(d => (
+                                              <div key={d.name} className="d-flex justify-content-between align-items-center small">
+                                                  <span className="d-flex align-items-center text-muted fw-bold">
+                                                      <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: d.color }}></span>
+                                                      {d.name}
+                                                  </span>
+                                                  <span className="fw-bold text-main">{((d.value / totalPie) * 100).toFixed(1)}%</span>
                                               </div>
                                           ))}
                                       </div>
                                   </div>
                               ) : (
-                                  <div className="text-center text-muted fst-italic py-4">Not enough data.</div>
+                                  <div className="text-muted small py-5">No distribution data available.</div>
                               )}
                           </div>
                       </div>
 
                       <div className="col-12 col-md-6">
                           <div className="rp-card border-secondary rounded-4 h-100 p-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
-                              <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-wallet-fill text-info me-2"></i>Retirement Funding</h6>
+                              <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-wallet2 text-info me-2"></i>Retirement Sourcing</h6>
                               
                               {totalFund > 1 ? (
                                   <div className="d-flex flex-column align-items-center justify-content-center gap-4 mt-2 w-100">
                                       <div className="position-relative d-flex align-items-center justify-content-center w-100" style={{height: '200px'}}>
                                           <div className="position-absolute d-flex flex-column align-items-center justify-content-center pointer-events-none text-center" style={{ zIndex: 1 }}>
-                                              <span className="small text-muted fw-bold text-center lh-1 mb-1" style={{fontSize: '0.65rem'}}>RETIREMENT<br/>INCOME</span>
-                                              <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(totalFund)}</span>
+                                              <span className="small text-muted fw-bold" style={{fontSize: '0.65rem'}}>SOURCED</span>
+                                              <span className="fw-bold text-main lh-1" style={{fontSize: '0.9rem'}}>{formatCurrency(retSpent)}</span>
                                           </div>
                                           <div className="w-100 h-100 position-relative" style={{ zIndex: 2 }}>
                                               <ResponsiveContainer width="100%" height="100%">
@@ -721,99 +665,273 @@ export default function DashboardTab() {
                                                           paddingAngle={4} 
                                                           dataKey="value" 
                                                           stroke="none"
-                                                          isAnimationActive={!isExporting}
                                                       >
                                                           {fundData.map((entry, index) => (
-                                                              <Cell key={`cell-${index}`} fill={entry.color} />
+                                                              <Cell key={`cell-fund-${index}`} fill={entry.color} />
                                                           ))}
                                                       </Pie>
-                                                      <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} offset={20} wrapperStyle={{ zIndex: 1000 }} />
+                                                      <Tooltip 
+                                                          formatter={(value: any) => [formatCurrency(Number(value)), 'Amount']}
+                                                          contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', fontWeight: 'bold' }}
+                                                          itemStyle={{ color: '#f8fafc' }}
+                                                      />
                                                   </PieChart>
                                               </ResponsiveContainer>
                                           </div>
                                       </div>
-                                      
-                                      <div className="d-flex flex-column gap-2 w-100" style={{maxWidth: '220px'}}>
-                                          {fundData.map((d, i) => (
-                                              <div className="d-flex justify-content-between align-items-center" key={i}>
-                                                  <div className="d-flex align-items-center">
-                                                      <span className="rounded-circle me-2 shadow-sm" style={{width: '12px', height: '12px', backgroundColor: d.color, display: 'inline-block'}}></span>
-                                                      <span className="small text-muted fw-bold">{d.name}</span>
-                                                  </div>
-                                                  <span className="fw-bold text-main small">{((d.value / totalFund) * 100).toFixed(1)}%</span>
+
+                                      <div className="d-flex flex-column gap-2 w-100 px-3">
+                                          {fundData.map(d => (
+                                              <div key={d.name} className="d-flex justify-content-between align-items-center small">
+                                                  <span className="d-flex align-items-center text-muted fw-bold">
+                                                      <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: d.color }}></span>
+                                                      {d.name}
+                                                  </span>
+                                                  <span className="fw-bold text-main">{((d.value / totalFund) * 100).toFixed(1)}%</span>
                                               </div>
                                           ))}
                                       </div>
                                   </div>
                               ) : (
-                                  <div className="text-center text-muted fst-italic py-4">No retirement data.</div>
+                                  <div className="text-muted small py-5">No retirement funding data yet.</div>
                               )}
                           </div>
                       </div>
 
                   </div>
               </div>
-
           </div>
 
-          <div className="row mt-2">
-              <div className="col-12">
-                  <div className="rp-card border-secondary rounded-4 p-4 shadow-sm d-flex flex-column tour-cashflow-chart" style={{ height: '600px' }}>
-                      <h6 className="fw-bold text-uppercase ls-1 mb-4 text-center text-muted"><i className="bi bi-bar-chart-line-fill text-primary me-2"></i>Net Worth Composition Over Time</h6>
-                      
-                      {maxTotalNW > 1 ? (
-                          <>
-                              <div className="d-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-secondary flex-shrink-0">
-                                  {[...activeCategories].reverse().map(c => (
-                                      <div className="d-flex align-items-center" key={c.key}>
-                                          <span className="rounded-circle me-2 shadow-sm border border-secondary border-opacity-25" style={{width: '12px', height: '12px', backgroundColor: c.color, display: 'inline-block'}}></span>
-                                          <span className="small text-muted fw-bold ls-1" style={{fontSize: '0.75rem'}}>{c.label}</span>
-                                      </div>
-                                  ))}
-                              </div>
+          {/* NET WORTH ACCUMULATION / DECUMULATION TRAJECTORY */}
+          <div className="rp-card border-secondary rounded-4 p-4 shadow-sm mb-4">
+              <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                  <div>
+                      <h6 className="fw-bold text-uppercase ls-1 text-muted mb-1 d-flex align-items-center">
+                          <i className="bi bi-graph-up text-primary me-2"></i>Net Worth Trajectory
+                      </h6>
+                      <span className="text-muted small">Visualizing portfolio drawdown and asset allocation shifts over time.</span>
+                  </div>
 
-                              <div className="w-100 flex-grow-1" style={{ minHeight: 0 }}>
-                                  <ResponsiveContainer width="100%" height="100%">
-                                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.4} />
-                                          <XAxis 
-                                              dataKey="year" 
-                                              stroke="#888" 
-                                              tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} 
-                                              tickMargin={12} 
-                                              minTickGap={25} 
-                                          />
-                                          <YAxis 
-                                              tickFormatter={(val: number) => formatYAxis(val)} 
-                                              stroke="#888" 
-                                              tick={{ fill: '#888', fontSize: 12, fontWeight: 600 }} 
-                                              width={65} 
-                                              axisLine={false}
-                                              tickLine={false}
-                                          />
-                                          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bs-primary)', opacity: 0.1 }} offset={20} wrapperStyle={{ zIndex: 1000 }} />
-                                          
-                                          {[...activeCategories].map(c => (
-                                              <Bar 
-                                                  key={c.key} 
-                                                  dataKey={c.key} 
-                                                  name={c.label} 
-                                                  stackId="a" 
-                                                  fill={c.color} 
-                                                  isAnimationActive={!isExporting} 
-                                              />
-                                          ))}
-                                      </BarChart>
-                                  </ResponsiveContainer>
-                              </div>
-                          </>
-                      ) : (
-                          <div className="text-center text-muted fst-italic py-5 my-auto">No assets tracked.</div>
-                      )}
+                  <div className="d-flex gap-2">
+                      <div className="btn-group btn-group-sm bg-input border border-secondary rounded-pill p-1 shadow-sm">
+                          <button 
+                              className={`btn btn-sm rounded-pill fw-bold px-3 ${chartView === 'stacked' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
+                              onClick={() => setChartView('stacked')}
+                          >
+                              Asset Breakdown
+                          </button>
+                          <button 
+                              className={`btn btn-sm rounded-pill fw-bold px-3 ${chartView === 'total' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
+                              onClick={() => setChartView('total')}
+                          >
+                              Total Trajectory
+                          </button>
+                      </div>
+
+                      <div className="btn-group btn-group-sm bg-input border border-secondary rounded-pill p-1 shadow-sm">
+                          <button 
+                              className={`btn btn-sm rounded-pill fw-bold px-3 ${activeAssetView === 'real' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
+                              onClick={() => setActiveAssetView('real')}
+                          >
+                              Today's \$
+                          </button>
+                          <button 
+                              className={`btn btn-sm rounded-pill fw-bold px-3 ${activeAssetView === 'nominal' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
+                              onClick={() => setActiveAssetView('nominal')}
+                          >
+                              Future \$
+                          </button>
+                      </div>
                   </div>
               </div>
+
+              <div style={{ width: '100%', height: 350 }}>
+                  <ResponsiveContainer>
+                      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} vertical={false} />
+                          <XAxis 
+                              dataKey="age" 
+                              stroke="#94a3b8" 
+                              fontSize={12} 
+                              tickLine={false}
+                              tickFormatter={(age) => `Age ${age}`}
+                          />
+                          <YAxis 
+                              stroke="#94a3b8" 
+                              fontSize={12} 
+                              tickLine={false}
+                              tickFormatter={(val) => formatCurrency(val)}
+                          />
+                          <Tooltip 
+                              content={({ active, payload, label }) => {
+                                  if (active && payload && payload.length) {
+                                      const dataObj = payload[0].payload;
+                                      return (
+                                          <div className="p-3 border border-secondary rounded-3 shadow-lg" style={{ backgroundColor: '#1e293b', minWidth: '220px' }}>
+                                              <div className="fw-bold text-main border-bottom border-secondary pb-1 mb-2 d-flex justify-content-between">
+                                                  <span>Age {label}</span>
+                                                  <span className="text-muted">{dataObj.year}</span>
+                                              </div>
+                                              {chartView === 'stacked' ? (
+                                                  <>
+                                                      {categories.map(c => {
+                                                          const val = dataObj[c.key] || 0;
+                                                          if (val <= 0) return null;
+                                                          return (
+                                                              <div key={c.key} className="d-flex justify-content-between small py-0.5">
+                                                                  <span style={{ color: c.color }} className="fw-bold">{c.label}:</span>
+                                                                  <span className="text-main fw-bold">{formatCurrency(val)}</span>
+                                                              </div>
+                                                          );
+                                                      })}
+                                                      <div className="border-top border-secondary pt-1 mt-2 d-flex justify-content-between fw-bold text-main">
+                                                          <span>Total:</span>
+                                                          <span className="text-info">{formatCurrency(dataObj.total)}</span>
+                                                      </div>
+                                                  </>
+                                              ) : (
+                                                  <div className="d-flex justify-content-between fw-bold text-main py-1">
+                                                      <span>Net Worth:</span>
+                                                      <span className="text-info">{formatCurrency(dataObj.total)}</span>
+                                                  </div>
+                                              )}
+                                          </div>
+                                      );
+                                  }
+                                  return null;
+                              }}
+                          />
+                          
+                          {chartView === 'stacked' ? (
+                              categories.map((c) => (
+                                  <Bar 
+                                      key={c.key} 
+                                      dataKey={c.key} 
+                                      stackId="a" 
+                                      fill={c.color} 
+                                      radius={c.key === 'realEstate' ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                                  />
+                              ))
+                          ) : (
+                              <Bar 
+                                  dataKey="total" 
+                                  fill="#0ea5e9" 
+                                  radius={[6, 6, 0, 0]}
+                              />
+                          )}
+                      </BarChart>
+                  </ResponsiveContainer>
+              </div>
+
+              {chartView === 'stacked' && (
+                  <div className="d-flex flex-wrap justify-content-center gap-3 mt-4 pt-2 border-top border-secondary border-opacity-25">
+                      {categories.map(c => (
+                          <div key={c.key} className="d-flex align-items-center small text-muted">
+                              <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: c.color }}></span>
+                              <span className="fw-bold">{c.label}</span>
+                          </div>
+                      ))}
+                  </div>
+              )}
           </div>
-          
+
+          {/* ANNUAL CASH OUTFLOWS & SAVINGS PROFILE */}
+          <div className="rp-card border-secondary rounded-4 p-4 shadow-sm">
+              <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                  <div>
+                      <h6 className="fw-bold text-uppercase ls-1 text-muted mb-1 d-flex align-items-center">
+                          <i className="bi bi-cash-stack text-warning me-2"></i>Annual Expenses & Savings Profile
+                      </h6>
+                      <span className="text-muted small">Tracking your living costs, mortgage commitments, and annual savings through retirement.</span>
+                  </div>
+
+                  <div className="btn-group btn-group-sm bg-input border border-secondary rounded-pill p-1 shadow-sm">
+                      <button 
+                          className={`btn btn-sm rounded-pill fw-bold px-3 ${activeSpendView === 'real' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
+                          onClick={() => setActiveSpendView('real')}
+                      >
+                          Today's $
+                      </button>
+                      <button 
+                          className={`btn btn-sm rounded-pill fw-bold px-3 ${activeSpendView === 'nominal' ? 'btn-primary text-white' : 'btn-link text-muted text-decoration-none'}`}
+                          onClick={() => setActiveSpendView('nominal')}
+                      >
+                          Future $
+                      </button>
+                  </div>
+              </div>
+
+              <div style={{ width: '100%', height: 320 }}>
+                  <ResponsiveContainer>
+                      <BarChart data={spendChartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} vertical={false} />
+                          <XAxis 
+                              dataKey="age" 
+                              stroke="#94a3b8" 
+                              fontSize={12} 
+                              tickLine={false}
+                              tickFormatter={(age) => `Age ${age}`}
+                          />
+                          <YAxis 
+                              stroke="#94a3b8" 
+                              fontSize={12} 
+                              tickLine={false}
+                              tickFormatter={(val) => formatCurrency(val)}
+                          />
+                          <Tooltip 
+                              content={({ active, payload, label }) => {
+                                  if (active && payload && payload.length) {
+                                      const dataObj = payload[0].payload;
+                                      return (
+                                          <div className="p-3 border border-secondary rounded-3 shadow-lg" style={{ backgroundColor: '#1e293b', minWidth: '220px' }}>
+                                              <div className="fw-bold text-main border-bottom border-secondary pb-1 mb-2 d-flex justify-content-between">
+                                                  <span>Age {label}</span>
+                                                  <span className="text-muted">{dataObj.year}</span>
+                                              </div>
+                                              {spendCategories.map(c => {
+                                                  const val = dataObj[c.key] || 0;
+                                                  if (val <= 0) return null;
+                                                  return (
+                                                      <div key={c.key} className="d-flex justify-content-between small py-0.5">
+                                                          <span style={{ color: c.color }} className="fw-bold">{c.label}:</span>
+                                                          <span className="text-main fw-bold">{formatCurrency(val)}</span>
+                                                      </div>
+                                                  );
+                                              })}
+                                              <div className="border-top border-secondary pt-1 mt-2 d-flex justify-content-between fw-bold text-main">
+                                                  <span>Total Spend:</span>
+                                                  <span className="text-warning">{formatCurrency(dataObj.total)}</span>
+                                              </div>
+                                          </div>
+                                      );
+                                  }
+                                  return null;
+                              }}
+                          />
+                          
+                          {spendCategories.map((c) => (
+                              <Bar 
+                                  key={c.key} 
+                                  dataKey={c.key} 
+                                  stackId="a" 
+                                  fill={c.color} 
+                                  radius={c.key === 'savings' ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                              />
+                          ))}
+                      </BarChart>
+                  </ResponsiveContainer>
+              </div>
+
+              <div className="d-flex flex-wrap justify-content-center gap-3 mt-4 pt-2 border-top border-secondary border-opacity-25">
+                  {spendCategories.map(c => (
+                      <div key={c.key} className="d-flex align-items-center small text-muted">
+                          <span className="rounded-circle me-2" style={{ width: '10px', height: '10px', backgroundColor: c.color }}></span>
+                          <span className="fw-bold">{c.label}</span>
+                      </div>
+                  ))}
+              </div>
+          </div>
+
       </div>
 
     </div>
