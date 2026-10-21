@@ -46,7 +46,7 @@ export default function PlanTab() {
     return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
   };
 
-  // --- SMART COLLAPSED CARD SUMMARIES ---
+  // --- SMART COLLAPSED CARD SUMMARIES (CENTERED & EASY TO READ) ---
   const sectionSummaries = useMemo(() => {
     const fallback = {
       personal: '',
@@ -66,20 +66,20 @@ export default function PlanTab() {
     const p1Name = data.inputs.p1_name || 'Player 1';
     const p2Name = data.inputs.p2_name || 'Player 2';
 
-    // 1. Personal
+    // 1. Personal Information
     const p1Age = data.inputs.p1_age ?? 38;
     const p1Ret = data.inputs.p1_retireAge ?? 60;
     const p2Age = data.inputs.p2_age ?? 34;
     const p2Ret = data.inputs.p2_retireAge ?? 60;
     const personalText = isCouple 
-      ? `${p1Name}: ${p1Age} (Ret: ${p1Ret}) • ${p2Name}: ${p2Age} (Ret: ${p2Ret})` 
-      : `${p1Name}: Age ${p1Age} (Retire: ${p1Ret})`;
+      ? `${p1Name}: Age ${p1Age} (Retire ${p1Ret})  |  ${p2Name}: Age ${p2Age} (Retire ${p2Ret})` 
+      : `${p1Name}: Age ${p1Age}  |  Target Retirement: Age ${p1Ret}`;
 
-    // 2. Dependents
+    // 2. Dependents & Family
     const depCount = data.dependents?.length || 0;
-    const depText = depCount === 0 ? 'No Dependents' : `${depCount} ${depCount === 1 ? 'Child' : 'Children'}`;
+    const depText = depCount === 0 ? 'No Dependents' : `${depCount} ${depCount === 1 ? 'Child' : 'Children'} Registered`;
 
-    // 3. Portfolio
+    // 3. Portfolio Assets
     const acctKeys = ['cash', 'tfsa', 'fhsa', 'rrsp', 'resp', 'lirf', 'lif', 'rrif_acct', 'nonreg', 'crypto'];
     let totalPort = 0;
     ['p1', 'p2'].forEach(p => {
@@ -96,21 +96,21 @@ export default function PlanTab() {
     const alloc = data.inputs.portfolio_allocation 
       ? data.inputs.portfolio_allocation.charAt(0).toUpperCase() + data.inputs.portfolio_allocation.slice(1) 
       : 'Custom';
-    const portText = `${formatShort(totalPort)} Total • ${alloc}`;
+    const portText = `${formatShort(totalPort)} Portfolio  |  ${alloc} Allocation`;
 
-    // 4. Real Estate
+    // 4. Real Estate & Living Costs
     const primaryVal = Number(data.inputs.primary_value) || 0;
     const primaryMort = Number(data.inputs.primary_mortgage) || 0;
     const primaryRent = Number(data.inputs.primary_rent) || 0;
     const realestateText = primaryVal > 0 
-      ? `Home: ${formatShort(primaryVal)}${primaryMort > 0 ? ` (Mort: \${formatShort(primaryMort)})` : ' (No Mort.)'}`
-      : `Rent: ${formatShort(primaryRent)}/mo`;
+      ? `Home: ${formatShort(primaryVal)}${primaryMort > 0 ? `  |  Mortgage: \${formatShort(primaryMort)}` : '  |  Mortgage-Free'}`
+      : `Residence: ${formatShort(primaryRent)}/mo Rent`;
 
     // 5. Income & Taxes
     const prov = data.inputs.province || 'ON';
     const p1Inc = Number(data.inputs.p1_income) || 0;
     const p2Inc = isCouple ? (Number(data.inputs.p2_income) || 0) : 0;
-    const taxText = `${prov} • Income: ${formatShort(p1Inc + p2Inc)}/yr`;
+    const taxText = `${prov}  |  Household Income: ${formatShort(p1Inc + p2Inc)}/yr`;
 
     // 6. Living Expenses
     let annualSpend = 60000;
@@ -119,28 +119,28 @@ export default function PlanTab() {
     } else if (data.expensePhases && data.expensePhases[0]?.amount) {
       annualSpend = Number(data.expensePhases[0].amount);
     }
-    const livingText = `Spend: ${formatShort(annualSpend / 12)}/mo (${formatShort(annualSpend)}/yr)`;
+    const livingText = `Living Expenses: ${formatShort(annualSpend / 12)}/mo (${formatShort(annualSpend)}/yr)`;
 
-    // 7. Future Expenses
+    // 7. Future Milestone Expenses
     const futureCount = data.debt?.length || 0;
-    const futureText = futureCount === 0 ? 'No Planned Expenses' : `${futureCount} Planned ${futureCount === 1 ? 'Milestone' : 'Milestones'}`;
+    const futureText = futureCount === 0 ? 'No Milestone Expenses' : `${futureCount} Planned ${futureCount === 1 ? 'Milestone Expense' : 'Milestone Expenses'}`;
 
     // 8. Windfalls
     const windfallCount = data.windfalls?.length || 0;
-    const windfallsText = windfallCount === 0 ? 'No Windfalls' : `${windfallCount} ${windfallCount === 1 ? 'Windfall' : 'Windfalls'}`;
+    const windfallsText = windfallCount === 0 ? 'No Windfalls' : `${windfallCount} Future ${windfallCount === 1 ? 'Windfall' : 'Windfalls'}`;
 
-    // 9. Govt Benefits
+    // 9. Government Benefits
     const p1Cpp = data.inputs.p1_cpp_start || 65;
     const p1Oas = data.inputs.p1_oas_start || 65;
     const p2Cpp = data.inputs.p2_cpp_start || 65;
     const p2Oas = data.inputs.p2_oas_start || 65;
     const govtText = isCouple 
-      ? `P1: CPP ${p1Cpp}/OAS ${p1Oas} • P2: CPP ${p2Cpp}/OAS ${p2Oas}`
-      : `CPP: Age ${p1Cpp} • OAS: Age ${p1Oas}`;
+      ? `P1: CPP @ ${p1Cpp}, OAS @ ${p1Oas}  |  P2: CPP @ ${p2Cpp}, OAS @ ${p2Oas}`
+      : `CPP Start: Age ${p1Cpp}  |  OAS Start: Age ${p1Oas}`;
 
-    // 10. Economic
+    // 10. Economic Assumptions
     const inf = data.inputs.inflation_rate !== undefined && data.inputs.inflation_rate !== '' ? data.inputs.inflation_rate : 2.1;
-    const economicText = `Inflation: ${inf}% • Life Exp: Age ${data.inputs.p1_lifeExp || 90}`;
+    const economicText = `Inflation: ${inf}%  |  Simulation Horizon: Age ${data.inputs.p1_lifeExp || 90}`;
 
     return {
       personal: personalText,
@@ -245,22 +245,30 @@ export default function PlanTab() {
         .collapse-summary-pill {
             position: absolute;
             top: 0;
-            right: 48px;
+            left: 50%;
+            transform: translateX(-50%);
             height: 56px;
             display: flex;
             align-items: center;
+            justify-content: center;
             z-index: 15;
             pointer-events: none;
+            max-width: 45%;
         }
         .collapse-summary-pill .badge {
-            font-size: 0.72rem;
-            padding: 0.35rem 0.65rem;
-            max-width: 380px;
+            font-size: 0.76rem;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            padding: 0.38rem 0.85rem;
+            color: var(--bs-info, #38bdf8);
+            background: rgba(15, 23, 42, 0.85) !important;
+            border: 1px solid rgba(56, 189, 248, 0.25) !important;
+            border-radius: 9999px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(8px);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            background: rgba(30, 41, 59, 0.75) !important;
-            backdrop-filter: blur(4px);
         }
         .plan-card-wrapper.is-collapsed .card-body {
             display: none !important;
@@ -299,8 +307,8 @@ export default function PlanTab() {
         {/* 1. Personal Information */}
         <div className={`plan-card-wrapper ${collapsedMap['personal'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['personal'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.personal}
               </span>
             </div>
@@ -319,8 +327,8 @@ export default function PlanTab() {
         {/* 2. Dependents & Family */}
         <div className={`plan-card-wrapper ${collapsedMap['dependents'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['dependents'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.dependents}
               </span>
             </div>
@@ -339,8 +347,8 @@ export default function PlanTab() {
         {/* 3. Portfolio Assets */}
         <div className={`plan-card-wrapper ${collapsedMap['portfolio'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['portfolio'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.portfolio}
               </span>
             </div>
@@ -359,8 +367,8 @@ export default function PlanTab() {
         {/* 4. Real Estate & Living Costs */}
         <div className={`plan-card-wrapper ${collapsedMap['realestate'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['realestate'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.realestate}
               </span>
             </div>
@@ -379,8 +387,8 @@ export default function PlanTab() {
         {/* 5. Income & Taxes */}
         <div className={`plan-card-wrapper ${collapsedMap['tax'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['tax'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.tax}
               </span>
             </div>
@@ -399,8 +407,8 @@ export default function PlanTab() {
         {/* 6. Living Expenses */}
         <div className={`plan-card-wrapper ${collapsedMap['living'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['living'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.living}
               </span>
             </div>
@@ -419,8 +427,8 @@ export default function PlanTab() {
         {/* 7. Future Milestone Expenses */}
         <div className={`plan-card-wrapper ${collapsedMap['future'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['future'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.future}
               </span>
             </div>
@@ -439,8 +447,8 @@ export default function PlanTab() {
         {/* 8. Windfalls */}
         <div className={`plan-card-wrapper ${collapsedMap['windfalls'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['windfalls'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.windfalls}
               </span>
             </div>
@@ -459,8 +467,8 @@ export default function PlanTab() {
         {/* 9. Government Benefits */}
         <div className={`plan-card-wrapper ${collapsedMap['govt'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['govt'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.govt}
               </span>
             </div>
@@ -479,8 +487,8 @@ export default function PlanTab() {
         {/* 10. Economic Assumptions */}
         <div className={`plan-card-wrapper ${collapsedMap['economic'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['economic'] && (
-            <div className="collapse-summary-pill d-none d-sm-flex">
-              <span className="badge border border-secondary border-opacity-50 text-main fw-normal">
+            <div className="collapse-summary-pill d-none d-md-flex">
+              <span className="badge">
                 {sectionSummaries.economic}
               </span>
             </div>
