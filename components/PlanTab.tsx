@@ -511,7 +511,7 @@ export default function PlanTab() {
                 </span>
                 {liveStats.useRealDollars && (
                   <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 d-none d-sm-inline-block" style={{ fontSize: '0.62rem' }}>
-                    Real \$
+                    Tdoay's $
                   </span>
                 )}
               </div>
