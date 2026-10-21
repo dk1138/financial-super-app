@@ -1,4 +1,3 @@
-```tsx
 import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
