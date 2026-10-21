@@ -29,11 +29,11 @@ export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: {
 
 // Helper to parse financial inputs with 'k' (thousands) and 'm' (millions) shorthand
 export const parseFinancialInput = (raw: string): number | '' => {
-    const cleaned = raw.trim().toLowerCase().replace(/[\$,]/g, '');
+    const cleaned = String(raw).trim().toLowerCase().replace(/[\$,]/g, '');
     if (cleaned === '') return '';
     
     // Match e.g. "85k", "1.2m", "500", "1500.50"
-    const match = cleaned.match(/^([0-9]+(?:\.[0-9]+)?)\s*([km])?\$/);
+    const match = cleaned.match(/^([0-9]+(?:\.[0-9]+)?)\s*([km])\$/);
     if (match) {
         const num = parseFloat(match[1]);
         if (isNaN(num)) return '';
@@ -65,9 +65,22 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let rawStr = e.target.value;
         if (rawStr.length > 15) rawStr = rawStr.substring(0, 15);
+
+        // INSTANT SHORTHAND EXPANSION:
+        // As soon as the user types 'k' or 'm' (e.g. "50k", "1.5m"), immediately expand to formatted numbers!
+        const hasShorthand = /[km]\$/i.test(rawStr.trim());
+        if (hasShorthand) {
+            const parsed = parseFinancialInput(rawStr);
+            if (typeof parsed === 'number' && !isNaN(parsed)) {
+                setDisplayVal(parsed.toLocaleString('en-US'));
+                onChange(parsed);
+                return;
+            }
+        }
+
         setDisplayVal(rawStr);
 
-        // If the user types pure digits/commas, update onChange in real-time
+        // If the user is typing standard numbers/commas, update onChange live
         if (/^[0-9,]*\$/.test(rawStr)) {
             const digits = rawStr.replace(/[^0-9]/g, '');
             if (digits === '') onChange('');
@@ -95,7 +108,11 @@ export const CurrencyInput = ({ value, onChange, className, placeholder, style, 
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
         setIsFocused(true);
-        e.target.select();
+        // Use a 10ms microtask so mouseup doesn't cancel selection on desktop click
+        const target = e.target;
+        setTimeout(() => {
+            if (target) target.select();
+        }, 10);
     };
 
     return (
@@ -141,7 +158,11 @@ export const PercentInput = ({ value, onChange, className, placeholder, noBg, di
                 style={{ minWidth: 0, paddingLeft: '6px', paddingRight: '28px', fontWeight: '600', outline: 'none' }} 
                 value={focused ? (value ?? '') : displayValue} 
                 onChange={handleChange} 
-                onFocus={(e) => { setFocused(true); e.target.select(); }} 
+                onFocus={(e) => { 
+                    setFocused(true); 
+                    const target = e.target;
+                    setTimeout(() => target && target.select(), 10);
+                }} 
                 onBlur={() => setFocused(false)} 
                 placeholder={placeholder} 
                 disabled={disabled} 
@@ -202,7 +223,10 @@ export const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) =>
                     style={{ outline: 'none', boxShadow: 'none', fontSize: '0.95rem' }} 
                     value={textVal} 
                     onChange={(e) => setTextVal(e.target.value)} 
-                    onFocus={(e) => e.target.select()}
+                    onFocus={(e) => {
+                        const target = e.target;
+                        setTimeout(() => target && target.select(), 10);
+                    }}
                     onBlur={handleBlur} 
                     onKeyDown={handleKeyDown} 
                 />

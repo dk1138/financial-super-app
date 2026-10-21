@@ -16,22 +16,9 @@ import { useFinance } from '../lib/FinanceContext';
 export default function PlanTab() {
   const { data, results } = useFinance();
 
-  // Collapsible state for each section (default: all expanded)
+  // Collapsed state map for the 10 sections
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
   const [isLiveBarMinimized, setIsLiveBarMinimized] = useState<boolean>(false);
-
-  const sections = useMemo(() => [
-    { id: 'personal', title: '1. Personal Information', icon: 'bi-person-fill', component: <PersonalInformationCard /> },
-    { id: 'dependents', title: '2. Dependents & Family', icon: 'bi-people-fill', component: <DependentsCard /> },
-    { id: 'portfolio', title: '3. Portfolio Assets & Balances', icon: 'bi-safe2-fill', component: <PortfolioAssetsCard /> },
-    { id: 'realestate', title: '4. Real Estate & Properties', icon: 'bi-house-fill', component: <LivingCostCard /> },
-    { id: 'tax', title: '5. Income, Deductions & Taxes', icon: 'bi-cash-coin', component: <IncomeTaxCard /> },
-    { id: 'living', title: '6. Living Expenses & Phases', icon: 'bi-cart-fill', component: <LivingExpensesCard /> },
-    { id: 'future', title: '7. Future Milestone Expenses', icon: 'bi-calendar-event-fill', component: <FutureExpensesCard /> },
-    { id: 'windfalls', title: '8. Windfalls & Lump Sums', icon: 'bi-gift-fill', component: <WindfallsCard /> },
-    { id: 'govt', title: '9. Government Benefits & DB Pensions', icon: 'bi-building-fill', component: <GovtBenefitsCard /> },
-    { id: 'economic', title: '10. Economic & Return Assumptions', icon: 'bi-sliders', component: <EconomicAssumptionsCard /> }
-  ], []);
 
   const toggleSection = (id: string) => {
     setCollapsedMap(prev => ({ ...prev, [id]: !prev[id] }));
@@ -39,9 +26,18 @@ export default function PlanTab() {
 
   const expandAll = () => setCollapsedMap({});
   const collapseAll = () => {
-    const allCollapsed: Record<string, boolean> = {};
-    sections.forEach(s => { allCollapsed[s.id] = true; });
-    setCollapsedMap(allCollapsed);
+    setCollapsedMap({
+      personal: true,
+      dependents: true,
+      portfolio: true,
+      realestate: true,
+      tax: true,
+      living: true,
+      future: true,
+      windfalls: true,
+      govt: true,
+      economic: true
+    });
   };
 
   // --- LIVE READINESS MATH ---
@@ -108,72 +104,197 @@ export default function PlanTab() {
         input[type="number"] {
             -moz-appearance: textfield;
         }
+
+        /* Direct accordion styling on existing cards */
+        .plan-card-wrapper {
+            position: relative;
+        }
+        .plan-card-wrapper .card-header {
+            padding-right: 52px !important;
+        }
+        .collapse-chevron-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 20;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+        .collapse-chevron-btn:hover {
+            background: var(--primary);
+            color: #fff !important;
+            border-color: var(--primary);
+        }
+        .plan-card-wrapper.is-collapsed .card-body {
+            display: none !important;
+        }
+        .plan-card-wrapper.is-collapsed .card-header {
+            border-bottom: none !important;
+        }
+        .plan-card-wrapper.is-collapsed .rp-card {
+            margin-bottom: 0.75rem !important;
+        }
       `}</style>
 
-      {/* --- TOP CONTROLS: EXPAND / COLLAPSE TOOLBAR --- */}
-      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-4 pb-2 border-bottom border-secondary border-opacity-50">
-        <div className="d-flex align-items-center gap-2">
-          <span className="small text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.78rem' }}>
-            <i className="bi bi-ui-checks-grid me-2 text-primary"></i> 10 Plan Sections
-          </span>
-        </div>
-
-        <div className="d-flex align-items-center gap-2">
-          <button 
-            type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input"
-            onClick={expandAll}
-            style={{ fontSize: '0.75rem' }}
-          >
-            <i className="bi bi-arrows-expand me-1"></i> Expand All
-          </button>
-          <button 
-            type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input"
-            onClick={collapseAll}
-            style={{ fontSize: '0.75rem' }}
-          >
-            <i className="bi bi-arrows-collapse me-1"></i> Collapse All
-          </button>
-        </div>
+      {/* --- TOP TOOLBAR: EXPAND / COLLAPSE ALL --- */}
+      <div className="d-flex justify-content-end align-items-center gap-2 mb-4 pb-2 border-bottom border-secondary border-opacity-50">
+        <button 
+          type="button" 
+          className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
+          onClick={expandAll}
+          style={{ fontSize: '0.78rem' }}
+        >
+          <i className="bi bi-arrows-expand me-1"></i> Expand All
+        </button>
+        <button 
+          type="button" 
+          className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
+          onClick={collapseAll}
+          style={{ fontSize: '0.78rem' }}
+        >
+          <i className="bi bi-arrows-collapse me-1"></i> Collapse All
+        </button>
       </div>
 
-      {/* --- SECTIONS ACCORDION LIST --- */}
+      {/* --- FORM WITH THE 10 EXISTING CARDS --- */}
       <form id="financialForm" onSubmit={e => e.preventDefault()}>
-        {sections.map(sec => {
-          const isCollapsed = Boolean(collapsedMap[sec.id]);
+        
+        {/* 1. Personal Information */}
+        <div className={`plan-card-wrapper ${collapsedMap['personal'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('personal')}
+            title={collapsedMap['personal'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['personal'] ? 'down' : 'up'}`}></i>
+          </button>
+          <PersonalInformationCard />
+        </div>
 
-          return (
-            <div key={sec.id} className="mb-4">
-              {/* Header Collapse Toggle Bar */}
-              <div 
-                className="d-flex justify-content-between align-items-center p-3 rounded-4 surface-card border border-secondary shadow-sm mb-2 cursor-pointer transition-all hover-border-primary"
-                onClick={() => toggleSection(sec.id)}
-                style={{ userSelect: 'none' }}
-              >
-                <div className="d-flex align-items-center gap-2">
-                  <i className={`bi ${sec.icon} text-primary fs-5`}></i>
-                  <h6 className="fw-bold mb-0 text-main">{sec.title}</h6>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-secondary bg-opacity-25 text-muted small" style={{ fontSize: '0.7rem' }}>
-                    {isCollapsed ? 'Collapsed' : 'Open'}
-                  </span>
-                  <button type="button" className="btn btn-sm btn-link p-0 text-muted text-decoration-none">
-                    <i className={`bi bi-chevron-${isCollapsed ? 'down' : 'up'}`}></i>
-                  </button>
-                </div>
-              </div>
+        {/* 2. Dependents & Family */}
+        <div className={`plan-card-wrapper ${collapsedMap['dependents'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('dependents')}
+            title={collapsedMap['dependents'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['dependents'] ? 'down' : 'up'}`}></i>
+          </button>
+          <DependentsCard />
+        </div>
 
-              {/* Render Component when Open */}
-              {!isCollapsed && (
-                <div className="fade-in">
-                  {sec.component}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {/* 3. Portfolio Assets */}
+        <div className={`plan-card-wrapper ${collapsedMap['portfolio'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('portfolio')}
+            title={collapsedMap['portfolio'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['portfolio'] ? 'down' : 'up'}`}></i>
+          </button>
+          <PortfolioAssetsCard />
+        </div>
+
+        {/* 4. Real Estate & Living Costs */}
+        <div className={`plan-card-wrapper ${collapsedMap['realestate'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('realestate')}
+            title={collapsedMap['realestate'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['realestate'] ? 'down' : 'up'}`}></i>
+          </button>
+          <LivingCostCard />
+        </div>
+
+        {/* 5. Income & Taxes */}
+        <div className={`plan-card-wrapper ${collapsedMap['tax'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('tax')}
+            title={collapsedMap['tax'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['tax'] ? 'down' : 'up'}`}></i>
+          </button>
+          <IncomeTaxCard />
+        </div>
+
+        {/* 6. Living Expenses */}
+        <div className={`plan-card-wrapper ${collapsedMap['living'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('living')}
+            title={collapsedMap['living'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['living'] ? 'down' : 'up'}`}></i>
+          </button>
+          <LivingExpensesCard />
+        </div>
+
+        {/* 7. Future Milestone Expenses */}
+        <div className={`plan-card-wrapper ${collapsedMap['future'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('future')}
+            title={collapsedMap['future'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['future'] ? 'down' : 'up'}`}></i>
+          </button>
+          <FutureExpensesCard />
+        </div>
+
+        {/* 8. Windfalls */}
+        <div className={`plan-card-wrapper ${collapsedMap['windfalls'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('windfalls')}
+            title={collapsedMap['windfalls'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['windfalls'] ? 'down' : 'up'}`}></i>
+          </button>
+          <WindfallsCard />
+        </div>
+
+        {/* 9. Government Benefits */}
+        <div className={`plan-card-wrapper ${collapsedMap['govt'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('govt')}
+            title={collapsedMap['govt'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['govt'] ? 'down' : 'up'}`}></i>
+          </button>
+          <GovtBenefitsCard />
+        </div>
+
+        {/* 10. Economic Assumptions */}
+        <div className={`plan-card-wrapper ${collapsedMap['economic'] ? 'is-collapsed' : ''}`}>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-secondary rounded-circle collapse-chevron-btn text-muted"
+            onClick={() => toggleSection('economic')}
+            title={collapsedMap['economic'] ? "Expand section" : "Collapse section"}
+          >
+            <i className={`bi bi-chevron-${collapsedMap['economic'] ? 'down' : 'up'}`}></i>
+          </button>
+          <EconomicAssumptionsCard />
+        </div>
+
       </form>
 
       {/* --- STICKY LIVE READINESS BAR --- */}
