@@ -5,7 +5,7 @@
  */
 import { parseFormattedNumber } from './utils';
 import { getInflatedTaxData, calculateTaxDetailed } from './engine/tax';
-import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
+import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getRrifFactor, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
 import { handleSurplus, handleDeficit, applyPensionSplitting } from './engine/cashflow';
 export { calculatePlanScore } from './engine/scoring'; 
 
