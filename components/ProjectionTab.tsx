@@ -440,7 +440,7 @@ export default function ProjectionTab() {
       }
 
       let net = added - withdrawn;
-      if (Math.abs(net) < 1) return <span style={{width: '45px', display: 'inline-block'}}></span>; 
+      if (Math.abs(net) < 1) return <span style={{width: '55px', display: 'inline-block'}}></span>; 
       
       net = getRealValue(net, year);
       const isPos = net > 0;
@@ -448,7 +448,7 @@ export default function ProjectionTab() {
       const formatted = absNet >= 1000 ? `${(absNet/1000).toFixed(1).replace('.0', '')}k` : Math.round(absNet);
       
       return (
-          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end me-2`} style={{fontSize: '0.65rem', width: '45px', display: 'inline-block'}}>
+          <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end text-nowrap me-2`} style={{fontSize: '0.65rem', minWidth: '55px', width: 'auto', whiteSpace: 'nowrap', display: 'inline-block'}}>
               ({isPos ? '+' : '-'}{formatted})
           </span>
       );
