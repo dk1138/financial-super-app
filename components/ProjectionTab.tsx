@@ -430,6 +430,15 @@ export default function ProjectionTab() {
           const pUpper = player.toUpperCase();
           wdKeys.forEach(k => withdrawn += (y.flows.withdrawals[`${pUpper} ${k}`] || 0));
       }
+
+      const lifTransfer = (player === 'p1' ? y.lifTransferP1 : y.lifTransferP2) || (y.flows?.transfers?.[player]?.lif_to_rrif || 0);
+      if (wdKeys.includes('LIF') && lifTransfer > 0) {
+          withdrawn += lifTransfer;
+      }
+      if (wdKeys.includes('RRIF') && lifTransfer > 0) {
+          added += lifTransfer;
+      }
+
       let net = added - withdrawn;
       if (Math.abs(net) < 1) return <span style={{width: '45px', display: 'inline-block'}}></span>; 
       
@@ -683,14 +692,23 @@ export default function ProjectionTab() {
                   );
               })}
 
-              {(nonTaxWds.length > 0 || refund > 0) && (
+              const lifTransferAmt = isP1 ? (y.lifTransferP1 || 0) : (y.lifTransferP2 || 0);
+
+              {(nonTaxWds.length > 0 || refund > 0 || lifTransferAmt > 0) && (
                   <div className="mt-2 pt-2 border-top border-secondary border-opacity-25">
-                      <div className="text-muted fw-bold small mb-1 ls-1" style={{fontSize: '0.65rem'}}>NON-TAXABLE INFLOWS</div>
+                      <div className="text-muted fw-bold small mb-1 ls-1" style={{fontSize: '0.65rem'}}>NON-TAXABLE INFLOWS & TRANSFERS</div>
                       
                       {refund > 0 && (
                           <div className="d-flex justify-content-between small mb-1 align-items-center">
                               <span className="text-muted ms-2 d-flex align-items-center">Tax Refund <InfoBtn align="left" title="Tax Refund" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Refund generated from prior year RRSP contributions." /></span>
                               <span className="text-success">+{formatCurrency(refund, year)}</span>
+                          </div>
+                      )}
+
+                      {lifTransferAmt > 0 && (
+                          <div className="d-flex justify-content-between small mb-1 align-items-center">
+                              <span className="text-muted ms-2 d-flex align-items-center">LIF to RRIF Transfer <InfoBtn align="left" title="LIF to RRIF Transfer" text="<span class='text-info fw-bold'>Tax-Deferred Rollover (0% Immediate Tax).</span><br>Transferred directly from your locked-in LIF to your unlocked RRIF under CRA Form T2033 (Line 23200 deduction). Unlocks capital with no future maximum withdrawal limit." /></span>
+                              <span className="text-info">+{formatCurrency(lifTransferAmt, year)}</span>
                           </div>
                       )}
 
@@ -1075,7 +1093,7 @@ export default function ProjectionTab() {
                                                     </div>
                                                 )}
 
-                                                {(y.assetsP1?.lif > 0 || y.flows?.withdrawals?.['P1 LIF'] > 0) && (
+                                                {(y.assetsP1?.lif > 0 || y.flows?.withdrawals?.['P1 LIF'] > 0 || (y.lifTransferP1 || 0) > 0) && (
                                                     <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">
@@ -1165,7 +1183,7 @@ export default function ProjectionTab() {
                                                     </div>
                                                 )}
 
-                                                {(y.assetsP2?.lif > 0 || y.flows?.withdrawals?.['P2 LIF'] > 0) && (
+                                                {(y.assetsP2?.lif > 0 || y.flows?.withdrawals?.['P2 LIF'] > 0 || (y.lifTransferP2 || 0) > 0) && (
                                                     <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                         <span className="text-muted ms-2">LIF</span>
                                                         <div className="d-flex justify-content-end align-items-center">

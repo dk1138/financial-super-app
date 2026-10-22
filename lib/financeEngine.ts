@@ -5,7 +5,7 @@
  */
 import { parseFormattedNumber } from './utils';
 import { getInflatedTaxData, calculateTaxDetailed } from './engine/tax';
-import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getLifMaxFactor } from './engine/benefits';
+import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
 import { handleSurplus, handleDeficit, applyPensionSplitting } from './engine/cashflow';
 export { calculatePlanScore } from './engine/scoring'; 
 
@@ -474,6 +474,7 @@ export class FinanceEngine {
         let netWorthArray: number[] = [], projectionData: any[] = [];
         
         const rrifStartAge = this.CONSTANTS?.RRIF_START_AGE || 72;
+        let lastLifGain1 = 0, lastLifGain2 = 0;
 
         let person1 = { 
             tfsa: this.getVal('p1_tfsa'), tfsa_successor: 0, fhsa: this.getVal('p1_fhsa'), resp: this.getVal('p1_resp'), 
@@ -547,9 +548,11 @@ export class FinanceEngine {
 
             if (alive1 && age1 >= rrifStartAge && person1.rrsp > 0) { person1.rrif_acct += person1.rrsp; person1.rrsp = 0; }
             if (this.mode === 'Couple' && alive2 && age2 >= rrifStartAge && person2.rrsp > 0) { person2.rrif_acct += person2.rrsp; person2.rrsp = 0; }
+            if (alive1 && age1 >= rrifStartAge && person1.lirf > 0) { person1.lif += person1.lirf; person1.lirf = 0; }
+            if (this.mode === 'Couple' && alive2 && age2 >= rrifStartAge && person2.lirf > 0) { person2.lif += person2.lirf; person2.lirf = 0; }
 
             if (detailed) {
-                flowLog = { contributions: { p1: {tfsa:0, fhsa:0, resp:0, rrsp:0, nonreg:0, cash:0, crypto:0}, p2: {tfsa:0, fhsa:0, rrsp:0, nonreg:0, cash:0, crypto:0}, shared: {spending_cash:0} }, withdrawals: {} };
+                flowLog = { contributions: { p1: {tfsa:0, fhsa:0, resp:0, rrsp:0, nonreg:0, cash:0, crypto:0}, p2: {tfsa:0, fhsa:0, rrsp:0, nonreg:0, cash:0, crypto:0}, shared: {spending_cash:0} }, withdrawals: {}, transfers: { p1: { lif_to_rrif: 0 }, p2: { lif_to_rrif: 0 } } };
             }
 
             let deathEvents: string[] = [];
@@ -784,24 +787,36 @@ export class FinanceEngine {
             let ccbPayout = calculateCCBForYear(yr, this.dependents, previousAFNI, baseInflation, this.CONSTANTS.CCB_RULES);
             if (ccbPayout > 0 && alive1) inflows.p1.ccb = ccbPayout;
 
-            let lifMax1 = (preGrowthLirf1 + preGrowthLif1) * getLifMaxFactor(age1 - 1, provinceStr);
-            let lifMax2 = (preGrowthLirf2 + preGrowthLif2) * getLifMaxFactor(age2 - 1, provinceStr);
-            lifMax1 = Math.max(0, lifMax1 - regMins.lifTaken1); lifMax2 = Math.max(0, lifMax2 - regMins.lifTaken2);
+            let priorYearGain1 = (i === 0) ? (preGrowthLif1 * (ratesP1?.lif || 0)) : (lastLifGain1 || 0);
+            let priorYearGain2 = (i === 0) ? (preGrowthLif2 * (ratesP2?.lif || 0)) : (lastLifGain2 || 0);
+
+            let lifMax1 = calcLifMaxLimit(age1 - 1, provinceStr, preGrowthLif1, priorYearGain1);
+            let lifMax2 = calcLifMaxLimit(age2 - 1, provinceStr, preGrowthLif2, priorYearGain2);
+            lifMax1 = Math.max(0, lifMax1 - regMins.lifTaken1); 
+            lifMax2 = Math.max(0, lifMax2 - regMins.lifTaken2);
+
+            let lifTransfer1 = 0;
+            let lifTransfer2 = 0;
 
             if (this.inputs.lif_to_rrif_transfer) {
                 if (alive1 && age1 >= 55 && lifMax1 > 0) {
                     let availLif1 = (person1.lif || 0) + (age1 >= rrifStartAge ? (person1.lirf || 0) : 0);
                     let transfer1 = Math.min(availLif1, lifMax1);
                     if (transfer1 > 0) {
+                        lifTransfer1 = transfer1;
                         let fromLif = Math.min(person1.lif || 0, transfer1);
                         person1.lif -= fromLif;
                         let fromLirf = transfer1 - fromLif;
                         if (fromLirf > 0) person1.lirf -= fromLirf;
                         person1.rrif_acct = (person1.rrif_acct || 0) + transfer1;
                         lifMax1 -= transfer1;
-                        if (detailed && !trackedEvents.has('LIF Unlocked to RRIF (P1)')) {
-                            trackedEvents.add('LIF Unlocked to RRIF (P1)');
-                            inflows.events.push('LIF Unlocked to RRIF (P1)');
+                        if (detailed) {
+                            if (!flowLog.transfers) flowLog.transfers = { p1: { lif_to_rrif: 0 }, p2: { lif_to_rrif: 0 } };
+                            flowLog.transfers.p1.lif_to_rrif = transfer1;
+                            if (!trackedEvents.has('LIF Unlocked to RRIF (P1)')) {
+                                trackedEvents.add('LIF Unlocked to RRIF (P1)');
+                                inflows.events.push('LIF Unlocked to RRIF (P1)');
+                            }
                         }
                     }
                 }
@@ -809,15 +824,20 @@ export class FinanceEngine {
                     let availLif2 = (person2.lif || 0) + (age2 >= rrifStartAge ? (person2.lirf || 0) : 0);
                     let transfer2 = Math.min(availLif2, lifMax2);
                     if (transfer2 > 0) {
+                        lifTransfer2 = transfer2;
                         let fromLif = Math.min(person2.lif || 0, transfer2);
                         person2.lif -= fromLif;
                         let fromLirf = transfer2 - fromLif;
                         if (fromLirf > 0) person2.lirf -= fromLirf;
                         person2.rrif_acct = (person2.rrif_acct || 0) + transfer2;
                         lifMax2 -= transfer2;
-                        if (detailed && !trackedEvents.has('LIF Unlocked to RRIF (P2)')) {
-                            trackedEvents.add('LIF Unlocked to RRIF (P2)');
-                            inflows.events.push('LIF Unlocked to RRIF (P2)');
+                        if (detailed) {
+                            if (!flowLog.transfers) flowLog.transfers = { p1: { lif_to_rrif: 0 }, p2: { lif_to_rrif: 0 } };
+                            flowLog.transfers.p2.lif_to_rrif = transfer2;
+                            if (!trackedEvents.has('LIF Unlocked to RRIF (P2)')) {
+                                trackedEvents.add('LIF Unlocked to RRIF (P2)');
+                                inflows.events.push('LIF Unlocked to RRIF (P2)');
+                            }
                         }
                     }
                 }
@@ -1161,7 +1181,11 @@ export class FinanceEngine {
                 const totalWithdrawals = Object.values(flowLog.withdrawals).reduce((sum: any, val: any) => sum + val, 0);
                 const grossInflow = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax + divInc1 + divInc2 + cryptoYield1 + cryptoYield2 + (totalWithdrawals as number);
                 
+                lastLifGain1 = preGrowthLif1 * (ratesP1?.lif || 0);
+                lastLifGain2 = preGrowthLif2 * (ratesP2?.lif || 0);
+
                 projectionData.push({
+                    lifTransferP1: lifTransfer1, lifTransferP2: lifTransfer2,
                     year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
                     incomeP1: inflows.p1.gross, incomeP2: inflows.p2.gross, eiMatP1: inflows.p1.eiMat, eiMatP2: inflows.p2.eiMat, topUpP1: inflows.p1.topUp, topUpP2: inflows.p2.topUp,
                     rentalP1: inflows.p1.rental, rentalP2: inflows.p2.rental, otherP1: inflows.p1.other, otherP2: inflows.p2.other,

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { getRrifFactor, getLifMaxFactor } from '../../lib/engine/benefits';
+import { getRrifFactor, getLifMaxFactor, calcLifMaxLimit } from '../../lib/engine/benefits';
 import { SegmentedControl, CurrencyInput, PercentInput, StepperInput, InfoBtn } from '../SharedUI';
 
 export default function LIFtoRRIFOptimizer() {
@@ -34,11 +34,14 @@ export default function LIFtoRRIFOptimizer() {
 
     const calculations = useMemo(() => {
         const ageForFactors = Math.max(55, currentAge);
+        const r = growthRate / 100;
         const minRate = getRrifFactor(ageForFactors - 1);
-        const maxRate = getLifMaxFactor(ageForFactors - 1, province);
+        const baseMaxRate = getLifMaxFactor(ageForFactors - 1, province);
 
+        const estimatedPriorGrowth = currentBalance * r;
         const currentMin = currentBalance * minRate;
-        const currentMax = currentBalance * maxRate;
+        const currentMax = calcLifMaxLimit(ageForFactors - 1, province, currentBalance, estimatedPriorGrowth);
+        const effectiveMaxRate = currentBalance > 0 ? (currentMax / currentBalance) : baseMaxRate;
         const currentTransfer = Math.max(0, currentMax - currentMin);
 
         // 10-year projection comparing status-quo vs unlocking strategy
@@ -56,21 +59,22 @@ export default function LIFtoRRIFOptimizer() {
         let simLif = currentBalance;
         let simRrif = 0;
         let cumUnlocked = 0;
-        const r = growthRate / 100;
+        let priorYearGrowth = currentBalance * r;
 
         for (let y = 1; y <= 10; y++) {
             const ageYear = currentAge + y - 1;
             const yMinRate = getRrifFactor(ageYear - 1);
-            const yMaxRate = getLifMaxFactor(ageYear - 1, province);
+            const yMax = calcLifMaxLimit(ageYear - 1, province, simLif, priorYearGrowth);
 
             const yMin = simLif * yMinRate;
-            const yMax = simLif * yMaxRate;
             const yTransfer = Math.max(0, yMax - yMin);
 
             cumUnlocked += yTransfer;
             const remainingLif = Math.max(0, simLif - yMin - yTransfer);
-            simLif = remainingLif * (1 + r);
+            const growthEarned = remainingLif * r;
+            simLif = remainingLif + growthEarned;
             simRrif = (simRrif + yTransfer) * (1 + r);
+            priorYearGrowth = growthEarned;
 
             // If "Today's \$" mode is active, deflate future values to constant purchasing power
             const deflator = useRealDollars ? Math.pow(1 + inflationRate, y - 1) : 1;
@@ -92,7 +96,8 @@ export default function LIFtoRRIFOptimizer() {
 
         return {
             minRate,
-            maxRate,
+            maxRate: effectiveMaxRate,
+            baseMaxRate,
             currentMin,
             currentMax,
             currentTransfer,
@@ -117,7 +122,7 @@ export default function LIFtoRRIFOptimizer() {
                         <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">LIF to RRIF Flexibility Optimizer</h5>
                         <InfoBtn 
                             title="LIF to RRIF Unlocking Transfer"
-                            text="Life Income Funds (LIFs) enforce both minimum and maximum annual withdrawal limits. Under Canadian tax law (ITA 60(l)), you can take the mandatory minimum in taxable cash and transfer the difference between the maximum and minimum directly into an unlocked RRIF without triggering immediate tax or consuming RRSP room.<br><br>This unlocks future liquidity since RRIFs have no maximum withdrawal ceiling."
+                            text="Life Income Funds (LIFs) enforce both minimum and maximum annual withdrawal limits. Under Canadian pension regulations (e.g. ON, BC, AB, NL, MB), the maximum is the greater of the age percentage limit or the previous year's investment return. Under Canadian tax law (ITA 60(l)), you can take the mandatory minimum in taxable cash and transfer the difference between the maximum and minimum directly into an unlocked RRIF without triggering immediate tax or consuming RRSP room.<br><br>This unlocks future liquidity since RRIFs have no maximum withdrawal ceiling."
                             align="right"
                         />
                     </div>
