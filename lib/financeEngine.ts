@@ -714,9 +714,9 @@ export class FinanceEngine {
 
             if (detailed && wdBreakdown) {
                 if (regMins.p1 > 0) { flowLog.withdrawals['P1 RRIF'] = (flowLog.withdrawals['P1 RRIF'] || 0) + regMins.p1; wdBreakdown.p1.RRIF = regMins.p1; wdBreakdown.p1.RRIF_math = { wd: regMins.p1, tax: regMins.p1, min: regMins.details.p1.min, priorBal: regMins.details.p1.bal, factor: regMins.details.p1.factor }; }
-                if (regMins.lifTaken1 > 0) { flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; wdBreakdown.p1.LIF = regMins.lifTaken1; wdBreakdown.p1.LIF_math = { wd: regMins.lifTaken1, tax: regMins.lifTaken1, min: regMins.details.p1.min, priorBal: regMins.details.p1.bal, factor: regMins.details.p1.factor }; }
+                if (regMins.lifTaken1 > 0) { flowLog.withdrawals['P1 LIF'] = (flowLog.withdrawals['P1 LIF'] || 0) + regMins.lifTaken1; wdBreakdown.p1.LIF = regMins.lifTaken1; wdBreakdown.p1.LIF_math = { wd: regMins.lifTaken1, tax: regMins.lifTaken1, min: regMins.details.p1.lifMin, priorBal: regMins.details.p1.lifBal, factor: regMins.details.p1.factor }; }
                 if (regMins.p2 > 0) { flowLog.withdrawals['P2 RRIF'] = (flowLog.withdrawals['P2 RRIF'] || 0) + regMins.p2; wdBreakdown.p2.RRIF = regMins.p2; wdBreakdown.p2.RRIF_math = { wd: regMins.p2, tax: regMins.p2, min: regMins.details.p2.min, priorBal: regMins.details.p2.bal, factor: regMins.details.p2.factor }; }
-                if (regMins.lifTaken2 > 0) { flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; wdBreakdown.p2.LIF = regMins.lifTaken2; wdBreakdown.p2.LIF_math = { wd: regMins.lifTaken2, tax: regMins.lifTaken2, min: regMins.details.p2.min, priorBal: regMins.details.p2.bal, factor: regMins.details.p2.factor }; }
+                if (regMins.lifTaken2 > 0) { flowLog.withdrawals['P2 LIF'] = (flowLog.withdrawals['P2 LIF'] || 0) + regMins.lifTaken2; wdBreakdown.p2.LIF = regMins.lifTaken2; wdBreakdown.p2.LIF_math = { wd: regMins.lifTaken2, tax: regMins.lifTaken2, min: regMins.details.p2.lifMin, priorBal: regMins.details.p2.lifBal, factor: regMins.details.p2.factor }; }
             }
 
             const taxBrackets = getInflatedTaxData(this.CONSTANTS.TAX_DATA, baseInflation);
@@ -797,6 +797,8 @@ export class FinanceEngine {
 
             let lifTransfer1 = 0;
             let lifTransfer2 = 0;
+            const lifMaxLimit1 = lifMax1 + regMins.lifTaken1;
+            const lifMaxLimit2 = lifMax2 + regMins.lifTaken2;
 
             if (this.inputs.lif_to_rrif_transfer) {
                 if (alive1 && age1 >= 55 && lifMax1 > 0) {
@@ -1184,8 +1186,31 @@ export class FinanceEngine {
                 lastLifGain1 = preGrowthLif1 * (ratesP1?.lif || 0);
                 lastLifGain2 = preGrowthLif2 * (ratesP2?.lif || 0);
 
+                const lifTransferMath1 = {
+                    openingBal: preGrowthLif1,
+                    minFactor: getRrifFactor(age1 - 1),
+                    minAmount: regMins.lifTaken1,
+                    maxFactor: getLifMaxFactor(age1 - 1, provinceStr),
+                    maxLimit: lifMaxLimit1,
+                    priorGain: priorYearGain1,
+                    province: provinceStr,
+                    transferAmt: lifTransfer1
+                };
+
+                const lifTransferMath2 = {
+                    openingBal: preGrowthLif2,
+                    minFactor: getRrifFactor(age2 - 1),
+                    minAmount: regMins.lifTaken2,
+                    maxFactor: getLifMaxFactor(age2 - 1, provinceStr),
+                    maxLimit: lifMaxLimit2,
+                    priorGain: priorYearGain2,
+                    province: provinceStr,
+                    transferAmt: lifTransfer2
+                };
+
                 projectionData.push({
                     lifTransferP1: lifTransfer1, lifTransferP2: lifTransfer2,
+                    lifTransferMathP1: lifTransferMath1, lifTransferMathP2: lifTransferMath2,
                     year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
                     incomeP1: inflows.p1.gross, incomeP2: inflows.p2.gross, eiMatP1: inflows.p1.eiMat, eiMatP2: inflows.p2.eiMat, topUpP1: inflows.p1.topUp, topUpP2: inflows.p2.topUp,
                     rentalP1: inflows.p1.rental, rentalP2: inflows.p2.rental, otherP1: inflows.p1.other, otherP2: inflows.p2.other,

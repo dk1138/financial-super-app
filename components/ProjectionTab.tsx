@@ -570,6 +570,38 @@ export default function ProjectionTab() {
       return lines.length > 0 ? lines.join('<br>') : "No contributions.";
   };
 
+  const buildLifTransferTooltip = (math: any, transferVal: number, year: number, useRealDollars: boolean) => {
+      if (!math) {
+          return `<span class='text-info fw-bold'>Tax-Deferred Rollover (0% Immediate Tax).</span><br>Transferred directly from your locked-in LIF to your unlocked RRIF under CRA Form T2033 (Line 23200 deduction). Unlocks capital with no future maximum withdrawal limit.<hr class="my-1 border-secondary"><b>Transfer Amount:</b> $${formatStr(transferVal, year)}`;
+      }
+
+      const openBal = math.openingBal || 0;
+      const minFactor = (math.minFactor || 0) * 100;
+      const minAmt = math.minAmount || 0;
+      const maxFactor = (math.maxFactor || 0) * 100;
+      const maxLimit = math.maxLimit || 0;
+      const priorGain = math.priorGain || 0;
+      const prov = (math.province || 'ON').toUpperCase();
+      const isGainApplied = ['ON', 'BC', 'AB', 'NL', 'MB'].includes(prov) && priorGain > (openBal * (math.maxFactor || 0));
+
+      let content = `<span class='text-info fw-bold'>Tax-Deferred Rollover (0% Immediate Tax).</span><br>Transferred under CRA Form T2033 (Line 23200 deduction) to unlock capital into a regular RRIF with no future maximum ceiling.<hr class="my-1 border-secondary">`;
+      
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Jan 1 LIF Balance:</span><span>$${Math.round(openBal).toLocaleString()}</span></div>`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Mandatory Min (${minFactor.toFixed(2)}%):</span><span class="text-danger">-$${Math.round(minAmt).toLocaleString()} (Cash)</span></div>`;
+      content += `<hr class="my-1 border-secondary">`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Age Max Factor (${prov}):</span><span>${maxFactor.toFixed(2)}% ($${Math.round(openBal * (math.maxFactor || 0)).toLocaleString()})</span></div>`;
+      if (['ON', 'BC', 'AB', 'NL', 'MB'].includes(prov)) {
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Prior Year Return:</span><span>$${Math.round(priorGain).toLocaleString()}${isGainApplied ? ' (Used)' : ''}</span></div>`;
+      }
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Permitted Statutory Max:</span><span class="fw-bold">$${Math.round(maxLimit).toLocaleString()}</span></div>`;
+      content += `<hr class="my-1 border-secondary">`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Nominal Transfer (Max - Min):</span><span class="fw-bold text-success">+$${Math.round(transferVal).toLocaleString()}</span></div>`;
+      if (useRealDollars) {
+          content += `<div class="d-flex justify-content-between fw-bold text-info small mt-1"><span>Transfer in Today's $:</span><span>+$${formatStr(transferVal, year)}</span></div>`;
+      }
+      return content;
+  };
+
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
       const isP1 = player === 'p1';
       const pUpper = player.toUpperCase();
@@ -667,7 +699,22 @@ export default function ProjectionTab() {
                       }
                   }
                   else if (k.includes('LIF')) {
-                      info = `<span class='text-info fw-bold'>100% Taxable.</span><br>LIF withdrawal bound by provincial limits.`;
+                      const factor = getRrifFactor(age - 1);
+                      let priorLifBal = 0;
+                      const prevYear = index > 0 ? timeline[index - 1] : null;
+                      if (prevYear) {
+                          priorLifBal = (prevYear[`assets${pUpper}`]?.lif || 0) + (age >= 72 ? (prevYear[`assets${pUpper}`]?.lirf || 0) : 0);
+                      } else {
+                          priorLifBal = Number(data.inputs[`${player}_lif`]) || 0;
+                      }
+                      const minAmount = priorLifBal * factor;
+                      const extraWd = Math.max(0, val - minAmount);
+
+                      if (data.useRealDollars) {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor * 100).toFixed(2)}%).<hr class="my-1 border-secondary"><span class='text-muted small'>Nominal Math: $${Math.round(priorLifBal).toLocaleString()} × ${(factor * 100).toFixed(2)}% = $${Math.round(minAmount).toLocaleString()}</span><br><b>Min in Today's $:</b> $${formatStr(minAmount, year)}${extraWd > 1 ? `<br><span class='text-warning'>+ Discretionary Pull: $${formatStr(extraWd, year)}</span><br><b>Total W/D:</b> $${formatStr(val, year)}` : ''}`;
+                      } else {
+                          info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Mandatory minimum withdrawal based on age factor (${(factor * 100).toFixed(2)}%).<hr class="my-1 border-secondary"><i>Math: $${formatStr(priorLifBal, year)} × ${(factor * 100).toFixed(2)}% = $${formatStr(minAmount, year)}</i>${extraWd > 1 ? `<br><b>+ Extra Discretionary:</b> $${formatStr(extraWd, year)}<br><b>Total W/D:</b> $${formatStr(val, year)}` : ''}`;
+                      }
                   }
                   else if (k.includes('RRSP')) {
                       info = `<span class='text-info fw-bold'>100% Taxable.</span><br>Added directly to taxable income.`;
@@ -706,7 +753,7 @@ export default function ProjectionTab() {
 
                       {lifTransferAmt > 0 && (
                           <div className="d-flex justify-content-between small mb-1 align-items-center">
-                              <span className="text-muted ms-2 d-flex align-items-center">LIF to RRIF Transfer <InfoBtn align="left" title="LIF to RRIF Transfer" text="<span class='text-info fw-bold'>Tax-Deferred Rollover (0% Immediate Tax).</span><br>Transferred directly from your locked-in LIF to your unlocked RRIF under CRA Form T2033 (Line 23200 deduction). Unlocks capital with no future maximum withdrawal limit." /></span>
+                              <span className="text-muted ms-2 d-flex align-items-center">LIF to RRIF Transfer <InfoBtn align="left" title="LIF to RRIF Transfer Math" text={buildLifTransferTooltip(isP1 ? y.lifTransferMathP1 : y.lifTransferMathP2, lifTransferAmt, year, data.useRealDollars)} /></span>
                               <span className="text-info">+{formatCurrency(lifTransferAmt, year)}</span>
                           </div>
                       )}
