@@ -587,6 +587,7 @@ export default function ProjectionTab() {
       const invYieldMath = isP1 ? y.invYieldMathP1 : y.invYieldMathP2;
       const cppStart = isP1 ? data.inputs.p1_cpp_start : data.inputs.p2_cpp_start;
       const refund = isP1 ? y.rrspRefundP1 : y.rrspRefundP2;
+      const lifTransferAmt = isP1 ? (y.lifTransferP1 || 0) : (y.lifTransferP2 || 0);
 
       const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
@@ -691,8 +692,6 @@ export default function ProjectionTab() {
                       </div>
                   );
               })}
-
-              const lifTransferAmt = isP1 ? (y.lifTransferP1 || 0) : (y.lifTransferP2 || 0);
 
               {(nonTaxWds.length > 0 || refund > 0 || lifTransferAmt > 0) && (
                   <div className="mt-2 pt-2 border-top border-secondary border-opacity-25">
