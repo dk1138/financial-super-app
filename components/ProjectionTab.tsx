@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
 import html2canvas from 'html2canvas';
@@ -19,6 +19,8 @@ const getRrifFactor = (age: number) => {
 export default function ProjectionTab() {
   const { data, results } = useFinance();
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
+  const [phaseFilter, setPhaseFilter] = useState<'all' | 'pre' | 'ret' | 'milestones'>('all');
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   const toggleRow = (year: number) => {
     setExpandedYears(prev => {
@@ -29,29 +31,15 @@ export default function ProjectionTab() {
     });
   };
 
-  const toggleAllRows = () => {
-    if (!results?.timeline) return;
-    if (expandedYears.size === results.timeline.length) {
-      setExpandedYears(new Set());
-    } else {
-      setExpandedYears(new Set(results.timeline.map((y: any) => y.year)));
-    }
-  };
-
-  const jumpToYear = (year: number) => {
-    const el = document.getElementById(`proj-row-${year}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('table-primary');
-      setTimeout(() => el.classList.remove('table-primary'), 1500);
-    }
-  };
-  
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [jumpMenuOpen, setJumpMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
+
+  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setShowBackToTop(e.currentTarget.scrollTop > 250);
+  };
 
   const isCouple = data.mode === 'Couple';
 
@@ -263,6 +251,59 @@ export default function ProjectionTab() {
   const finalYear = results.timeline[results.timeline.length - 1];
   const finalEstate = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
 
+  const p1RetAgeVal = Number(data.inputs.p1_retireAge) || 65;
+  const p2RetAgeVal = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : null;
+  const rrifYrVal = results.timeline.find((y: any) => y.p1Age === 72)?.year;
+  const firstDepYearObjVal = results.timeline.find((y: any) => y.p1Age >= p1RetAgeVal && (y.liquidNW || 0) <= 1);
+  const firstDepYearVal = firstDepYearObjVal ? firstDepYearObjVal.year : null;
+
+  const filteredTimeline = useMemo(() => {
+    if (!results?.timeline) return [];
+    if (phaseFilter === 'pre') {
+      return results.timeline.filter((y: any) => y.p1Age < p1RetAgeVal);
+    }
+    if (phaseFilter === 'ret') {
+      return results.timeline.filter((y: any) => y.p1Age >= p1RetAgeVal);
+    }
+    if (phaseFilter === 'milestones') {
+      const startYr = results.timeline[0]?.year;
+      const endYr = results.timeline[results.timeline.length - 1]?.year;
+      return results.timeline.filter((y: any) => 
+        y.year === startYr ||
+        y.year === endYr ||
+        y.p1Age === p1RetAgeVal ||
+        (isCouple && p2RetAgeVal && y.p2Age === p2RetAgeVal) ||
+        y.year === rrifYrVal ||
+        y.year === firstDepYearVal ||
+        (y.events && y.events.length > 0)
+      );
+    }
+    return results.timeline;
+  }, [results?.timeline, phaseFilter, p1RetAgeVal, p2RetAgeVal, isCouple, rrifYrVal, firstDepYearVal]);
+
+  const toggleAllRows = () => {
+    if (expandedYears.size === filteredTimeline.length) {
+      setExpandedYears(new Set());
+    } else {
+      setExpandedYears(new Set(filteredTimeline.map((y: any) => y.year)));
+    }
+  };
+
+  const jumpToYear = (year: number) => {
+    if (phaseFilter !== 'all') {
+      const isVisible = filteredTimeline.some((y: any) => y.year === year);
+      if (!isVisible) setPhaseFilter('all');
+    }
+    setTimeout(() => {
+      const el = document.getElementById(`proj-row-${year}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('proj-jump-highlight');
+        setTimeout(() => el.classList.remove('proj-jump-highlight'), 2200);
+      }
+    }, 60);
+  };
+
 
 
   const getEventIcons = (events: string[], y?: any) => {
@@ -300,6 +341,10 @@ export default function ProjectionTab() {
               colorClass = "text-info"; icon = "bi-person-hearts";
           } else if (lower.includes('fhsa')) {
               colorClass = "text-info"; icon = "bi-house-heart-fill";
+          } else if (lower.includes('disability') || lower.includes('dtc')) {
+              colorClass = "text-info"; icon = "bi-shield-check";
+          } else if (lower.includes('lif unlocked') || lower.includes('transfer')) {
+              colorClass = "text-purple"; icon = "bi-arrow-left-right";
           } else if (lower.includes('rrsp')) {
               colorClass = "text-secondary"; icon = "bi-arrow-left-right";
           } else {
@@ -865,8 +910,29 @@ export default function ProjectionTab() {
           </div>
       )}
 
-      <div className="row g-2 g-md-3 mb-4">
-          <div className="col-12 col-md-4 col-xl">
+      <style>{`
+        @keyframes projJumpPulse {
+          0% {
+            box-shadow: inset 0 0 0 2px #3b82f6, inset 0 0 24px rgba(59, 130, 246, 0.45);
+            background-color: rgba(59, 130, 246, 0.22) !important;
+          }
+          60% {
+            box-shadow: inset 0 0 0 2px #3b82f6, inset 0 0 12px rgba(59, 130, 246, 0.3);
+            background-color: rgba(59, 130, 246, 0.14) !important;
+          }
+          100% {
+            box-shadow: inset 0 0 0 0 transparent;
+            background-color: transparent;
+          }
+        }
+        .proj-jump-highlight {
+          animation: projJumpPulse 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
+
+      {/* SUMMARY METRIC CARDS */}
+      <div className="row g-2 g-md-3 mb-3">
+          <div className="col-12 col-sm-6 col-md-4 col-xl">
               <div className={`border px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100 ${planSuccess ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
                   <span className="small fw-bold text-uppercase ls-1 me-2" style={{color: planSuccess ? 'var(--bs-success)' : 'var(--bs-danger)'}}>Status</span>
                   <span className={`fw-bold text-nowrap ${planSuccess ? 'text-success' : 'text-danger'}`}>
@@ -875,38 +941,74 @@ export default function ProjectionTab() {
               </div>
           </div>
 
-          <div className="col-12 col-md-4 col-xl">
+          <div className="col-12 col-sm-6 col-md-4 col-xl">
               <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100" title={`Reached at Age ${peakAge}`}>
-                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Peak NW <span className="d-none d-xxl-inline text-opacity-50">({peakAge})</span></span>
+                  <span className="small text-muted text-uppercase fw-bold ls-1 me-2 d-flex align-items-center">
+                    Peak NW <span className="d-none d-xxl-inline text-opacity-50 ms-1">({peakAge})</span>
+                    {data.useRealDollars && (
+                      <span className="badge bg-info bg-opacity-25 text-info ms-1 border border-info border-opacity-50" style={{ fontSize: '0.62rem', letterSpacing: '0.04em' }}>
+                        Today's $
+                      </span>
+                    )}
+                  </span>
                   <span className="fs-6 fw-bold text-info text-nowrap">{formatCurrency(peakNW)}</span>
               </div>
           </div>
 
-          <div className="col-12 col-md-4 col-xl">
+          <div className="col-12 col-sm-6 col-md-4 col-xl">
               <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
                   <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Ret. Years</span>
                   <span className="fs-6 fw-bold text-primary text-nowrap">{retYears} Yrs</span>
               </div>
           </div>
 
-          <div className="col-12 col-md-4 col-xl">
+          <div className="col-12 col-sm-6 col-md-4 col-xl">
               <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
                   <span className="small text-muted text-uppercase fw-bold ls-1 me-2">Tax Paid</span>
                   <span className="fs-6 fw-bold text-danger text-nowrap">{formatCurrency(totalTaxPaid)}</span>
               </div>
           </div>
 
-          <div className="col-12 col-md-4 col-xl">
+          <div className="col-12 col-sm-6 col-md-4 col-xl">
               <div className="bg-input border border-secondary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-between align-items-center h-100">
                   <span className="small text-muted text-uppercase fw-bold ls-1 me-2 d-flex align-items-center">
                       Estate <InfoBtn title="After-Tax Estate" text="The final value of your portfolio after applying terminal taxes to remaining RRSPs and Capital Gains." />
+                      {data.useRealDollars && (
+                        <span className="badge bg-info bg-opacity-25 text-info ms-1 border border-info border-opacity-50" style={{ fontSize: '0.62rem', letterSpacing: '0.04em' }}>
+                          Today's $
+                        </span>
+                      )}
                   </span>
                   <span className="fs-6 fw-bold text-success text-nowrap">{formatCurrency(finalEstate, finalYear.year)}</span>
               </div>
           </div>
+      </div>
 
-          {/* ACTIONS: QUICK JUMP, EXPAND/COLLAPSE, EXPORT */}
-          <div className="col-12 col-md-8 col-xl d-flex align-items-center justify-content-end gap-2 flex-wrap flex-sm-nowrap">
+      {/* DEDICATED TOOLBAR: PHASE FILTERS (LEFT) & ACTIONS (RIGHT) */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          {/* Phase Filter Segmented Pills */}
+          <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm">
+              {[
+                { id: 'all', label: `All Years (${results.timeline.length})`, icon: 'bi-grid-fill' },
+                { id: 'pre', label: 'Pre-Ret', icon: 'bi-briefcase-fill' },
+                { id: 'ret', label: 'Retirement', icon: 'bi-cup-hot-fill' },
+                { id: 'milestones', label: 'Milestones', icon: 'bi-flag-fill' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setPhaseFilter(tab.id as any)}
+                  className={`btn btn-sm rounded-pill py-1 px-3 fw-bold transition-all d-flex align-items-center gap-1.5 border-0 ${phaseFilter === tab.id ? 'bg-primary text-white shadow-sm' : 'text-muted hover-text-main'}`}
+                  style={{ fontSize: '0.75rem', height: '30px' }}
+                >
+                  <i className={`bi ${tab.icon}`} style={{ fontSize: '0.72rem' }}></i>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+          </div>
+
+          {/* Action Buttons: Jump To, Expand/Collapse, Export */}
+          <div className="d-flex align-items-center gap-2 flex-nowrap">
               {(() => {
                 const p1Ret = Number(data.inputs.p1_retireAge) || 65;
                 const retYr = results.timeline.find((y: any) => y.p1Age === p1Ret)?.year;
@@ -1045,8 +1147,8 @@ export default function ProjectionTab() {
                 title="Expand or collapse all yearly audit drawers"
               >
                 <span className="small fw-bold text-uppercase ls-1 text-info d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
-                  <i className={`bi bi-arrows-${expandedYears.size === results.timeline.length ? 'collapse' : 'expand'} me-1.5`}></i>
-                  {expandedYears.size === results.timeline.length ? 'Collapse All' : 'Expand All'}
+                  <i className={`bi bi-arrows-${expandedYears.size === filteredTimeline.length ? 'collapse' : 'expand'} me-1.5`}></i>
+                  {expandedYears.size === filteredTimeline.length ? 'Collapse All' : 'Expand All'}
                 </span>
               </button>
 
@@ -1063,29 +1165,29 @@ export default function ProjectionTab() {
                           <i className={`bi bi-chevron-${exportMenuOpen ? 'up' : 'down'} ms-1.5 text-primary text-opacity-75`} style={{ fontSize: '0.65rem' }}></i>
                       </span>
                   </div>
-              {exportMenuOpen && (
-                  <>
-                      <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
-                      <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-1" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '170px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)'}}>
-                          <li>
-                              <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-primary d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
-                                  <i className="bi bi-filetype-csv me-2 fs-6"></i> Export to CSV
-                              </button>
-                          </li>
-                          <li>
-                              <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-success d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
-                                  <i className="bi bi-image me-2 fs-6"></i> Export to PNG
-                              </button>
-                          </li>
-                      </ul>
-                  </>
-              )}
+                  {exportMenuOpen && (
+                      <>
+                          <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
+                          <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-1" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '170px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)'}}>
+                              <li>
+                                  <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-primary d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
+                                      <i className="bi bi-filetype-csv me-2 fs-6"></i> Export to CSV
+                                  </button>
+                              </li>
+                              <li>
+                                  <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-success d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
+                                      <i className="bi bi-image me-2 fs-6"></i> Export to PNG
+                                  </button>
+                              </li>
+                          </ul>
+                      </>
+                  )}
               </div>
           </div>
       </div>
 
-      <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm" ref={tableRef}>
-        <div className="table-responsive hide-scrollbar" style={{ maxHeight: '75vh' }}>
+      <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm position-relative">
+        <div className="table-responsive hide-scrollbar" style={{ maxHeight: '75vh' }} ref={tableRef} onScroll={handleTableScroll}>
           
           <table className="table table-hover align-middle mb-0" style={{ tableLayout: 'fixed', minWidth: '1100px', width: '100%' }}>
             
@@ -1108,7 +1210,17 @@ export default function ProjectionTab() {
                 const firstDepYearObj = results.timeline.find((y: any) => y.p1Age >= retAgeVal && (y.liquidNW || 0) <= 1);
                 const firstDepYear = firstDepYearObj ? firstDepYearObj.year : null;
 
-                return results.timeline.map((y: any, index: number) => {
+                if (filteredTimeline.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={8} className="py-5 text-center text-muted">
+                        <i className="bi bi-funnel fs-2 mb-2 d-block opacity-50"></i>
+                        <span className="fw-medium">No timeline years match the selected filter.</span>
+                      </td>
+                    </tr>
+                  );
+                }
+                return filteredTimeline.map((y: any, index: number) => {
                 const isExpanded = expandedYears.has(y.year);
                 
                 const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
@@ -1176,11 +1288,21 @@ export default function ProjectionTab() {
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} transition-all`}></i>
                       </td>
                       <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
-                        <div className="d-flex align-items-center flex-wrap">
+                        <div className="d-flex align-items-center flex-wrap gap-1">
                             <span className="fs-6 me-1">{y.year}</span>
                             {isLiquidDepleted && (
-                                <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-1 py-0.5 me-1" style={{ fontSize: '0.65rem' }}>
+                                <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-1 py-0.5" style={{ fontSize: '0.65rem' }}>
                                     Depleted
+                                </span>
+                            )}
+                            {y.p1Age === (Number(data.inputs.p1_retireAge) || 65) && (
+                                <span className="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-50 px-1.5 py-0.5" style={{ fontSize: '0.65rem' }}>
+                                    <i className="bi bi-cup-hot-fill me-1"></i>Retire
+                                </span>
+                            )}
+                            {y.p1Age === 72 && (
+                                <span className="badge bg-info bg-opacity-20 text-info border border-info border-opacity-50 px-1.5 py-0.5" style={{ fontSize: '0.65rem' }}>
+                                    <i className="bi bi-arrow-left-right me-1"></i>RRIF
                                 </span>
                             )}
                             {getEventIcons(y.events, y)}
@@ -1544,6 +1666,18 @@ export default function ProjectionTab() {
             </tbody>
           </table>
         </div>
+        {showBackToTop && (
+          <button
+            type="button"
+            onClick={() => tableRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-lg position-absolute bottom-0 end-0 m-3 d-flex align-items-center gap-1.5 transition-all"
+            style={{ zIndex: 30, fontSize: '0.75rem', opacity: 0.92 }}
+            title="Scroll back to top of table"
+          >
+            <i className="bi bi-arrow-up-circle-fill fs-6"></i>
+            <span className="fw-bold text-uppercase ls-1" style={{ fontSize: '0.72rem' }}>Top</span>
+          </button>
+        )}
       </div>
     </div>
   );

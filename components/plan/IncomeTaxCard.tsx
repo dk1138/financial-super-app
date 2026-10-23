@@ -1021,6 +1021,30 @@ export default function IncomeTaxCard() {
                                   <PercentInput className="form-control" value={data.inputs[`${p}_income_growth`]} onChange={(val: any) => updateInput(`${p}_income_growth`, val)} />
                               </div>
                           </div>
+                          {(() => {
+                              const pMetrics = p === 'p1' ? p1Metrics : p2Metrics;
+                              const netAnnual = pMetrics?.netIncome || 0;
+                              if (netAnnual <= 0) return null;
+                              const biWeekly = netAnnual / 26;
+                              const monthly = netAnnual / 12;
+                              return (
+                                  <div className="d-flex align-items-center justify-content-between pt-2.5 mt-3 border-top border-secondary border-opacity-25 flex-wrap gap-1">
+                                      <span className="small text-muted d-flex align-items-center gap-1.5" style={{ fontSize: '0.75rem' }}>
+                                          <i className="bi bi-wallet2 text-success"></i>
+                                          <span>Estimated Net Pay</span>
+                                      </span>
+                                      <div className="d-flex align-items-center gap-2">
+                                          <span className="small text-main fw-bold" style={{ fontSize: '0.78rem' }}>
+                                              {formatCurrency(biWeekly)}<span className="text-muted fw-normal" style={{ fontSize: '0.7rem' }}> /bi-wk</span>
+                                          </span>
+                                          <span className="text-secondary opacity-50">·</span>
+                                          <span className="small text-main fw-bold" style={{ fontSize: '0.78rem' }}>
+                                              {formatCurrency(monthly)}<span className="text-muted fw-normal" style={{ fontSize: '0.7rem' }}> /mo</span>
+                                          </span>
+                                      </div>
+                                  </div>
+                              );
+                          })()}
                       </div>
                   </div>
 
