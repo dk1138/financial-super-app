@@ -988,6 +988,7 @@ export default function ProjectionTab() {
                       </ul>
                   </>
               )}
+              </div>
           </div>
       </div>
 

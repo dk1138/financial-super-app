@@ -50,6 +50,13 @@ export function getLifMaxFactor(age: number, province: string) {
     return maxRates[type][age] || (type === 'g2' ? 0.2000 : 1.0000);
 }
 
+export function calcLifMaxLimit(age: number, province: string, balance: number, priorYearGain: number = 0): number {
+    if (balance <= 0) return 0;
+    const factor = getLifMaxFactor(age, province);
+    const statutoryLimit = balance * factor;
+    return Math.max(statutoryLimit, priorYearGain || 0);
+}
+
 export function calcBenefitAmount(maxAmount: number, startAge: number, proportion: number, retireAge: number, type: string, startMonthOffset: number = 0) { 
     let benefitValue = maxAmount * proportion;
     let monthsDifference = (startAge - 65) * 12 + startMonthOffset; 
