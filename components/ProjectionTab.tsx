@@ -545,10 +545,19 @@ export default function ProjectionTab() {
 
   const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
       if (!math) return "No yield.";
+      const cdnRate = (math.rate || 0) * 100;
+      const cdnAmt = math.amt || 0;
+      const forRate = (math.foreignRate || 0) * 100;
+      const forAmt = math.foreignAmt || 0;
+      const totalAmt = cdnAmt + forAmt;
+
+      let cdnStr = `<b>Cdn Div Yield:</b> ${cdnRate.toFixed(2)}%<br><b>Cdn Cash:</b> <span class="text-success">+$${formatStr(cdnAmt, year)}</span> <i>(Eligible DTC)</i>`;
+      let forStr = `<br><b>Foreign Div Yield:</b> ${forRate.toFixed(2)}%<br><b>Foreign Cash:</b> <span class="text-success">+$${formatStr(forAmt, year)}</span> <i>(100% Taxable)</i>`;
+
       if (useRealDollars) {
-          return `<b>Nominal Balance:</b> $${Math.round(math.bal).toLocaleString()}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Nominal Cash:</b> <span class="text-success">+$${Math.round(math.amt).toLocaleString()}</span><hr class="my-1 border-secondary"><b>In Today's $:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+          return `<b>Nominal Balance:</b> $${Math.round(math.bal || 0).toLocaleString()}<br>${cdnStr}${forStr}<hr class="my-1 border-secondary"><b>Total Yield Cash:</b> <span class="text-success">+$${Math.round(totalAmt).toLocaleString()}</span><br><b>In Today's $:</b> <span class="text-success">+$${formatStr(totalAmt, year)}</span>`;
       }
-      return `<b>Asset Balance:</b> $${formatStr(math.bal, year)}<br><b>Yield Rate:</b> ${(math.rate * 100).toFixed(2)}%<br><b>Cash Generated:</b> <span class="text-success">+$${formatStr(math.amt, year)}</span>`;
+      return `<b>Asset Balance:</b> $${formatStr(math.bal || 0, year)}<br>${cdnStr}${forStr}<hr class="my-1 border-secondary"><b>Total Yield Cash:</b> <span class="text-success">+$${formatStr(totalAmt, year)}</span>`;
   };
 
   const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number, threshold: number) => {
@@ -1150,7 +1159,7 @@ export default function ProjectionTab() {
                                                 )}
 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="text-muted ms-2">Non-Reg</span>
+                                                    <span className="text-muted ms-2 d-flex align-items-center">Non-Reg <InfoBtn title="Non-Registered Account" text={`<span class='text-info fw-bold'>Taxable Portfolio.</span><br>Holdings generate capital gains, eligible Canadian dividends, and ordinary foreign dividends.<hr class="my-1 border-secondary">${buildYieldTooltip(y.invYieldMathP1, y.year, data.useRealDollars)}`} align="left" /></span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['nonreg'], ['Non-Reg'], y.year)}
                                                         <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.nonreg || 0, y.year)}</span>
@@ -1240,7 +1249,7 @@ export default function ProjectionTab() {
                                                 )}
 
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="text-muted ms-2">Non-Reg</span>
+                                                    <span className="text-muted ms-2 d-flex align-items-center">Non-Reg <InfoBtn title="Non-Registered Account" text={`<span class='text-info fw-bold'>Taxable Portfolio.</span><br>Holdings generate capital gains, eligible Canadian dividends, and ordinary foreign dividends.<hr class="my-1 border-secondary">${buildYieldTooltip(y.invYieldMathP2, y.year, data.useRealDollars)}`} align="left" /></span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p2', ['nonreg'], ['Non-Reg'], y.year)}
                                                         <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.nonreg || 0, y.year)}</span>
