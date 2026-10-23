@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { useFinance } from '../lib/FinanceContext';
 import ExpenseHeaderActions from './expenses/ExpenseHeaderActions';
+import { ENGINE_VERSION } from '../lib/financeEngine';
 
 export default function GlobalHeader() {
     const { data: session } = useSession();
@@ -301,37 +302,53 @@ export default function GlobalHeader() {
                         </div>
                     </div>
                     
-                    {/* 2. CENTER: File Menu (Absolutely Positioned to prevent layout breaking) */}
+                    {/* 2. CENTER: File Menu & Version Badge */}
                     {activeModule === 'planner' && (
-                        <div ref={fileMenuRef} className="d-none d-lg-block position-absolute start-50 translate-middle-x" style={{ zIndex: 1050 }}>
-                            <button 
-                                className="btn btn-sm d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all border border-primary border-opacity-25" 
-                                type="button" 
-                                onClick={() => setFileMenuOpen(!fileMenuOpen)} 
-                                style={{ height: '40px', backgroundColor: 'rgba(13, 110, 253, 0.08)' }}
+                        <div ref={fileMenuRef} className="d-none d-lg-flex align-items-center gap-2 position-absolute start-50 translate-middle-x" style={{ zIndex: 1050 }}>
+                            <div className="position-relative">
+                                <button 
+                                    className="btn btn-sm d-flex align-items-center fw-bold rounded-pill px-3 shadow-sm transition-all border border-primary border-opacity-25" 
+                                    type="button" 
+                                    onClick={() => setFileMenuOpen(!fileMenuOpen)} 
+                                    style={{ height: '40px', backgroundColor: 'rgba(13, 110, 253, 0.08)' }}
+                                >
+                                    <i className="bi bi-folder2-open text-primary me-2 fs-5"></i>
+                                    <span className="text-truncate d-inline-block text-primary" style={{ maxWidth: '250px', fontSize: '0.95rem', letterSpacing: '0.3px' }}>
+                                        {activePlanName}
+                                    </span>
+                                    <span className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center ms-3 shadow-sm" style={{ width: '24px', height: '24px' }}>
+                                        <i className={`bi bi-chevron-${fileMenuOpen ? 'up' : 'down'}`} style={{ fontSize: '0.8rem', strokeWidth: '2px' }}></i>
+                                    </span>
+                                </button>
+                                
+                                {fileMenuOpen && (
+                                    <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 start-50 translate-middle-x" style={{zIndex: 1060, top: '100%', minWidth: '260px'}}>
+                                        <li>
+                                            <h6 className="dropdown-header text-muted text-uppercase ls-1 d-flex justify-content-between align-items-center" style={{fontSize: '0.7rem'}}>
+                                                <span>File Options</span>
+                                                <span className="badge bg-secondary bg-opacity-25 text-secondary">v{ENGINE_VERSION}</span>
+                                            </h6>
+                                        </li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
+                                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
+                                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
+                                    </ul>
+                                )}
+                            </div>
+
+                            {/* VERSION BADGE */}
+                            <span 
+                                className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold shadow-sm" 
+                                style={{ fontSize: '0.75rem', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}
+                                title={`Planfolio Version ${ENGINE_VERSION}`}
                             >
-                                <i className="bi bi-folder2-open text-primary me-2 fs-5"></i>
-                                <span className="text-truncate d-inline-block text-primary" style={{ maxWidth: '250px', fontSize: '0.95rem', letterSpacing: '0.3px' }}>
-                                    {activePlanName}
-                                </span>
-                                <span className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center ms-3 shadow-sm" style={{ width: '24px', height: '24px' }}>
-                                    <i className={`bi bi-chevron-${fileMenuOpen ? 'up' : 'down'}`} style={{ fontSize: '0.8rem', strokeWidth: '2px' }}></i>
-                                </span>
-                            </button>
-                            
-                            {fileMenuOpen && (
-                                <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 start-50 translate-middle-x" style={{zIndex: 1060, top: '100%', minWidth: '260px'}}>
-                                    <li><h6 className="dropdown-header text-muted text-uppercase ls-1" style={{fontSize: '0.7rem'}}>File Options</h6></li>
-                                    <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
-                                    <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
-                                    <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                                    <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
-                                    <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
-                                    <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
-                                    <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                                    <li><button className="dropdown-item py-2 fw-bold text-danger" onClick={() => { setShowResetConfirm(true); setFileMenuOpen(false); }}><i className="bi bi-trash3-fill me-2"></i> Reset Current Plan</button></li>
-                                </ul>
-                            )}
+                                v{ENGINE_VERSION}
+                            </span>
                         </div>
                     )}
 
