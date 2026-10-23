@@ -140,7 +140,7 @@ export default function GovtBenefitsCard() {
                                             <div className="flex-grow-1">
                                                 <StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} />
                                             </div>
-                                            <div style={{width: '80px', flexShrink: 0}}>
+                                            <div style={{width: '84px', flexShrink: 0}}>
                                                 <ModernDropdown 
                                                     pill 
                                                     value={data.inputs[`${p}_cpp_start_month`] ?? 1} 
@@ -182,7 +182,7 @@ export default function GovtBenefitsCard() {
                                             <div className="flex-grow-1">
                                                 <StepperInput min={65} max={70} value={oasStart} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} />
                                             </div>
-                                            <div style={{width: '80px', flexShrink: 0}}>
+                                            <div style={{width: '84px', flexShrink: 0}}>
                                                 <ModernDropdown 
                                                     pill 
                                                     value={data.inputs[`${p}_oas_start_month`] ?? 1} 
@@ -240,7 +240,7 @@ export default function GovtBenefitsCard() {
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} />
                                                 </div>
-                                                <div style={{width: '80px', flexShrink: 0}}>
+                                                <div style={{width: '84px', flexShrink: 0}}>
                                                     <ModernDropdown 
                                                         pill 
                                                         value={data.inputs[`${p}_db_lifetime_start_month`] ?? 1} 
@@ -264,7 +264,7 @@ export default function GovtBenefitsCard() {
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} />
                                                 </div>
-                                                <div style={{width: '80px', flexShrink: 0}}>
+                                                <div style={{width: '84px', flexShrink: 0}}>
                                                     <ModernDropdown 
                                                         pill 
                                                         value={data.inputs[`${p}_db_bridge_start_month`] ?? 1} 

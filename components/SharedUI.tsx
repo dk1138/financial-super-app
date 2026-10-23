@@ -182,7 +182,7 @@ export const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) =>
     };
     
     return (
-        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm w-100 justify-content-between">
+        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm w-100 justify-content-between" style={{ height: "38px" }}>
             <button type="button" className="btn btn-sm btn-link text-muted p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
             <div className="d-flex align-items-center justify-content-center flex-grow-1">
                 <input 
@@ -323,7 +323,7 @@ export const ModernDropdown = ({
     pill?: boolean
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [coords, setCoords] = useState({ top: 0, left: 0, width: 140, openUp: false });
+    const [coords, setCoords] = useState<{ top: number, left: number, width: number, height: number, openUp: boolean }>({ top: 0, left: 0, width: 140, height: 360, openUp: false });
     const triggerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -331,14 +331,34 @@ export const ModernDropdown = ({
         e.stopPropagation();
         if (!isOpen && triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
-            const menuHeight = Math.min(options.length * 36 + 12, 220);
-            const spaceBelow = window.innerHeight - rect.bottom;
-            const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
-            const menuWidth = Math.max(rect.width, (options.length > 5 && !options[0]?.icon) ? 84 : 140);
+            // 12 months * ~29px + 10px padding = ~358px; allow full list without scrolling
+            const desiredHeight = Math.min(options.length * 30 + 10, 365);
+            const spaceBelow = window.innerHeight - rect.bottom - 12;
+            const spaceAbove = rect.top - 12;
+            
+            let openUp = false;
+            let menuHeight = desiredHeight;
+            
+            if (spaceBelow >= desiredHeight) {
+                openUp = false;
+                menuHeight = desiredHeight;
+            } else if (spaceAbove >= desiredHeight) {
+                openUp = true;
+                menuHeight = desiredHeight;
+            } else if (spaceBelow >= spaceAbove) {
+                openUp = false;
+                menuHeight = Math.max(160, spaceBelow);
+            } else {
+                openUp = true;
+                menuHeight = Math.max(160, spaceAbove);
+            }
+
+            const menuWidth = Math.max(rect.width, (options.length > 5 && !options[0]?.icon) ? 90 : 140);
             setCoords({
                 top: openUp ? Math.max(10, rect.top - menuHeight - 4) : (rect.bottom + 4),
                 left: Math.max(10, Math.min(rect.left, window.innerWidth - menuWidth - 10)),
                 width: menuWidth,
+                height: menuHeight,
                 openUp
             });
         }
@@ -368,17 +388,18 @@ export const ModernDropdown = ({
     }, [isOpen]);
 
     const selected = options.find((a: any) => String(a.id) === String(value)) || options[0] || { label: 'Select' };
+    const targetHeight = pill ? '38px' : '31px';
 
     return (
         <div className="position-relative w-100" ref={triggerRef}>
             <div 
-                className={`d-flex justify-content-between align-items-center bg-input border ${isOpen ? 'border-primary shadow' : 'border-secondary shadow-sm'} ${pill ? 'rounded-pill px-2.5' : 'rounded-3 px-2'} cursor-pointer text-main user-select-none transition-all ${className}`}
-                style={{ height: '31px', minHeight: '31px', ...style }}
+                className={`d-flex justify-content-between align-items-center bg-input border ${isOpen ? 'border-primary shadow' : 'border-secondary shadow-sm'} ${pill ? 'rounded-pill px-3' : 'rounded-3 px-2'} cursor-pointer text-main user-select-none transition-all ${className}`}
+                style={{ height: targetHeight, minHeight: targetHeight, ...style }}
                 onClick={toggle}
             >
                 <div className="d-flex align-items-center gap-1.5 overflow-hidden me-1">
                     {selected.icon && <i className={`bi ${selected.icon} ${selected.color || 'text-muted'} flex-shrink-0`} style={{fontSize: '0.85rem'}}></i>}
-                    <span className="fw-bold text-truncate" style={{fontSize: '0.75rem'}}>{selected.label}</span>
+                    <span className="fw-bold text-truncate" style={{fontSize: pill ? '0.8rem' : '0.75rem'}}>{selected.label}</span>
                 </div>
                 <i className={`bi bi-chevron-${isOpen ? 'up text-primary' : 'down text-muted'} flex-shrink-0`} style={{fontSize: '0.7rem'}}></i>
             </div>
@@ -386,18 +407,20 @@ export const ModernDropdown = ({
             {isOpen && typeof document !== 'undefined' && createPortal(
                 <div 
                     ref={menuRef}
-                    className="position-fixed rounded-3 shadow-lg border border-secondary overflow-hidden"
+                    className="position-fixed rounded-3 shadow-lg border border-secondary"
                     style={{
                         top: coords.top,
                         left: coords.left,
                         width: coords.width,
+                        maxHeight: `${coords.height}px`,
                         backgroundColor: 'var(--bg-card)',
                         zIndex: 99999,
-                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.5)'
+                        boxShadow: '0 12px 28px -4px rgba(0,0,0,0.65), 0 8px 10px -6px rgba(0,0,0,0.5)',
+                        overflowY: 'auto'
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="d-flex flex-column py-1 hide-scrollbar" style={{maxHeight: '220px', overflowY: 'auto'}}>
+                    <div className="d-flex flex-column py-1">
                         {options.map((opt: any) => {
                             const isSelected = String(value) === String(opt.id);
                             return (
