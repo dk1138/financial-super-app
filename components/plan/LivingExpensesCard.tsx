@@ -195,8 +195,8 @@ export default function LivingExpensesCard() {
         {/* --- CATEGORY TABLES --- */}
         <div className="d-flex flex-column gap-4">
             {Object.keys(data.expensesByCategory).map(cat => (
-                <div className="card surface-card border-secondary shadow-sm rounded-4" key={cat}>
-                    <div className="card-header bg-secondary bg-opacity-10 border-bottom border-secondary d-flex justify-content-between align-items-center p-3 rounded-top-4">
+                <div className="card surface-card border-secondary shadow-sm rounded-4 overflow-hidden" key={cat}>
+                    <div className="card-header bg-secondary bg-opacity-10 border-bottom border-secondary d-flex justify-content-between align-items-center p-3">
                         <h6 className="text-uppercase mb-0 fw-bold d-flex align-items-center gap-2">
                             {getCategoryIcon(cat)} <span className="ls-1">{cat}</span>
                         </h6>

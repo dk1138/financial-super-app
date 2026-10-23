@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 // --- FLUID TOOLTIP ---
 export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title: string, text: string, align?: 'center'|'right'|'left', direction?: 'up'|'down' }) => {
@@ -307,34 +308,112 @@ export const FrequencyToggle = ({ value, onChange, mode = 'number' }: { value: a
 
 // --- MODERN DROPDOWN ---
 export const ModernDropdown = ({ value, onChange, options }: { value: string, onChange: (val: string) => void, options: {id: string, label: string, icon?: string, color?: string}[] }) => {
-    const selected = options.find(a => a.id === value) || options[0] || { label: 'Select' };
+    const [isOpen, setIsOpen] = useState(false);
+    const [coords, setCoords] = useState({ top: 0, left: 0, width: 140, openUp: false });
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    const toggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isOpen && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const menuHeight = Math.min(options.length * 38 + 12, 220);
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+            setCoords({
+                top: openUp ? Math.max(10, rect.top - menuHeight - 4) : (rect.bottom + 4),
+                left: Math.max(10, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 150) - 10)),
+                width: Math.max(rect.width, 145),
+                openUp
+            });
+        }
+        setIsOpen(!isOpen);
+    };
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleClose = (e: MouseEvent) => {
+            if (
+                triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+                menuRef.current && !menuRef.current.contains(e.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        };
+        const handleScroll = () => setIsOpen(false);
+
+        document.addEventListener('mousedown', handleClose);
+        window.addEventListener('scroll', handleScroll, true);
+        window.addEventListener('resize', handleScroll);
+        return () => {
+            document.removeEventListener('mousedown', handleClose);
+            window.removeEventListener('scroll', handleScroll, true);
+            window.removeEventListener('resize', handleScroll);
+        };
+    }, [isOpen]);
+
+    const selected = options.find((a: any) => a.id === value) || options[0] || { label: 'Select' };
 
     return (
-        <div className="position-relative w-100">
+        <div className="position-relative w-100" ref={triggerRef}>
             <div 
-                className="d-flex justify-content-between align-items-center bg-input border border-secondary shadow-sm rounded-3 px-2 text-main user-select-none transition-all"
+                className={`d-flex justify-content-between align-items-center bg-input border ${isOpen ? 'border-primary shadow' : 'border-secondary shadow-sm'} rounded-3 px-2 cursor-pointer text-main user-select-none transition-all`}
                 style={{ height: '31px' }}
+                onClick={toggle}
             >
                 <div className="d-flex align-items-center gap-1.5 overflow-hidden me-1">
                     {selected.icon && <i className={`bi ${selected.icon} ${selected.color || 'text-muted'} flex-shrink-0`} style={{fontSize: '0.85rem'}}></i>}
                     <span className="fw-bold text-truncate" style={{fontSize: '0.75rem'}}>{selected.label}</span>
                 </div>
-                <i className="bi bi-chevron-down text-muted flex-shrink-0" style={{fontSize: '0.7rem'}}></i>
+                <i className={`bi bi-chevron-${isOpen ? 'up text-primary' : 'down text-muted'} flex-shrink-0`} style={{fontSize: '0.7rem'}}></i>
             </div>
-            
-            <select 
-                className="position-absolute top-0 start-0 w-100 h-100 opacity-0 cursor-pointer"
-                style={{ zIndex: 10, fontSize: '0.85rem' }}
-                value={value} 
-                onChange={(e) => onChange(e.target.value)}
-                title={selected.label}
-            >
-                {options.map(opt => (
-                    <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
+
+            {isOpen && typeof document !== 'undefined' && createPortal(
+                <div 
+                    ref={menuRef}
+                    className="position-fixed rounded-3 shadow-lg border border-secondary overflow-hidden"
+                    style={{
+                        top: coords.top,
+                        left: coords.left,
+                        width: coords.width,
+                        backgroundColor: 'var(--bg-card)',
+                        zIndex: 99999,
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.5)'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="d-flex flex-column py-1 hide-scrollbar" style={{maxHeight: '220px', overflowY: 'auto'}}>
+                        {options.map((opt: any) => {
+                            const isSelected = value === opt.id;
+                            return (
+                                <div 
+                                    key={opt.id}
+                                    className={`d-flex align-items-center gap-2 px-3 py-2 cursor-pointer transition-all ${isSelected ? 'text-primary fw-bold' : 'text-main'}`}
+                                    style={{ 
+                                        fontSize: '0.75rem', 
+                                        lineHeight: '1.4',
+                                        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent';
+                                    }}
+                                    onClick={() => {
+                                        onChange(opt.id);
+                                        setIsOpen(false);
+                                    }}
+                                >
+                                    {opt.icon && <i className={`bi ${opt.icon} ${opt.color || 'text-muted'}`} style={{fontSize: '0.85rem'}}></i>}
+                                    <span>{opt.label}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };
