@@ -476,7 +476,23 @@ export default function ProjectionTab() {
       if (cpp > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>CPP:</span> <span>$${formatStr(cpp, year)}</span></div>`; sum += cpp; }
       if (oas > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>OAS:</span> <span>$${formatStr(oas, year)}</span></div>`; sum += oas; }
       if (db > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Pension:</span> <span>$${formatStr(db, year)}</span></div>`; sum += db; }
-      if (invInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Inv. Yield:</span> <span>$${formatStr(invInc, year)}</span></div>`; sum += invInc; }
+      const yieldMath = isP1 ? y.invYieldMathP1 : y.invYieldMathP2;
+      const cdnDiv = yieldMath?.amt || 0;
+      const forDiv = yieldMath?.foreignAmt || 0;
+      const cryptoYield = Math.max(0, (invInc || 0) - cdnDiv - forDiv);
+
+      if (cdnDiv > 0) { 
+          breakdownStr += `<div class="d-flex justify-content-between"><span>Cdn Dividends (Eligible):</span> <span>$${formatStr(cdnDiv, year)}</span></div>`; 
+          sum += cdnDiv; 
+      }
+      if (forDiv > 0) { 
+          breakdownStr += `<div class="d-flex justify-content-between"><span>Foreign Dividends (Ordinary):</span> <span>$${formatStr(forDiv, year)}</span></div>`; 
+          sum += forDiv; 
+      }
+      if (cryptoYield > 0) { 
+          breakdownStr += `<div class="d-flex justify-content-between"><span>Crypto Yield:</span> <span>$${formatStr(cryptoYield, year)}</span></div>`; 
+          sum += cryptoYield; 
+      }
 
       const wdKeys = Object.keys(y.flows?.withdrawals || {}).filter(k => k.startsWith(pUpper) && y.flows.withdrawals[k] > 0);
       const taxableWds = wdKeys.filter(k => !k.includes('TFSA') && !k.includes('FHSA') && !k.includes('Cash') && !k.includes('RESP'));
@@ -686,10 +702,22 @@ export default function ProjectionTab() {
                       <span className="text-success">+{formatCurrency(ccb, year)}</span>
                   </div>
               )}
-              {invInc > 0 && (
+              {invYieldMath?.amt > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Non-Reg Yield <InfoBtn title="Yield Calc" text={`<span class='text-info fw-bold'>Partially Taxable.</span><br>Taxed as interest, dividends, or capital gains.<hr class="my-1 border-secondary">${buildYieldTooltip(invYieldMath, year, data.useRealDollars)}`} align="left" /></span>
-                      <span className="text-success">+{formatCurrency(invInc, year)}</span>
+                      <span className="d-flex align-items-center text-muted ms-2">Cdn Div Yield <InfoBtn title="Canadian Eligible Dividends" text={`<span class='text-info fw-bold'>Eligible Dividend.</span><br>Subject to 38% gross-up and federal/provincial Dividend Tax Credit.<hr class="my-1 border-secondary"><b>Nominal Balance:</b> $${Math.round(invYieldMath.bal || 0).toLocaleString()}<br><b>Yield:</b> ${(invYieldMath.rate * 100).toFixed(2)}%<br><b>Cash Received:</b> <span class='text-success'>+$${formatStr(invYieldMath.amt, year)}</span>`} align="left" /></span>
+                      <span className="text-success">+{formatCurrency(invYieldMath.amt, year)}</span>
+                  </div>
+              )}
+              {invYieldMath?.foreignAmt > 0 && (
+                  <div className="d-flex justify-content-between small mb-1 mt-1">
+                      <span className="d-flex align-items-center text-muted ms-2">Foreign Div Yield <InfoBtn title="Foreign Dividends" text={`<span class='text-info fw-bold'>100% Taxable.</span><br>Taxed as ordinary foreign income at your marginal rate (no Canadian gross-up or dividend tax credit).<hr class="my-1 border-secondary"><b>Nominal Balance:</b> $${Math.round(invYieldMath.bal || 0).toLocaleString()}<br><b>Yield:</b> ${(invYieldMath.foreignRate * 100).toFixed(2)}%<br><b>Cash Received:</b> <span class='text-success'>+$${formatStr(invYieldMath.foreignAmt, year)}</span>`} align="left" /></span>
+                      <span className="text-success">+{formatCurrency(invYieldMath.foreignAmt, year)}</span>
+                  </div>
+              )}
+              {Math.max(0, (invInc || 0) - (invYieldMath?.amt || 0) - (invYieldMath?.foreignAmt || 0)) > 0 && (
+                  <div className="d-flex justify-content-between small mb-1 mt-1">
+                      <span className="d-flex align-items-center text-muted ms-2">Crypto Yield <InfoBtn title="Crypto Yield" text="Staking or distribution income from crypto holdings. 100% taxable as regular income." align="left" /></span>
+                      <span className="text-success">+{formatCurrency(Math.max(0, (invInc || 0) - (invYieldMath?.amt || 0) - (invYieldMath?.foreignAmt || 0)), year)}</span>
                   </div>
               )}
 
