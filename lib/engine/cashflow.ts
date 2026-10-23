@@ -18,7 +18,8 @@ export function calcTaxableCapitalGain(gain: number, priorGainInYear: number = 0
 export function applyPensionSplitting(
     ti1: number, ti2: number, inflows: any, regMins: any, 
     age1: number, age2: number, applyFn: Function,
-    wdBreakdown?: any
+    wdBreakdown?: any,
+    taxEvaluator?: (t1: number, t2: number, p1Elig: number, p2Elig: number) => number
 ) {
     // Eligible pension income under CRA rules (ITA s. 60.03):
     // 1. Lifetime DB company pensions (any age / 55+)
@@ -33,39 +34,80 @@ export function applyPensionSplitting(
     let p1Eligible = (inflows?.p1?.pension || 0) + p1RrifLif;
     let p2Eligible = (inflows?.p2?.pension || 0) + p2RrifLif;
 
-    if (ti1 > ti2 && p1Eligible > 0) {
-        let maxTransfer = p1Eligible * 0.50; // CRA statutory 50% maximum limit
-        let incomeDiff = ti1 - ti2;
-        let transferToEqualize = incomeDiff / 2;
-        
-        // Target \$2,000 of pension income for P2 to unlock the federal Pension Income Tax Credit (Line 31400)
-        let p2CreditTarget = p2Eligible < 2000 ? (2000 - p2Eligible) : 0;
-        let optimalTransfer = Math.max(transferToEqualize, p2CreditTarget);
+    const evaluateTransfer = (direction: 'p1_to_p2' | 'p2_to_p1', fromElig: number, toElig: number, fromTi: number, toTi: number) => {
+        const maxTransfer = fromElig * 0.50; // CRA statutory 50% limit
+        if (maxTransfer <= 0) return { bestTransfer: 0, minTax: Infinity };
 
-        // Never transfer so much that P2 ends up with higher taxable income than P1
-        if (ti1 - optimalTransfer < ti2 + optimalTransfer) {
-            optimalTransfer = Math.max(0, transferToEqualize);
+        // Test candidate transfer amounts:
+        // 1. 0% to 50% in 5% increments
+        // 2. Exact equalization amount ((fromTi - toTi) / 2)
+        // 3. ,000 federal pension credit threshold for the receiving spouse
+        const candidates = new Set<number>();
+        candidates.add(0);
+        for (let pct = 0.05; pct <= 0.50; pct += 0.05) {
+            candidates.add(Math.round(fromElig * pct));
         }
-        optimalTransfer = Math.min(maxTransfer, Math.max(0, optimalTransfer));
-
-        if (optimalTransfer > 0) {
-            applyFn(ti1 - optimalTransfer, ti2 + optimalTransfer, optimalTransfer, 'p1_to_p2');
+        if (fromTi > toTi) {
+            candidates.add(Math.round((fromTi - toTi) / 2));
         }
-    } else if (ti2 > ti1 && p2Eligible > 0) {
-        let maxTransfer = p2Eligible * 0.50;
-        let incomeDiff = ti2 - ti1;
-        let transferToEqualize = incomeDiff / 2;
-        
-        let p1CreditTarget = p1Eligible < 2000 ? (2000 - p1Eligible) : 0;
-        let optimalTransfer = Math.max(transferToEqualize, p1CreditTarget);
-
-        if (ti2 - optimalTransfer < ti1 + optimalTransfer) {
-            optimalTransfer = Math.max(0, transferToEqualize);
+        if (toElig < 2000) {
+            candidates.add(Math.round(2000 - toElig));
         }
-        optimalTransfer = Math.min(maxTransfer, Math.max(0, optimalTransfer));
 
-        if (optimalTransfer > 0) {
-            applyFn(ti1 + optimalTransfer, ti2 - optimalTransfer, optimalTransfer, 'p2_to_p1');
+        let bestTransfer = 0;
+        let lowestTax = Infinity;
+
+        if (taxEvaluator) {
+            for (let amt of Array.from(candidates)) {
+                if (amt < 0 || amt > maxTransfer) continue;
+                if (fromTi - amt < toTi + amt && amt > (fromTi - toTi) / 2 && (fromTi - toTi) > 0) continue;
+
+                const newFromTi = fromTi - amt;
+                const newToTi = toTi + amt;
+                const newFromElig = fromElig - amt;
+                const newToElig = toElig + amt;
+
+                const tax = direction === 'p1_to_p2'
+                    ? taxEvaluator(newFromTi, newToTi, newFromElig, newToElig)
+                    : taxEvaluator(newToTi, newFromTi, newToElig, newFromElig);
+
+                if (tax < lowestTax) {
+                    lowestTax = tax;
+                    bestTransfer = amt;
+                }
+            }
+        } else {
+            let incomeDiff = fromTi - toTi;
+            let transferToEqualize = incomeDiff / 2;
+            let creditTarget = toElig < 2000 ? (2000 - toElig) : 0;
+            bestTransfer = Math.max(transferToEqualize, creditTarget);
+            if (fromTi - bestTransfer < toTi + bestTransfer) {
+                bestTransfer = Math.max(0, transferToEqualize);
+            }
+            bestTransfer = Math.min(maxTransfer, Math.max(0, bestTransfer));
+        }
+
+        return { bestTransfer, minTax: lowestTax };
+    };
+
+    if (p1Eligible > 0 && p2Eligible > 0) {
+        const resP1 = evaluateTransfer('p1_to_p2', p1Eligible, p2Eligible, ti1, ti2);
+        const resP2 = evaluateTransfer('p2_to_p1', p2Eligible, p1Eligible, ti2, ti1);
+
+        if (resP1.bestTransfer > 0 && resP1.minTax <= resP2.minTax) {
+            applyFn(ti1 - resP1.bestTransfer, ti2 + resP1.bestTransfer, resP1.bestTransfer, 'p1_to_p2');
+        } else if (resP2.bestTransfer > 0 && resP2.minTax < resP1.minTax) {
+            applyFn(ti1 + resP2.bestTransfer, ti2 - resP2.bestTransfer, resP2.bestTransfer, 'p2_to_p1');
+        }
+    } else if (p1Eligible > 0) {
+        const res = evaluateTransfer('p1_to_p2', p1Eligible, p2Eligible, ti1, ti2);
+        if (res.bestTransfer > 0) {
+            applyFn(ti1 - res.bestTransfer, ti2 + res.bestTransfer, res.bestTransfer, 'p1_to_p2');
+        }
+    } else if (p2Eligible > 0) {
+        const res = evaluateTransfer('p2_to_p1', p2Eligible, p1Eligible, ti2, ti1);
+        if (res.bestTransfer > 0) {
+            applyFn(ti1 + res.bestTransfer, ti2 - res.bestTransfer, res.bestTransfer, 'p2_to_p1');
         }
     }
 }

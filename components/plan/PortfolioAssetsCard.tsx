@@ -243,11 +243,24 @@ export default function PortfolioAssetsCard() {
                                           <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}_acb`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}_acb`, val)} placeholder="$0" />
                                       </div>
                                       <div style={{flex: '0 0 75px'}} className="position-relative">
-                                          <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>Yld</span>
+                                          <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>{acct === 'nonreg' ? 'Cdn' : 'Yld'}</span>
                                           <PercentInput disabled={hasAutoAllocation && acct !== 'crypto'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct}_yield`]} onChange={(val: any) => updateInput(`${p}_${acct}_yield`, val)} placeholder="Yield" />
                                       </div>
                                       {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                   </div>
+                                  {acct === 'nonreg' && (
+                                      <div className="d-flex align-items-center gap-2 mt-1 pt-1 border-top border-secondary border-opacity-10 w-100">
+                                          <div className="d-flex justify-content-end align-items-center pe-1" style={{flex: '0 0 135px'}}>
+                                              <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>For. Div Yld</span>
+                                              <InfoBtn direction="up" title="Foreign Dividend Yield" text="Foreign dividend yield (e.g., US stocks, global ETFs). Taxed at 100% as regular foreign income (no Canadian gross-up or dividend tax credit). Assumes Foreign Tax Credit (FTC) offsets Foreign Withholding Tax (FWT)." />
+                                          </div>
+                                          <div style={{flex: '1 1 0%', minWidth: '80px'}}></div>
+                                          <div style={{flex: '0 0 75px'}} className="position-relative">
+                                              <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1" value={data.inputs[`${p}_nonreg_foreign_yield`]} onChange={(val: any) => updateInput(`${p}_nonreg_foreign_yield`, val)} placeholder="0.0%" />
+                                          </div>
+                                          {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
+                                      </div>
+                                  )}
                               </div>
                           ))}
 
@@ -314,6 +327,7 @@ export default function PortfolioAssetsCard() {
                                                   </div>
 
                                                   {isNonReg && (
+                                                      <>
                                                       <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
                                                           <div style={{flex: '0 0 24px'}}></div>
                                                           <div style={{flex: '0 0 130px'}}></div>
@@ -325,11 +339,27 @@ export default function PortfolioAssetsCard() {
                                                               <CurrencyInput className="form-control form-control-sm" value={ca.acb ?? ''} onChange={(val: any) => updateCa('acb', val)} placeholder="$0" />
                                                           </div>
                                                           <div style={{flex: '0 0 75px'}} className="position-relative">
-                                                              <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>Yld</span>
+                                                              <span className="position-absolute text-muted small fw-bold text-uppercase ls-1" style={{left: '-30px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.65rem'}}>{ca.type === 'nonreg' ? 'Cdn' : 'Yld'}</span>
                                                               <PercentInput disabled={hasAutoAllocation && ca.type !== 'crypto'} className="form-control form-control-sm px-1" value={ca.yield ?? ''} onChange={(val: any) => updateCa('yield', val)} placeholder="Yield" />
                                                           </div>
                                                           {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                                       </div>
+                                                   {ca.type === 'nonreg' && (
+                                                       <div className="d-flex align-items-center gap-2 mt-1 pt-1 border-top border-secondary border-opacity-10 w-100">
+                                                           <div style={{flex: '0 0 24px'}}></div>
+                                                           <div style={{flex: '0 0 130px'}}></div>
+                                                           <div style={{flex: '1 1 0%', minWidth: '60px'}} className="d-flex justify-content-end align-items-center pe-1">
+                                                               <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>For. Yld</span>
+                                                               <InfoBtn direction="up" title="Foreign Dividend Yield" text="Foreign dividend yield (100% ordinary taxable income, no Canadian gross-up or dividend tax credit)." />
+                                                           </div>
+                                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}></div>
+                                                           <div style={{flex: '0 0 75px'}} className="position-relative">
+                                                               <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1" value={ca.foreignYield ?? ''} onChange={(val: any) => updateCa('foreignYield', val)} placeholder="0.0%" />
+                                                           </div>
+                                                           {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
+                                                       </div>
+                                                   )}
+                                                      </>
                                                   )}
                                               </div>
                                           );

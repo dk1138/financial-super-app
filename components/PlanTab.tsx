@@ -276,8 +276,12 @@ export default function PlanTab() {
         .floating-readiness-island {
             max-width: 680px;
             width: 100%;
-            background-color: rgba(15, 23, 42, 0.92);
+            background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+        [data-bs-theme="dark"] .floating-readiness-island {
+            background-color: rgba(15, 23, 42, 0.92);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
         }
       `}</style>
@@ -511,7 +515,7 @@ export default function PlanTab() {
                 </span>
                 {liveStats.useRealDollars && (
                   <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 d-none d-sm-inline-block" style={{ fontSize: '0.62rem' }}>
-                    Tdoay's $
+                    Today's $
                   </span>
                 )}
               </div>
