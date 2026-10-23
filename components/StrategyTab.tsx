@@ -206,10 +206,17 @@ export default function StrategyTab() {
   };
 
   const renderLimitField = (label: string, colorClass: string, sharedKey: string, p1Key: string, p2Key: string) => {
+    const isUncapped = (val: any) => Number(val) === 0 || !val;
+
     if (isSplitLimits) {
       return (
         <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-          <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>{label}</span>
+          <div className="d-flex justify-content-between align-items-center">
+            <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>{label}</span>
+            {(isUncapped(data.inputs[p1Key]) && isUncapped(data.inputs[p2Key])) && (
+              <span className="badge bg-secondary bg-opacity-25 text-muted px-1.5 py-0.5 rounded" style={{ fontSize: '0.58rem' }}>No Cap</span>
+            )}
+          </div>
           <div className="d-flex flex-column gap-2 mt-1">
             <div className="d-flex align-items-center gap-2">
               <span className="badge bg-secondary bg-opacity-25 text-muted fw-bold px-2 py-1" style={{ fontSize: '0.6rem', minWidth: '28px' }}>{p1Name}</span>
@@ -220,16 +227,23 @@ export default function StrategyTab() {
               <CurrencyInput className="form-control form-control-sm border-secondary shadow-none flex-grow-1" value={data.inputs[p2Key] || 0} onChange={(val: any) => updateInput(p2Key, val)} />
             </div>
           </div>
+          <span className="text-muted text-start" style={{ fontSize: '0.65rem' }}>$0 = Absorbs surplus</span>
         </div>
       );
     }
 
     return (
       <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
-        <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>
-          {label} {isCouple ? 'MAX (Combined)' : 'MAX'}
-        </span>
+        <div className="d-flex justify-content-between align-items-center">
+          <span className={`small fw-bold ${colorClass} text-uppercase ls-1`}>
+            {label} {isCouple ? 'MAX (Comb)' : 'MAX'}
+          </span>
+          {isUncapped(data.inputs[sharedKey]) && (
+            <span className="badge bg-secondary bg-opacity-25 text-muted px-1.5 py-0.5 rounded" style={{ fontSize: '0.58rem' }}>No Cap</span>
+          )}
+        </div>
         <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs[sharedKey] || 0} onChange={(val: any) => updateInput(sharedKey, val)} />
+        <span className="text-muted text-start" style={{ fontSize: '0.65rem' }}>$0 = Absorbs surplus</span>
       </div>
     );
   };
@@ -324,15 +338,23 @@ export default function StrategyTab() {
 
                         {/* COMPACT OVERLAY FOR SMART OPTIMIZER */}
                         {isOptimized && (
-                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: 'fit-content', minWidth: '220px' }}>
-                                <div className="bg-success bg-opacity-10 border border-success rounded-4 shadow-lg p-3 py-4 px-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backdropFilter: 'blur(3px)' }}>
+                            <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: 'fit-content', minWidth: '230px' }}>
+                                <div className="border border-success rounded-4 shadow-lg p-3 py-4 px-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(8px)' }}>
                                     <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
                                         <i className="bi bi-lock-fill fs-5"></i>
                                     </div>
                                     <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
-                                    <span className="small text-muted fw-medium lh-sm" style={{fontSize: '0.7rem'}}>
-                                        Engine's tax-efficient route handles this stack.
+                                    <span className="small text-muted fw-medium lh-sm mb-2" style={{fontSize: '0.72rem'}}>
+                                        Engine's tax optimizer handles this stack.
                                     </span>
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-sm btn-outline-success rounded-pill fw-bold px-3 py-1" 
+                                        style={{ fontSize: '0.72rem' }}
+                                        onClick={() => updateInput('fully_optimize_tax', false)}
+                                    >
+                                        <i className="bi bi-unlock-fill me-1"></i> Unlock for Manual Order
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -451,12 +473,12 @@ export default function StrategyTab() {
                             />
                             <div className="mt-3">
                                 {efMode === 'none' && (
-                                    <div className="bg-black bg-opacity-25 border border-secondary rounded-3 p-2 text-center text-muted small fst-italic shadow-inner">
+                                    <div className="bg-input surface-card border border-secondary rounded-3 p-2 text-center text-muted small fst-italic shadow-inner">
                                         $0 reserved. All cash is available for spending or investing.
                                     </div>
                                 )}
                                 {(efMode === '3_months' || efMode === '6_months') && (
-                                    <div className="bg-black bg-opacity-25 border border-secondary rounded-3 p-2 d-flex justify-content-between align-items-center px-3 shadow-inner">
+                                    <div className="bg-input surface-card border border-secondary rounded-3 p-2 d-flex justify-content-between align-items-center px-3 shadow-inner">
                                         <span className="small text-muted fw-bold">Dynamic Target:</span>
                                         <span className="fw-bold text-success">
                                             {new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(monthlyExp * (efMode === '3_months' ? 3 : 6))}

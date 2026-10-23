@@ -498,8 +498,13 @@ export default function PlanTab() {
           style={{ bottom: '1.25rem', transition: 'all 0.3s ease', pointerEvents: 'none' }}
         >
           <div 
-            className="floating-readiness-island border border-primary border-opacity-50 rounded-pill py-2 px-3 d-flex align-items-center justify-content-between gap-3 text-nowrap"
-            style={{ pointerEvents: 'auto' }}
+            className="floating-readiness-island border border-primary border-opacity-50 rounded-pill py-2 px-3 d-flex align-items-center justify-content-between gap-3 text-nowrap shadow-lg"
+            style={{ 
+              pointerEvents: 'auto',
+              backgroundColor: 'var(--bg-card)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)'
+            }}
           >
             {/* Left: Health Status */}
             <div className="d-flex align-items-center gap-2 overflow-hidden">

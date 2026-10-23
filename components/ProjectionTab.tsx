@@ -18,7 +18,34 @@ const getRrifFactor = (age: number) => {
 
 export default function ProjectionTab() {
   const { data, results } = useFinance();
-  const [expandedYear, setExpandedYear] = useState<number | null>(null);
+  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
+
+  const toggleRow = (year: number) => {
+    setExpandedYears(prev => {
+      const next = new Set(prev);
+      if (next.has(year)) next.delete(year);
+      else next.add(year);
+      return next;
+    });
+  };
+
+  const toggleAllRows = () => {
+    if (!results?.timeline) return;
+    if (expandedYears.size === results.timeline.length) {
+      setExpandedYears(new Set());
+    } else {
+      setExpandedYears(new Set(results.timeline.map((y: any) => y.year)));
+    }
+  };
+
+  const jumpToYear = (year: number) => {
+    const el = document.getElementById(`proj-row-${year}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('table-primary');
+      setTimeout(() => el.classList.remove('table-primary'), 1500);
+    }
+  };
   
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -235,9 +262,7 @@ export default function ProjectionTab() {
   const finalYear = results.timeline[results.timeline.length - 1];
   const finalEstate = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
 
-  const toggleRow = (year: number) => {
-    setExpandedYear(expandedYear === year ? null : year);
-  };
+
 
   const getEventIcons = (events: string[], y?: any) => {
       let iconElements: any[] = [];
@@ -879,16 +904,73 @@ export default function ProjectionTab() {
               </div>
           </div>
 
-          <div className="col-12 col-md-4 col-xl position-relative">
-              <div 
-                  className="bg-primary bg-opacity-10 border border-primary px-3 py-2 rounded-pill shadow-sm d-flex justify-content-center align-items-center h-100 transition-all hover-opacity-75 cursor-pointer"
-                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
-              >
-                  <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap">
-                      {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download fs-5 me-2"></i>}
-                      Export
-                  </span>
-              </div>
+          {/* QUICK JUMP MILESTONES & EXPAND ALL */}
+          <div className="col-12 col-md-8 col-xl d-flex align-items-center justify-content-end gap-2 flex-wrap">
+              {(() => {
+                const p1Ret = Number(data.inputs.p1_retireAge) || 65;
+                const retYr = results.timeline.find((y: any) => y.p1Age === p1Ret)?.year;
+                const rrifYr = results.timeline.find((y: any) => y.p1Age === 72)?.year;
+                const depYr = results.timeline.find((y: any) => y.p1Age >= p1Ret && (y.liquidNW || 0) <= 1)?.year;
+
+                return (
+                  <div className="d-flex align-items-center gap-1 flex-wrap">
+                    {retYr && (
+                      <button 
+                        type="button" 
+                        onClick={() => jumpToYear(retYr)} 
+                        className="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 fw-bold shadow-sm"
+                        style={{ fontSize: '0.72rem' }}
+                        title={`Jump to Retirement Age ${p1Ret} (${retYr})`}
+                      >
+                        <i className="bi bi-cup-hot-fill me-1"></i> Ret {p1Ret}
+                      </button>
+                    )}
+                    {rrifYr && (
+                      <button 
+                        type="button" 
+                        onClick={() => jumpToYear(rrifYr)} 
+                        className="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 fw-bold shadow-sm"
+                        style={{ fontSize: '0.72rem' }}
+                        title={`Jump to Mandatory RRIF Age 72 (${rrifYr})`}
+                      >
+                        <i className="bi bi-arrow-left-right me-1"></i> RRIF 72
+                      </button>
+                    )}
+                    {depYr && (
+                      <button 
+                        type="button" 
+                        onClick={() => jumpToYear(depYr)} 
+                        className="btn btn-sm btn-outline-danger rounded-pill py-1 px-2.5 fw-bold shadow-sm"
+                        style={{ fontSize: '0.72rem' }}
+                        title={`Jump to Portfolio Depletion Year (${depYr})`}
+                      >
+                        <i className="bi bi-exclamation-triangle-fill me-1"></i> Depleted
+                      </button>
+                    )}
+                    <button 
+                      type="button" 
+                      onClick={toggleAllRows} 
+                      className="btn btn-sm btn-outline-info rounded-pill py-1 px-2.5 fw-bold shadow-sm"
+                      style={{ fontSize: '0.72rem' }}
+                      title="Expand or collapse all yearly audit drawers"
+                    >
+                      <i className={`bi bi-arrows-${expandedYears.size === results.timeline.length ? 'collapse' : 'expand'} me-1`}></i>
+                      {expandedYears.size === results.timeline.length ? 'Collapse All' : 'Expand All'}
+                    </button>
+                  </div>
+                );
+              })()}
+
+              <div className="position-relative">
+                  <div 
+                      className="bg-primary bg-opacity-10 border border-primary px-3 py-1.5 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer"
+                      onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                  >
+                      <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
+                          {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download me-1.5"></i>}
+                          Export
+                      </span>
+                  </div>
               {exportMenuOpen && (
                   <>
                       <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
@@ -914,7 +996,7 @@ export default function ProjectionTab() {
           
           <table className="table table-hover align-middle mb-0" style={{ tableLayout: 'fixed', minWidth: '1100px', width: '100%' }}>
             
-            <thead className="surface-card" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+            <thead className="surface-card" style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg-card)' }}>
               <tr style={{ fontSize: '0.75rem', letterSpacing: '0.05em' }}>
                 <th className="py-3 ps-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '4%' }}></th>
                 <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '16%' }}>Year & Events</th>
@@ -934,7 +1016,7 @@ export default function ProjectionTab() {
                 const firstDepYear = firstDepYearObj ? firstDepYearObj.year : null;
 
                 return results.timeline.map((y: any, index: number) => {
-                const isExpanded = expandedYear === y.year;
+                const isExpanded = expandedYears.has(y.year);
                 
                 const p1Clawback = y.taxDetailsP1?.oas_clawback || 0;
                 const p2Clawback = y.taxDetailsP2?.oas_clawback || 0;
@@ -996,7 +1078,7 @@ export default function ProjectionTab() {
                         </td>
                       </tr>
                     )}
-                    <tr className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : (isLiquidDepleted ? 'bg-danger bg-opacity-5' : '')}`} onClick={() => toggleRow(y.year)}>
+                    <tr id={`proj-row-${y.year}`} className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : (isLiquidDepleted ? 'bg-danger bg-opacity-5' : '')}`} onClick={() => toggleRow(y.year)}>
                       <td className="py-3 ps-3 text-center text-primary border-bottom border-secondary border-opacity-25">
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} transition-all`}></i>
                       </td>

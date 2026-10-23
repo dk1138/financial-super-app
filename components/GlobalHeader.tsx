@@ -335,6 +335,7 @@ export default function GlobalHeader() {
                                             </h6>
                                         </li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setNewPlanName(`${activePlanName} (Copy)`); setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-copy text-info me-2"></i> Save As Copy...</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
                                         <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>

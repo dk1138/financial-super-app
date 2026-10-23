@@ -31,6 +31,18 @@ export default function LivingExpensesCard() {
     updateExpenseCategory(cat, newItems);
   };
 
+  const copyWorkingToRetire = (cat: string, multiplier: number = 1.0) => {
+    const newList = data.expensesByCategory[cat].items.map((item: any) => ({
+      ...item,
+      ret: Math.round((Number(item.curr) || 0) * multiplier),
+      trans: Math.round((Number(item.curr) || 0) * multiplier),
+      gogo: Math.round((Number(item.curr) || 0) * multiplier),
+      slow: Math.round((Number(item.curr) || 0) * multiplier * 0.85),
+      nogo: Math.round((Number(item.curr) || 0) * multiplier * 0.70)
+    }));
+    updateExpenseCategory(cat, newList);
+  };
+
   const calcExpenseTotal = (phase: string) => {
       let total = 0;
       Object.values(data.expensesByCategory || {}).forEach((cat: any) => {
@@ -188,12 +200,23 @@ export default function LivingExpensesCard() {
                         <h6 className="text-uppercase mb-0 fw-bold d-flex align-items-center gap-2">
                             {getCategoryIcon(cat)} <span className="ls-1">{cat}</span>
                         </h6>
-                        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => { 
-                            const newList = [...data.expensesByCategory[cat].items, { name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12, owner: 'joint' }]; 
-                            updateExpenseCategory(cat, newList); 
-                        }}>
-                            <i className="bi bi-plus-lg me-1"></i> Add Item
-                        </button>
+                        <div className="d-flex align-items-center gap-2">
+                            <button 
+                                type="button" 
+                                className="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold" 
+                                style={{ fontSize: '0.75rem' }}
+                                title="Copy all working expense numbers into retirement for this category" 
+                                onClick={() => copyWorkingToRetire(cat, 1.0)}
+                            >
+                                <i className="bi bi-copy me-1"></i> Copy to Ret
+                            </button>
+                            <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => { 
+                                const newList = [...data.expensesByCategory[cat].items, { name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12, owner: 'joint' }]; 
+                                updateExpenseCategory(cat, newList); 
+                            }}>
+                                <i className="bi bi-plus-lg me-1"></i> Add Item
+                            </button>
+                        </div>
                     </div>
                     <div className="card-body p-0 table-responsive hide-scrollbar">
                         <table className="table table-borderless align-middle mb-0 w-100" style={{ minWidth: expenseAdvancedMode ? '1100px' : '750px' }}>
