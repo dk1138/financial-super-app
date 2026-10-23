@@ -46,6 +46,7 @@ export default function DashboardTab() {
   const [imgbbApiKey, setImgbbApiKey] = useState('');
   const [uploadedUrl, setUploadedUrl] = useState('');
   const [viewerUrl, setViewerUrl] = useState('');
+  const [uploadProvider, setUploadProvider] = useState('ImgBB');
 
   useEffect(() => {
     // Only load custom key if manually saved in browser
@@ -64,7 +65,7 @@ export default function DashboardTab() {
     if (!dashboardRef.current) return;
 
     setIsUploadingImgBB(true);
-    showToast('📸 Capturing summary and uploading to ImgBB...');
+    showToast('📸 Capturing summary and generating link...');
 
     try {
       setTimeout(async () => {
@@ -77,47 +78,90 @@ export default function DashboardTab() {
               return;
             }
 
+            let uploadSuccess = false;
+
             try {
+              // --- TIER 1: SERVER-SIDE API PROXY ROUTE ---
               const formData = new FormData();
               formData.append('image', blob, 'Retirement_Summary.png');
 
-              // Optional: pass custom client key if user entered one in the modal
               const headers: Record<string, string> = {};
               const customKey = imgbbApiKey.trim() || (localStorage.getItem('imgbb_api_key') || '').trim();
               if (customKey) {
                 headers['x-imgbb-key'] = customKey;
               }
 
-              // Upload via server-side API proxy (keeps IMGBB_API_KEY hidden from browser and GitHub)
-              const response = await fetch('/api/upload-image', {
-                method: 'POST',
-                headers,
-                body: formData
-              });
+              try {
+                const response = await fetch('/api/upload-image', {
+                  method: 'POST',
+                  headers,
+                  body: formData
+                });
 
-              const result = await response.json();
+                if (response.ok) {
+                  const contentType = response.headers.get('content-type') || '';
+                  if (contentType.includes('application/json')) {
+                    const result = await response.json();
+                    if (result.success && result.data?.url) {
+                      const url = result.data.url;
+                      const viewer = result.data.url_viewer || result.data.display_url || url;
+                      setUploadedUrl(url);
+                      setViewerUrl(viewer);
+                      setUploadProvider(result.provider || 'ImgBB');
+                      await navigator.clipboard.writeText(url);
+                      showToast(`✅ ${result.provider || 'Image'} link copied to clipboard!`);
+                      setImgbbModalOpen(true);
+                      uploadSuccess = true;
+                    }
+                  }
+                }
+              } catch (srvErr) {
+                console.warn('Server route fetch error, trying direct client fallback:', srvErr);
+              }
 
-              if (result.success && result.data?.url) {
-                const url = result.data.url;
-                const viewer = result.data.url_viewer || result.data.display_url || url;
-                setUploadedUrl(url);
-                setViewerUrl(viewer);
-                await navigator.clipboard.writeText(url);
-                showToast('✅ ImgBB link copied to clipboard!');
-                setImgbbModalOpen(true);
-              } else {
-                console.error('ImgBB upload error:', result);
-                if (result.code === 'KEY_MISSING') {
-                  showToast('🔑 Please configure your ImgBB API key.');
-                  setApiKeyModalOpen(true);
-                } else {
-                  const errMsg = result.error || 'Upload failed. Please check your ImgBB API key.';
-                  showToast(`❌ ${errMsg}`);
+              // --- TIER 2: DIRECT CLIENT LITTERBOX FALLBACK (FREE, ZERO API KEY REQUIRED) ---
+              if (!uploadSuccess) {
+                try {
+                  const litterForm = new FormData();
+                  litterForm.append('reqtype', 'fileupload');
+                  litterForm.append('time', '72h');
+                  litterForm.append('fileToUpload', blob, 'Retirement_Summary.png');
+
+                  const litterRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+                    method: 'POST',
+                    body: litterForm
+                  });
+
+                  if (litterRes.ok) {
+                    const litterUrl = (await litterRes.text()).trim();
+                    if (litterUrl.startsWith('http')) {
+                      setUploadedUrl(litterUrl);
+                      setViewerUrl(litterUrl);
+                      setUploadProvider('Litterbox (Free 72h Host)');
+                      await navigator.clipboard.writeText(litterUrl);
+                      showToast('✅ Direct link copied to clipboard!');
+                      setImgbbModalOpen(true);
+                      uploadSuccess = true;
+                    }
+                  }
+                } catch (clientErr) {
+                  console.warn('Direct client fallback error:', clientErr);
                 }
               }
-            } catch (fetchErr: any) {
-              console.error(fetchErr);
-              showToast('❌ Network error uploading to ImgBB.');
+
+              // --- TIER 3: DIRECT CLIPBOARD IMAGE COPY (ZERO NETWORK NEEDED) ---
+              if (!uploadSuccess) {
+                try {
+                  const item = new ClipboardItem({ 'image/png': blob });
+                  await navigator.clipboard.write([item]);
+                  showToast('📋 Image copied directly to clipboard! (Ctrl+V into Reddit/Discord)');
+                } catch (clipErr) {
+                  showToast('❌ Image host blocked by adblocker. Use "Copy Image" or "Save PNG".');
+                }
+              }
+            } catch (err: any) {
+              console.error(err);
+              showToast('❌ Could not complete upload.');
             } finally {
               setIsUploadingImgBB(false);
             }
@@ -997,7 +1041,7 @@ export default function DashboardTab() {
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h6 className="fw-bold text-success mb-0 d-flex align-items-center gap-2">
                 <i className="bi bi-check-circle-fill"></i>
-                Uploaded to ImgBB!
+                Image Link Ready ({uploadProvider})
               </h6>
               <button type="button" className="btn-close btn-close-white" onClick={() => setImgbbModalOpen(false)}></button>
             </div>
