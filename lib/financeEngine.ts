@@ -1,8 +1,10 @@
 /**
  * financeEngine.ts
+ * Version: 1.2.0 (CRA 2026 Engine)
  * The core orchestrator. 
  * Heavy logic has been extracted to lib/engine/ modules for maintainability.
  */
+export const ENGINE_VERSION = '1.2.0';
 import { parseFormattedNumber } from './utils';
 import { getInflatedTaxData, calculateTaxDetailed } from './engine/tax';
 import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getRrifFactor, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
@@ -777,7 +779,7 @@ export class FinanceEngine {
             let cashIncome1 = Math.max(0, baseGross1 + divInc1);
             let cashIncome2 = Math.max(0, baseGross2 + divInc2);
 
-            pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
+            let pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
             let annualRealizedGains: Record<string, number> = { p1: 0, p2: 0 };
 
             let getEligPension1 = () => (inflows.p1.pension + (age1 >= 65 ? (regMins.p1 + regMins.lifTaken1 + (wdBreakdown?.p1?.RRIF || 0) + (wdBreakdown?.p1?.LIF || 0)) : 0)) - pensionSplitTransfer.p1ToP2 + pensionSplitTransfer.p2ToP1;
@@ -1030,7 +1032,7 @@ export class FinanceEngine {
                 trackedEvents.add('Mortgage Paid'); inflows.events.push('Mortgage Paid'); 
             }
 
-            let pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
+            pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
             if (this.mode === 'Couple' && this.inputs['pension_split_enabled']) {
                 const evaluateHouseholdTax = (testTi1: number, testTi2: number, testEligP1: number, testEligP2: number) => {
                     const t1 = alive1 ? calculateTaxDetailed(testTi1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, testEligP1, alive2 ? testTi2 : -1, isEligibleDividend, credits1) : { totalTax: 0 };
