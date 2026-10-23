@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper } from '../SharedUI';
+import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper, StepperInput } from '../SharedUI';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
 
 // --- CUSTOM TAX TOOLTIP COMPONENTS ---
@@ -857,15 +857,23 @@ export default function IncomeTaxCard() {
                                   {taxDetails.nrtc.disability > 0 && (
                                       <div className="d-flex justify-content-between align-items-center">
                                           <span className="text-muted small fst-italic d-flex align-items-center">
-                                              Disability Tax Credit
+                                              Disability Tax Credit (Line 31600/58440)
                                               <DetailedCreditInfoButton 
                                                   title="Disability Tax Credit" 
-                                                  desc="Provides a non-refundable credit for individuals with severe and prolonged impairments. Combines federal and provincial base amounts." 
+                                                  desc="Provides a non-refundable credit for individuals with severe and prolonged impairments. Combines federal and provincial base amounts (Lines 31600 & 58440)." 
                                                   link="https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html"
                                                   details={taxDetails.nrtcDetails?.disability} 
                                               />
                                           </span>
                                           <span className="small text-success fw-bold opacity-75">+{Math.round(taxDetails.nrtc.disability).toLocaleString()}</span>
+                                      </div>
+                                  )}
+                                  {data.inputs[`${p}_disability`] && !(taxDetails.nrtc.disability > 0) && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                          <span className="text-muted small fst-italic d-flex align-items-center">
+                                              Disability Tax Credit (Line 31600/58440)
+                                          </span>
+                                          <span className="small text-muted fst-italic">Starts at age {data.inputs[`${p}_disability_start_age`] || (Number(data.inputs[`${p}_age`]) || (p === 'p1' ? 38 : 35))}</span>
                                       </div>
                                   )}
                                   {taxDetails.nrtc.caregiver > 0 && (
@@ -983,6 +991,8 @@ export default function IncomeTaxCard() {
           {['p1', 'p2'].map((p) => {
             if (!isCouple && p === 'p2') return null;
             const currentName = p === 'p1' ? p1Name : p2Name;
+            const playerAge = Number(data.inputs[`${p}_age`]) || (p === 'p1' ? 38 : 35);
+            const playerLifeExp = Number(data.inputs[`${p}_lifeExp`]) || 95;
             return (
             <div className="col-12 col-xl-6" key={p}>
               
@@ -1092,15 +1102,46 @@ export default function IncomeTaxCard() {
                                   {/* Left Column: Disability, Caregiver, Home Buyer */}
                                   <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
                                       
-                                      {/* Disability Tax Credit */}
-                                      <div className="d-flex align-items-center justify-content-between bg-secondary bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25">
-                                          <span className="small fw-medium text-main d-flex align-items-center gap-1">
-                                              Disability Tax Credit
-                                              <InfoBtn title="Disability Tax Credit" text="A non-refundable tax credit that helps persons with disabilities or their supporting persons reduce the amount of income tax they may have to pay.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html' target='_blank'>Learn more on Canada.ca</a>" />
-                                          </span>
-                                          <div className="form-check form-switch mb-0">
-                                              <input className="form-check-input cursor-pointer m-0 shadow-none" type="checkbox" id={`${p}_disability`} checked={data.inputs[`${p}_disability`] || false} onChange={(e) => updateInput(`${p}_disability`, e.target.checked)} />
+                                      {/* Disability Tax Credit (Line 31600 / 58440) */}
+                                      <div className="bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2">
+                                          <div className="d-flex align-items-center justify-content-between px-1">
+                                              <span className="small fw-medium text-main d-flex align-items-center gap-1">
+                                                  Disability Tax Credit
+                                                  <InfoBtn 
+                                                      title="Disability Tax Credit (Line 31600 / 58440)" 
+                                                      text="A non-refundable tax credit (Federal Line 31600 & Provincial Line 58440) that reduces income tax for individuals with a severe and prolonged physical or mental impairment.<br/><br/>You can designate this credit to start at a specific age (especially useful for planning for older years or long-term care) or start immediately.<br/><br/><a href='https://www.taxtips.ca/nrcredits/tax-credits-2025-base.htm' target='_blank'>TaxTips.ca Base Tax Credits</a><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html' target='_blank'>CRA Disability Tax Credit</a>" 
+                                                  />
+                                              </span>
+                                              <div className="form-check form-switch mb-0">
+                                                  <input 
+                                                      className="form-check-input cursor-pointer m-0 shadow-none" 
+                                                      type="checkbox" 
+                                                      id={`${p}_disability`} 
+                                                      checked={data.inputs[`${p}_disability`] || false} 
+                                                      onChange={(e) => {
+                                                          const isChecked = e.target.checked;
+                                                          updateInput(`${p}_disability`, isChecked);
+                                                          if (isChecked && !data.inputs[`${p}_disability_start_age`]) {
+                                                              updateInput(`${p}_disability_start_age`, playerAge);
+                                                          }
+                                                      }} 
+                                                  />
+                                              </div>
                                           </div>
+                                          
+                                          {data.inputs[`${p}_disability`] && (
+                                              <div className="d-flex align-items-center justify-content-between bg-input rounded-pill px-3 py-1 mt-2 border border-secondary border-opacity-25 user-select-none">
+                                                  <span className="small fw-medium text-muted">Starts at Age</span>
+                                                  <div style={{ width: '110px' }}>
+                                                      <StepperInput 
+                                                          min={playerAge} 
+                                                          max={playerLifeExp} 
+                                                          value={data.inputs[`${p}_disability_start_age`] ?? playerAge} 
+                                                          onChange={(val: number) => updateInput(`${p}_disability_start_age`, val)} 
+                                                      />
+                                                  </div>
+                                              </div>
+                                          )}
                                       </div>
                                       
                                       {/* Caregiver Block */}

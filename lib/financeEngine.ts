@@ -1,10 +1,10 @@
 /**
  * financeEngine.ts
- * Version: 1.2.0 (CRA 2026 Engine)
+ * Version: 1.2.1 (CRA 2026 Engine)
  * The core orchestrator. 
  * Heavy logic has been extracted to lib/engine/ modules for maintainability.
  */
-export const ENGINE_VERSION = '1.2.0';
+export const ENGINE_VERSION = '1.2.1';
 import { parseFormattedNumber } from './utils';
 import { getInflatedTaxData, calculateTaxDetailed } from './engine/tax';
 import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getRrifFactor, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
@@ -786,8 +786,30 @@ export class FinanceEngine {
             let under18_count_p2 = Number(this.inputs['p2_caregiver_under_18']) || 0;
             let over18_count_p2 = Number(this.inputs['p2_caregiver_over_18']) || 0;
 
+            const isP1Disability = Boolean(this.inputs['p1_disability']) && (
+                this.inputs['p1_disability_start_age'] !== undefined && this.inputs['p1_disability_start_age'] !== '' 
+                    ? age1 >= Number(this.inputs['p1_disability_start_age']) 
+                    : true
+            );
+            const isP2Disability = Boolean(this.inputs['p2_disability']) && (
+                this.inputs['p2_disability_start_age'] !== undefined && this.inputs['p2_disability_start_age'] !== '' 
+                    ? age2 >= Number(this.inputs['p2_disability_start_age']) 
+                    : true
+            );
+
+            if (detailed && inflows && inflows.events) {
+                if (alive1 && isP1Disability && !trackedEvents.has('P1 DTC Active')) {
+                    trackedEvents.add('P1 DTC Active');
+                    inflows.events.push(`${this.inputs['p1_name'] || 'P1'} Disability Tax Credit Active`);
+                }
+                if (this.mode === 'Couple' && alive2 && isP2Disability && !trackedEvents.has('P2 DTC Active')) {
+                    trackedEvents.add('P2 DTC Active');
+                    inflows.events.push(`${this.inputs['p2_name'] || 'P2'} Disability Tax Credit Active`);
+                }
+            }
+
             let credits1 = {
-                disability: this.inputs['p1_disability'] || false,
+                disability: isP1Disability,
                 caregiver_under_18_share: under18_count_p1, 
                 caregiver_over_18_share: over18_count_p1,   
                 medicalExpenses: this.getVal('p1_medical_expenses'),
@@ -799,7 +821,7 @@ export class FinanceEngine {
             };
 
             let credits2 = {
-                disability: this.inputs['p2_disability'] || false,
+                disability: isP2Disability,
                 caregiver_under_18_share: under18_count_p2, 
                 caregiver_over_18_share: over18_count_p2,   
                 medicalExpenses: this.getVal('p2_medical_expenses'),
