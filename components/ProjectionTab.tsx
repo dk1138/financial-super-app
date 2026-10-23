@@ -48,6 +48,7 @@ export default function ProjectionTab() {
   };
   
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [jumpMenuOpen, setJumpMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
@@ -904,85 +905,176 @@ export default function ProjectionTab() {
               </div>
           </div>
 
-          {/* QUICK JUMP MILESTONES & EXPAND ALL */}
-          <div className="col-12 col-md-8 col-xl d-flex align-items-center justify-content-end gap-2 flex-wrap">
+          {/* ACTIONS: QUICK JUMP, EXPAND/COLLAPSE, EXPORT */}
+          <div className="col-12 col-md-8 col-xl d-flex align-items-center justify-content-end gap-2 flex-wrap flex-sm-nowrap">
               {(() => {
                 const p1Ret = Number(data.inputs.p1_retireAge) || 65;
                 const retYr = results.timeline.find((y: any) => y.p1Age === p1Ret)?.year;
+                const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : null;
+                const p2RetYr = p2Ret ? results.timeline.find((y: any) => y.p2Age === p2Ret)?.year : null;
                 const rrifYr = results.timeline.find((y: any) => y.p1Age === 72)?.year;
                 const depYr = results.timeline.find((y: any) => y.p1Age >= p1Ret && (y.liquidNW || 0) <= 1)?.year;
 
+                const milestones: { label: string; sub?: string; year: number; icon: string; colorClass: string }[] = [];
+
+                if (retYr) {
+                  milestones.push({
+                    label: `${data.inputs.p1_name || 'Player 1'} Retires`,
+                    sub: `Age ${p1Ret}`,
+                    year: retYr,
+                    icon: 'bi-cup-hot-fill',
+                    colorClass: 'text-primary'
+                  });
+                }
+                if (isCouple && p2RetYr && p2RetYr !== retYr) {
+                  milestones.push({
+                    label: `${data.inputs.p2_name || 'Player 2'} Retires`,
+                    sub: `Age ${p2Ret}`,
+                    year: p2RetYr,
+                    icon: 'bi-cup-hot-fill',
+                    colorClass: 'text-purple'
+                  });
+                }
+                if (rrifYr) {
+                  milestones.push({
+                    label: 'Mandatory RRIF',
+                    sub: 'Age 72',
+                    year: rrifYr,
+                    icon: 'bi-arrow-left-right',
+                    colorClass: 'text-info'
+                  });
+                }
+                if (depYr) {
+                  milestones.push({
+                    label: 'Portfolio Depleted',
+                    sub: 'Liquid NW ≤ $0',
+                    year: depYr,
+                    icon: 'bi-exclamation-triangle-fill',
+                    colorClass: 'text-danger'
+                  });
+                }
+                if (results.timeline.length > 0) {
+                  const startYr = results.timeline[0].year;
+                  const endYr = results.timeline[results.timeline.length - 1].year;
+                  if (!milestones.some(m => m.year === startYr)) {
+                    milestones.push({
+                      label: 'Plan Start',
+                      sub: `Age ${results.timeline[0].p1Age}`,
+                      year: startYr,
+                      icon: 'bi-play-circle-fill',
+                      colorClass: 'text-muted'
+                    });
+                  }
+                  if (!milestones.some(m => m.year === endYr)) {
+                    milestones.push({
+                      label: 'Plan Horizon / Estate',
+                      sub: `Age ${results.timeline[results.timeline.length - 1].p1Age}`,
+                      year: endYr,
+                      icon: 'bi-flag-fill',
+                      colorClass: 'text-success'
+                    });
+                  }
+                }
+
+                milestones.sort((a, b) => a.year - b.year);
+
                 return (
-                  <div className="d-flex align-items-center gap-1 flex-wrap">
-                    {retYr && (
-                      <button 
-                        type="button" 
-                        onClick={() => jumpToYear(retYr)} 
-                        className="btn btn-sm btn-outline-primary rounded-pill py-1 px-2.5 fw-bold shadow-sm"
-                        style={{ fontSize: '0.72rem' }}
-                        title={`Jump to Retirement Age ${p1Ret} (${retYr})`}
-                      >
-                        <i className="bi bi-cup-hot-fill me-1"></i> Ret {p1Ret}
-                      </button>
-                    )}
-                    {rrifYr && (
-                      <button 
-                        type="button" 
-                        onClick={() => jumpToYear(rrifYr)} 
-                        className="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 fw-bold shadow-sm"
-                        style={{ fontSize: '0.72rem' }}
-                        title={`Jump to Mandatory RRIF Age 72 (${rrifYr})`}
-                      >
-                        <i className="bi bi-arrow-left-right me-1"></i> RRIF 72
-                      </button>
-                    )}
-                    {depYr && (
-                      <button 
-                        type="button" 
-                        onClick={() => jumpToYear(depYr)} 
-                        className="btn btn-sm btn-outline-danger rounded-pill py-1 px-2.5 fw-bold shadow-sm"
-                        style={{ fontSize: '0.72rem' }}
-                        title={`Jump to Portfolio Depletion Year (${depYr})`}
-                      >
-                        <i className="bi bi-exclamation-triangle-fill me-1"></i> Depleted
-                      </button>
-                    )}
+                  <div className="position-relative">
                     <button 
                       type="button" 
-                      onClick={toggleAllRows} 
-                      className="btn btn-sm btn-outline-info rounded-pill py-1 px-2.5 fw-bold shadow-sm"
-                      style={{ fontSize: '0.72rem' }}
-                      title="Expand or collapse all yearly audit drawers"
+                      onClick={() => { setJumpMenuOpen(!jumpMenuOpen); setExportMenuOpen(false); }}
+                      className="btn btn-sm btn-outline-secondary bg-input border border-secondary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 text-nowrap"
+                      style={{ height: '36px' }}
+                      title="Jump to timeline milestone"
                     >
-                      <i className={`bi bi-arrows-${expandedYears.size === results.timeline.length ? 'collapse' : 'expand'} me-1`}></i>
-                      {expandedYears.size === results.timeline.length ? 'Collapse All' : 'Expand All'}
+                      <span className="small fw-bold text-uppercase ls-1 text-main d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
+                        <i className="bi bi-geo-alt me-1.5 text-muted"></i>
+                        Jump To
+                        <i className={`bi bi-chevron-${jumpMenuOpen ? 'up' : 'down'} ms-1.5 text-muted`} style={{ fontSize: '0.65rem' }}></i>
+                      </span>
                     </button>
+                    {jumpMenuOpen && (
+                      <>
+                        <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setJumpMenuOpen(false)}></div>
+                        <ul 
+                          className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-1" 
+                          style={{ 
+                            zIndex: 1060, 
+                            top: '100%', 
+                            right: 0, 
+                            minWidth: '240px', 
+                            backgroundColor: 'var(--bg-card)', 
+                            borderColor: 'var(--border-color)' 
+                          }}
+                        >
+                          <li className="px-3 py-1 border-bottom border-secondary border-opacity-25 mb-1">
+                            <span className="text-muted text-uppercase fw-bold ls-1" style={{ fontSize: '0.65rem' }}>Plan Milestones</span>
+                          </li>
+                          {milestones.map((m: any, idx: number) => (
+                            <li key={idx}>
+                              <button
+                                type="button"
+                                className="dropdown-item py-2 px-3 rounded-2 d-flex align-items-center justify-content-between text-start border-0 bg-transparent text-main transition-all"
+                                onClick={() => { setJumpMenuOpen(false); jumpToYear(m.year); }}
+                              >
+                                <div className="d-flex align-items-center gap-2">
+                                  <i className={`bi ${m.icon} ${m.colorClass}`} style={{ fontSize: '0.9rem', width: '16px' }}></i>
+                                  <div>
+                                    <div className="fw-semibold text-main" style={{ fontSize: '0.8rem' }}>{m.label}</div>
+                                    {m.sub && <div className="text-muted" style={{ fontSize: '0.7rem' }}>{m.sub}</div>}
+                                  </div>
+                                </div>
+                                <span className="badge bg-secondary bg-opacity-25 text-muted ms-2 px-2 py-1 font-monospace" style={{ fontSize: '0.72rem' }}>
+                                  {m.year}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                   </div>
                 );
               })()}
 
+              <button 
+                type="button" 
+                onClick={toggleAllRows} 
+                className="btn btn-sm btn-outline-info bg-info bg-opacity-10 border border-info px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 text-nowrap"
+                style={{ height: '36px' }}
+                title="Expand or collapse all yearly audit drawers"
+              >
+                <span className="small fw-bold text-uppercase ls-1 text-info d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
+                  <i className={`bi bi-arrows-${expandedYears.size === results.timeline.length ? 'collapse' : 'expand'} me-1.5`}></i>
+                  {expandedYears.size === results.timeline.length ? 'Collapse All' : 'Expand All'}
+                </span>
+              </button>
+
               <div className="position-relative">
                   <div 
-                      className="bg-primary bg-opacity-10 border border-primary px-3 py-1.5 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer"
-                      onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                      className="bg-primary bg-opacity-10 border border-primary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer text-nowrap"
+                      style={{ height: '36px' }}
+                      onClick={() => { setExportMenuOpen(!exportMenuOpen); setJumpMenuOpen(false); }}
+                      title="Export projection data"
                   >
                       <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
-                          {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download me-1.5"></i>}
+                          {isExporting ? <span className="spinner-border spinner-border-sm me-1.5"></span> : <i className="bi bi-download me-1.5"></i>}
                           Export
+                          <i className={`bi bi-chevron-${exportMenuOpen ? 'up' : 'down'} ms-1.5 text-primary text-opacity-75`} style={{ fontSize: '0.65rem' }}></i>
                       </span>
                   </div>
               {exportMenuOpen && (
                   <>
                       <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
-                      <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '150px'}}>
+                      <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-1" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '170px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)'}}>
                           <li>
-                              <button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
-                                  <i className="bi bi-filetype-csv me-2"></i> Export to CSV
+                              <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-primary d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
+                                  <i className="bi bi-filetype-csv me-2 fs-6"></i> Export to CSV
                               </button>
                           </li>
                           <li>
-                              <button className="dropdown-item py-2 fw-bold text-success" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
-                                  <i className="bi bi-image me-2"></i> Export to PNG
+                              <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-success d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
+                                  <i className="bi bi-image me-2 fs-6"></i> Export to PNG
                               </button>
                           </li>
                       </ul>
