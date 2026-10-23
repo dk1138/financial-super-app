@@ -48,12 +48,10 @@ export default function DashboardTab() {
   const [viewerUrl, setViewerUrl] = useState('');
 
   useEffect(() => {
+    // Only load custom key if manually saved in browser
     const saved = localStorage.getItem('imgbb_api_key');
     if (saved) {
       setImgbbApiKey(saved);
-    } else {
-      setImgbbApiKey('90602a49d3d1711ead0dc0f549df7f83');
-      localStorage.setItem('imgbb_api_key', '90602a49d3d1711ead0dc0f549df7f83');
     }
   }, []);
 
@@ -64,12 +62,6 @@ export default function DashboardTab() {
 
   const handleUploadImgBB = async () => {
     if (!dashboardRef.current) return;
-
-    const key = (process.env.NEXT_PUBLIC_IMGBB_API_KEY || imgbbApiKey || localStorage.getItem('imgbb_api_key') || '90602a49d3d1711ead0dc0f549df7f83').trim();
-    if (!key) {
-      setApiKeyModalOpen(true);
-      return;
-    }
 
     setIsUploadingImgBB(true);
     showToast('📸 Capturing summary and uploading to ImgBB...');
@@ -89,8 +81,17 @@ export default function DashboardTab() {
               const formData = new FormData();
               formData.append('image', blob, 'Retirement_Summary.png');
 
-              const response = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, {
+              // Optional: pass custom client key if user entered one in the modal
+              const headers: Record<string, string> = {};
+              const customKey = imgbbApiKey.trim() || (localStorage.getItem('imgbb_api_key') || '').trim();
+              if (customKey) {
+                headers['x-imgbb-key'] = customKey;
+              }
+
+              // Upload via server-side API proxy (keeps IMGBB_API_KEY hidden from browser and GitHub)
+              const response = await fetch('/api/upload-image', {
                 method: 'POST',
+                headers,
                 body: formData
               });
 
@@ -106,9 +107,13 @@ export default function DashboardTab() {
                 setImgbbModalOpen(true);
               } else {
                 console.error('ImgBB upload error:', result);
-                const errMsg = result.error?.message || 'Upload failed. Please check your ImgBB API key.';
-                showToast(`❌ ${errMsg}`);
-                setApiKeyModalOpen(true);
+                if (result.code === 'KEY_MISSING') {
+                  showToast('🔑 Please configure your ImgBB API key.');
+                  setApiKeyModalOpen(true);
+                } else {
+                  const errMsg = result.error || 'Upload failed. Please check your ImgBB API key.';
+                  showToast(`❌ ${errMsg}`);
+                }
               }
             } catch (fetchErr: any) {
               console.error(fetchErr);
@@ -954,12 +959,15 @@ export default function DashboardTab() {
             <div className="mb-3">
               <label className="form-label small text-muted fw-semibold">API Key</label>
               <input 
-                type="text" 
+                type="password" 
                 className="form-control bg-input text-main border-secondary" 
                 placeholder="Paste your ImgBB API key here"
                 value={imgbbApiKey}
                 onChange={(e) => setImgbbApiKey(e.target.value)}
               />
+              <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
+                Tip: Set <code>IMGBB_API_KEY</code> in your server <code>.env.local</code> to hide your key completely from client browsers.
+              </div>
             </div>
             <div className="d-flex justify-content-end gap-2">
               <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-3" onClick={() => setApiKeyModalOpen(false)}>
