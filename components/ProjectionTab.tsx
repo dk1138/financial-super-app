@@ -1291,18 +1291,8 @@ export default function ProjectionTab() {
                         <div className="d-flex align-items-center flex-wrap gap-1">
                             <span className="fs-6 me-1">{y.year}</span>
                             {isLiquidDepleted && (
-                                <span className="badge bg-danger bg-opacity-25 text-danger border border-danger px-1 py-0.5" style={{ fontSize: '0.65rem' }}>
+                                <span className="badge px-1.5 py-0.5 rounded-pill" style={{ fontSize: '0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
                                     Depleted
-                                </span>
-                            )}
-                            {y.p1Age === (Number(data.inputs.p1_retireAge) || 65) && (
-                                <span className="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-50 px-1.5 py-0.5" style={{ fontSize: '0.65rem' }}>
-                                    <i className="bi bi-cup-hot-fill me-1"></i>Retire
-                                </span>
-                            )}
-                            {y.p1Age === 72 && (
-                                <span className="badge bg-info bg-opacity-20 text-info border border-info border-opacity-50 px-1.5 py-0.5" style={{ fontSize: '0.65rem' }}>
-                                    <i className="bi bi-arrow-left-right me-1"></i>RRIF
                                 </span>
                             )}
                             {getEventIcons(y.events, y)}
