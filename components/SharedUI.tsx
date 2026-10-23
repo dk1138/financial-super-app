@@ -307,60 +307,34 @@ export const FrequencyToggle = ({ value, onChange, mode = 'number' }: { value: a
 
 // --- MODERN DROPDOWN ---
 export const ModernDropdown = ({ value, onChange, options }: { value: string, onChange: (val: string) => void, options: {id: string, label: string, icon?: string, color?: string}[] }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const [localVal, setLocalVal] = useState(value);
-    useEffect(() => setLocalVal(value), [value]);
-
-    const handleSelect = (id: string) => {
-        setLocalVal(id);
-        setIsOpen(false);
-        setTimeout(() => onChange(id), 10);
-    };
-
-    const selected = options.find(a => a.id === localVal) || options[0] || { label: 'Select' };
+    const selected = options.find(a => a.id === value) || options[0] || { label: 'Select' };
 
     return (
-        <div className="position-relative w-100" ref={dropdownRef}>
+        <div className="position-relative w-100">
             <div 
-                className={`d-flex justify-content-between align-items-center bg-input border ${isOpen ? 'border-primary shadow' : 'border-secondary shadow-sm'} rounded-3 px-2 cursor-pointer text-main user-select-none transition-all`}
+                className="d-flex justify-content-between align-items-center bg-input border border-secondary shadow-sm rounded-3 px-2 text-main user-select-none transition-all"
                 style={{ height: '31px' }}
-                onClick={() => setIsOpen(!isOpen)}
             >
-                <div className="d-flex align-items-center gap-1 overflow-hidden me-1">
+                <div className="d-flex align-items-center gap-1.5 overflow-hidden me-1">
                     {selected.icon && <i className={`bi ${selected.icon} ${selected.color || 'text-muted'} flex-shrink-0`} style={{fontSize: '0.85rem'}}></i>}
                     <span className="fw-bold text-truncate" style={{fontSize: '0.75rem'}}>{selected.label}</span>
                 </div>
-                <i className={`bi bi-chevron-${isOpen ? 'up text-primary' : 'down text-muted'} flex-shrink-0`} style={{fontSize: '0.7rem'}}></i>
+                <i className="bi bi-chevron-down text-muted flex-shrink-0" style={{fontSize: '0.7rem'}}></i>
             </div>
             
-            {isOpen && (
-                <div className="position-absolute w-100 bg-input border border-secondary rounded-3 shadow-lg z-3 overflow-hidden" style={{ top: 'calc(100% + 4px)', left: 0, minWidth: '140px' }}>
-                    <div className="d-flex flex-column hide-scrollbar" style={{maxHeight: '250px', overflowY: 'auto'}}>
-                        {options.map(opt => (
-                            <div 
-                                key={opt.id}
-                                className={`d-flex align-items-center gap-2 px-3 py-2 cursor-pointer transition-all ${localVal === opt.id ? 'bg-secondary bg-opacity-25' : 'hover-bg-secondary'}`}
-                                onClick={() => handleSelect(opt.id)}
-                            >
-                                {opt.icon && <i className={`bi ${opt.icon} ${opt.color || 'text-muted'}`} style={{fontSize: '0.85rem'}}></i>}
-                                <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{opt.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+            <select 
+                className="position-absolute top-0 start-0 w-100 h-100 opacity-0 cursor-pointer"
+                style={{ zIndex: 10, fontSize: '0.85rem' }}
+                value={value} 
+                onChange={(e) => onChange(e.target.value)}
+                title={selected.label}
+            >
+                {options.map(opt => (
+                    <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                    </option>
+                ))}
+            </select>
         </div>
     );
 };

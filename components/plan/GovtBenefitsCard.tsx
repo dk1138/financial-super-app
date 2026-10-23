@@ -132,17 +132,17 @@ export default function GovtBenefitsCard() {
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
                                         <label className="form-label small text-muted mb-0">Est. Base Payout (Age 65)</label>
-                                        <div style={{width: '200px'}}><CurrencyInput suffix="/yr" className="form-control form-control-sm" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} /></div>
+                                        <div style={{width: '215px'}}><CurrencyInput suffix="/yr" className="form-control form-control-sm" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
                                         <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
-                                        <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                        <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                             <div className="flex-grow-1">
                                                 <StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} />
                                             </div>
                                             <select 
-                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
-                                                style={{width: '75px', minWidth: '75px'}}
+                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
+                                                style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
                                                 value={data.inputs[`${p}_cpp_start_month`] ?? 1} 
                                                 onChange={(e) => updateInput(`${p}_cpp_start_month`, parseInt(e.target.value, 10))}
                                                 title="Start Month"
@@ -177,17 +177,17 @@ export default function GovtBenefitsCard() {
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
                                         <label className="form-label small text-muted mb-0">Years in Canada <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65.<br><br><a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/eligibility.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>"/></label>
-                                        <div style={{width: '200px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
+                                        <div style={{width: '215px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
                                         <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
-                                        <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                        <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                             <div className="flex-grow-1">
                                                 <StepperInput min={65} max={70} value={oasStart} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} />
                                             </div>
                                             <select 
-                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
-                                                style={{width: '75px', minWidth: '75px'}}
+                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
+                                                style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
                                                 value={data.inputs[`${p}_oas_start_month`] ?? 1} 
                                                 onChange={(e) => updateInput(`${p}_oas_start_month`, parseInt(e.target.value, 10))}
                                                 title="Start Month"
@@ -238,17 +238,17 @@ export default function GovtBenefitsCard() {
                                         <h6 className="small fw-bold mb-3" style={p === 'p2' ? {color: 'var(--bs-purple)'} : {color: 'var(--bs-info)'}}>Lifetime Pension</h6>
                                         <div className="d-flex justify-content-between align-items-center mb-2">
                                             <label className="small text-muted mb-0">Amount</label>
-                                            <div style={{width: '200px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_lifetime`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_lifetime`, val)} /></div>
+                                            <div style={{width: '215px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_lifetime`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_lifetime`, val)} /></div>
                                         </div>
                                         <div className="d-flex justify-content-between align-items-center">
                                             <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
-                                            <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                            <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} />
                                                 </div>
                                                 <select 
-                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
-                                                    style={{width: '75px', minWidth: '75px'}}
+                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
+                                                    style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
                                                     value={data.inputs[`${p}_db_lifetime_start_month`] ?? 1} 
                                                     onChange={(e) => updateInput(`${p}_db_lifetime_start_month`, parseInt(e.target.value, 10))}
                                                     title="Start Month"
@@ -265,17 +265,17 @@ export default function GovtBenefitsCard() {
                                         <h6 className="small fw-bold text-muted mb-3">Bridge Benefit <span className="text-muted fw-normal">(Ends at 65)</span></h6>
                                         <div className="d-flex justify-content-between align-items-center mb-2">
                                             <label className="small text-muted mb-0">Amount</label>
-                                            <div style={{width: '200px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_bridge`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_bridge`, val)} /></div>
+                                            <div style={{width: '215px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_bridge`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_bridge`, val)} /></div>
                                         </div>
                                         <div className="d-flex justify-content-between align-items-center">
                                             <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
-                                            <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                            <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} />
                                                 </div>
                                                 <select 
-                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
-                                                    style={{width: '75px', minWidth: '75px'}}
+                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
+                                                    style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
                                                     value={data.inputs[`${p}_db_bridge_start_month`] ?? 1} 
                                                     onChange={(e) => updateInput(`${p}_db_bridge_start_month`, parseInt(e.target.value, 10))}
                                                     title="Start Month"
