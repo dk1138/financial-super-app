@@ -24,23 +24,20 @@ export function getLifMaxFactor(age: number, province: string) {
     if (group1.includes(province)) type = 'g1';
     else if (group2.includes(province)) type = 'g2';
 
-    const maxRates: Record<string, Record<number, number>> = {
+    const maxRates: any = {
         'g1': {
-            50: 0.0627, 51: 0.0631, 52: 0.0635, 53: 0.0640, 54: 0.0645,
             55: 0.0651, 56: 0.0657, 57: 0.0663, 58: 0.0670, 59: 0.0677, 60: 0.0685, 61: 0.0694, 62: 0.0704, 63: 0.0714, 64: 0.0726, 
             65: 0.0738, 66: 0.0752, 67: 0.0767, 68: 0.0783, 69: 0.0802, 70: 0.0822, 71: 0.0845, 72: 0.0871, 73: 0.0900, 74: 0.0934, 
             75: 0.0971, 76: 0.1015, 77: 0.1066, 78: 0.1125, 79: 0.1196, 80: 0.1282, 81: 0.1387, 82: 0.1519, 83: 0.1690, 84: 0.1919, 
             85: 0.2240, 86: 0.2723, 87: 0.3529, 88: 0.5146
         },
         'g2': {
-            50: 0.0610, 51: 0.0610, 52: 0.0610, 53: 0.0610, 54: 0.0610,
             55: 0.0640, 56: 0.0650, 57: 0.0650, 58: 0.0660, 59: 0.0670, 60: 0.0670, 61: 0.0680, 62: 0.0690, 63: 0.0700, 64: 0.0710, 
             65: 0.0720, 66: 0.0730, 67: 0.0740, 68: 0.0760, 69: 0.0770, 70: 0.0790, 71: 0.0810, 72: 0.0830, 73: 0.0850, 74: 0.0880, 
             75: 0.0910, 76: 0.0940, 77: 0.0980, 78: 0.1030, 79: 0.1080, 80: 0.1150, 81: 0.1210, 82: 0.1290, 83: 0.1380, 84: 0.1480, 
             85: 0.1600, 86: 0.1730, 87: 0.1890, 88: 0.2000
         },
         'fed': {
-            50: 0.0477, 51: 0.0483, 52: 0.0490, 53: 0.0498, 54: 0.0506,
             55: 0.0516, 56: 0.0522, 57: 0.0527, 58: 0.0534, 59: 0.0541, 60: 0.0548, 61: 0.0556, 62: 0.0565, 63: 0.0575, 64: 0.0586, 
             65: 0.0598, 66: 0.0611, 67: 0.0625, 68: 0.0641, 69: 0.0660, 70: 0.0680, 71: 0.0703, 72: 0.0729, 73: 0.0759, 74: 0.0793, 
             75: 0.0833, 76: 0.0879, 77: 0.0932, 78: 0.0994, 79: 0.1068, 80: 0.1157, 81: 0.1265, 82: 0.1401, 83: 0.1575, 84: 0.1809, 
@@ -49,50 +46,13 @@ export function getLifMaxFactor(age: number, province: string) {
     };
 
     if (age >= 89) return type === 'g2' ? 0.2000 : 1.0000;
-    if (age < 50) return maxRates[type][50]; 
+    if (age < 55) return maxRates[type][55]; 
     return maxRates[type][age] || (type === 'g2' ? 0.2000 : 1.0000);
 }
 
-/**
- * Calculates the statutory maximum LIF withdrawal amount considering both 
- * the prescribed age percentage factor and previous year's investment gains where permitted.
- * 
- * Rules reference: BMO Nesbitt Burns LIF Withdrawal Schedule (Footnotes 4 & 6)
- * - AB, BC, ON, NL: Greater of percentage limit or prior year's investment returns.
- * - MB: Greater of percentage limit or prior year returns + 6% of new transfers in.
- * - Federal, NB, NS, SK: Prescribed percentage factor only.
- */
-export function calcLifMaxLimit(
-    ageOnJan1: number, 
-    province: string, 
-    openingBal: number, 
-    priorYearGrowth: number = 0, 
-    newTransfersIn: number = 0
-): number {
-    if (openingBal <= 0) return 0;
-    
-    const factor = getLifMaxFactor(ageOnJan1, province);
-    const percentageLimit = openingBal * factor;
-    const provUpper = (province || 'ON').toUpperCase();
-
-    // Alberta, British Columbia, Ontario, Newfoundland & Labrador (Footnote 4)
-    if (['ON', 'BC', 'AB', 'NL'].includes(provUpper)) {
-        return Math.max(percentageLimit, Math.max(0, priorYearGrowth));
-    }
-
-    // Manitoba (Footnote 6)
-    if (provUpper === 'MB') {
-        const mbAlternative = Math.max(0, priorYearGrowth) + (0.06 * Math.max(0, newTransfersIn));
-        return Math.max(percentageLimit, mbAlternative);
-    }
-
-    // Federal, New Brunswick, Nova Scotia, Saskatchewan
-    return percentageLimit;
-}
-
-export function calcBenefitAmount(maxAmount: number, startAge: number, proportion: number, retireAge: number, type: string) { 
+export function calcBenefitAmount(maxAmount: number, startAge: number, proportion: number, retireAge: number, type: string, startMonthOffset: number = 0) { 
     let benefitValue = maxAmount * proportion;
-    let monthsDifference = (startAge - 65) * 12; 
+    let monthsDifference = (startAge - 65) * 12 + startMonthOffset; 
     
     if (type === 'cpp') {
         if (monthsDifference < 0) {

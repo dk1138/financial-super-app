@@ -3,19 +3,36 @@ import { useFinance } from '../../lib/FinanceContext';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
 import { InfoBtn, CurrencyInput, StepperInput } from '../SharedUI';
 
-const getAdjustedCPP = (basePerYear: number, startAge: number) => {
+const MONTH_OPTIONS = [
+  { value: 1, label: 'Jan' },
+  { value: 2, label: 'Feb' },
+  { value: 3, label: 'Mar' },
+  { value: 4, label: 'Apr' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'Jun' },
+  { value: 7, label: 'Jul' },
+  { value: 8, label: 'Aug' },
+  { value: 9, label: 'Sep' },
+  { value: 10, label: 'Oct' },
+  { value: 11, label: 'Nov' },
+  { value: 12, label: 'Dec' },
+];
+
+const getAdjustedCPP = (basePerYear: number, startAge: number, startMonth: number = 1, birthMonth: number = 1) => {
     let val = Number(basePerYear) || 0;
-    let diff = (startAge - 65) * 12;
+    const monthOffset = startMonth - birthMonth;
+    const diff = (startAge - 65) * 12 + monthOffset;
     if (diff < 0) val *= (1 - (Math.abs(diff) * 0.006));
     else if (diff > 0) val *= (1 + (diff * 0.007));
     return val;
 };
 
-const getAdjustedOAS = (yearsInCanada: number, startAge: number) => {
+const getAdjustedOAS = (yearsInCanada: number, startAge: number, startMonth: number = 1, birthMonth: number = 1) => {
     let maxOAS = FINANCIAL_CONSTANTS?.MAX_OAS || 8560; 
     let proportion = Math.max(0, Math.min(40, yearsInCanada || 40)) / 40;
     let val = maxOAS * proportion;
-    let diff = (startAge - 65) * 12;
+    const monthOffset = startMonth - birthMonth;
+    const diff = (startAge - 65) * 12 + monthOffset;
     if (diff > 0) val *= (1 + (diff * 0.006));
     return val;
 };
@@ -74,19 +91,26 @@ export default function GovtBenefitsCard() {
             // Resolve dynamic customized name
             const playerName = data.inputs[`${p}_name`] || (p === 'p1' ? 'Player 1' : 'Player 2');
 
+            // Extract birth month from DOB for accurate month-level actuarial adjustment
+            const birthMonth = parseInt((data.inputs[`${p}_dob`] || '').split('-')[1], 10) || 1;
+
             const cppBase = Number(data.inputs[`${p}_cpp_est_base`]) || 0;
             const cppStart = Number(data.inputs[`${p}_cpp_start`]) || 65;
-            const cppAdjYr = getAdjustedCPP(cppBase, cppStart);
+            const cppStartMonth = Number(data.inputs[`${p}_cpp_start_month`]) || 1;
+            const cppAdjYr = getAdjustedCPP(cppBase, cppStart, cppStartMonth, birthMonth);
             const cppAdjMo = cppAdjYr / 12;
-            const isCppEarly = cppStart < 65;
-            const isCppLate = cppStart > 65;
+            const totalCppMonthsDiff = (cppStart - 65) * 12 + (cppStartMonth - birthMonth);
+            const isCppEarly = totalCppMonthsDiff < 0;
+            const isCppLate = totalCppMonthsDiff > 0;
             const cppColor = isCppEarly ? 'text-danger' : isCppLate ? 'text-success' : 'text-primary';
 
             const oasStart = Number(data.inputs[`${p}_oas_start`]) || 65;
+            const oasStartMonth = Number(data.inputs[`${p}_oas_start_month`]) || 1;
             const oasYears = Number(data.inputs[`${p}_oas_years`]) ?? 40;
-            const oasAdjYr = getAdjustedOAS(oasYears, oasStart);
+            const oasAdjYr = getAdjustedOAS(oasYears, oasStart, oasStartMonth, birthMonth);
             const oasAdjMo = oasAdjYr / 12;
-            const isOasLate = oasStart > 65;
+            const totalOasMonthsDiff = (oasStart - 65) * 12 + (oasStartMonth - birthMonth);
+            const isOasLate = totalOasMonthsDiff > 0;
             const oasColor = isOasLate ? 'text-success' : 'text-primary';
 
             return (
@@ -108,11 +132,26 @@ export default function GovtBenefitsCard() {
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
                                         <label className="form-label small text-muted mb-0">Est. Base Payout (Age 65)</label>
-                                        <div style={{width: '170px'}}><CurrencyInput suffix="/yr" className="form-control form-control-sm" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} /></div>
+                                        <div style={{width: '200px'}}><CurrencyInput suffix="/yr" className="form-control form-control-sm" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <span className="small text-muted fw-bold">Starts at Age:</span>
-                                        <div style={{width: '170px'}}><StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} /></div>
+                                        <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                        <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                            <div className="flex-grow-1">
+                                                <StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} />
+                                            </div>
+                                            <select 
+                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
+                                                style={{width: '75px', minWidth: '75px'}}
+                                                value={data.inputs[`${p}_cpp_start_month`] ?? 1} 
+                                                onChange={(e) => updateInput(`${p}_cpp_start_month`, parseInt(e.target.value, 10))}
+                                                title="Start Month"
+                                            >
+                                                {MONTH_OPTIONS.map(m => (
+                                                    <option key={m.value} value={m.value}>{m.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
                                         <span className="small text-muted">Adjusted Payout:</span>
@@ -138,11 +177,26 @@ export default function GovtBenefitsCard() {
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
                                         <label className="form-label small text-muted mb-0">Years in Canada <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65.<br><br><a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/eligibility.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>"/></label>
-                                        <div style={{width: '170px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
+                                        <div style={{width: '200px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <span className="small text-muted fw-bold">Starts at Age:</span>
-                                        <div style={{width: '170px'}}><StepperInput min={65} max={70} value={oasStart} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} /></div>
+                                        <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                        <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                            <div className="flex-grow-1">
+                                                <StepperInput min={65} max={70} value={oasStart} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} />
+                                            </div>
+                                            <select 
+                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
+                                                style={{width: '75px', minWidth: '75px'}}
+                                                value={data.inputs[`${p}_oas_start_month`] ?? 1} 
+                                                onChange={(e) => updateInput(`${p}_oas_start_month`, parseInt(e.target.value, 10))}
+                                                title="Start Month"
+                                            >
+                                                {MONTH_OPTIONS.map(m => (
+                                                    <option key={m.value} value={m.value}>{m.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
                                         <span className="small text-muted">Adjusted Payout:</span>
@@ -184,11 +238,26 @@ export default function GovtBenefitsCard() {
                                         <h6 className="small fw-bold mb-3" style={p === 'p2' ? {color: 'var(--bs-purple)'} : {color: 'var(--bs-info)'}}>Lifetime Pension</h6>
                                         <div className="d-flex justify-content-between align-items-center mb-2">
                                             <label className="small text-muted mb-0">Amount</label>
-                                            <div style={{width: '170px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_lifetime`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_lifetime`, val)} /></div>
+                                            <div style={{width: '200px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_lifetime`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_lifetime`, val)} /></div>
                                         </div>
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span className="small text-muted fw-bold">Starts at Age:</span>
-                                            <div style={{width: '170px'}}><StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} /></div>
+                                            <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                            <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                                <div className="flex-grow-1">
+                                                    <StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} />
+                                                </div>
+                                                <select 
+                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
+                                                    style={{width: '75px', minWidth: '75px'}}
+                                                    value={data.inputs[`${p}_db_lifetime_start_month`] ?? 1} 
+                                                    onChange={(e) => updateInput(`${p}_db_lifetime_start_month`, parseInt(e.target.value, 10))}
+                                                    title="Start Month"
+                                                >
+                                                    {MONTH_OPTIONS.map(m => (
+                                                        <option key={m.value} value={m.value}>{m.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -196,11 +265,26 @@ export default function GovtBenefitsCard() {
                                         <h6 className="small fw-bold text-muted mb-3">Bridge Benefit <span className="text-muted fw-normal">(Ends at 65)</span></h6>
                                         <div className="d-flex justify-content-between align-items-center mb-2">
                                             <label className="small text-muted mb-0">Amount</label>
-                                            <div style={{width: '170px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_bridge`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_bridge`, val)} /></div>
+                                            <div style={{width: '200px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_bridge`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_bridge`, val)} /></div>
                                         </div>
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span className="small text-muted fw-bold">Starts at Age:</span>
-                                            <div style={{width: '170px'}}><StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} /></div>
+                                            <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                            <div className="d-flex align-items-center gap-2" style={{width: '200px'}}>
+                                                <div className="flex-grow-1">
+                                                    <StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} />
+                                                </div>
+                                                <select 
+                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill px-2 text-center" 
+                                                    style={{width: '75px', minWidth: '75px'}}
+                                                    value={data.inputs[`${p}_db_bridge_start_month`] ?? 1} 
+                                                    onChange={(e) => updateInput(`${p}_db_bridge_start_month`, parseInt(e.target.value, 10))}
+                                                    title="Start Month"
+                                                >
+                                                    {MONTH_OPTIONS.map(m => (
+                                                        <option key={m.value} value={m.value}>{m.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -278,33 +278,83 @@ export class FinanceEngine {
                 const dbMultiplier = (this.inputs[`${prefix}_db_indexed`] !== false) ? baseInflation : 1.0;
                 
                 if (age >= lifetimeStart) {
-                    let proration = (age === lifetimeStart) ? startProration : 1.0;
+                    let proration = 1.0;
+                    if (age === lifetimeStart) {
+                        const mInput = this.inputs[`${prefix}_db_lifetime_start_month`];
+                        if (mInput !== undefined && mInput !== '' && mInput !== null) {
+                            const startM = Math.max(1, Math.min(12, parseInt(mInput, 10)));
+                            proration = (13 - startM) / 12;
+                        } else if (yearIndex === 0) {
+                            proration = 1.0;
+                        } else {
+                            proration = startProration;
+                        }
+                    }
                     inflows.pension += this.getVal(`${prefix}_db_lifetime`) * 12 * dbMultiplier * proration;
                 }
                 
                 if (age >= bridgeStart && age <= 65) {
                     let months = 12;
-                    if (age === bridgeStart) months -= birthMonth;
-                    if (age === 65) months -= (12 - birthMonth);
+                    if (age === bridgeStart) {
+                        const mInput = this.inputs[`${prefix}_db_bridge_start_month`];
+                        if (mInput !== undefined && mInput !== '' && mInput !== null) {
+                            const startM = Math.max(1, Math.min(12, parseInt(mInput, 10)));
+                            months = Math.max(0, Math.min(12, 13 - startM));
+                        } else if (yearIndex === 0) {
+                            months = 12;
+                        } else {
+                            months = 12 - birthMonth;
+                        }
+                    }
+                    if (age === 65) {
+                        months = Math.min(months, birthMonth);
+                    }
                     if (months > 0) inflows.pension += this.getVal(`${prefix}_db_bridge`) * months * dbMultiplier;
                 }
             }
 
             const cppStart = parseInt(this.getRaw(`${prefix}_cpp_start`) || 65);
             if (this.inputs[`${prefix}_cpp_enabled`] && age >= cppStart) {
-                let proration = (age === cppStart) ? startProration : 1.0;
-                inflows.cpp = calcBenefitAmount(maxCpp, cppStart, 1, person.retAge, 'cpp') * proration;
+                let proration = 1.0;
+                let cppMonthOffset = 0;
+                const mInput = this.inputs[`${prefix}_cpp_start_month`];
+                if (mInput !== undefined && mInput !== '' && mInput !== null) {
+                    const startM = Math.max(1, Math.min(12, parseInt(mInput, 10)));
+                    if (age === cppStart) {
+                        proration = (13 - startM) / 12;
+                    }
+                    cppMonthOffset = startM - (birthMonth + 1);
+                } else {
+                    if (age === cppStart) {
+                        proration = (yearIndex === 0) ? 1.0 : startProration;
+                    }
+                }
+                inflows.cpp = calcBenefitAmount(maxCpp, cppStart, 1, person.retAge, 'cpp', cppMonthOffset) * proration;
                 if (trackedEvents && age >= cppStart && !trackedEvents.has(`${prefix.toUpperCase()} CPP`)) trackedEvents.add(`${prefix.toUpperCase()} CPP`); 
             }
             
             const oasStart = parseInt(this.getRaw(`${prefix}_oas_start`) || 65);
             if (this.inputs[`${prefix}_oas_enabled`] && age >= oasStart) {
-                let baseOas = calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas');
+                let oasMonthOffset = 0;
+                let proration = 1.0;
+                const mInput = this.inputs[`${prefix}_oas_start_month`];
+                if (mInput !== undefined && mInput !== '' && mInput !== null) {
+                    const startM = Math.max(1, Math.min(12, parseInt(mInput, 10)));
+                    if (age === oasStart) {
+                        proration = (13 - startM) / 12;
+                    }
+                    oasMonthOffset = startM - (birthMonth + 1);
+                } else {
+                    if (age === oasStart) {
+                        proration = (yearIndex === 0) ? 1.0 : startProration;
+                    }
+                }
+                let baseOas = calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas', oasMonthOffset);
                 if (age >= 75) baseOas = (age === 75) ? ((baseOas * endProration) + (baseOas * 1.10 * startProration)) : (baseOas * 1.10);
 
                 if (age === oasStart) {
-                    if (oasStart === 75) baseOas = calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas') * 1.10;
-                    inflows.oas = baseOas * startProration;
+                    if (oasStart === 75) baseOas = calcBenefitAmount(maxOas, oasStart, 1, 65, 'oas', oasMonthOffset) * 1.10;
+                    inflows.oas = baseOas * proration;
                 } else {
                     inflows.oas = baseOas;
                 }
