@@ -148,15 +148,20 @@ export default function GlobalHeader() {
     };
 
     const handleExportJson = () => {
-        const dataStr = JSON.stringify(data, null, 2);
+        const exportPayload = {
+            ...data,
+            version: ENGINE_VERSION,
+            exportedAt: new Date().toISOString()
+        };
+        const dataStr = JSON.stringify(exportPayload, null, 2);
         const blob = new Blob([dataStr], {type: "application/json"});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${activePlanName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.json`;
+        a.download = `${activePlanName.replace(/\s+/g, '_')}_v${ENGINE_VERSION}_${new Date().toISOString().slice(0,10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        showToast("Plan exported to PC!");
+        showToast(`Plan exported to PC (v${ENGINE_VERSION})!`);
         setFileMenuOpen(false);
     };
 

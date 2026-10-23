@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
 import html2canvas from 'html2canvas';
+import { ENGINE_VERSION } from '../lib/financeEngine';
 
 const getRrifFactor = (age: number) => {
     if (age < 71) return 1 / (90 - age);
@@ -133,7 +134,7 @@ export default function ProjectionTab() {
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `Retirement_Projection_v${ENGINE_VERSION}_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -172,7 +173,7 @@ export default function ProjectionTab() {
               const url = canvas.toDataURL('image/png');
               const link = document.createElement('a');
               link.href = url;
-              link.download = `Retirement_Projection_${new Date().toISOString().split('T')[0]}.png`;
+              link.download = `Retirement_Projection_v${ENGINE_VERSION}_${new Date().toISOString().split('T')[0]}.png`;
               link.click();
               showToast('✅ Table image downloaded successfully!');
           } catch (err) {
