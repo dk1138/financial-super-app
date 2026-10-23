@@ -91,32 +91,38 @@ export default function DashboardTab() {
                 headers['x-imgbb-key'] = customKey;
               }
 
-              try {
-                const response = await fetch('/api/upload-image', {
-                  method: 'POST',
-                  headers,
-                  body: formData
-                });
+              // Support both /api/upload-image and /api/auth/upload-image
+              const endpoints = ['/api/upload-image', '/api/auth/upload-image'];
+              for (const endpoint of endpoints) {
+                if (uploadSuccess) break;
+                try {
+                  const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers,
+                    body: formData
+                  });
 
-                if (response.ok) {
-                  const contentType = response.headers.get('content-type') || '';
-                  if (contentType.includes('application/json')) {
-                    const result = await response.json();
-                    if (result.success && result.data?.url) {
-                      const url = result.data.url;
-                      const viewer = result.data.url_viewer || result.data.display_url || url;
-                      setUploadedUrl(url);
-                      setViewerUrl(viewer);
-                      setUploadProvider(result.provider || 'ImgBB');
-                      await navigator.clipboard.writeText(url);
-                      showToast(`✅ ${result.provider || 'Image'} link copied to clipboard!`);
-                      setImgbbModalOpen(true);
-                      uploadSuccess = true;
+                  if (response.ok) {
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                      const result = await response.json();
+                      if (result.success && result.data?.url) {
+                        const url = result.data.url;
+                        const viewer = result.data.url_viewer || result.data.display_url || url;
+                        setUploadedUrl(url);
+                        setViewerUrl(viewer);
+                        setUploadProvider(result.provider || 'ImgBB');
+                        await navigator.clipboard.writeText(url);
+                        showToast(`✅ ${result.provider || 'Image'} link copied to clipboard!`);
+                        setImgbbModalOpen(true);
+                        uploadSuccess = true;
+                        break;
+                      }
                     }
                   }
+                } catch (srvErr) {
+                  console.warn(`Route ${endpoint} fetch error:`, srvErr);
                 }
-              } catch (srvErr) {
-                console.warn('Server route fetch error, trying direct client fallback:', srvErr);
               }
 
               // --- TIER 2: DIRECT CLIENT LITTERBOX FALLBACK (FREE, ZERO API KEY REQUIRED) ---

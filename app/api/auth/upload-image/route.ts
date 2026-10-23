@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const image = formData.get('image');
     const requestedService = (formData.get('service') as string) || 'auto'; // 'auto' | 'imgbb' | 'litterbox'
 
-    if (!image) {
+    if (!image || typeof image === 'string') {
       return NextResponse.json(
         { success: false, error: 'No image file found in the upload request.' },
         { status: 400 }
@@ -16,8 +16,6 @@ export async function POST(req: Request) {
     }
 
     const imageBlob = image as Blob;
-    const arrayBuffer = await imageBlob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     // 1. Check for ImgBB API key from server environment or request headers
     const apiKey = (
@@ -29,13 +27,14 @@ export async function POST(req: Request) {
 
     // 2. If user specifically requested Litterbox or no ImgBB key is configured, use Litterbox directly
     if (requestedService === 'litterbox' || (!apiKey && requestedService === 'auto')) {
-      return await uploadToLitterbox(buffer);
+      return await uploadToLitterbox(imageBlob);
     }
 
     // 3. Try ImgBB first if key is present
     if (apiKey) {
       try {
-        const base64Image = buffer.toString('base64');
+        const arrayBuffer = await imageBlob.arrayBuffer();
+        const base64Image = Buffer.from(arrayBuffer).toString('base64');
         const imgbbParams = new URLSearchParams();
         imgbbParams.append('image', base64Image);
 
@@ -73,9 +72,9 @@ export async function POST(req: Request) {
     }
 
     // 4. Automatic Fallback: Upload to Litterbox (free, no API key needed, direct 72h link)
-    return await uploadToLitterbox(buffer);
+    return await uploadToLitterbox(imageBlob);
   } catch (error: any) {
-    console.error('API proxy error in /api/upload-image:', error);
+    console.error('API proxy error in upload-image route:', error);
     return NextResponse.json(
       {
         success: false,
@@ -86,13 +85,13 @@ export async function POST(req: Request) {
   }
 }
 
-async function uploadToLitterbox(buffer: Buffer) {
+async function uploadToLitterbox(imageBlob: Blob) {
   try {
     const uploadForm = new FormData();
     uploadForm.append('reqtype', 'fileupload');
     uploadForm.append('time', '72h'); // 72-hour direct link
-    const blob = new Blob([buffer], { type: 'image/png' });
-    uploadForm.append('fileToUpload', blob, 'Retirement_Summary.png');
+    // Pass imageBlob directly to FormData.append to avoid Buffer <-> BlobPart type incompatibility in Next 16 / TS 5.5+
+    uploadForm.append('fileToUpload', imageBlob, 'Retirement_Summary.png');
 
     const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
       method: 'POST',
