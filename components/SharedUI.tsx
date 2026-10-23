@@ -307,7 +307,21 @@ export const FrequencyToggle = ({ value, onChange, mode = 'number' }: { value: a
 };
 
 // --- MODERN DROPDOWN ---
-export const ModernDropdown = ({ value, onChange, options }: { value: string, onChange: (val: string) => void, options: {id: string, label: string, icon?: string, color?: string}[] }) => {
+export const ModernDropdown = ({ 
+    value, 
+    onChange, 
+    options, 
+    className = '', 
+    style = {}, 
+    pill = false 
+}: { 
+    value: any, 
+    onChange: (val: any) => void, 
+    options: { id: any, label: string, icon?: string, color?: string }[],
+    className?: string,
+    style?: React.CSSProperties,
+    pill?: boolean
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 140, openUp: false });
     const triggerRef = useRef<HTMLDivElement>(null);
@@ -317,13 +331,14 @@ export const ModernDropdown = ({ value, onChange, options }: { value: string, on
         e.stopPropagation();
         if (!isOpen && triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
-            const menuHeight = Math.min(options.length * 38 + 12, 220);
+            const menuHeight = Math.min(options.length * 36 + 12, 220);
             const spaceBelow = window.innerHeight - rect.bottom;
             const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+            const menuWidth = Math.max(rect.width, (options.length > 5 && !options[0]?.icon) ? 84 : 140);
             setCoords({
                 top: openUp ? Math.max(10, rect.top - menuHeight - 4) : (rect.bottom + 4),
-                left: Math.max(10, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 150) - 10)),
-                width: Math.max(rect.width, 145),
+                left: Math.max(10, Math.min(rect.left, window.innerWidth - menuWidth - 10)),
+                width: menuWidth,
                 openUp
             });
         }
@@ -352,13 +367,13 @@ export const ModernDropdown = ({ value, onChange, options }: { value: string, on
         };
     }, [isOpen]);
 
-    const selected = options.find((a: any) => a.id === value) || options[0] || { label: 'Select' };
+    const selected = options.find((a: any) => String(a.id) === String(value)) || options[0] || { label: 'Select' };
 
     return (
         <div className="position-relative w-100" ref={triggerRef}>
             <div 
-                className={`d-flex justify-content-between align-items-center bg-input border ${isOpen ? 'border-primary shadow' : 'border-secondary shadow-sm'} rounded-3 px-2 cursor-pointer text-main user-select-none transition-all`}
-                style={{ height: '31px' }}
+                className={`d-flex justify-content-between align-items-center bg-input border ${isOpen ? 'border-primary shadow' : 'border-secondary shadow-sm'} ${pill ? 'rounded-pill px-2.5' : 'rounded-3 px-2'} cursor-pointer text-main user-select-none transition-all ${className}`}
+                style={{ height: '31px', minHeight: '31px', ...style }}
                 onClick={toggle}
             >
                 <div className="d-flex align-items-center gap-1.5 overflow-hidden me-1">
@@ -384,11 +399,11 @@ export const ModernDropdown = ({ value, onChange, options }: { value: string, on
                 >
                     <div className="d-flex flex-column py-1 hide-scrollbar" style={{maxHeight: '220px', overflowY: 'auto'}}>
                         {options.map((opt: any) => {
-                            const isSelected = value === opt.id;
+                            const isSelected = String(value) === String(opt.id);
                             return (
                                 <div 
                                     key={opt.id}
-                                    className={`d-flex align-items-center gap-2 px-3 py-2 cursor-pointer transition-all ${isSelected ? 'text-primary fw-bold' : 'text-main'}`}
+                                    className={`d-flex align-items-center gap-2 px-3 py-1.5 cursor-pointer transition-all ${isSelected ? 'text-primary fw-bold' : 'text-main'}`}
                                     style={{ 
                                         fontSize: '0.75rem', 
                                         lineHeight: '1.4',

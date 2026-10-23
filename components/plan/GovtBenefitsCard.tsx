@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
-import { InfoBtn, CurrencyInput, StepperInput } from '../SharedUI';
+import { InfoBtn, CurrencyInput, StepperInput, ModernDropdown } from '../SharedUI';
 
 const MONTH_OPTIONS = [
-  { value: 1, label: 'Jan' },
-  { value: 2, label: 'Feb' },
-  { value: 3, label: 'Mar' },
-  { value: 4, label: 'Apr' },
-  { value: 5, label: 'May' },
-  { value: 6, label: 'Jun' },
-  { value: 7, label: 'Jul' },
-  { value: 8, label: 'Aug' },
-  { value: 9, label: 'Sep' },
-  { value: 10, label: 'Oct' },
-  { value: 11, label: 'Nov' },
-  { value: 12, label: 'Dec' },
+  { id: 1, label: 'Jan' },
+  { id: 2, label: 'Feb' },
+  { id: 3, label: 'Mar' },
+  { id: 4, label: 'Apr' },
+  { id: 5, label: 'May' },
+  { id: 6, label: 'Jun' },
+  { id: 7, label: 'Jul' },
+  { id: 8, label: 'Aug' },
+  { id: 9, label: 'Sep' },
+  { id: 10, label: 'Oct' },
+  { id: 11, label: 'Nov' },
+  { id: 12, label: 'Dec' },
 ];
 
 const getAdjustedCPP = (basePerYear: number, startAge: number, startMonth: number = 1, birthMonth: number = 1) => {
@@ -140,17 +140,14 @@ export default function GovtBenefitsCard() {
                                             <div className="flex-grow-1">
                                                 <StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} />
                                             </div>
-                                            <select 
-                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
-                                                style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
-                                                value={data.inputs[`${p}_cpp_start_month`] ?? 1} 
-                                                onChange={(e) => updateInput(`${p}_cpp_start_month`, parseInt(e.target.value, 10))}
-                                                title="Start Month"
-                                            >
-                                                {MONTH_OPTIONS.map(m => (
-                                                    <option key={m.value} value={m.value}>{m.label}</option>
-                                                ))}
-                                            </select>
+                                            <div style={{width: '80px', flexShrink: 0}}>
+                                                <ModernDropdown 
+                                                    pill 
+                                                    value={data.inputs[`${p}_cpp_start_month`] ?? 1} 
+                                                    onChange={(val: any) => updateInput(`${p}_cpp_start_month`, Number(val))} 
+                                                    options={MONTH_OPTIONS} 
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
@@ -185,17 +182,14 @@ export default function GovtBenefitsCard() {
                                             <div className="flex-grow-1">
                                                 <StepperInput min={65} max={70} value={oasStart} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} />
                                             </div>
-                                            <select 
-                                                className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
-                                                style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
-                                                value={data.inputs[`${p}_oas_start_month`] ?? 1} 
-                                                onChange={(e) => updateInput(`${p}_oas_start_month`, parseInt(e.target.value, 10))}
-                                                title="Start Month"
-                                            >
-                                                {MONTH_OPTIONS.map(m => (
-                                                    <option key={m.value} value={m.value}>{m.label}</option>
-                                                ))}
-                                            </select>
+                                            <div style={{width: '80px', flexShrink: 0}}>
+                                                <ModernDropdown 
+                                                    pill 
+                                                    value={data.inputs[`${p}_oas_start_month`] ?? 1} 
+                                                    onChange={(val: any) => updateInput(`${p}_oas_start_month`, Number(val))} 
+                                                    options={MONTH_OPTIONS} 
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
@@ -246,17 +240,14 @@ export default function GovtBenefitsCard() {
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} />
                                                 </div>
-                                                <select 
-                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
-                                                    style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
-                                                    value={data.inputs[`${p}_db_lifetime_start_month`] ?? 1} 
-                                                    onChange={(e) => updateInput(`${p}_db_lifetime_start_month`, parseInt(e.target.value, 10))}
-                                                    title="Start Month"
-                                                >
-                                                    {MONTH_OPTIONS.map(m => (
-                                                        <option key={m.value} value={m.value}>{m.label}</option>
-                                                    ))}
-                                                </select>
+                                                <div style={{width: '80px', flexShrink: 0}}>
+                                                    <ModernDropdown 
+                                                        pill 
+                                                        value={data.inputs[`${p}_db_lifetime_start_month`] ?? 1} 
+                                                        onChange={(val: any) => updateInput(`${p}_db_lifetime_start_month`, Number(val))} 
+                                                        options={MONTH_OPTIONS} 
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -273,17 +264,14 @@ export default function GovtBenefitsCard() {
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} />
                                                 </div>
-                                                <select 
-                                                    className="form-select form-select-sm bg-input border-secondary text-main rounded-pill shadow-none" 
-                                                    style={{width: '88px', minWidth: '88px', paddingLeft: '0.75rem', paddingRight: '1.75rem', fontSize: '0.75rem', fontWeight: '600'}}
-                                                    value={data.inputs[`${p}_db_bridge_start_month`] ?? 1} 
-                                                    onChange={(e) => updateInput(`${p}_db_bridge_start_month`, parseInt(e.target.value, 10))}
-                                                    title="Start Month"
-                                                >
-                                                    {MONTH_OPTIONS.map(m => (
-                                                        <option key={m.value} value={m.value}>{m.label}</option>
-                                                    ))}
-                                                </select>
+                                                <div style={{width: '80px', flexShrink: 0}}>
+                                                    <ModernDropdown 
+                                                        pill 
+                                                        value={data.inputs[`${p}_db_bridge_start_month`] ?? 1} 
+                                                        onChange={(val: any) => updateInput(`${p}_db_bridge_start_month`, Number(val))} 
+                                                        options={MONTH_OPTIONS} 
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
