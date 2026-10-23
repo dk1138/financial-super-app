@@ -6,7 +6,6 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const image = formData.get('image');
-    const requestedService = (formData.get('service') as string) || 'auto'; // 'auto' | 'imgbb' | 'litterbox'
 
     if (!image || typeof image === 'string') {
       return NextResponse.json(
@@ -16,29 +15,71 @@ export async function POST(req: Request) {
     }
 
     const imageBlob = image as Blob;
+    const arrayBuffer = await imageBlob.arrayBuffer();
+    const base64Image = Buffer.from(arrayBuffer).toString('base64');
 
-    // 1. Check for ImgBB API key from server environment or request headers
-    const apiKey = (
+    // 1. Primary Service: Imgur (via IMGUR_CLIENT_ID or anonymous client ID)
+    const imgurClientId = (
+      process.env.IMGUR_CLIENT_ID ||
+      process.env.NEXT_PUBLIC_IMGUR_CLIENT_ID ||
+      req.headers.get('x-imgur-client-id') ||
+      '546c25a59c58ad7' // Standard anonymous client ID for Imgur API
+    ).trim();
+
+    if (imgurClientId) {
+      try {
+        const imgurForm = new FormData();
+        imgurForm.append('image', base64Image);
+        imgurForm.append('type', 'base64');
+        imgurForm.append('title', 'Planfolio.ca Summary');
+
+        const imgurRes = await fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            Authorization: `Client-ID ${imgurClientId}`,
+          },
+          body: imgurForm,
+        });
+
+        const contentType = imgurRes.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const imgurData = await imgurRes.json();
+          if (imgurRes.ok && imgurData?.success && imgurData?.data?.link) {
+            return NextResponse.json({
+              success: true,
+              provider: 'Imgur',
+              data: {
+                url: imgurData.data.link,
+                display_url: imgurData.data.link,
+                url_viewer: imgurData.data.link,
+                delete_hash: imgurData.data.deletehash,
+                title: 'Planfolio.ca Summary',
+              },
+            });
+          }
+          console.warn('Imgur returned non-success response:', imgurData?.data?.error);
+        } else {
+          console.warn('Imgur returned non-JSON status:', imgurRes.status);
+        }
+      } catch (imgurErr: any) {
+        console.warn('Imgur fetch error, proceeding to fallback:', imgurErr?.message);
+      }
+    }
+
+    // 2. Secondary Service: ImgBB (if IMGBB_API_KEY is configured)
+    const imgbbKey = (
       process.env.IMGBB_API_KEY ||
       process.env.NEXT_PUBLIC_IMGBB_API_KEY ||
       req.headers.get('x-imgbb-key') ||
       ''
     ).trim();
 
-    // 2. If user specifically requested Litterbox or no ImgBB key is configured, use Litterbox directly
-    if (requestedService === 'litterbox' || (!apiKey && requestedService === 'auto')) {
-      return await uploadToLitterbox(imageBlob);
-    }
-
-    // 3. Try ImgBB first if key is present
-    if (apiKey) {
+    if (imgbbKey) {
       try {
-        const arrayBuffer = await imageBlob.arrayBuffer();
-        const base64Image = Buffer.from(arrayBuffer).toString('base64');
         const imgbbParams = new URLSearchParams();
         imgbbParams.append('image', base64Image);
 
-        const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -57,21 +98,17 @@ export async function POST(req: Request) {
                 url: data.data.url,
                 display_url: data.data.display_url,
                 url_viewer: data.data.url_viewer || data.data.display_url || data.data.url,
-                delete_url: data.data.delete_url,
-                title: data.data.title,
+                title: 'Planfolio.ca Summary',
               },
             });
           }
-          console.warn('ImgBB returned error status:', data?.error?.message);
-        } else {
-          console.warn('ImgBB returned non-JSON response status:', imgbbRes.status);
         }
       } catch (err: any) {
-        console.warn('ImgBB network request failed, attempting fallback:', err?.message);
+        console.warn('ImgBB upload error, proceeding to fallback:', err?.message);
       }
     }
 
-    // 4. Automatic Fallback: Upload to Litterbox (free, no API key needed, direct 72h link)
+    // 3. Fallback Service: Litterbox (Zero-credentials required, direct 72h link)
     return await uploadToLitterbox(imageBlob);
   } catch (error: any) {
     console.error('API proxy error in upload-image route:', error);
@@ -90,8 +127,8 @@ async function uploadToLitterbox(imageBlob: Blob) {
     const uploadForm = new FormData();
     uploadForm.append('reqtype', 'fileupload');
     uploadForm.append('time', '72h'); // 72-hour direct link
-    // Pass imageBlob directly to FormData.append to avoid Buffer <-> BlobPart type incompatibility in Next 16 / TS 5.5+
-    uploadForm.append('fileToUpload', imageBlob, 'Retirement_Summary.png');
+    // Pass imageBlob directly to avoid Buffer vs BlobPart type issues in Next.js 16
+    uploadForm.append('fileToUpload', imageBlob, 'Planfolio_Summary.png');
 
     const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
       method: 'POST',
@@ -107,13 +144,13 @@ async function uploadToLitterbox(imageBlob: Blob) {
           url: url,
           display_url: url,
           url_viewer: url,
-          note: 'Direct link valid for 72 hours (no API key required).',
+          note: 'Direct link valid for 72 hours (free anonymous host).',
         },
       });
     }
 
     return NextResponse.json(
-      { success: false, error: 'Failed to upload to both ImgBB and Litterbox.' },
+      { success: false, error: 'Failed to upload to image hosts.' },
       { status: 500 }
     );
   } catch (err: any) {
