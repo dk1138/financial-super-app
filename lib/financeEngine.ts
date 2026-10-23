@@ -777,8 +777,11 @@ export class FinanceEngine {
             let cashIncome1 = Math.max(0, baseGross1 + divInc1);
             let cashIncome2 = Math.max(0, baseGross2 + divInc2);
 
-            let getEligPension1 = () => inflows.p1.pension + (age1 >= 65 ? (regMins.p1 + regMins.lifTaken1 + (wdBreakdown?.p1?.RRIF || 0) + (wdBreakdown?.p1?.LIF || 0)) : 0);
-            let getEligPension2 = () => inflows.p2.pension + (age2 >= 65 ? (regMins.p2 + regMins.lifTaken2 + (wdBreakdown?.p2?.RRIF || 0) + (wdBreakdown?.p2?.LIF || 0)) : 0);
+            pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
+            let annualRealizedGains: Record<string, number> = { p1: 0, p2: 0 };
+
+            let getEligPension1 = () => (inflows.p1.pension + (age1 >= 65 ? (regMins.p1 + regMins.lifTaken1 + (wdBreakdown?.p1?.RRIF || 0) + (wdBreakdown?.p1?.LIF || 0)) : 0)) - pensionSplitTransfer.p1ToP2 + pensionSplitTransfer.p2ToP1;
+            let getEligPension2 = () => (inflows.p2.pension + (age2 >= 65 ? (regMins.p2 + regMins.lifTaken2 + (wdBreakdown?.p2?.RRIF || 0) + (wdBreakdown?.p2?.LIF || 0)) : 0)) + pensionSplitTransfer.p1ToP2 - pensionSplitTransfer.p2ToP1;
 
             const provinceStr = this.getRaw('tax_province');
 
@@ -1101,7 +1104,8 @@ export class FinanceEngine {
                             blockRRSPWithdrawalsP1: p1RRSPContributed,
                             blockRRSPWithdrawalsP2: p2RRSPContributed,
                             isRet1, 
-                            isRet2
+                            isRet2,
+                            annualRealizedGains
                         }
                     );
                 }

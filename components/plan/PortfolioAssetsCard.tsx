@@ -254,7 +254,13 @@ export default function PortfolioAssetsCard() {
                                               <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>For. Div Yld</span>
                                               <InfoBtn direction="up" title="Foreign Dividend Yield" text="Foreign dividend yield (e.g., US stocks, global ETFs). Taxed at 100% as regular foreign income (no Canadian gross-up or dividend tax credit). Assumes Foreign Tax Credit (FTC) offsets Foreign Withholding Tax (FWT)." />
                                           </div>
-                                          <div style={{flex: '1 1 0%', minWidth: '80px'}}></div>
+                                           <div style={{flex: "1 1 0%", minWidth: "80px"}} className="text-end pe-1">
+                                               {((Number(data.inputs[`${p}_${acct}`]) || 0) * ((Number(data.inputs[`${p}_nonreg_foreign_yield`]) || 0) / 100)) > 0 && (
+                                                   <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style={{fontSize: "0.65rem", fontWeight: "600"}}>
+                                                       ≈ ${Math.round((Number(data.inputs[`${p}_${acct}`]) || 0) * ((Number(data.inputs[`${p}_nonreg_foreign_yield`]) || 0) / 100)).toLocaleString()}/yr
+                                                   </span>
+                                               )}
+                                           </div>
                                           <div style={{flex: '0 0 75px'}} className="position-relative">
                                               <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1" value={data.inputs[`${p}_nonreg_foreign_yield`]} onChange={(val: any) => updateInput(`${p}_nonreg_foreign_yield`, val)} placeholder="0.0%" />
                                           </div>
@@ -352,7 +358,13 @@ export default function PortfolioAssetsCard() {
                                                                <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>For. Yld</span>
                                                                <InfoBtn direction="up" title="Foreign Dividend Yield" text="Foreign dividend yield (100% ordinary taxable income, no Canadian gross-up or dividend tax credit)." />
                                                            </div>
-                                                           <div style={{flex: '1 1 0%', minWidth: '80px'}}></div>
+                                                           <div style={{flex: "1 1 0%", minWidth: "80px"}} className="text-end pe-1">
+                                                               {((Number(ca.balance) || 0) * ((Number(ca.foreignYield) || 0) / 100)) > 0 && (
+                                                                   <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style={{fontSize: "0.65rem", fontWeight: "600"}}>
+                                                                       ≈ ${Math.round((Number(ca.balance) || 0) * ((Number(ca.foreignYield) || 0) / 100)).toLocaleString()}/yr
+                                                                   </span>
+                                                               )}
+                                                           </div>
                                                            <div style={{flex: '0 0 75px'}} className="position-relative">
                                                                <PercentInput disabled={hasAutoAllocation} className="form-control form-control-sm px-1" value={ca.foreignYield ?? ''} onChange={(val: any) => updateCa('foreignYield', val)} placeholder="0.0%" />
                                                            </div>

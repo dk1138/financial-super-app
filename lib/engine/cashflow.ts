@@ -41,7 +41,7 @@ export function applyPensionSplitting(
         // Test candidate transfer amounts:
         // 1. 0% to 50% in 5% increments
         // 2. Exact equalization amount ((fromTi - toTi) / 2)
-        // 3. ,000 federal pension credit threshold for the receiving spouse
+        // 3. $2,000 federal pension credit threshold for the receiving spouse
         const candidates = new Set<number>();
         candidates.add(0);
         for (let pct = 0.05; pct <= 0.50; pct += 0.05) {
@@ -58,6 +58,7 @@ export function applyPensionSplitting(
         let lowestTax = Infinity;
 
         if (taxEvaluator) {
+            // First pass: evaluate discrete candidate milestones
             for (let amt of Array.from(candidates)) {
                 if (amt < 0 || amt > maxTransfer) continue;
                 if (fromTi - amt < toTi + amt && amt > (fromTi - toTi) / 2 && (fromTi - toTi) > 0) continue;
@@ -74,6 +75,29 @@ export function applyPensionSplitting(
                 if (tax < lowestTax) {
                     lowestTax = tax;
                     bestTransfer = amt;
+                }
+            }
+
+            // Second pass: fine-grained local refinement (±4% around bestTransfer in 1% steps)
+            const fineRadius = Math.round(fromElig * 0.04);
+            const step = Math.max(1, Math.round(fromElig * 0.01));
+            for (let delta = -fineRadius; delta <= fineRadius; delta += step) {
+                const fineAmt = bestTransfer + delta;
+                if (fineAmt < 0 || fineAmt > maxTransfer) continue;
+                if (fromTi - fineAmt < toTi + fineAmt && fineAmt > (fromTi - toTi) / 2 && (fromTi - toTi) > 0) continue;
+
+                const newFromTi = fromTi - fineAmt;
+                const newToTi = toTi + fineAmt;
+                const newFromElig = fromElig - fineAmt;
+                const newToElig = toElig + fineAmt;
+
+                const tax = direction === 'p1_to_p2'
+                    ? taxEvaluator(newFromTi, newToTi, newFromElig, newToElig)
+                    : taxEvaluator(newToTi, newFromTi, newToElig, newFromElig);
+
+                if (tax < lowestTax) {
+                    lowestTax = tax;
+                    bestTransfer = fineAmt;
                 }
             }
         } else {
@@ -120,8 +144,8 @@ export function handleSurplus(
     age1: number, age2: number,
     options?: { 
         blockRRSPContributionsP1?: boolean; 
-        blockRRSPContributionsP2?: boolean;
-        isRet1?: boolean;
+        blockRRSPContributionsP2?: boolean; 
+        isRet1?: boolean; 
         isRet2?: boolean;
         p1MatchRate?: number;
         p1Tier?: number;
@@ -370,7 +394,13 @@ export function handleDeficit(
     forceOrder: string[] | null, eligPen1: number, eligPen2: number,
     inputs: any, CONSTANTS: any, province: string, rrifStartAge: number,
     totalExpenses: number = 0,
-    options?: { blockRRSPWithdrawalsP1?: boolean; blockRRSPWithdrawalsP2?: boolean; isRet1?: boolean; isRet2?: boolean }
+    options?: { 
+        blockRRSPWithdrawalsP1?: boolean; 
+        blockRRSPWithdrawalsP2?: boolean; 
+        isRet1?: boolean; 
+        isRet2?: boolean;
+        annualRealizedGains?: Record<string, number>;
+    }
 ) {
     let remainingDeficit = deficit;
     const isBothRetired = (options?.isRet1 ?? false) && (options?.isRet2 ?? false);
@@ -396,8 +426,9 @@ export function handleDeficit(
     let householdCash = (alive1 ? person1.cash : 0) + (alive2 ? person2.cash : 0);
     let availableHouseholdCash = Math.max(0, householdCash - protectedCash);
 
-    // Track annual cumulative capital gains per person for the \$250k Budget 2024 inclusion threshold
-    let annualRealizedGains: Record<string, number> = { p1: 0, p2: 0 };
+    // Track annual cumulative capital gains per person for the $250k Budget 2024 inclusion threshold
+    // Persists across multi-pass iterations within the tax year when provided via options
+    let annualRealizedGains: Record<string, number> = options?.annualRealizedGains || { p1: 0, p2: 0 };
 
     const executePull = (p: any, prefix: string, acct: string, maxSlice?: number): number => {
         if (remainingDeficit <= 0) return 0;
@@ -462,7 +493,7 @@ export function handleDeficit(
                 wdBreakdown[prefix][logKey + '_math'].acb += acbDisposed;
                 wdBreakdown[prefix][logKey + '_math'].gain += gain;
                 
-                // CRA Budget 2024 Rule: 50% inclusion on first \$250k; 66.67% (2/3) on gains above \$250k
+                // CRA Budget 2024 Rule: 50% inclusion on first $250k; 66.67% (2/3) on gains above $250k
                 let taxableGain = calcTaxableCapitalGain(gain, annualRealizedGains[prefix] || 0);
                 annualRealizedGains[prefix] = (annualRealizedGains[prefix] || 0) + gain;
                 

@@ -63,7 +63,8 @@ export default function ProjectionTab() {
       if (!results || !results.timeline) return;
 
       const headers = [
-          "Year", "P1 Age", "P2 Age", "Phase", "Net Income", "Taxes Paid (Excl. OAS Clawback)",
+          "Year", "P1 Age", "P2 Age", "Phase", "Gross Inflow", "Cdn Div Yield", "Foreign Div Yield", 
+          "Pension Split Transfer", "Taxes Paid (Excl. OAS Clawback)", "OAS Clawback",
           "Living Expenses", "Mortgage & Debt", "Education Costs", "Contributions", "Withdrawals",
           "Liquid Net Worth", "Real Estate Equity", "Total Estate"
       ];
@@ -102,13 +103,21 @@ export default function ProjectionTab() {
           const totalTaxes = (y.taxP1 || 0) + (y.taxP2 || 0) - totalClawback;
           const totalEstate = (y.afterTaxEstate !== undefined ? y.afterTaxEstate : (y.liquidNW + (y.reIncludedEq || 0)));
 
+          const cdnDiv = (y.invYieldMathP1?.amt || 0) + (y.invYieldMathP2?.amt || 0);
+          const forDiv = (y.invYieldMathP1?.foreignAmt || 0) + (y.invYieldMathP2?.foreignAmt || 0);
+          const pensionSplit = (y.pensionSplit?.p1ToP2 || 0) + (y.pensionSplit?.p2ToP1 || 0);
+
           return [
               y.year,
               y.p1Age || y.ageP1 || '',
               isCouple ? (y.p2Age || y.ageP2 || '') : 'N/A',
               phase,
-              Math.round(getRealValue((y.grossInflow || 0) - totalClawback, y.year)),
+              Math.round(getRealValue(y.grossInflow || 0, y.year)),
+              Math.round(getRealValue(cdnDiv, y.year)),
+              Math.round(getRealValue(forDiv, y.year)),
+              Math.round(getRealValue(pensionSplit, y.year)),
               Math.round(getRealValue(totalTaxes, y.year)),
+              Math.round(getRealValue(totalClawback, y.year)),
               Math.round(getRealValue(y.expenses || 0, y.year)),
               Math.round(getRealValue((y.mortgagePay || 0) + baseDebtRepayment, y.year)),
               Math.round(getRealValue(y.eduExpense || 0, y.year)),
