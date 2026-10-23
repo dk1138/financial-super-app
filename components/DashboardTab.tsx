@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
@@ -39,11 +39,95 @@ export default function DashboardTab() {
   const { data, results, planScore } = useFinance();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isUploadingImgBB, setIsUploadingImgBB] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [imgbbModalOpen, setImgbbModalOpen] = useState(false);
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [imgbbApiKey, setImgbbApiKey] = useState('');
+  const [uploadedUrl, setUploadedUrl] = useState('');
+  const [viewerUrl, setViewerUrl] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('imgbb_api_key');
+    if (saved) {
+      setImgbbApiKey(saved);
+    } else {
+      setImgbbApiKey('90602a49d3d1711ead0dc0f549df7f83');
+      localStorage.setItem('imgbb_api_key', '90602a49d3d1711ead0dc0f549df7f83');
+    }
+  }, []);
 
   const showToast = (msg: string) => {
       setToastMsg(msg);
       setTimeout(() => setToastMsg(''), 4000);
+  };
+
+  const handleUploadImgBB = async () => {
+    if (!dashboardRef.current) return;
+
+    const key = (process.env.NEXT_PUBLIC_IMGBB_API_KEY || imgbbApiKey || localStorage.getItem('imgbb_api_key') || '90602a49d3d1711ead0dc0f549df7f83').trim();
+    if (!key) {
+      setApiKeyModalOpen(true);
+      return;
+    }
+
+    setIsUploadingImgBB(true);
+    showToast('📸 Capturing summary and uploading to ImgBB...');
+
+    try {
+      setTimeout(async () => {
+        try {
+          const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              showToast('❌ Failed to create image.');
+              setIsUploadingImgBB(false);
+              return;
+            }
+
+            try {
+              const formData = new FormData();
+              formData.append('image', blob, 'Retirement_Summary.png');
+
+              const response = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, {
+                method: 'POST',
+                body: formData
+              });
+
+              const result = await response.json();
+
+              if (result.success && result.data?.url) {
+                const url = result.data.url;
+                const viewer = result.data.url_viewer || result.data.display_url || url;
+                setUploadedUrl(url);
+                setViewerUrl(viewer);
+                await navigator.clipboard.writeText(url);
+                showToast('✅ ImgBB link copied to clipboard!');
+                setImgbbModalOpen(true);
+              } else {
+                console.error('ImgBB upload error:', result);
+                const errMsg = result.error?.message || 'Upload failed. Please check your ImgBB API key.';
+                showToast(`❌ ${errMsg}`);
+                setApiKeyModalOpen(true);
+              }
+            } catch (fetchErr: any) {
+              console.error(fetchErr);
+              showToast('❌ Network error uploading to ImgBB.');
+            } finally {
+              setIsUploadingImgBB(false);
+            }
+          }, 'image/png');
+        } catch (canvasErr) {
+          console.error(canvasErr);
+          showToast('❌ Failed to capture dashboard.');
+          setIsUploadingImgBB(false);
+        }
+      }, 300);
+    } catch (err) {
+      console.error(err);
+      showToast('❌ Failed to initialize upload.');
+      setIsUploadingImgBB(false);
+    }
   };
 
   const handleCopyToClipboard = async () => {
@@ -381,19 +465,28 @@ export default function DashboardTab() {
               <i className="bi bi-clipboard2-data me-2"></i> Executive Summary
           </h5>
           
-          <div className="d-flex gap-2" data-html2canvas-ignore>
+          <div className="d-flex flex-wrap gap-2" data-html2canvas-ignore>
               <button 
-                  className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
                   onClick={handleCopyToClipboard}
-                  disabled={isExporting}
+                  disabled={isExporting || isUploadingImgBB}
               >
                   {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-clipboard me-2"></i>}
                   Copy Image to Clipboard
               </button>
               <button 
-                  className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center" 
+                  className="btn btn-sm btn-outline-success fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
+                  onClick={handleUploadImgBB}
+                  disabled={isExporting || isUploadingImgBB}
+                  title="Upload to ImgBB and generate a shareable image link"
+              >
+                  {isUploadingImgBB ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-cloud-arrow-up me-2"></i>}
+                  Get ImgBB Link
+              </button>
+              <button 
+                  className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
                   onClick={handleDownloadPNG}
-                  disabled={isExporting}
+                  disabled={isExporting || isUploadingImgBB}
               >
                   <i className="bi bi-download me-2"></i> Save PNG
               </button>
@@ -841,6 +934,124 @@ export default function DashboardTab() {
           </div>
           
       </div>
+
+      {/* --- IMGBB API KEY SETUP MODAL --- */}
+      {apiKeyModalOpen && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setApiKeyModalOpen(false)}>
+          <div className="bg-card border border-secondary rounded-4 p-4 shadow-lg" style={{ maxWidth: '440px', width: '92%' }} onClick={(e) => e.stopPropagation()}>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="fw-bold text-main mb-0 d-flex align-items-center gap-2">
+                <i className="bi bi-key-fill text-success"></i>
+                ImgBB API Key Required
+              </h6>
+              <button type="button" className="btn-close btn-close-white" onClick={() => setApiKeyModalOpen(false)}></button>
+            </div>
+            <p className="small text-muted mb-3" style={{ fontSize: '0.82rem', lineHeight: '1.5' }}>
+              To upload your summary and generate direct links via <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none fw-semibold">ImgBB</a>, enter your free API key.
+              <br /><br />
+              You can get one instantly at <a href="https://api.imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none fw-semibold">api.imgbb.com <i className="bi bi-box-arrow-up-right" style={{ fontSize: '0.7rem' }}></i></a>.
+            </p>
+            <div className="mb-3">
+              <label className="form-label small text-muted fw-semibold">API Key</label>
+              <input 
+                type="text" 
+                className="form-control bg-input text-main border-secondary" 
+                placeholder="Paste your ImgBB API key here"
+                value={imgbbApiKey}
+                onChange={(e) => setImgbbApiKey(e.target.value)}
+              />
+            </div>
+            <div className="d-flex justify-content-end gap-2">
+              <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-3" onClick={() => setApiKeyModalOpen(false)}>
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-sm btn-success rounded-pill px-3 fw-bold"
+                disabled={!imgbbApiKey.trim()}
+                onClick={() => {
+                  localStorage.setItem('imgbb_api_key', imgbbApiKey.trim());
+                  setApiKeyModalOpen(false);
+                  handleUploadImgBB();
+                }}
+              >
+                Save & Generate Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- IMGBB SUCCESS RESULT MODAL --- */}
+      {imgbbModalOpen && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setImgbbModalOpen(false)}>
+          <div className="bg-card border border-secondary rounded-4 p-4 shadow-lg text-start" style={{ maxWidth: '520px', width: '92%' }} onClick={(e) => e.stopPropagation()}>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="fw-bold text-success mb-0 d-flex align-items-center gap-2">
+                <i className="bi bi-check-circle-fill"></i>
+                Uploaded to ImgBB!
+              </h6>
+              <button type="button" className="btn-close btn-close-white" onClick={() => setImgbbModalOpen(false)}></button>
+            </div>
+            <p className="small text-muted mb-3" style={{ fontSize: '0.82rem' }}>
+              Your summary image link is ready and copied to your clipboard. You can share this link on Reddit, Discord, or forums.
+            </p>
+            
+            <div className="mb-3">
+              <label className="form-label small text-muted fw-semibold mb-1">Direct Image URL</label>
+              <div className="input-group">
+                <input type="text" readOnly className="form-control bg-input text-main border-secondary font-monospace" style={{ fontSize: '0.8rem' }} value={uploadedUrl} />
+                <button 
+                  type="button" 
+                  className="btn btn-outline-primary"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(uploadedUrl);
+                    showToast('✅ Direct link copied!');
+                  }}
+                  title="Copy direct image link"
+                >
+                  <i className="bi bi-clipboard"></i>
+                </button>
+                <a href={uploadedUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary" title="Open image">
+                  <i className="bi bi-box-arrow-up-right"></i>
+                </a>
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label small text-muted fw-semibold mb-1">Markdown (Reddit / GitHub)</label>
+              <div className="input-group">
+                <input type="text" readOnly className="form-control bg-input text-main border-secondary font-monospace" style={{ fontSize: '0.78rem' }} value={`![Retirement Summary](${uploadedUrl})`} />
+                <button 
+                  type="button" 
+                  className="btn btn-outline-info"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(`![Retirement Summary](${uploadedUrl})`);
+                    showToast('✅ Markdown copied!');
+                  }}
+                  title="Copy Markdown embed code"
+                >
+                  <i className="bi bi-clipboard"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25">
+              <button 
+                type="button" 
+                className="btn btn-sm btn-link text-muted p-0 text-decoration-none" 
+                style={{ fontSize: '0.75rem' }}
+                onClick={() => { setImgbbModalOpen(false); setApiKeyModalOpen(true); }}
+              >
+                <i className="bi bi-gear me-1"></i> Change ImgBB API Key
+              </button>
+              <button type="button" className="btn btn-sm btn-primary rounded-pill px-4 fw-bold" onClick={() => setImgbbModalOpen(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
