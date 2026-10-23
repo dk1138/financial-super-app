@@ -323,7 +323,7 @@ export const ModernDropdown = ({
     pill?: boolean
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [coords, setCoords] = useState<{ top: number, left: number, width: number, height: number, openUp: boolean }>({ top: 0, left: 0, width: 140, height: 360, openUp: false });
+    const [coords, setCoords] = useState<{ top: number, left: number, width: number, maxHeight: number, openUp: boolean }>({ top: 0, left: 0, width: 140, maxHeight: 420, openUp: false });
     const triggerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -331,34 +331,23 @@ export const ModernDropdown = ({
         e.stopPropagation();
         if (!isOpen && triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
-            // 12 months * ~29px + 10px padding = ~358px; allow full list without scrolling
-            const desiredHeight = Math.min(options.length * 30 + 10, 365);
+            // Estimate natural height with ample headroom (36px per row + 16px container padding)
+            const naturalHeight = options.length * 36 + 16;
             const spaceBelow = window.innerHeight - rect.bottom - 12;
             const spaceAbove = rect.top - 12;
             
-            let openUp = false;
-            let menuHeight = desiredHeight;
-            
-            if (spaceBelow >= desiredHeight) {
-                openUp = false;
-                menuHeight = desiredHeight;
-            } else if (spaceAbove >= desiredHeight) {
-                openUp = true;
-                menuHeight = desiredHeight;
-            } else if (spaceBelow >= spaceAbove) {
-                openUp = false;
-                menuHeight = Math.max(160, spaceBelow);
-            } else {
-                openUp = true;
-                menuHeight = Math.max(160, spaceAbove);
-            }
+            // Only flip upward if space below is genuinely cramped (< naturalHeight) AND above has more space
+            const openUp = spaceBelow < Math.min(naturalHeight, 180) && spaceAbove > spaceBelow;
+            const availableSpace = openUp ? spaceAbove : spaceBelow;
+            const maxHeight = Math.min(420, Math.max(120, availableSpace));
 
-            const menuWidth = Math.max(rect.width, (options.length > 5 && !options[0]?.icon) ? 90 : 140);
+            const menuWidth = Math.max(rect.width, (options.length > 5 && !options[0]?.icon) ? 90 : 145);
+            
             setCoords({
-                top: openUp ? Math.max(10, rect.top - menuHeight - 4) : (rect.bottom + 4),
+                top: openUp ? Math.max(10, rect.top - Math.min(naturalHeight, maxHeight) - 4) : (rect.bottom + 4),
                 left: Math.max(10, Math.min(rect.left, window.innerWidth - menuWidth - 10)),
                 width: menuWidth,
-                height: menuHeight,
+                maxHeight: maxHeight,
                 openUp
             });
         }
@@ -389,6 +378,7 @@ export const ModernDropdown = ({
 
     const selected = options.find((a: any) => String(a.id) === String(value)) || options[0] || { label: 'Select' };
     const targetHeight = pill ? '38px' : '31px';
+    const isShortList = options.length <= 8;
 
     return (
         <div className="position-relative w-100" ref={triggerRef}>
@@ -412,11 +402,13 @@ export const ModernDropdown = ({
                         top: coords.top,
                         left: coords.left,
                         width: coords.width,
-                        maxHeight: `${coords.height}px`,
+                        maxHeight: `${coords.maxHeight}px`,
                         backgroundColor: 'var(--bg-card)',
                         zIndex: 99999,
                         boxShadow: '0 12px 28px -4px rgba(0,0,0,0.65), 0 8px 10px -6px rgba(0,0,0,0.5)',
-                        overflowY: 'auto'
+                        overflowY: isShortList ? 'hidden' : 'auto',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'var(--border-color) transparent'
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
