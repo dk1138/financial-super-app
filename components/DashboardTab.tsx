@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
@@ -509,12 +510,13 @@ export default function DashboardTab() {
   return (
     <div className="p-3 p-md-4 pb-5 mb-5 position-relative">
         
-      {toastMsg && (
-          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{zIndex: 9999}}>
+      {toastMsg && typeof document !== 'undefined' && createPortal(
+          <div className="position-fixed top-0 start-50 translate-middle-x mt-4 transition-all" style={{ zIndex: 9999 }}>
               <div className="bg-success text-white px-4 py-3 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success">
                   {toastMsg}
               </div>
-          </div>
+          </div>,
+          document.body
       )}
 
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
@@ -998,17 +1000,19 @@ export default function DashboardTab() {
           
       </div>
 
-      {/* --- IMGUR LINK FLOATING POPUP (BOTTOM RIGHT) --- */}
-      {imgurModalOpen && (
+      {/* --- IMGUR LINK FLOATING POPUP (ABOVE FLOATING ACTION BUTTONS) --- */}
+      {imgurModalOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="position-fixed bottom-0 end-0 m-3 m-md-4 rp-card rounded-4 p-3 p-md-4 text-start"
+          className="position-fixed rp-card rounded-4 p-3 p-md-4 text-start mb-0"
           style={{
+            bottom: '90px',
+            right: '30px',
             zIndex: 1060,
-            maxWidth: '420px',
-            width: 'calc(100vw - 2rem)',
+            maxWidth: '400px',
+            width: 'calc(100vw - 60px)',
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
-            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.28)',
+            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.35)',
           }}
         >
           <div className="d-flex justify-content-between align-items-center mb-2">
@@ -1065,7 +1069,8 @@ export default function DashboardTab() {
               <i className="bi bi-box-arrow-up-right"></i>
             </a>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
