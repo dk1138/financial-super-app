@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
@@ -39,34 +39,55 @@ export default function DashboardTab() {
   const { data, results, planScore } = useFinance();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [isUploadingImgBB, setIsUploadingImgBB] = useState(false);
+  const [isUploadingImgur, setIsUploadingImgur] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
-  const [imgbbModalOpen, setImgbbModalOpen] = useState(false);
-  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
-  const [imgbbApiKey, setImgbbApiKey] = useState('');
+  const [imgurModalOpen, setImgurModalOpen] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState('');
-  const [viewerUrl, setViewerUrl] = useState('');
-  const [uploadProvider, setUploadProvider] = useState('ImgBB');
+  const [lastUploadedHash, setLastUploadedHash] = useState('');
 
-  useEffect(() => {
-    // Only load custom key if manually saved in browser
-    const saved = localStorage.getItem('imgbb_api_key');
-    if (saved) {
-      setImgbbApiKey(saved);
+  // Fingerprint the current plan data so we know if anything changed since the last Imgur upload
+  const currentPlanHash = useMemo(() => {
+    try {
+      return JSON.stringify({
+        mode: data.mode,
+        useRealDollars: data.useRealDollars,
+        expenseMode: data.expenseMode,
+        inputs: data.inputs,
+        properties: data.properties,
+        housingTransitions: data.housingTransitions,
+        expensePhases: data.expensePhases,
+        windfalls: data.windfalls,
+        additionalIncome: data.additionalIncome,
+        customAssets: data.customAssets,
+        deductions: data.deductions,
+        leaves: data.leaves,
+        dependents: data.dependents,
+        debt: data.debt,
+        strategies: data.strategies,
+        expensesByCategory: data.expensesByCategory,
+      });
+    } catch {
+      return '';
     }
-  }, []);
+  }, [data]);
 
   const showToast = (msg: string) => {
       setToastMsg(msg);
       setTimeout(() => setToastMsg(''), 4000);
   };
 
-  const handleUploadImgBB = async () => {
+  const handleUploadImgur = async () => {
     if (!dashboardRef.current) return;
 
-    setIsUploadingImgBB(true);
+    // If the user hasn't changed anything in the plan, just pop up the existing Imgur link immediately!
+    if (uploadedUrl && lastUploadedHash === currentPlanHash) {
+      setImgurModalOpen(true);
+      return;
+    }
+
+    setIsUploadingImgur(true);
     setIsExporting(true);
-    showToast('📸 Capturing Planfolio summary and uploading to Imgur...');
+    showToast('📸 Capturing Planfolio.ca summary and uploading to Imgur...');
 
     try {
       setTimeout(async () => {
@@ -76,31 +97,23 @@ export default function DashboardTab() {
           canvas.toBlob(async (blob) => {
             if (!blob) {
               showToast('❌ Failed to create image.');
-              setIsUploadingImgBB(false);
+              setIsUploadingImgur(false);
               return;
             }
 
             let uploadSuccess = false;
 
             try {
-              // --- TIER 1: SERVER-SIDE API PROXY ROUTE ---
               const formData = new FormData();
               formData.append('image', blob, 'Planfolio_Summary.png');
 
-              const headers: Record<string, string> = {};
-              const customKey = imgbbApiKey.trim() || (localStorage.getItem('imgbb_api_key') || '').trim();
-              if (customKey) {
-                headers['x-imgbb-key'] = customKey;
-              }
-
-              // Support both /api/upload-image and /api/auth/upload-image
+              // Try server-side Imgur proxy routes (/api/upload-image or /api/auth/upload-image)
               const endpoints = ['/api/upload-image', '/api/auth/upload-image'];
               for (const endpoint of endpoints) {
                 if (uploadSuccess) break;
                 try {
                   const response = await fetch(endpoint, {
                     method: 'POST',
-                    headers,
                     body: formData
                   });
 
@@ -110,13 +123,9 @@ export default function DashboardTab() {
                       const result = await response.json();
                       if (result.success && result.data?.url) {
                         const url = result.data.url;
-                        const viewer = result.data.url_viewer || result.data.display_url || url;
                         setUploadedUrl(url);
-                        setViewerUrl(viewer);
-                        setUploadProvider(result.provider || 'ImgBB');
-                        await navigator.clipboard.writeText(url);
-                        showToast(`✅ ${result.provider || 'Image'} link copied to clipboard!`);
-                        setImgbbModalOpen(true);
+                        setLastUploadedHash(currentPlanHash);
+                        setImgurModalOpen(true);
                         uploadSuccess = true;
                         break;
                       }
@@ -127,64 +136,53 @@ export default function DashboardTab() {
                 }
               }
 
-              // --- TIER 2: DIRECT CLIENT LITTERBOX FALLBACK (FREE, ZERO API KEY REQUIRED) ---
+              // Direct client-side Imgur upload if server route wasn't reachable
               if (!uploadSuccess) {
-                try {
-                  const litterForm = new FormData();
-                  litterForm.append('reqtype', 'fileupload');
-                  litterForm.append('time', '72h');
-                  litterForm.append('fileToUpload', blob, 'Planfolio_Summary.png');
+                const imgurForm = new FormData();
+                imgurForm.append('image', blob);
+                imgurForm.append('title', 'Planfolio.ca Summary');
 
-                  const litterRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-                    method: 'POST',
-                    body: litterForm
-                  });
+                const imgurRes = await fetch('https://api.imgur.com/3/image', {
+                  method: 'POST',
+                  headers: {
+                    Authorization: 'Client-ID 546c25a59c58ad7'
+                  },
+                  body: imgurForm
+                });
 
-                  if (litterRes.ok) {
-                    const litterUrl = (await litterRes.text()).trim();
-                    if (litterUrl.startsWith('http')) {
-                      setUploadedUrl(litterUrl);
-                      setViewerUrl(litterUrl);
-                      setUploadProvider('Litterbox (Free 72h Host)');
-                      await navigator.clipboard.writeText(litterUrl);
-                      showToast('✅ Direct link copied to clipboard!');
-                      setImgbbModalOpen(true);
-                      uploadSuccess = true;
-                    }
-                  }
-                } catch (clientErr) {
-                  console.warn('Direct client fallback error:', clientErr);
-                }
-              }
-
-              // --- TIER 3: DIRECT CLIPBOARD IMAGE COPY (ZERO NETWORK NEEDED) ---
-              if (!uploadSuccess) {
-                try {
-                  const item = new ClipboardItem({ 'image/png': blob });
-                  await navigator.clipboard.write([item]);
-                  showToast('📋 Image copied directly to clipboard! (Ctrl+V into Reddit/Discord)');
-                } catch (clipErr) {
-                  showToast('❌ Image host blocked by adblocker. Use "Copy Image" or "Save PNG".');
+                const imgurData = await imgurRes.json();
+                if (imgurRes.ok && imgurData?.success && imgurData?.data?.link) {
+                  const url = imgurData.data.link;
+                  setUploadedUrl(url);
+                  setLastUploadedHash(currentPlanHash);
+                  setImgurModalOpen(true);
+                  uploadSuccess = true;
+                } else {
+                  const errMsg = typeof imgurData?.data?.error === 'string'
+                    ? imgurData.data.error
+                    : imgurData?.data?.error?.message || 'Imgur upload failed.';
+                  showToast(`❌ ${errMsg}`);
                 }
               }
             } catch (err: any) {
               console.error(err);
-              showToast('❌ Could not complete upload.');
+              showToast('❌ Network error uploading to Imgur.');
             } finally {
-              setIsUploadingImgBB(false);
+              setIsUploadingImgur(false);
             }
           }, 'image/png');
         } catch (canvasErr) {
           console.error(canvasErr);
           showToast('❌ Failed to capture dashboard.');
           setIsExporting(false);
-          setIsUploadingImgBB(false);
+          setIsUploadingImgur(false);
         }
       }, 300);
     } catch (err) {
       console.error(err);
       showToast('❌ Failed to initialize upload.');
-      setIsUploadingImgBB(false);
+      setIsExporting(false);
+      setIsUploadingImgur(false);
     }
   };
 
@@ -527,24 +525,24 @@ export default function DashboardTab() {
               <button 
                   className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
                   onClick={handleCopyToClipboard}
-                  disabled={isExporting || isUploadingImgBB}
+                  disabled={isExporting || isUploadingImgur}
               >
                   {isExporting ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-clipboard me-2"></i>}
                   Copy Image to Clipboard
               </button>
               <button 
                   className="btn btn-sm btn-outline-success fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
-                  onClick={handleUploadImgBB}
-                  disabled={isExporting || isUploadingImgBB}
+                  onClick={handleUploadImgur}
+                  disabled={isExporting || isUploadingImgur}
                   title="Upload to Imgur and generate a shareable image link"
               >
-                  {isUploadingImgBB ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-cloud-arrow-up me-2"></i>}
+                  {isUploadingImgur ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-cloud-arrow-up me-2"></i>}
                   Get Imgur Link
               </button>
               <button 
                   className="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
                   onClick={handleDownloadPNG}
-                  disabled={isExporting || isUploadingImgBB}
+                  disabled={isExporting || isUploadingImgur}
               >
                   <i className="bi bi-download me-2"></i> Save PNG
               </button>
@@ -993,121 +991,52 @@ export default function DashboardTab() {
           
       </div>
 
-      {/* --- IMGBB API KEY SETUP MODAL --- */}
-      {apiKeyModalOpen && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setApiKeyModalOpen(false)}>
-          <div className="bg-card border border-secondary rounded-4 p-4 shadow-lg" style={{ maxWidth: '440px', width: '92%' }} onClick={(e) => e.stopPropagation()}>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h6 className="fw-bold text-main mb-0 d-flex align-items-center gap-2">
-                <i className="bi bi-key-fill text-success"></i>
-                ImgBB API Key Required
-              </h6>
-              <button type="button" className="btn-close btn-close-white" onClick={() => setApiKeyModalOpen(false)}></button>
-            </div>
-            <p className="small text-muted mb-3" style={{ fontSize: '0.82rem', lineHeight: '1.5' }}>
-              To upload your summary and generate direct links via <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none fw-semibold">ImgBB</a>, enter your free API key.
-              <br /><br />
-              You can get one instantly at <a href="https://api.imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-info text-decoration-none fw-semibold">api.imgbb.com <i className="bi bi-box-arrow-up-right" style={{ fontSize: '0.7rem' }}></i></a>.
-            </p>
-            <div className="mb-3">
-              <label className="form-label small text-muted fw-semibold">API Key</label>
-              <input 
-                type="password" 
-                className="form-control bg-input text-main border-secondary" 
-                placeholder="Paste your ImgBB API key here"
-                value={imgbbApiKey}
-                onChange={(e) => setImgbbApiKey(e.target.value)}
-              />
-              <div className="form-text text-muted" style={{ fontSize: '0.75rem' }}>
-                Tip: Set <code>IMGBB_API_KEY</code> in your server <code>.env.local</code> to hide your key completely from client browsers.
-              </div>
-            </div>
-            <div className="d-flex justify-content-end gap-2">
-              <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-3" onClick={() => setApiKeyModalOpen(false)}>
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                className="btn btn-sm btn-success rounded-pill px-3 fw-bold"
-                disabled={!imgbbApiKey.trim()}
-                onClick={() => {
-                  localStorage.setItem('imgbb_api_key', imgbbApiKey.trim());
-                  setApiKeyModalOpen(false);
-                  handleUploadImgBB();
-                }}
-              >
-                Save & Generate Link
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- IMGBB SUCCESS RESULT MODAL --- */}
-      {imgbbModalOpen && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setImgbbModalOpen(false)}>
-          <div className="bg-card border border-secondary rounded-4 p-4 shadow-lg text-start" style={{ maxWidth: '520px', width: '92%' }} onClick={(e) => e.stopPropagation()}>
+      {/* --- IMGUR LINK POPUP MODAL --- */}
+      {imgurModalOpen && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setImgurModalOpen(false)}>
+          <div className="bg-card border border-secondary rounded-4 p-4 shadow-lg text-start" style={{ maxWidth: '480px', width: '92%' }} onClick={(e) => e.stopPropagation()}>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h6 className="fw-bold text-success mb-0 d-flex align-items-center gap-2">
                 <i className="bi bi-check-circle-fill"></i>
-                Uploaded to {uploadProvider}!
+                Imgur Link Ready
               </h6>
-              <button type="button" className="btn-close btn-close-white" onClick={() => setImgbbModalOpen(false)}></button>
+              <button type="button" className="btn-close btn-close-white" onClick={() => setImgurModalOpen(false)}></button>
             </div>
             <p className="small text-muted mb-3" style={{ fontSize: '0.82rem' }}>
-              Your summary image link is ready and copied to your clipboard. You can share this link on Reddit, Discord, or forums.
+              Copy your Imgur link below to share your Planfolio.ca summary.
             </p>
             
             <div className="mb-3">
-              <label className="form-label small text-muted fw-semibold mb-1">Direct Image URL</label>
+              <label className="form-label small text-muted fw-semibold mb-1">Direct Imgur URL</label>
               <div className="input-group">
-                <input type="text" readOnly className="form-control bg-input text-main border-secondary font-monospace" style={{ fontSize: '0.8rem' }} value={uploadedUrl} />
+                <input 
+                  type="text" 
+                  readOnly 
+                  className="form-control bg-input text-main border-secondary font-monospace" 
+                  style={{ fontSize: '0.82rem' }} 
+                  value={uploadedUrl} 
+                  onClick={(e) => (e.target as HTMLInputElement).select()} 
+                />
                 <button 
                   type="button" 
-                  className="btn btn-outline-primary"
+                  className="btn btn-primary fw-bold px-3 d-flex align-items-center gap-1"
                   onClick={async () => {
                     await navigator.clipboard.writeText(uploadedUrl);
-                    showToast('✅ Direct link copied!');
+                    showToast('✅ Imgur link copied to clipboard!');
                   }}
-                  title="Copy direct image link"
+                  title="Copy Imgur link"
                 >
-                  <i className="bi bi-clipboard"></i>
+                  <i className="bi bi-clipboard"></i> Copy
                 </button>
-                <a href={uploadedUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary" title="Open image">
+                <a href={uploadedUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary" title="Open image in new tab">
                   <i className="bi bi-box-arrow-up-right"></i>
                 </a>
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="form-label small text-muted fw-semibold mb-1">Markdown (Reddit / GitHub)</label>
-              <div className="input-group">
-                <input type="text" readOnly className="form-control bg-input text-main border-secondary font-monospace" style={{ fontSize: '0.78rem' }} value={`![Planfolio Summary](${uploadedUrl})`} />
-                <button 
-                  type="button" 
-                  className="btn btn-outline-info"
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(`![Planfolio Summary](${uploadedUrl})`);
-                    showToast('✅ Markdown copied!');
-                  }}
-                  title="Copy Markdown embed code"
-                >
-                  <i className="bi bi-clipboard"></i>
-                </button>
-              </div>
-            </div>
-
-            <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25">
-              <button 
-                type="button" 
-                className="btn btn-sm btn-link text-muted p-0 text-decoration-none" 
-                style={{ fontSize: '0.75rem' }}
-                onClick={() => { setImgbbModalOpen(false); setApiKeyModalOpen(true); }}
-              >
-                <i className="bi bi-gear me-1"></i> Change ImgBB API Key
-              </button>
-              <button type="button" className="btn btn-sm btn-primary rounded-pill px-4 fw-bold" onClick={() => setImgbbModalOpen(false)}>
-                Done
+            <div className="d-flex justify-content-end mt-3 pt-2 border-top border-secondary border-opacity-25">
+              <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-4 fw-bold" onClick={() => setImgurModalOpen(false)}>
+                Close
               </button>
             </div>
           </div>
