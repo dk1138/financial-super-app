@@ -15,16 +15,16 @@ function ScoreCard({ title, score, max, tooltip }: { title: string, score: numbe
   return (
     <div className="p-3 border border-secondary rounded-4 bg-input shadow-sm h-100 d-flex flex-column justify-content-between transition-all">
       <div className="d-flex justify-content-between align-items-start mb-2">
-        <div className="text-muted fw-bold text-uppercase ls-1 d-flex align-items-center" style={{fontSize: '0.65rem'}}>
-          {title}
+        <div className="text-muted fw-bold text-uppercase d-flex align-items-center" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+          <span>{title}</span>
           {tooltip && <InfoBtn align="left" title={title} text={tooltip} />}
         </div>
       </div>
       
       <div>
-          <div className="d-flex align-items-end mb-2">
-              <span className={`fw-bolder ${colorClass} lh-1`} style={{fontSize: '1.5rem'}}>{Math.round(score)}</span>
-              <span className="text-muted fw-bold ms-1 mb-1" style={{fontSize: '0.75rem'}}>/ {max}</span>
+          <div className="d-flex align-items-baseline mb-2">
+              <span className={`fw-bolder ${colorClass}`} style={{ fontSize: '1.5rem', lineHeight: 1 }}>{Math.round(score)}</span>
+              <span className="text-muted fw-bold ms-1" style={{ fontSize: '0.75rem', lineHeight: 1 }}>/ {max}</span>
           </div>
           
           <div className="progress bg-black bg-opacity-25 w-100 rounded-pill overflow-hidden" style={{ height: '6px' }}>
@@ -76,6 +76,30 @@ export default function DashboardTab() {
       setTimeout(() => setToastMsg(''), 4000);
   };
 
+  // Shared helper that fixes Tailwind's `img { display: block }` baseline bug in html2canvas
+  const captureDashboardCanvas = async () => {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'h2c-baseline-fix';
+    styleEl.innerHTML = 'img { display: inline !important; }';
+    document.head.appendChild(styleEl);
+
+    try {
+      return await html2canvas(dashboardRef.current!, {
+        backgroundColor: '#16181d',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          const cloneStyle = clonedDoc.createElement('style');
+          cloneStyle.innerHTML = 'img { display: inline !important; }';
+          clonedDoc.head.appendChild(cloneStyle);
+        }
+      });
+    } finally {
+      styleEl.remove();
+    }
+  };
+
   const handleUploadImgur = async () => {
     if (!dashboardRef.current) return;
 
@@ -92,7 +116,7 @@ export default function DashboardTab() {
     try {
       setTimeout(async () => {
         try {
-          const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+          const canvas = await captureDashboardCanvas();
           setIsExporting(false);
           canvas.toBlob(async (blob) => {
             if (!blob) {
@@ -192,7 +216,7 @@ export default function DashboardTab() {
       showToast('Generating high-res image...');
       try {
           setTimeout(async () => {
-              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+              const canvas = await captureDashboardCanvas();
               canvas.toBlob(async (blob) => {
                   if (blob) {
                       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -214,7 +238,7 @@ export default function DashboardTab() {
       showToast('Generating high-res image...');
       try {
           setTimeout(async () => {
-              const canvas = await html2canvas(dashboardRef.current!, { backgroundColor: '#16181d', scale: 2 });
+              const canvas = await captureDashboardCanvas();
               const url = canvas.toDataURL('image/png');
               const link = document.createElement('a');
               link.href = url;
@@ -549,7 +573,7 @@ export default function DashboardTab() {
           </div>
       </div>
 
-      <div ref={dashboardRef}>
+      <div ref={dashboardRef} className={isExporting ? 'p-3' : ''}>
           
           {isExporting && (
               <div className="text-center text-muted fw-bold small text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary">
@@ -564,17 +588,17 @@ export default function DashboardTab() {
                   <i className="bi bi-shield-check text-primary me-2"></i> Quick Overview
               </h6>
               
-              <div className="row g-5 mb-2">
+              <div className="row g-4 mb-2">
                   {/* Overall Plan Health Pill */}
-                  <div className="col-12 col-md-6 d-flex flex-column justify-content-center border-end-md border-secondary">
+                  <div className="col-12 col-md-6 d-flex flex-column justify-content-center border-end-md border-secondary pe-md-4">
                       <div className="d-flex flex-column gap-1 mb-2">
                           <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-main">
-                              Overall Plan Health
+                              <span>Overall Plan Health</span>
                               <InfoBtn align="left" title="Plan Health" text="A comprehensive score out of 100 based on your savings rate, debt-load, emergency reserves, and projected retirement trajectory." />
                           </h6>
-                          <div className="d-flex justify-content-between align-items-end mt-2">
+                          <div className="d-flex justify-content-between align-items-baseline mt-2">
                               <span className="text-muted small fw-medium">Based on 4 Core Pillars</span>
-                              <span className={`fw-bold fs-5 ${getScoreColorText(planScore.totalScore)}`}>{planScore.totalScore} / 100</span>
+                              <span className={`fw-bold fs-5 ${getScoreColorText(planScore.totalScore)}`} style={{ lineHeight: 1 }}>{planScore.totalScore} / 100</span>
                           </div>
                       </div>
                       
@@ -592,30 +616,36 @@ export default function DashboardTab() {
                   </div>
 
                   {/* FI Readiness Pill */}
-                  <div className="col-12 col-md-6 d-flex flex-column justify-content-center">
+                  <div className="col-12 col-md-6 d-flex flex-column justify-content-center ps-md-4">
                       <div className="d-flex flex-column gap-1 mb-2">
                           <h6 className="fw-bold mb-0 text-uppercase ls-1 d-flex align-items-center text-primary">
-                              Freedom Target (FI) Readiness
+                              <span>Freedom Target (FI) Readiness</span>
                               <InfoBtn align="left" title="Financial Independence Target" text="Your Freedom Target is 25x your projected annual retirement spending (The 4% Rule) calculated in today's dollars.<br><br>This bar shows your current liquid net worth vs your target, focusing purely on present-day readiness instead of backward-looking estimates." />
                           </h6>
-                          <div className="d-flex justify-content-between align-items-end mt-2">
+                          <div className="d-flex justify-content-between align-items-baseline mt-2">
                               <span className="text-muted small fw-medium">Target: {formatCurrency(fiTarget)}</span>
-                              <div className="text-md-end lh-1">
-                                  <span className="fw-bold fs-5 text-main">{formatCurrency(currentLiquidNW)}</span>
-                              </div>
+                              <span className="fw-bold fs-5 text-main" style={{ lineHeight: 1 }}>{formatCurrency(currentLiquidNW)}</span>
                           </div>
                       </div>
                       
                       <div className="position-relative" style={{ height: '36px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '100px', padding: '4px' }}>
                           <div 
-                              className="h-100 rounded-pill d-flex align-items-center justify-content-end px-3 transition-all"
+                              className={`h-100 rounded-pill d-flex align-items-center ${fiPercent < 18 ? 'justify-content-center px-2' : 'justify-content-end px-3'} transition-all`}
                               style={{ 
-                                  width: `${Math.min(Math.max(fiPercent, 2), 100)}%`, 
+                                  width: `${Math.min(Math.max(fiPercent, 2), 100)}%`,
+                                  minWidth: fiPercent >= 5 ? '52px' : undefined,
                                   background: isFI ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' : 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)',
                                   boxShadow: isFI ? '0 0 15px rgba(52, 211, 153, 0.4)' : '0 0 15px rgba(96, 165, 250, 0.4)',
                               }} 
                           >
-                              {fiPercent >= 10 && <span className="fw-bolder text-white small" style={{textShadow: '0 1px 2px rgba(0,0,0,0.4)', letterSpacing: '0.5px'}}>{fiPercent.toFixed(1)}%</span>}
+                              {fiPercent >= 5 && (
+                                  <span 
+                                      className="fw-bolder text-white" 
+                                      style={{ fontSize: '0.78rem', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.4)', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}
+                                  >
+                                      {fiPercent.toFixed(1)}%
+                                  </span>
+                              )}
                           </div>
                       </div>
                   </div>
