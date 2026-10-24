@@ -131,8 +131,10 @@ export default function DashboardTab() {
               const formData = new FormData();
               formData.append('image', blob, 'Planfolio_Summary.png');
 
-              // Try server-side Imgur proxy routes (/api/upload-image or /api/auth/upload-image)
+              // Upload strictly via server-side API route (/api/upload-image or /api/auth/upload-image)
               const endpoints = ['/api/upload-image', '/api/auth/upload-image'];
+              let lastError = 'Imgur upload failed.';
+
               for (const endpoint of endpoints) {
                 if (uploadSuccess) break;
                 try {
@@ -141,18 +143,18 @@ export default function DashboardTab() {
                     body: formData
                   });
 
-                  if (response.ok) {
-                    const contentType = response.headers.get('content-type') || '';
-                    if (contentType.includes('application/json')) {
-                      const result = await response.json();
-                      if (result.success && result.data?.url) {
-                        const url = result.data.url;
-                        setUploadedUrl(url);
-                        setLastUploadedHash(currentPlanHash);
-                        setImgurModalOpen(true);
-                        uploadSuccess = true;
-                        break;
-                      }
+                  const contentType = response.headers.get('content-type') || '';
+                  if (contentType.includes('application/json')) {
+                    const result = await response.json();
+                    if (response.ok && result.success && result.data?.url) {
+                      const url = result.data.url;
+                      setUploadedUrl(url);
+                      setLastUploadedHash(currentPlanHash);
+                      setImgurModalOpen(true);
+                      uploadSuccess = true;
+                      break;
+                    } else if (result.error) {
+                      lastError = result.error;
                     }
                   }
                 } catch (srvErr) {
@@ -160,33 +162,8 @@ export default function DashboardTab() {
                 }
               }
 
-              // Direct client-side Imgur upload if server route wasn't reachable
               if (!uploadSuccess) {
-                const imgurForm = new FormData();
-                imgurForm.append('image', blob);
-                imgurForm.append('title', 'Planfolio.ca Summary');
-
-                const imgurRes = await fetch('https://api.imgur.com/3/image', {
-                  method: 'POST',
-                  headers: {
-                    Authorization: 'Client-ID 546c25a59c58ad7'
-                  },
-                  body: imgurForm
-                });
-
-                const imgurData = await imgurRes.json();
-                if (imgurRes.ok && imgurData?.success && imgurData?.data?.link) {
-                  const url = imgurData.data.link;
-                  setUploadedUrl(url);
-                  setLastUploadedHash(currentPlanHash);
-                  setImgurModalOpen(true);
-                  uploadSuccess = true;
-                } else {
-                  const errMsg = typeof imgurData?.data?.error === 'string'
-                    ? imgurData.data.error
-                    : imgurData?.data?.error?.message || 'Imgur upload failed.';
-                  showToast(`❌ ${errMsg}`);
-                }
+                showToast(`❌ ${lastError}`);
               }
             } catch (err: any) {
               console.error(err);
@@ -1021,54 +998,72 @@ export default function DashboardTab() {
           
       </div>
 
-      {/* --- IMGUR LINK POPUP MODAL --- */}
+      {/* --- IMGUR LINK FLOATING POPUP (BOTTOM RIGHT) --- */}
       {imgurModalOpen && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.65)' }} onClick={() => setImgurModalOpen(false)}>
-          <div className="bg-card border border-secondary rounded-4 p-4 shadow-lg text-start" style={{ maxWidth: '480px', width: '92%' }} onClick={(e) => e.stopPropagation()}>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h6 className="fw-bold text-success mb-0 d-flex align-items-center gap-2">
-                <i className="bi bi-check-circle-fill"></i>
-                Imgur Link Ready
-              </h6>
-              <button type="button" className="btn-close btn-close-white" onClick={() => setImgurModalOpen(false)}></button>
-            </div>
-            <p className="small text-muted mb-3" style={{ fontSize: '0.82rem' }}>
-              Copy your Imgur link below to share your Planfolio.ca summary.
-            </p>
-            
-            <div className="mb-3">
-              <label className="form-label small text-muted fw-semibold mb-1">Direct Imgur URL</label>
-              <div className="input-group">
-                <input 
-                  type="text" 
-                  readOnly 
-                  className="form-control bg-input text-main border-secondary font-monospace" 
-                  style={{ fontSize: '0.82rem' }} 
-                  value={uploadedUrl} 
-                  onClick={(e) => (e.target as HTMLInputElement).select()} 
-                />
-                <button 
-                  type="button" 
-                  className="btn btn-primary fw-bold px-3 d-flex align-items-center gap-1"
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(uploadedUrl);
-                    showToast('✅ Imgur link copied to clipboard!');
-                  }}
-                  title="Copy Imgur link"
-                >
-                  <i className="bi bi-clipboard"></i> Copy
-                </button>
-                <a href={uploadedUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary" title="Open image in new tab">
-                  <i className="bi bi-box-arrow-up-right"></i>
-                </a>
-              </div>
-            </div>
+        <div
+          className="position-fixed bottom-0 end-0 m-3 m-md-4 rp-card rounded-4 p-3 p-md-4 text-start"
+          style={{
+            zIndex: 1060,
+            maxWidth: '420px',
+            width: 'calc(100vw - 2rem)',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.28)',
+          }}
+        >
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <h6 className="fw-bold text-success mb-0 d-flex align-items-center gap-2">
+              <i className="bi bi-check-circle-fill"></i>
+              Imgur Link Ready
+            </h6>
+            <button
+              type="button"
+              className="btn btn-sm btn-link text-muted p-0 text-decoration-none d-flex align-items-center justify-content-center"
+              style={{ width: '28px', height: '28px' }}
+              onClick={() => setImgurModalOpen(false)}
+              title="Close"
+            >
+              <i className="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <p className="small text-muted mb-2" style={{ fontSize: '0.8rem' }}>
+            Copy your Imgur link below to share your Planfolio.ca summary.
+          </p>
 
-            <div className="d-flex justify-content-end mt-3 pt-2 border-top border-secondary border-opacity-25">
-              <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-4 fw-bold" onClick={() => setImgurModalOpen(false)}>
-                Close
-              </button>
-            </div>
+          <div className="d-flex align-items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              className="form-control form-control-sm font-monospace"
+              style={{
+                fontSize: '0.82rem',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-color)',
+              }}
+              value={uploadedUrl}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-primary fw-bold px-3 d-flex align-items-center gap-1 flex-shrink-0"
+              onClick={async () => {
+                await navigator.clipboard.writeText(uploadedUrl);
+                showToast('✅ Imgur link copied to clipboard!');
+              }}
+              title="Copy Imgur link"
+            >
+              <i className="bi bi-clipboard"></i> Copy
+            </button>
+            <a
+              href={uploadedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center flex-shrink-0"
+              title="Open image in new tab"
+            >
+              <i className="bi bi-box-arrow-up-right"></i>
+            </a>
           </div>
         </div>
       )}
