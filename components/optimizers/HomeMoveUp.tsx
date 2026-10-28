@@ -276,8 +276,8 @@ export default function HomeMoveUp() {
                         <div className="d-flex align-items-center gap-2">
                             <span className="small text-muted fw-bold">Province:</span>
                             <select 
-                                className="form-select form-select-sm bg-transparent border-secondary text-main fw-bold rounded-pill"
-                                style={{ width: '110px' }}
+                                className="form-select form-select-sm bg-transparent border-secondary text-main fw-bold rounded-pill px-3 cursor-pointer shadow-sm"
+                                style={{ width: 'auto', minWidth: '175px', height: '32px' }}
                                 value={province}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setProvince(e.target.value)}
                             >
@@ -437,19 +437,19 @@ export default function HomeMoveUp() {
                 /* --- TAB 2: MONTHLY PAYMENTS & STRESS TEST --- */
                 <div className="d-flex flex-column gap-3 flex-grow-1">
                     {/* Mortgage Setup Controls */}
-                    <div className="row g-3">
-                        <div className="col-6 col-sm-4">
+                    <div className="row g-3 mb-1">
+                        <div className="col-6 col-sm-4 d-flex flex-column justify-content-end">
                             <label className="form-label small fw-bold text-muted mb-1">Mortgage Rate (%)</label>
                             <PercentInput 
                                 value={mortgageRate} 
                                 onChange={(val: any) => setMortgageRate(val ?? 4.75)} 
                             />
                         </div>
-                        <div className="col-6 col-sm-4">
+                        <div className="col-6 col-sm-4 d-flex flex-column justify-content-end">
                             <label className="form-label small fw-bold text-muted mb-1">Amortization</label>
                             <select 
-                                className="form-select form-select-sm bg-input border-secondary text-main fw-bold rounded-pill h-100"
-                                style={{ height: '38px' }}
+                                className="form-select form-select-sm bg-input border-secondary text-main fw-bold rounded-pill px-3 cursor-pointer shadow-sm"
+                                style={{ height: '32px' }}
                                 value={amortizationYears}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setAmortizationYears(Number(e.target.value))}
                             >
@@ -459,7 +459,7 @@ export default function HomeMoveUp() {
                                 <option value={15} className="bg-dark text-white">15 Years</option>
                             </select>
                         </div>
-                        <div className="col-12 col-sm-4">
+                        <div className="col-12 col-sm-4 d-flex flex-column justify-content-end">
                             <label className="form-label small fw-bold text-muted mb-1">Est. Property Tax (%)</label>
                             <PercentInput 
                                 value={propertyTaxRate} 
