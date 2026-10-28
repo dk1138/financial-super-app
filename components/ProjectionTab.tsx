@@ -328,13 +328,7 @@ export default function ProjectionTab() {
               colorClass = lower.includes('cut') ? "text-warning" : "text-success";
               icon = "bi-shield-shaded";
           } else if (lower.includes('mortgage paid')) {
-              iconElements.push(
-                  <span key={`ev-${i}`} className="badge rounded-pill bg-success bg-opacity-25 text-success border border-success border-opacity-50 d-inline-flex align-items-center gap-1 ms-1 px-2 py-0.5" style={{ fontSize: '0.68rem', cursor: 'help' }} title="Mortgage Paid Off — You are completely mortgage free!">
-                      <i className="bi bi-house-check-fill"></i>
-                      Mortgage Free
-                  </span>
-              );
-              return;
+              colorClass = "text-success"; icon = "bi-house-check-fill";
           } else if (lower.includes('sold')) {
               colorClass = "text-success"; icon = "bi-cash-coin";
           } else if (lower.includes('windfall')) {
@@ -357,8 +351,9 @@ export default function ProjectionTab() {
               return;
           }
 
+          const evTitle = lower.includes('mortgage paid') ? 'Mortgage Paid Off — Completely Mortgage Free!' : ev;
           iconElements.push(
-              <i key={`ev-${i}`} className={`bi ${icon} ${colorClass} ms-1 fs-5`} title={ev} style={{cursor: 'help'}}></i>
+              <i key={`ev-${i}`} className={`bi ${icon} ${colorClass} ms-1 fs-5`} title={evTitle} style={{cursor: 'help'}}></i>
           );
       });
 
@@ -690,6 +685,43 @@ export default function ProjectionTab() {
       }
       
       return `<span class="text-info fw-bold">100% Taxable.</span><br><b>Gross OAS:</b> $${formatStr(gross, year)}<hr class="my-1 border-secondary"><b>Net Income for OAS:</b> $${formatStr(taxInc, year)}<br><b>OAS Threshold:</b> $${formatStr(threshold, year)}<br><span class="text-muted" style="font-size: 0.7rem;"><b>Fully Eliminated At:</b> $${formatStr(eliminationThreshold, year)}</span><br><br><span class="text-danger"><b>Clawback Penalty:</b> -$${formatStr(clawback, year)}${isFullyEliminated ? ' <br><i>(OAS Fully Eliminated)</i>' : ''}</span><br><b>Net OAS Received:</b> $${formatStr(Math.max(0, gross - clawback), year)}`;
+  };
+
+  const buildRespTooltip = (y: any, year: number) => {
+      const p1RespCont = y.flows?.contributions?.p1?.resp || 0;
+      const p2RespCont = y.flows?.contributions?.p2?.resp || 0;
+      const totalDeposit = p1RespCont + p2RespCont;
+      const cesgMatch = y.cesgGrant !== undefined ? y.cesgGrant : (y.flows?.cesg !== undefined ? y.flows.cesg : (totalDeposit > 0 ? Math.min(totalDeposit * 0.20, 500 * (data.dependents?.length || 1)) : 0));
+      const totalNewInvested = totalDeposit + cesgMatch;
+      const p1RespWd = y.flows?.withdrawals?.['P1 RESP'] || 0;
+      const p2RespWd = y.flows?.withdrawals?.['P2 RESP'] || 0;
+      const totalWd = p1RespWd + p2RespWd;
+      const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
+
+      let content = `<span class="text-purple fw-bold">Family RESP Breakdown</span><br>`;
+      content += `Registered Education Savings Plan (CESG Gov't Match)<hr class="my-1 border-secondary">`;
+
+      if (totalDeposit > 0) {
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>New Deposit (Parent):</span><span class="text-main fw-bold">+$${formatStr(totalDeposit, year)}</span></div>`;
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Gov't Match (20% CESG):</span><span class="text-success fw-bold">+$${formatStr(cesgMatch, year)}</span></div>`;
+          content += `<hr class="my-1 border-secondary">`;
+          content += `<div class="d-flex justify-content-between small mb-1 fw-bold text-info"><span>Total New Invested:</span><span>+$${formatStr(totalNewInvested, year)}</span></div>`;
+      } else if (totalWd > 0) {
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Tuition / College Withdrawal:</span><span class="text-danger fw-bold">-$${formatStr(totalWd, year)}</span></div>`;
+          if (y.eduExpense > totalWd) {
+              content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Unfunded Tuition (Cashflowed):</span><span class="text-warning fw-bold">$${formatStr(y.eduExpense - totalWd, year)}</span></div>`;
+          }
+      } else {
+          content += `<div class="text-muted small mb-1">No deposits or withdrawals this year.</div>`;
+      }
+
+      content += `<hr class="my-1 border-secondary">`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Ending RESP Balance:</span><span class="text-info fw-bold">$${formatStr(respBal, year)}</span></div>`;
+      content += `<div class="small text-muted mt-2" style="font-size: 0.72rem; line-height: 1.45;">`;
+      content += `• <b>CESG Match:</b> Federal grant provides 20% match on first $2,500/yr per child ($500 max/yr) up to age 17 (lifetime limit $7,200 per child).<br>`;
+      content += `• <b>Post-Secondary at 18:</b> Withdrawn to fund tuition and college expenses (EAP/PSE) adjusted for inflation.`;
+      content += `</div>`;
+      return content;
   };
 
   const buildContributionTooltip = (flows: any, isCouple: boolean, year: number) => {
@@ -1427,8 +1459,11 @@ export default function ProjectionTab() {
                                             </div>
                                         )}
                                         {y.eduExpense > 0 && (
-                                            <div className="d-flex justify-content-between small mb-1">
-                                                <span className="text-muted ms-2 fw-bold text-info">Education Costs</span>
+                                            <div className="d-flex justify-content-between small mb-1 align-items-center">
+                                                <span className="text-muted ms-2 fw-bold text-info d-flex align-items-center">
+                                                    Education Costs
+                                                    <InfoBtn align="right" title="RESP Education Funding" text={buildRespTooltip(y, y.year)} />
+                                                </span>
                                                 <span className="fw-medium text-info">{formatCurrency(y.eduExpense, y.year)}</span>
                                             </div>
                                         )}
@@ -1657,10 +1692,13 @@ export default function ProjectionTab() {
                                             </div>
                                         )}
                                         
-                                        {respBal > 0 && (
+                                        {(respBal > 0 || (y.flows?.contributions?.p1?.resp || 0) > 0 || (y.flows?.contributions?.p2?.resp || 0) > 0 || (y.flows?.withdrawals?.['P1 RESP'] || 0) > 0 || (y.flows?.withdrawals?.['P2 RESP'] || 0) > 0) && (
                                             <div className="mb-2 mt-3 pt-2 border-top border-secondary border-opacity-25">
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
-                                                    <span className="text-muted fw-bold d-flex align-items-center">Family RESP</span>
+                                                    <span className="text-muted fw-bold d-flex align-items-center">
+                                                        Family RESP
+                                                        <InfoBtn align="right" title="Family RESP Breakdown" text={buildRespTooltip(y, y.year)} />
+                                                    </span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year)}
                                                         <span className="text-info fw-bold text-end" style={{width: '75px'}}>{formatCurrency(respBal, y.year)}</span>
