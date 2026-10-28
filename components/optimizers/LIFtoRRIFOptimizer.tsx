@@ -23,6 +23,7 @@ export default function LIFtoRRIFOptimizer() {
     const [overrideBalance, setOverrideBalance] = useState<number | ''>('');
     const [overrideAge, setOverrideAge] = useState<number | ''>('');
     const [growthRate, setGrowthRate] = useState<number>(5.0);
+    const [priorReturnRate, setPriorReturnRate] = useState<number | ''>('');
     const [viewMode, setViewMode] = useState<'summary' | 'schedule'>('summary');
 
     const defaultAge = Math.max(55, Number(data.inputs[`${activeTarget}_age`]) || 65);
@@ -35,13 +36,19 @@ export default function LIFtoRRIFOptimizer() {
     const calculations = useMemo(() => {
         const ageForFactors = Math.max(55, currentAge);
         const r = growthRate / 100;
+        const priorR = priorReturnRate !== '' 
+            ? Number(priorReturnRate) / 100 
+            : (data.inputs[`${activeTarget}_lif_prior_return`] !== undefined && data.inputs[`${activeTarget}_lif_prior_return`] !== '' 
+                ? Number(data.inputs[`${activeTarget}_lif_prior_return`]) / 100 
+                : r);
         const minRate = getRrifFactor(ageForFactors - 1);
         const baseMaxRate = getLifMaxFactor(ageForFactors - 1, province);
 
-        const estimatedPriorGrowth = currentBalance * r;
+        const estimatedPriorGrowth = currentBalance * priorR;
         const currentMin = currentBalance * minRate;
         const currentMax = calcLifMaxLimit(ageForFactors - 1, province, currentBalance, estimatedPriorGrowth);
         const effectiveMaxRate = currentBalance > 0 ? (currentMax / currentBalance) : baseMaxRate;
+        const isPriorReturnHigher = estimatedPriorGrowth > (currentBalance * baseMaxRate);
         const currentTransfer = Math.max(0, currentMax - currentMin);
 
         // 10-year projection comparing status-quo vs unlocking strategy
@@ -59,7 +66,7 @@ export default function LIFtoRRIFOptimizer() {
         let simLif = currentBalance;
         let simRrif = 0;
         let cumUnlocked = 0;
-        let priorYearGrowth = currentBalance * r;
+        let priorYearGrowth = estimatedPriorGrowth;
 
         for (let y = 1; y <= 10; y++) {
             const ageYear = currentAge + y - 1;
@@ -101,10 +108,11 @@ export default function LIFtoRRIFOptimizer() {
             currentMin,
             currentMax,
             currentTransfer,
+            isPriorReturnHigher,
             schedule,
             totalUnlocked10Yr: cumUnlocked
         };
-    }, [currentAge, currentBalance, province, growthRate, useRealDollars, inflationRate]);
+    }, [currentAge, currentBalance, province, growthRate, priorReturnRate, activeTarget, data.inputs, useRealDollars, inflationRate]);
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
@@ -153,7 +161,7 @@ export default function LIFtoRRIFOptimizer() {
 
             {/* Inputs Grid */}
             <div className="row g-3 mb-3">
-                <div className="col-12 col-sm-6">
+                <div className="col-12 col-md-5">
                     <label className="form-label small text-muted fw-bold mb-1">Jan 1 LIF Balance (\$)</label>
                     <CurrencyInput 
                         value={overrideBalance !== '' ? overrideBalance : defaultLifBalance} 
@@ -161,7 +169,7 @@ export default function LIFtoRRIFOptimizer() {
                         placeholder="100,000"
                     />
                 </div>
-                <div className="col-6 col-sm-3">
+                <div className="col-4 col-md-2">
                     <label className="form-label small text-muted fw-bold mb-1">Age</label>
                     <StepperInput 
                         min={55} 
@@ -170,11 +178,22 @@ export default function LIFtoRRIFOptimizer() {
                         onChange={(val: number) => setOverrideAge(val)} 
                     />
                 </div>
-                <div className="col-6 col-sm-3">
+                <div className="col-4 col-md-2">
                     <label className="form-label small text-muted fw-bold mb-1">Growth (%)</label>
                     <PercentInput 
                         value={growthRate} 
                         onChange={(val: number) => setGrowthRate(val ?? 5.0)} 
+                    />
+                </div>
+                <div className="col-4 col-md-3">
+                    <label className="form-label small text-muted fw-bold mb-1 d-flex align-items-center">
+                        <span className="text-truncate">Prior Yr Ret (%)</span>
+                        <InfoBtn direction="up" title="Prior Year LIF Return (%)" text="LIF maximum withdrawal is the <b>greater of</b> the age-based statutory factor and the actual investment return earned in the preceding calendar year." />
+                    </label>
+                    <PercentInput 
+                        value={priorReturnRate !== '' ? priorReturnRate : (data.inputs[`${activeTarget}_lif_prior_return`] ?? '')} 
+                        onChange={(val: any) => setPriorReturnRate(val ?? '')} 
+                        placeholder={`${growthRate}%`}
                     />
                 </div>
             </div>
@@ -217,8 +236,8 @@ export default function LIFtoRRIFOptimizer() {
                                 </span>
                                 <div className="mt-2">
                                     <div className="fs-5 fw-bold text-main">{formatCurrency(calculations.currentMax)}</div>
-                                    <span className="badge bg-secondary bg-opacity-25 text-muted mt-1" style={{fontSize: '0.7rem'}}>
-                                        {(calculations.maxRate * 100).toFixed(2)}% ({province})
+                                    <span className={`badge ${calculations.isPriorReturnHigher ? 'bg-info bg-opacity-25 text-info border border-info border-opacity-50' : 'bg-secondary bg-opacity-25 text-muted'} mt-1`} style={{fontSize: '0.7rem'}}>
+                                        {(calculations.maxRate * 100).toFixed(2)}% {calculations.isPriorReturnHigher ? '• Prior Return Bound' : `(${province})`}
                                     </span>
                                 </div>
                             </div>

@@ -708,6 +708,28 @@ export default function ProjectionTab() {
       return content;
   };
 
+  const buildUnallocatedSurplusTooltip = (unallocatedVal: number, totalSourced: number, totalExp: number, totalTaxes: number, investedVal: number, year: number) => {
+      let content = `<span class="text-success fw-bold">Retained Liquid Cash Cushion</span><br>`;
+      content += `Net surplus cash remaining after covering all living expenses, debts, and taxes, and funding all tracked investment accounts.<hr class="my-1 border-secondary">`;
+      
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Total Cash Sourced:</span><span class="text-main fw-bold">+$${formatStr(totalSourced, year)}</span></div>`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Living Expenses & Debts:</span><span class="text-danger">-$${formatStr(totalExp, year)}</span></div>`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Income Taxes (P1 & P2):</span><span class="text-danger">-$${formatStr(totalTaxes, year)}</span></div>`;
+      if (investedVal > 0) {
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Surplus Invested (TFSA/RRSP/etc.):</span><span class="text-primary">-$${formatStr(investedVal, year)}</span></div>`;
+      }
+      content += `<hr class="my-1 border-secondary">`;
+      content += `<div class="d-flex justify-content-between fw-bold text-success small mb-1"><span>Unallocated Cash Remaining:</span><span>+$${formatStr(unallocatedVal, year)}</span></div>`;
+      
+      content += `<hr class="my-1 border-secondary">`;
+      content += `<div class="small text-muted" style="font-size: 0.72rem; line-height: 1.45;">`;
+      content += `<b class="text-main">Where did this money go?</b><br>`;
+      content += `• <b>Retained in Net Worth:</b> This cash is fully preserved in your household's <b>Total Net Worth</b> balance at the bottom of the table.<br>`;
+      content += `• <b>Liquid Bank Cushion:</b> Because your registered contribution room (TFSA, RRSP, RESP) was already filled for the year, this surplus was not locked into investments and remains as liquid chequing/savings buffer for unexpected needs or future spending.`;
+      content += `</div>`;
+      return content;
+  };
+
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
       const isP1 = player === 'p1';
       const pUpper = player.toUpperCase();
@@ -1405,7 +1427,7 @@ export default function ProjectionTab() {
                                         
                                         {unallocated > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
-                                                <span className="text-success fw-bold d-flex align-items-center">Unallocated Surplus <InfoBtn align="right" title="Surplus" text="Cash generated that wasn't spent or automatically routed into a tracked investment account." /></span>
+                                                <span className="text-success fw-bold d-flex align-items-center">Unallocated Surplus <InfoBtn align="right" title="Unallocated Surplus Cash" text={buildUnallocatedSurplusTooltip(unallocated, totalSourcedRaw, totalExpenses, totalTaxes, actualInvested, y.year)} /></span>
                                                 <span className="fw-medium text-success">+{formatCurrency(unallocated, y.year)}</span>
                                             </div>
                                         )}

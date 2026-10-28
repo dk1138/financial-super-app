@@ -1,10 +1,10 @@
 /**
  * financeEngine.ts
- * Version: 1.2.1 (CRA 2026 Engine)
+ * Version: 1.2.2 (CRA 2026 Engine)
  * The core orchestrator. 
  * Heavy logic has been extracted to lib/engine/ modules for maintainability.
  */
-export const ENGINE_VERSION = '1.2.1';
+export const ENGINE_VERSION = '1.2.2';
 import { parseFormattedNumber } from './utils';
 import { getInflatedTaxData, calculateTaxDetailed } from './engine/tax';
 import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getRrifFactor, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
@@ -874,8 +874,15 @@ export class FinanceEngine {
             let ccbPayout = calculateCCBForYear(yr, this.dependents, previousAFNI, baseInflation, this.CONSTANTS.CCB_RULES);
             if (ccbPayout > 0 && alive1) inflows.p1.ccb = ccbPayout;
 
-            let priorYearGain1 = (i === 0) ? (preGrowthLif1 * (ratesP1?.lif || 0)) : (lastLifGain1 || 0);
-            let priorYearGain2 = (i === 0) ? (preGrowthLif2 * (ratesP2?.lif || 0)) : (lastLifGain2 || 0);
+            let p1PriorLifRate = (this.inputs["p1_lif_prior_return"] !== undefined && this.inputs["p1_lif_prior_return"] !== "")
+                ? (Number(this.inputs["p1_lif_prior_return"]) / 100)
+                : (ratesP1?.lif || 0);
+            let p2PriorLifRate = (this.inputs["p2_lif_prior_return"] !== undefined && this.inputs["p2_lif_prior_return"] !== "")
+                ? (Number(this.inputs["p2_lif_prior_return"]) / 100)
+                : (ratesP2?.lif || 0);
+
+            let priorYearGain1 = (i === 0) ? (preGrowthLif1 * p1PriorLifRate) : (lastLifGain1 || 0);
+            let priorYearGain2 = (i === 0) ? (preGrowthLif2 * p2PriorLifRate) : (lastLifGain2 || 0);
 
             let lifMax1 = calcLifMaxLimit(age1 - 1, provinceStr, preGrowthLif1, priorYearGain1);
             let lifMax2 = calcLifMaxLimit(age2 - 1, provinceStr, preGrowthLif2, priorYearGain2);

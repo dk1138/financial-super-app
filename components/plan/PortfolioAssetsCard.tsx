@@ -183,31 +183,54 @@ export default function PortfolioAssetsCard() {
                               const showFhsaWarning = acct.id === 'fhsa' && bal > 40000;
 
                               return (
-                                  <div className="d-flex align-items-center gap-2 p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 w-100" key={`${p}_${acct.id}`}>
-                                      <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
-                                          <div className="d-flex align-items-center gap-1">
-                                              <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
-                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
-                                              {showFhsaWarning && (
-                                                  <i className="bi bi-exclamation-triangle-fill text-warning ms-1" 
-                                                     title="The lifetime contribution limit for an FHSA is $40,000. Ensure any amount above this represents investment growth, not over-contributions." 
-                                                     style={{ cursor: 'help', fontSize: '0.85rem' }}></i>
-                                              )}
+                                  <React.Fragment key={`${p}_${acct.id}`}>
+                                      <div className="d-flex align-items-center gap-2 p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 w-100">
+                                          <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
+                                              <div className="d-flex align-items-center gap-1">
+                                                  <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
+                                                  <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                                                  {showFhsaWarning && (
+                                                      <i className="bi bi-exclamation-triangle-fill text-warning ms-1" 
+                                                         title="The lifetime contribution limit for an FHSA is $40,000. Ensure any amount above this represents investment growth, not over-contributions." 
+                                                         style={{ cursor: 'help', fontSize: '0.85rem' }}></i>
+                                                  )}
+                                              </div>
+                                              <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
                                           </div>
-                                          <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
-                                      </div>
-                                      <div style={{flex: '1 1 0%', minWidth: '80px'}}>
-                                          <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
-                                      </div>
-                                      <div style={{flex: '0 0 75px'}}>
-                                          <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
-                                      </div>
-                                      {showAssetMixUI && (
+                                          <div style={{flex: '1 1 0%', minWidth: '80px'}}>
+                                              <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
+                                          </div>
                                           <div style={{flex: '0 0 75px'}}>
-                                              <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
+                                              <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1" value={data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} />
+                                          </div>
+                                          {showAssetMixUI && (
+                                              <div style={{flex: '0 0 75px'}}>
+                                                  <PercentInput disabled={hasAutoAllocation && acct.id !== 'cash'} className="form-control form-control-sm px-1 border-primary text-primary" value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} />
+                                              </div>
+                                          )}
+                                      </div>
+
+                                      {/* SUB-ROW FOR LIF: Prior Calendar Year Investment Return */}
+                                      {acct.id === 'lif' && bal > 0 && (
+                                          <div className="d-flex align-items-center gap-2 p-2 pt-1 bg-input border border-secondary border-opacity-50 rounded-3 shadow-sm mb-2 ms-2 w-auto">
+                                              <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
+                                                  <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>Prior Yr Return</span>
+                                                  <InfoBtn direction="up" title="Prior Year LIF Return (%)" text="Under Canadian pension regulations, the annual LIF maximum withdrawal limit is the <b>greater of</b> the statutory age-based factor and the actual investment return earned in the preceding calendar year.<br><br>Enter last year's LIF return percentage here. If left blank, Planfolio defaults to your projected return rate." />
+                                              </div>
+                                              <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-end pe-1">
+                                                  {data.inputs[`${p}_lif_prior_return`] !== undefined && data.inputs[`${p}_lif_prior_return`] !== '' && (
+                                                      <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem', fontWeight: '600'}}>
+                                                          ≈ ${Math.round(bal * (Number(data.inputs[`${p}_lif_prior_return`]) / 100)).toLocaleString()} gain
+                                                      </span>
+                                                  )}
+                                              </div>
+                                              <div style={{flex: '0 0 75px'}} className="position-relative">
+                                                  <PercentInput className="form-control form-control-sm px-1" value={data.inputs[`${p}_lif_prior_return`]} onChange={(val: any) => updateInput(`${p}_lif_prior_return`, val)} placeholder={`${data.inputs[`${p}_lif_ret`] ?? 6.0}%`} />
+                                              </div>
+                                              {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                           </div>
                                       )}
-                                  </div>
+                                  </React.Fragment>
                               );
                           })}
                           
