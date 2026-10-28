@@ -119,7 +119,7 @@ export default function LIFtoRRIFOptimizer() {
     };
 
     return (
-        <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
+        <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative d-flex flex-column shadow-sm">
             {/* Header */}
             <div className="d-flex align-items-center mb-3">
                 <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
@@ -161,16 +161,16 @@ export default function LIFtoRRIFOptimizer() {
 
             {/* Inputs Grid */}
             <div className="row g-3 mb-3">
-                <div className="col-12 col-md-5">
-                    <label className="form-label small text-muted fw-bold mb-1">Jan 1 LIF Balance (\$)</label>
+                <div className="col-12 col-sm-6">
+                    <label className="form-label small text-muted fw-bold mb-1">Jan 1 LIF Balance ($)</label>
                     <CurrencyInput 
                         value={overrideBalance !== '' ? overrideBalance : defaultLifBalance} 
                         onChange={(val: any) => setOverrideBalance(val)} 
                         placeholder="100,000"
                     />
                 </div>
-                <div className="col-4 col-md-2">
-                    <label className="form-label small text-muted fw-bold mb-1">Age</label>
+                <div className="col-12 col-sm-6">
+                    <label className="form-label small text-muted fw-bold mb-1">Current Age</label>
                     <StepperInput 
                         min={55} 
                         max={95} 
@@ -178,22 +178,22 @@ export default function LIFtoRRIFOptimizer() {
                         onChange={(val: number) => setOverrideAge(val)} 
                     />
                 </div>
-                <div className="col-4 col-md-2">
-                    <label className="form-label small text-muted fw-bold mb-1">Growth (%)</label>
+                <div className="col-12 col-sm-6">
+                    <label className="form-label small text-muted fw-bold mb-1">Projected Growth (%)</label>
                     <PercentInput 
                         value={growthRate} 
                         onChange={(val: number) => setGrowthRate(val ?? 5.0)} 
                     />
                 </div>
-                <div className="col-4 col-md-3">
-                    <label className="form-label small text-muted fw-bold mb-1 d-flex align-items-center">
-                        <span className="text-truncate">Prior Yr Ret (%)</span>
-                        <InfoBtn direction="up" title="Prior Year LIF Return (%)" text="LIF maximum withdrawal is the <b>greater of</b> the age-based statutory factor and the actual investment return earned in the preceding calendar year." />
+                <div className="col-12 col-sm-6">
+                    <label className="form-label small text-muted fw-bold mb-1 d-flex align-items-center justify-content-between">
+                        <span className="text-truncate">Prior Year LIF Return (%)</span>
+                        <InfoBtn align="right" direction="down" title="Prior Year LIF Return (%)" text="LIF maximum withdrawal is the <b>greater of</b> the age-based statutory factor and the actual investment return earned in the preceding calendar year." />
                     </label>
                     <PercentInput 
                         value={priorReturnRate !== '' ? priorReturnRate : (data.inputs[`${activeTarget}_lif_prior_return`] ?? '')} 
                         onChange={(val: any) => setPriorReturnRate(val ?? '')} 
-                        placeholder={`${growthRate}%`}
+                        placeholder={`${growthRate}`}
                     />
                 </div>
             </div>
