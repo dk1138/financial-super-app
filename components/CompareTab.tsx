@@ -133,7 +133,7 @@ export default function CompareTab() {
 
     const handleDelete = () => {
         if (window.confirm(`Are you sure you want to delete '${comparePlanName}'?`)) {
-            const newList = savedPlans.filter(p => p !== comparePlanName);
+            const newList = savedPlans.filter((p: string) => p !== comparePlanName);
             setSavedPlans(newList);
             localStorage.setItem('rp_plan_list', JSON.stringify(newList));
             localStorage.removeItem(`rp_saved_plan_${comparePlanName}`);
@@ -145,7 +145,7 @@ export default function CompareTab() {
         if (!data || !compareData) return [];
         const diffs: { key: string, oldVal: any, newVal: any }[] = [];
         
-        Object.keys(compareData.inputs || {}).forEach(key => {
+        Object.keys(compareData.inputs || {}).forEach((key: string) => {
             const oldVal = data.inputs[key];
             const newVal = compareData.inputs[key];
             if (oldVal !== newVal && oldVal !== undefined && newVal !== undefined) {
@@ -163,7 +163,7 @@ export default function CompareTab() {
         return nominal / Math.pow(1 + inf, Math.max(0, yOut - baseYear));
     };
 
-    const chartData = useMemo(() => {
+    const chartData = useMemo<any[]>(() => {
         if (!results?.timeline || results.timeline.length === 0) return [];
         const baseYear = results.timeline[0].year;
         return results.timeline.map((y: any, i: number) => {
@@ -201,10 +201,10 @@ export default function CompareTab() {
         });
     }, [results?.timeline, compareResults, data, compareData]);
 
-    const filteredRows = useMemo(() => {
+    const filteredRows = useMemo<any[]>(() => {
         if (!milestonesOnly) return chartData;
         const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-        return chartData.filter((d, idx) => {
+        return chartData.filter((d: any, idx: number) => {
             return idx === 0 || 
                    idx === chartData.length - 1 || 
                    d.age === p1Ret || 
@@ -281,7 +281,7 @@ export default function CompareTab() {
                                 {savedPlans.length === 0 ? (
                                     <li className="text-muted small px-3 py-2 fst-italic">No saved plans found. Save one from the header menu to compare!</li>
                                 ) : (
-                                    savedPlans.map(p => (
+                                    savedPlans.map((p: string) => (
                                         <li key={p}>
                                             <button 
                                                 className={`dropdown-item py-2 fw-medium rounded-2 d-flex align-items-center justify-content-between ${comparePlanName === p ? 'active' : ''}`} 
@@ -309,7 +309,7 @@ export default function CompareTab() {
                     </p>
                     {savedPlans.length > 0 && (
                         <div className="d-flex justify-content-center gap-2 flex-wrap">
-                            {savedPlans.slice(0, 3).map(p => (
+                            {savedPlans.slice(0, 3).map((p: string) => (
                                 <button key={p} onClick={() => setComparePlanName(p)} className="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold">
                                     <i className="bi bi-folder-symlink me-1"></i> Compare with "{p}"
                                 </button>
@@ -355,7 +355,7 @@ export default function CompareTab() {
                         </h6>
                     </div>
                     <div className="d-flex flex-wrap gap-2">
-                        {inputDiffs.map(diff => (
+                        {inputDiffs.map((diff: any) => (
                             <div key={diff.key} className="bg-input border border-secondary rounded-pill px-3 py-1.5 small fw-medium d-flex align-items-center shadow-sm">
                                 <span className="text-muted me-2">{formatInputKey(diff.key)}:</span>
                                 <span className="text-decoration-line-through opacity-50 me-2">{typeof diff.oldVal === 'number' ? formatCurrency(diff.oldVal) : diff.oldVal}</span>
@@ -473,7 +473,7 @@ export default function CompareTab() {
                         <div className="d-flex flex-wrap align-items-center gap-2">
                             {/* Metric Mode Switcher */}
                             <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1">
-                                {(['NW', 'TAX', 'SPEND'] as const).map(m => (
+                                {(['NW', 'TAX', 'SPEND'] as const).map((m: any) => (
                                     <button 
                                         key={m} 
                                         onClick={() => setChartMode(m)} 
@@ -536,7 +536,7 @@ export default function CompareTab() {
                                             dataKey="year" 
                                             stroke="#888" 
                                             tick={{ fill: '#888', fontSize: 12 }} 
-                                            tickFormatter={(val) => `'${String(val).slice(-2)}`} 
+                                            tickFormatter={(val: any) => `'${String(val).slice(-2)}`} 
                                             axisLine={false}
                                             tickLine={false}
                                             dy={8}
@@ -544,7 +544,7 @@ export default function CompareTab() {
                                         <YAxis 
                                             stroke="#888" 
                                             tick={{ fill: '#888', fontSize: 12 }} 
-                                            tickFormatter={(val) => formatShortCurrency(val)} 
+                                            tickFormatter={(val: any) => formatShortCurrency(val)} 
                                             width={65} 
                                             axisLine={false}
                                             tickLine={false}
@@ -617,7 +617,7 @@ export default function CompareTab() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-secondary">
-                                        {filteredRows.map((row) => {
+                                        {filteredRows.map((row: any) => {
                                             const nwDiff = row.nwDiff;
                                             const taxDiff = row.taxDiff;
                                             const spendDiff = row.spendDiff;
