@@ -1715,7 +1715,7 @@ export default function ProjectionTab() {
                                                         <InfoBtn align="right" direction="up" title="Family RESP Breakdown" text={buildRespTooltip(y, y.year)} />
                                                     </span>
                                                     <div className="d-flex justify-content-end align-items-center">
-                                                        {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year)}
+                                                        {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year, y.cesgGrant || y.flows?.cesg || 0)}
                                                         <span className="text-info fw-bold text-end" style={{width: '75px'}}>{formatCurrency(respBal, y.year)}</span>
                                                     </div>
                                                 </div>

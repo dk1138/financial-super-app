@@ -581,6 +581,10 @@ export class FinanceEngine {
             lifetimeByDep: (this.dependents || []).map(() => 0),
             lifetimeFallback: 0
         };
+        let cumRespDeposits = (this.inputs['p1_resp'] ? this.getVal('p1_resp') : 0) + (this.inputs['p2_resp'] ? this.getVal('p2_resp') : 0);
+        let cumRespGrants = 0;
+        let cumRespGrowth = 0;
+        let cumRespWds = 0;
 
         let consts = {
             cppMax1: this.getVal('p1_cpp_est_base'),
@@ -648,6 +652,7 @@ export class FinanceEngine {
             const preGrowthRrsp2 = person2.rrsp, preGrowthRrif2 = person2.rrif_acct, preGrowthLirf2 = person2.lirf, preGrowthLif2 = person2.lif;
             const preGrowthNonreg1 = person1.nonreg, preGrowthNonreg2 = person2.nonreg;
             const preGrowthCrypto1 = person1.crypto, preGrowthCrypto2 = person2.crypto;
+            const preGrowthResp = (person1.resp || 0) + (this.mode === 'Couple' ? (person2.resp || 0) : 0);
 
             const { ratesP1, ratesP2 } = this.applyGrowth(person1, person2, isRet1, isRet2, this.inputs['asset_mode_advanced'], consts.inflation, i, simContext, age1, age2);
             
@@ -1175,6 +1180,45 @@ export class FinanceEngine {
                 } as any
             );
             
+            // --- CESG GOVERNMENT GRANT TOP-UP GUARANTEE (20% match up to $500/child/year, $7,200 lifetime) ---
+            let actRespDepP1 = flowLog?.contributions?.p1?.resp || 0;
+            let actRespDepP2 = flowLog?.contributions?.p2?.resp || 0;
+            let totalRespDep = actRespDepP1 + actRespDepP2;
+
+            if (totalRespDep > 0 && (!flowLog?.cesg || flowLog.cesg === 0)) {
+                let grantAmt = 0;
+                if (this.dependents && this.dependents.length > 0) {
+                    let eligDeps = this.dependents.map((d: any, idx: number) => ({ dep: d, idx })).filter(({ dep }: any) => {
+                        let byear = parseInt((dep.dob || '2020').split('-')[0]) || yr;
+                        let depAge = yr - byear;
+                        let stopAge = this.inputs.cfg_resp_stop_age !== undefined ? parseInt(this.inputs.cfg_resp_stop_age) : 17;
+                        return depAge <= stopAge;
+                    });
+                    if (eligDeps.length > 0) {
+                        let contPerKid = totalRespDep / eligDeps.length;
+                        eligDeps.forEach(({ idx }: any) => {
+                            let curr = cesgTracking?.lifetimeByDep?.[idx] || 0;
+                            let rem = Math.max(0, 7200 - curr);
+                            let g = Math.min(contPerKid * 0.20, 500, rem);
+                            grantAmt += g;
+                            if (cesgTracking?.lifetimeByDep) cesgTracking.lifetimeByDep[idx] = curr + g;
+                        });
+                    }
+                } else {
+                    let curr = (cesgTracking as any)?.lifetimeFallback || 0;
+                    let rem = Math.max(0, 7200 - curr);
+                    let g = Math.min(totalRespDep * 0.20, 500, rem);
+                    grantAmt += g;
+                    if (cesgTracking) (cesgTracking as any).lifetimeFallback = curr + g;
+                }
+
+                if (grantAmt > 0) {
+                    if (alive1) person1.resp += grantAmt;
+                    else if (alive2) person2.resp += grantAmt;
+                    if (flowLog) flowLog.cesg = grantAmt;
+                }
+            }
+
             if (actualDeductions.p1 > 0 || matchTracking.totalMatch1 > 0) {
                 p1RRSPContributed = true;
                 pendingRefund.p1 = tax1.totalTax - calculateTaxDetailed(craTaxableIncome1 - actualDeductions.p1, provinceStr, taxBrackets, this.CONSTANTS, inflows.p1.oas, oasThresholdInf, inflows.p1.earned, baseInflation, divInc1, age1, getEligPension1(), alive2 ? (craTaxableIncome2 - actualDeductions.p2) : -1, isEligibleDividend, credits1).totalTax;
@@ -1341,7 +1385,37 @@ export class FinanceEngine {
                     transferAmt: lifTransfer2
                 };
 
+                let respGrowthThisYr = preGrowthResp * (ratesP1?.resp || 0);
+                cumRespGrowth += respGrowthThisYr;
+
+                let respWdThisYr = (flowLog?.withdrawals?.['P1 RESP'] || 0) + (flowLog?.withdrawals?.['P2 RESP'] || 0);
+                cumRespWds += respWdThisYr;
+
+                let respDepThisYr = (flowLog?.contributions?.p1?.resp || 0) + (flowLog?.contributions?.p2?.resp || 0);
+                cumRespDeposits += respDepThisYr;
+
+                let respGrantThisYr = flowLog?.cesg || 0;
+                cumRespGrants += respGrantThisYr;
+
+                let respEndingBal = (person1.resp || 0) + (this.mode === 'Couple' ? (person2.resp || 0) : 0);
+
+                const respMath = {
+                    openingBal: preGrowthResp,
+                    growthRate: (ratesP1?.resp || 0) * 100,
+                    growthAmt: respGrowthThisYr,
+                    deposit: respDepThisYr,
+                    grant: respGrantThisYr,
+                    totalNewInvested: respDepThisYr + respGrantThisYr,
+                    withdrawal: respWdThisYr,
+                    endingBal: respEndingBal,
+                    cumDeposits: cumRespDeposits,
+                    cumGrants: cumRespGrants,
+                    cumGrowth: cumRespGrowth,
+                    cumWithdrawals: cumRespWds
+                };
+
                 projectionData.push({
+                    respMath,
                     lifTransferP1: lifTransfer1, lifTransferP2: lifTransfer2,
                     lifTransferMathP1: lifTransferMath1, lifTransferMathP2: lifTransferMath2,
                     year: yr, p1Age: age1, p2Age: this.mode === 'Couple' ? age2 : null, p1Alive: alive1, p2Alive: alive2,
