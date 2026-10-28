@@ -688,38 +688,53 @@ export default function ProjectionTab() {
   };
 
   const buildRespTooltip = (y: any, year: number) => {
-      const p1RespCont = y.flows?.contributions?.p1?.resp || 0;
-      const p2RespCont = y.flows?.contributions?.p2?.resp || 0;
-      const totalDeposit = p1RespCont + p2RespCont;
-      const cesgMatch = y.cesgGrant !== undefined ? y.cesgGrant : (y.flows?.cesg !== undefined ? y.flows.cesg : (totalDeposit > 0 ? Math.min(totalDeposit * 0.20, 500 * (data.dependents?.length || 1)) : 0));
-      const totalNewInvested = totalDeposit + cesgMatch;
-      const p1RespWd = y.flows?.withdrawals?.['P1 RESP'] || 0;
-      const p2RespWd = y.flows?.withdrawals?.['P2 RESP'] || 0;
-      const totalWd = p1RespWd + p2RespWd;
-      const respBal = (y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0);
+      const rm = y.respMath || {};
+      const depositThisYear = rm.deposit !== undefined ? rm.deposit : ((y.flows?.contributions?.p1?.resp || 0) + (y.flows?.contributions?.p2?.resp || 0));
+      const grantThisYear = rm.grant !== undefined ? rm.grant : (y.cesgGrant !== undefined ? y.cesgGrant : (y.flows?.cesg !== undefined ? y.flows.cesg : (depositThisYear > 0 ? Math.min(depositThisYear * 0.20, 500 * (data.dependents?.length || 1)) : 0)));
+      const growthThisYear = rm.growthAmt !== undefined ? rm.growthAmt : 0;
+      const wdThisYear = rm.withdrawal !== undefined ? rm.withdrawal : ((y.flows?.withdrawals?.['P1 RESP'] || 0) + (y.flows?.withdrawals?.['P2 RESP'] || 0));
+      const endingBal = rm.endingBal !== undefined ? rm.endingBal : ((y.assetsP1?.resp || 0) + (y.assetsP2?.resp || 0));
 
-      let content = `<span class="text-purple fw-bold">Family RESP Breakdown</span><br>`;
-      content += `Registered Education Savings Plan (CESG Gov't Match)<hr class="my-1 border-secondary">`;
+      const cumDeposits = rm.cumDeposits !== undefined ? rm.cumDeposits : depositThisYear;
+      const cumGrants = rm.cumGrants !== undefined ? rm.cumGrants : grantThisYear;
+      const cumGrowth = rm.cumGrowth !== undefined ? rm.cumGrowth : Math.max(0, endingBal + (rm.cumWithdrawals || 0) - cumDeposits - cumGrants);
 
-      if (totalDeposit > 0) {
-          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>New Deposit (Parent):</span><span class="text-main fw-bold">+$${formatStr(totalDeposit, year)}</span></div>`;
-          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Gov't Match (20% CESG):</span><span class="text-success fw-bold">+$${formatStr(cesgMatch, year)}</span></div>`;
-          content += `<hr class="my-1 border-secondary">`;
-          content += `<div class="d-flex justify-content-between small mb-1 fw-bold text-info"><span>Total New Invested:</span><span>+$${formatStr(totalNewInvested, year)}</span></div>`;
-      } else if (totalWd > 0) {
-          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Tuition / College Withdrawal:</span><span class="text-danger fw-bold">-$${formatStr(totalWd, year)}</span></div>`;
-          if (y.eduExpense > totalWd) {
-              content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Unfunded Tuition (Cashflowed):</span><span class="text-warning fw-bold">$${formatStr(y.eduExpense - totalWd, year)}</span></div>`;
+      let content = `<span class="text-info fw-bold">Registered Education Savings Plan (RESP)</span><br>`;
+      content += `<span class="text-muted" style="font-size: 0.72rem;">Canada Education Savings Grant (CESG 20% match)</span><hr class="my-1 border-secondary">`;
+
+      content += `<b class="text-main" style="font-size: 0.75rem;">This Year (${year}):</b>`;
+      if (depositThisYear > 0 || grantThisYear > 0) {
+          content += `<div class="d-flex justify-content-between text-muted small mt-1 mb-1"><span>• Parent Deposit:</span><span class="text-main fw-bold">+$${formatStr(depositThisYear, year)}</span></div>`;
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Gov't Grant Match (20% CESG):</span><span class="text-success fw-bold">+$${formatStr(grantThisYear, year)}</span></div>`;
+          if (growthThisYear !== 0) {
+              content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Investment Growth (${(rm.growthRate || 6).toFixed(1)}%):</span><span class="${growthThisYear >= 0 ? 'text-info' : 'text-danger'} fw-bold">${growthThisYear >= 0 ? '+' : ''}$${formatStr(growthThisYear, year)}</span></div>`;
+          }
+          content += `<div class="d-flex justify-content-between small mb-1 fw-bold text-main border-top border-secondary pt-1"><span>Total Added This Year:</span><span class="text-success">+$${formatStr(depositThisYear + grantThisYear + growthThisYear, year)}</span></div>`;
+      } else if (wdThisYear > 0) {
+          content += `<div class="d-flex justify-content-between text-muted small mt-1 mb-1"><span>• Tuition / College Withdrawal:</span><span class="text-danger fw-bold">-$${formatStr(wdThisYear, year)}</span></div>`;
+          if (growthThisYear !== 0) {
+              content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Investment Growth (${(rm.growthRate || 6).toFixed(1)}%):</span><span class="${growthThisYear >= 0 ? 'text-info' : 'text-danger'}">${growthThisYear >= 0 ? '+' : ''}$${formatStr(growthThisYear, year)}</span></div>`;
           }
       } else {
-          content += `<div class="text-muted small mb-1">No deposits or withdrawals this year.</div>`;
+          content += `<div class="d-flex justify-content-between text-muted small mt-1 mb-1"><span>• New Deposits / Grants:</span><span>$0</span></div>`;
+          if (growthThisYear !== 0) {
+              content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Investment Growth (${(rm.growthRate || 6).toFixed(1)}%):</span><span class="${growthThisYear >= 0 ? 'text-info' : 'text-danger'} fw-bold">${growthThisYear >= 0 ? '+' : ''}$${formatStr(growthThisYear, year)}</span></div>`;
+          }
       }
 
       content += `<hr class="my-1 border-secondary">`;
-      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Ending RESP Balance:</span><span class="text-info fw-bold">$${formatStr(respBal, year)}</span></div>`;
-      content += `<div class="small text-muted mt-2" style="font-size: 0.72rem; line-height: 1.45;">`;
-      content += `• <b>CESG Match:</b> Federal grant provides 20% match on first $2,500/yr per child ($500 max/yr) up to age 17 (lifetime limit $7,200 per child).<br>`;
-      content += `• <b>Post-Secondary at 18:</b> Withdrawn to fund tuition and college expenses (EAP/PSE) adjusted for inflation.`;
+      content += `<b class="text-main" style="font-size: 0.75rem;">Cumulative Plan Breakdown (To Date):</b>`;
+      content += `<div class="d-flex justify-content-between text-muted small mt-1 mb-1"><span>• Total Parent Deposits:</span><span class="text-main fw-bold">$${formatStr(cumDeposits, year)}</span></div>`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Total Gov't Grants (CESG):</span><span class="text-success fw-bold">+$${formatStr(cumGrants, year)}</span></div>`;
+      content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Total Investment Growth:</span><span class="text-info fw-bold">+$${formatStr(cumGrowth, year)}</span></div>`;
+      if ((rm.cumWithdrawals || 0) > 0) {
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Cumulative Withdrawals:</span><span class="text-danger fw-bold">-$${formatStr(rm.cumWithdrawals, year)}</span></div>`;
+      }
+      content += `<hr class="my-1 border-secondary">`;
+      content += `<div class="d-flex justify-content-between small fw-bold text-main"><span>Ending RESP Balance:</span><span class="text-info">$${formatStr(endingBal, year)}</span></div>`;
+
+      content += `<div class="small text-muted mt-2 pt-1 border-top border-secondary" style="font-size: 0.7rem; line-height: 1.4;">`;
+      content += `<i>CRA CESG Rules: 20% match on first $2,500/yr per child ($500 max/yr) up to age 17; lifetime cap of $7,200 per child.</i>`;
       content += `</div>`;
       return content;
   };
@@ -1462,7 +1477,7 @@ export default function ProjectionTab() {
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="text-muted ms-2 fw-bold text-info d-flex align-items-center">
                                                     Education Costs
-                                                    <InfoBtn align="right" title="RESP Education Funding" text={buildRespTooltip(y, y.year)} />
+                                                    <InfoBtn align="right" direction="up" title="RESP Education Funding" text={buildRespTooltip(y, y.year)} />
                                                 </span>
                                                 <span className="fw-medium text-info">{formatCurrency(y.eduExpense, y.year)}</span>
                                             </div>
@@ -1697,7 +1712,7 @@ export default function ProjectionTab() {
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted fw-bold d-flex align-items-center">
                                                         Family RESP
-                                                        <InfoBtn align="right" title="Family RESP Breakdown" text={buildRespTooltip(y, y.year)} />
+                                                        <InfoBtn align="right" direction="up" title="Family RESP Breakdown" text={buildRespTooltip(y, y.year)} />
                                                     </span>
                                                     <div className="d-flex justify-content-end align-items-center">
                                                         {getAccountFlow(y, 'p1', ['resp'], ['RESP'], y.year)}
