@@ -1172,7 +1172,7 @@ export class FinanceEngine {
                     dependents: this.dependents,
                     cesgTracking,
                     currentYear: yr
-                }
+                } as any
             );
             
             if (actualDeductions.p1 > 0 || matchTracking.totalMatch1 > 0) {
