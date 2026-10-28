@@ -328,7 +328,13 @@ export default function ProjectionTab() {
               colorClass = lower.includes('cut') ? "text-warning" : "text-success";
               icon = "bi-shield-shaded";
           } else if (lower.includes('mortgage paid')) {
-              colorClass = "text-success"; icon = "bi-house-check-fill";
+              iconElements.push(
+                  <span key={`ev-${i}`} className="badge rounded-pill bg-success bg-opacity-25 text-success border border-success border-opacity-50 d-inline-flex align-items-center gap-1 ms-1 px-2 py-0.5" style={{ fontSize: '0.68rem', cursor: 'help' }} title="Mortgage Paid Off — You are completely mortgage free!">
+                      <i className="bi bi-house-check-fill"></i>
+                      Mortgage Free
+                  </span>
+              );
+              return;
           } else if (lower.includes('sold')) {
               colorClass = "text-success"; icon = "bi-cash-coin";
           } else if (lower.includes('windfall')) {
@@ -412,7 +418,25 @@ export default function ProjectionTab() {
       }
 
       // 3. Kids Registered Account Funding (RESP) — ONLY SHOW ON START YEAR AND END YEAR
-      if (results.timeline && results.timeline.length > 0) {
+      if (data.dependents && data.dependents.length > 0) {
+          data.dependents.forEach((dep: any, kIdx: number) => {
+              const bYear = parseInt((dep.dob || '2020').split('-')[0]) || results.timeline[0]?.year || currentYr;
+              const stopAge = data.inputs.cfg_resp_stop_age !== undefined ? parseInt(data.inputs.cfg_resp_stop_age) : 17;
+              const respEndYear = bYear + stopAge; // Last calendar year of eligibility (turns 17 / reaches 18)
+              const projStartYr = results.timeline[0]?.year;
+              const effectiveStart = Math.max(projStartYr, bYear);
+
+              if (currentYr === effectiveStart && currentYr <= respEndYear) {
+                  iconElements.push(
+                      <i key={`resp-start-${kIdx}`} className="bi bi-backpack-fill text-info ms-1 fs-5" title={`Kids Registered Account (RESP) Funding Starts for ${dep.name || 'Child'}`} style={{cursor: 'help'}}></i>
+                  );
+              } else if (currentYr === respEndYear) {
+                  iconElements.push(
+                      <i key={`resp-end-${kIdx}`} className="bi bi-backpack-fill text-success ms-1 fs-5" title={`Kids Registered Account (RESP) Funding Completed for ${dep.name || 'Child'} (Reaches Age 18)`} style={{cursor: 'help'}}></i>
+                  );
+              }
+          });
+      } else if (results.timeline && results.timeline.length > 0) {
           const respYears = results.timeline
               .filter((r: any) => ((r.flows?.contributions?.p1?.resp || 0) + (r.flows?.contributions?.p2?.resp || 0)) > 0)
               .map((r: any) => r.year);
@@ -501,8 +525,8 @@ export default function ProjectionTab() {
       return (assets.cash||0) + (assets.tfsa||0) + (assets.fhsa||0) + (assets.rrsp||0) + (assets.lirf||0) + (assets.lif||0) + (assets.rrif_acct||0) + (assets.nonreg||0) + (assets.crypto||0);
   };
 
-  const getAccountFlow = (y: any, player: string, acctKeys: string[], wdKeys: string[], year: number) => {
-      let added = 0;
+  const getAccountFlow = (y: any, player: string, acctKeys: string[], wdKeys: string[], year: number, extraFlow: number = 0) => {
+      let added = extraFlow;
       let withdrawn = 0;
       if (y.flows && y.flows.contributions && y.flows.contributions[player]) {
           acctKeys.forEach(k => added += (y.flows.contributions[player][k] || 0));
@@ -530,7 +554,7 @@ export default function ProjectionTab() {
       
       return (
           <span className={`fw-bold ${isPos ? 'text-success' : 'text-danger'} text-end text-nowrap me-2`} style={{fontSize: '0.65rem', minWidth: '55px', width: 'auto', whiteSpace: 'nowrap', display: 'inline-block'}}>
-              ({isPos ? '+' : '-'}{formatted})
+              ({isPos ? '+' : '-'}${formatted})
           </span>
       );
   };
@@ -1077,6 +1101,16 @@ export default function ProjectionTab() {
                     colorClass: 'text-danger'
                   });
                 }
+                const mortgagePaidYr = results.timeline.find((y: any) => (y.events || []).some((ev: string) => ev.toLowerCase().includes('mortgage paid')))?.year || results.timeline.find((y: any, idx: number) => idx > 0 && results.timeline[idx-1].mortgage > 0 && y.mortgage <= 0)?.year;
+                if (mortgagePaidYr) {
+                  milestones.push({
+                    label: 'Mortgage Paid Off',
+                    sub: 'Mortgage Free',
+                    year: mortgagePaidYr,
+                    icon: 'bi-house-check-fill',
+                    colorClass: 'text-success'
+                  });
+                }
                 if (results.timeline.length > 0) {
                   const startYr = results.timeline[0].year;
                   const endYr = results.timeline[results.timeline.length - 1].year;
@@ -1516,7 +1550,7 @@ export default function ProjectionTab() {
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
-                                                        {getAccountFlow(y, 'p1', ['cash'], ['Cash'], y.year)}
+                                                        {getAccountFlow(y, 'p1', ['cash'], ['Cash'], y.year, unallocated)}
                                                         <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP1?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>
@@ -1606,7 +1640,7 @@ export default function ProjectionTab() {
                                                 <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                     <span className="text-muted ms-2">Cash</span>
                                                     <div className="d-flex justify-content-end align-items-center">
-                                                        {getAccountFlow(y, 'p2', ['cash'], ['Cash'], y.year)}
+                                                        {getAccountFlow(y, 'p2', ['cash'], ['Cash'], y.year, !y.p1Alive ? unallocated : 0)}
                                                         <span className="text-end" style={{width: '75px'}}>{formatCurrency(y.assetsP2?.cash || 0, y.year)}</span>
                                                     </div>
                                                 </div>

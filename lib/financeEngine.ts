@@ -576,6 +576,11 @@ export class FinanceEngine {
         const endAge = Math.max(person1.lifeExp, this.mode === 'Couple' ? person2.lifeExp : 0);
         const yearsToRun = endAge - Math.min(p1StartAge, this.mode === 'Couple' ? p2StartAge : p1StartAge);
         let trackedEvents = new Set(), finalNetWorth = 0;
+        let hadAnyMortgage = (currentHousingMode === 'own' && primaryMortgage > 0) || simProperties.some((p: any) => (p.mortgage || 0) > 0);
+        let cesgTracking = {
+            lifetimeByDep: (this.dependents || []).map(() => 0),
+            lifetimeFallback: 0
+        };
 
         let consts = {
             cppMax1: this.getVal('p1_cpp_est_base'),
@@ -980,6 +985,7 @@ export class FinanceEngine {
                     primaryPayment = Number(transition.payment) || 0;
                     primaryGrowth = Number(transition.growth) || 3.0;
                     if (detailed && !trackedEvents.has(`Purchased Property`)) { trackedEvents.add(`Purchased Property`); inflows.events.push(`Purchased Property`); }
+                    if (primaryMortgage > 0) hadAnyMortgage = true;
                 } else if (transition.action === 'rent' || transition.action === 'ltc') {
                     currentHousingMode = transition.action;
                     currentRent = (transition.rent || 0); 
@@ -1058,11 +1064,14 @@ export class FinanceEngine {
             let eduExpense = 0;
             this.dependents.forEach(dep => {
                 if (dep.hasEdu) {
-                    let byear = parseInt(dep.dob.split('-')[0]) || yr;
+                    let byear = parseInt((dep.dob || '2020').split('-')[0]) || yr;
                     let depAge = yr - byear;
-                    let stopAge = this.inputs.cfg_resp_stop_age !== undefined ? parseInt(this.inputs.cfg_resp_stop_age) : 17;
-                    if (depAge >= 18 && depAge <= stopAge) {
-                        eduExpense += (this.getVal('cfg_resp_limit') || 2500) * baseInflation;
+                    let eduStart = parseInt(dep.eduStart) || 18;
+                    let eduDuration = parseInt(dep.eduDuration) || 4;
+                    let eduEnd = eduStart + eduDuration - 1;
+                    if (depAge >= eduStart && depAge <= eduEnd) {
+                        let annualCost = (dep.eduCost !== undefined && dep.eduCost !== null && !isNaN(Number(dep.eduCost)) ? Number(dep.eduCost) : 15000);
+                        eduExpense += annualCost * baseInflation;
                     }
                 }
             });
@@ -1107,8 +1116,10 @@ export class FinanceEngine {
                 rrspRoom2 = 0;
             }
             
-            if (detailed && simProperties.reduce((sum: number, p: any) => sum + p.mortgage, 0) <= 0 && !trackedEvents.has('Mortgage Paid') && simProperties.some((p: any) => p.mortgage === 0 && p.value > 0)) {                
-                trackedEvents.add('Mortgage Paid'); inflows.events.push('Mortgage Paid'); 
+            let currentRemainingMortgage = (currentHousingMode === 'own' ? primaryMortgage : 0) + simProperties.reduce((sum: number, p: any) => sum + (p.mortgage || 0), 0);
+            if (detailed && hadAnyMortgage && currentRemainingMortgage <= 0 && !trackedEvents.has('Mortgage Paid')) {                
+                trackedEvents.add('Mortgage Paid'); 
+                inflows.events.push('Mortgage Paid'); 
             }
 
             pensionSplitTransfer = { p1ToP2: 0, p2ToP1: 0 };
@@ -1131,11 +1142,24 @@ export class FinanceEngine {
                 }
             }
 
+            let eligibleRespDeps = (this.dependents || []).filter((dep: any) => {
+                let byear = parseInt((dep.dob || '2020').split('-')[0]) || yr;
+                let depAge = yr - byear;
+                let stopAge = this.inputs.cfg_resp_stop_age !== undefined ? parseInt(this.inputs.cfg_resp_stop_age) : 17;
+                return depAge <= stopAge;
+            });
+            let actRespLim = 0;
+            if (this.dependents && this.dependents.length > 0) {
+                actRespLim = eligibleRespDeps.length * (this.inputs.cfg_resp_limit !== undefined ? Number(this.inputs.cfg_resp_limit) : 2500);
+            } else {
+                actRespLim = (this.inputs.cfg_resp_limit !== undefined ? Number(this.inputs.cfg_resp_limit) : 2500);
+            }
+
             let netSurplus = handleSurplus(
                 cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
                 person1, person2, alive1, alive2, flowLog, i, 
                 consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
-                actFhsaLim1, actFhsaLim2, consts.respLimit * baseInflation, actualDeductions, fhsaLifetimeRooms, 
+                actFhsaLim1, actFhsaLim2, actRespLim, actualDeductions, fhsaLifetimeRooms, 
                 this.strategies, this.inputs, this.CONSTANTS, age1, age2,
                 {
                     blockRRSPContributionsP1: false, 
@@ -1144,7 +1168,10 @@ export class FinanceEngine {
                     p1MatchRate: p1_match_rate, p1Tier: p1_tier,
                     p2MatchRate: p2_match_rate, p2Tier: p2_tier,
                     inflowsReference: inflows,
-                    matchTracking
+                    matchTracking,
+                    dependents: this.dependents,
+                    cesgTracking,
+                    currentYear: yr
                 }
             );
             
