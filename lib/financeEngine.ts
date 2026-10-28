@@ -685,12 +685,24 @@ export class FinanceEngine {
                 if (initialWithdrawalRate === 0 && currentLiquidNW > 0) {
                     initialWithdrawalRate = currentWR;
                 } else if (initialWithdrawalRate > 0 && currentLiquidNW > 0) {
+                    // Capital Preservation Guardrail: Cut spending by 10% if withdrawal rate spikes >20% above initial rate
                     if (currentWR > initialWithdrawalRate * 1.2) {
-                        currentExpenseHaircut *= 0.90; initialWithdrawalRate = currentWR; 
-                        if (detailed && !trackedEvents.has('Guardrails Activated')) inflows.events.push('Guardrails: Spending Cut (-10%)');
-                    } else if (currentWR < initialWithdrawalRate * 0.8) {
-                        currentExpenseHaircut = Math.min(1.0, currentExpenseHaircut * 1.10); initialWithdrawalRate = currentWR;
-                        if (detailed && currentExpenseHaircut <= 1.0 && !trackedEvents.has('Guardrails Lifted')) inflows.events.push('Guardrails: Spending Raised (+10%)');
+                        currentExpenseHaircut *= 0.90;
+                        initialWithdrawalRate = currentWR; 
+                        if (detailed) {
+                            inflows.events.push('Guardrails: Spending Cut (-10%)');
+                            trackedEvents.add('Guardrails Activated');
+                            trackedEvents.delete('Guardrails Lifted');
+                        }
+                    // Recovery Guardrail: If spending was previously trimmed, restore it by 10% (up to 100% baseline) when portfolio recovers
+                    } else if (currentWR < initialWithdrawalRate * 0.8 && currentExpenseHaircut < 1.0) {
+                        currentExpenseHaircut = Math.min(1.0, currentExpenseHaircut * 1.10);
+                        initialWithdrawalRate = currentWR;
+                        if (detailed) {
+                            inflows.events.push(currentExpenseHaircut >= 0.999 ? 'Guardrails: Spending Fully Restored' : 'Guardrails: Spending Restored (+10%)');
+                            trackedEvents.add('Guardrails Lifted');
+                            trackedEvents.delete('Guardrails Activated');
+                        }
                     }
                 }
             }
