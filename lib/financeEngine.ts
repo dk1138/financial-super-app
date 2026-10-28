@@ -1354,7 +1354,7 @@ export class FinanceEngine {
                     benefitsP1: inflows.p1.cpp + inflows.p1.oas, benefitsP2: inflows.p2.cpp + inflows.p2.oas, dbP1: inflows.p1.pension, dbP2: inflows.p2.pension,
                     taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0), p2Net: alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0, pensionSplit: pensionSplitTransfer,
                     expenses: expenses, rentPay: rentPayment, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, eduExpense, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
-                    wdBreakdown: wdBreakdown, flows: flowLog, events: inflows.events, householdNet: grossInflow, grossInflow: grossInflow, 
+                    wdBreakdown: wdBreakdown, flows: flowLog, cesgGrant: (flowLog?.cesg || 0), events: inflows.events, householdNet: grossInflow, grossInflow: grossInflow, 
                     visualExpenses: expenses + mortgagePayment + rentPayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
                     reIncludedEq: realEstateValue - realEstateDebt, reExcludedEq: reExcludedValue - reExcludedDebt, reIncludedValue: realEstateValue,
                     windfall: inflows.p1.windfallTaxable + (inflows.p1.windfallNonTax - appliedRefundP1) + inflows.p2.windfallTaxable + (inflows.p2.windfallNonTax - appliedRefundP2),
