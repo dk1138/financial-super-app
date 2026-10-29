@@ -92,6 +92,7 @@ export interface PensionSplitTransfer {
 }
 
 export interface PlanData {
+    history?: HistoryRecord[];
     mode: 'Single' | 'Couple';
     useRealDollars: boolean;
     expenseMode: 'Simple' | 'Advanced';
@@ -119,4 +120,25 @@ export interface SimulationDashboard {
 export interface SimulationResult {
     timeline: any[];
     dashboard: SimulationDashboard;
+}
+export interface HistoryRecord {
+    id: string;
+    calendarYear: number;
+    archiveDate: string;
+    openingNetWorth: number;
+    closingNetWorth: number;
+    netSavingsAdded: number;
+    totalInvestmentGainDollar: number;
+    effectiveAnnualReturnPct: number;
+    actualBalances: {
+        p1: Record<string, number>;
+        p2?: Record<string, number>;
+        properties?: Array<{ name: string; value: number; mortgage: number }>;
+        customAssets?: Array<{ name: string; balance: number; owner: string; type: string }>;
+    };
+    priorYearGains?: {
+        p1_lif_dollar_gain?: number;
+        p2_lif_dollar_gain?: number;
+    };
+    fullSnapshot: any;
 }

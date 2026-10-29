@@ -210,26 +210,21 @@ export default function PortfolioAssetsCard() {
                                           )}
                                       </div>
 
-                                      {/* SUB-ROW FOR LIF: Prior Calendar Year Investment Return */}
-                                      {acct.id === 'lif' && bal > 0 && (
-                                          <div className="d-flex align-items-center gap-2 p-2 pt-1 bg-input border border-secondary border-opacity-50 rounded-3 shadow-sm mb-2 ms-2 w-auto">
-                                              <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 125px'}}>
-                                                  <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>Prior Yr Return</span>
-                                                  <InfoBtn direction="up" title="Prior Year LIF Return (%)" text="Under Canadian pension regulations, the annual LIF maximum withdrawal limit is the <b>greater of</b> the statutory age-based factor and the actual investment return earned in the preceding calendar year.<br><br>Enter last year's LIF return percentage here. If left blank, Planfolio defaults to your projected return rate." />
-                                              </div>
-                                              <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-end pe-1">
-                                                  {data.inputs[`${p}_lif_prior_return`] !== undefined && data.inputs[`${p}_lif_prior_return`] !== '' && (
-                                                      <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{fontSize: '0.65rem', fontWeight: '600'}}>
-                                                          ≈ ${Math.round(bal * (Number(data.inputs[`${p}_lif_prior_return`]) / 100)).toLocaleString()} gain
-                                                      </span>
-                                                  )}
-                                              </div>
-                                              <div style={{flex: '0 0 75px'}} className="position-relative">
-                                                  <PercentInput className="form-control form-control-sm px-1" value={data.inputs[`${p}_lif_prior_return`]} onChange={(val: any) => updateInput(`${p}_lif_prior_return`, val)} placeholder={`${data.inputs[`${p}_lif_ret`] ?? 6.0}%`} />
-                                              </div>
-                                              {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
-                                          </div>
-                                      )}
+                                       {/* SUB-ROW FOR LIF: Prior Calendar Year Investment Return (Dollar Amount) */}
+                                       {acct.id === 'lif' && bal > 0 && (
+                                           <div className="d-flex align-items-center gap-2 p-2 pt-1 bg-input border border-secondary border-opacity-50 rounded-3 shadow-sm mb-2 ms-2 w-auto">
+                                               <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
+                                                   <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>Prior Yr Return ($)</span>
+                                                   <InfoBtn direction="up" title="Prior Year LIF Return ($)" text="Under Canadian pension regulations, the annual LIF maximum withdrawal limit is the <b>greater of</b> the statutory age-based factor and the actual investment return earned in the preceding calendar year.<br><br>Enter last year's actual LIF dollar investment gain ($) here. If left blank, Planfolio defaults to your projected return rate applied to your starting balance." />
+                                               </div>
+                                               <div style={{flex: '1 1 0%', minWidth: '40px'}} className="text-end pe-1">
+                                               </div>
+                                               <div style={{flex: '0 0 95px'}} className="position-relative">
+                                                   <CurrencyInput className="form-control form-control-sm px-1" value={data.inputs[`${p}_lif_prior_return`] ?? ''} onChange={(val: any) => updateInput(`${p}_lif_prior_return`, val)} placeholder={`$${Math.round(bal * ((data.inputs[`${p}_lif_ret`] ?? 6.0) / 100)).toLocaleString()}`} />
+                                               </div>
+                                               {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
+                                           </div>
+                                       )}
                                   </React.Fragment>
                               );
                           })}

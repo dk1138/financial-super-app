@@ -36,15 +36,15 @@ export default function LIFtoRRIFOptimizer() {
     const calculations = useMemo(() => {
         const ageForFactors = Math.max(55, currentAge);
         const r = growthRate / 100;
-        const priorR = priorReturnRate !== '' 
-            ? Number(priorReturnRate) / 100 
-            : (data.inputs[`${activeTarget}_lif_prior_return`] !== undefined && data.inputs[`${activeTarget}_lif_prior_return`] !== '' 
-                ? Number(data.inputs[`${activeTarget}_lif_prior_return`]) / 100 
-                : r);
+        const priorDollarGain = priorReturnRate !== ''
+            ? Number(priorReturnRate)
+            : ((data.inputs[`${activeTarget}_lif_prior_return`] !== undefined && data.inputs[`${activeTarget}_lif_prior_return`] !== '')
+                ? Number(data.inputs[`${activeTarget}_lif_prior_return`])
+                : (currentBalance * r));
         const minRate = getRrifFactor(ageForFactors - 1);
         const baseMaxRate = getLifMaxFactor(ageForFactors - 1, province);
 
-        const estimatedPriorGrowth = currentBalance * priorR;
+        const estimatedPriorGrowth = priorDollarGain;
         const currentMin = currentBalance * minRate;
         const currentMax = calcLifMaxLimit(ageForFactors - 1, province, currentBalance, estimatedPriorGrowth);
         const effectiveMaxRate = currentBalance > 0 ? (currentMax / currentBalance) : baseMaxRate;
@@ -187,13 +187,13 @@ export default function LIFtoRRIFOptimizer() {
                 </div>
                 <div className="col-12 col-sm-6">
                     <label className="form-label small text-muted fw-bold mb-1 d-flex align-items-center justify-content-between">
-                        <span className="text-truncate">Prior Year LIF Return (%)</span>
-                        <InfoBtn align="right" direction="down" title="Prior Year LIF Return (%)" text="LIF maximum withdrawal is the <b>greater of</b> the age-based statutory factor and the actual investment return earned in the preceding calendar year." />
+                        <span className="text-truncate">Prior Year LIF Return ($)</span>
+                        <InfoBtn align="right" direction="down" title="Prior Year LIF Return ($)" text="LIF maximum withdrawal is the <b>greater of</b> the age-based statutory factor and the actual dollar investment return earned in the preceding calendar year." />
                     </label>
-                    <PercentInput 
+                    <CurrencyInput 
                         value={priorReturnRate !== '' ? priorReturnRate : (data.inputs[`${activeTarget}_lif_prior_return`] ?? '')} 
                         onChange={(val: any) => setPriorReturnRate(val ?? '')} 
-                        placeholder={`${growthRate}`}
+                        placeholder={`$${Math.round(currentBalance * (growthRate / 100)).toLocaleString()}`}
                     />
                 </div>
             </div>

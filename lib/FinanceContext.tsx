@@ -21,6 +21,7 @@ export interface FinanceData {
     leaves: any[];
     dependents: any[];
     debt: any[];
+    history?: any[];
     strategies: {
         accum: string[];
         shortfall?: string[]; // Added supporting architecture mapping
@@ -129,7 +130,7 @@ export const defaultData: FinanceData = {
     p1_lirf: 0, p1_lirf_ret: 6.0,
     p1_lif: 0, p1_lif_ret: 5.0,
     p1_rrif_acct: 0, p1_rrif_acct_ret: 5.0,
-    p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0,
+    p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0, p1_nonreg_foreign_yield: 0.0,
     p1_crypto: 0, p1_crypto_acb: 0, p1_crypto_ret: 8.0,
     p1_cpp_enabled: true, p1_cpp_est_base: 12000, p1_cpp_start: 65,
     p1_oas_enabled: true, p1_oas_years: 40, p1_oas_start: 65,
@@ -144,7 +145,7 @@ export const defaultData: FinanceData = {
     p2_lirf: 0, p2_lirf_ret: 6.0,
     p2_lif: 0, p2_lif_ret: 5.0,
     p2_rrif_acct: 0, p2_rrif_acct_ret: 5.0,
-    p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0,
+    p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0, p2_nonreg_foreign_yield: 0.0,
     p2_crypto: 0, p2_crypto_acb: 0, p2_crypto_ret: 8.0,
     p2_cpp_enabled: true, p2_cpp_est_base: 10000, p2_cpp_start: 65,
     p2_oas_enabled: true, p2_oas_years: 40, p2_oas_start: 65,
@@ -176,7 +177,7 @@ export const defaultData: FinanceData = {
   ], 
   housingTransitions: [],
   expensePhases: [],
-  windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
+  windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [], history: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'], 
     shortfall: ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp'],
@@ -202,7 +203,7 @@ export const emptyData: FinanceData = {
     p1_cash: 0, p1_cash_ret: 2.0, p1_tfsa: 0, p1_tfsa_ret: 6.0, p1_fhsa: 0, p1_fhsa_ret: 6.0,
     p1_rrsp: 0, p1_rrsp_ret: 6.0, p1_resp: 0, p1_resp_ret: 6.0, p1_lirf: 0, p1_lirf_ret: 6.0,
     p1_lif: 0, p1_lif_ret: 5.0, p1_rrif_acct: 0, p1_rrif_acct_ret: 5.0,
-    p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0,
+    p1_nonreg: 0, p1_nonreg_acb: 0, p1_nonreg_ret: 5.0, p1_nonreg_yield: 2.0, p1_nonreg_foreign_yield: 0.0,
     p1_crypto: 0, p1_crypto_acb: 0, p1_crypto_ret: 8.0,
     p1_cpp_enabled: true, p1_cpp_est_base: 0, p1_cpp_start: 65,
     p1_oas_enabled: true, p1_oas_years: 0, p1_oas_start: 65,
@@ -212,7 +213,7 @@ export const emptyData: FinanceData = {
     p2_cash: 0, p2_cash_ret: 2.0, p2_tfsa: 0, p2_tfsa_ret: 6.0, p2_fhsa: 0, p2_fhsa_ret: 6.0,
     p2_rrsp: 0, p2_rrsp_ret: 6.0, p2_resp: 0, p2_resp_ret: 6.0, p2_lirf: 0, p2_lirf_ret: 6.0,
     p2_lif: 0, p2_lif_ret: 5.0, p2_rrif_acct: 0, p2_rrif_acct_ret: 5.0,
-    p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0,
+    p2_nonreg: 0, p2_nonreg_acb: 0, p2_nonreg_ret: 5.0, p2_nonreg_yield: 2.0, p2_nonreg_foreign_yield: 0.0,
     p2_crypto: 0, p2_crypto_acb: 0, p2_crypto_ret: 8.0,
     p2_cpp_enabled: true, p2_cpp_est_base: 0, p2_cpp_start: 65,
     p2_oas_enabled: true, p2_oas_years: 0, p2_oas_start: 65,
@@ -230,7 +231,7 @@ export const emptyData: FinanceData = {
     emergency_fund_mode: 'none', emergency_fund_custom_amount: 0,
     max_annual_spending_cash: 0
   },
-  properties: [], housingTransitions: [], expensePhases: [], windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [],
+  properties: [], housingTransitions: [], expensePhases: [], windfalls: [], additionalIncome: [], customAssets: [], deductions: [], leaves: [], dependents: [], debt: [], history: [],
   strategies: { 
     accum: ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'], 
     shortfall: ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp'],
@@ -382,6 +383,38 @@ export function useFinance() {
         updateStrategy: (type: 'accum' | 'shortfall' | 'decum', newList: string[]) => store.setData((prev) => ({ 
             ...prev, strategies: { ...prev.strategies, [type]: newList } 
         })),
+        rollForwardPlan: (record: any, newInputs: Record<string, any>, newCustomAssets?: any[], newProperties?: any[]) => {
+            store.setData((prev) => {
+                const history = [...(prev.history || []), record];
+                const updated = {
+                    ...prev,
+                    history,
+                    inputs: { ...prev.inputs, ...newInputs },
+                    customAssets: newCustomAssets !== undefined ? newCustomAssets : prev.customAssets,
+                    properties: newProperties !== undefined ? newProperties : prev.properties
+                };
+                try {
+                    const backupKey = `rp_saved_plan_Pre_Rollforward_${record.calendarYear}`;
+                    localStorage.setItem(backupKey, JSON.stringify(prev));
+                    let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
+                    const cleanName = backupKey.replace('rp_saved_plan_', '');
+                    if (!plans.includes(cleanName)) {
+                        plans.push(cleanName);
+                        localStorage.setItem('rp_plan_list', JSON.stringify(plans));
+                    }
+                } catch (e) {
+                    console.error('Backup save failed', e);
+                }
+                return updated;
+            });
+        },
+        restoreHistorySnapshot: (historyId: string) => {
+            store.setData((prev) => {
+                const entry = (prev.history || []).find((h: any) => h.id === historyId);
+                if (!entry || !entry.fullSnapshot) return prev;
+                return { ...entry.fullSnapshot, history: prev.history };
+            });
+        },
         updateExpenseCategory: (catKey: string, items: any[]) => store.setData((prev) => ({
             ...prev,
             expensesByCategory: {
