@@ -93,37 +93,36 @@ export default function PlannerPage() {
       }
   };
 
-    const handleSendFeedback = async (e: React.FormEvent) => {
+  const handleSendFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSending(true);
 
-    const response = await fetch('/api/auth/feedback', { // Make sure this path is correct!
+    const response = await fetch('/api/auth/feedback', {
         method: 'POST',
-        body: JSON.stringify({ message: feedbackText }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: feedbackText })
     });
 
     if (response.ok) {
-        // If the POST was successful, the email was sent!
-        // No need to GET or check any IDs.
         setSendSuccess(true);
-        setFeedbackText('');
         setTimeout(() => {
-        setShowFeedbackModal(false);
-        setSendSuccess(false);
+            setShowFeedbackModal(false);
+            setSendSuccess(false);
+            setFeedbackText('');
         }, 2000);
     }
     setIsSending(false);
-    };
+  };
 
   const tabs = [
-    { id: 'plan', label: 'Inputs', icon: 'bi-pencil-square' },
-    { id: 'strategy', label: 'Strategy', icon: 'bi-sliders' },
-    { id: 'dashboard', label: 'Summary', icon: 'bi-clipboard2-data' },
-    { id: 'projection', label: 'Projection', icon: 'bi-table' },
-    { id: 'risk', label: 'Risk', icon: 'bi-activity' },
-    { id: 'cashflow', label: 'Cash Flow', icon: 'bi-diagram-3' },
-    { id: 'optimizers', label: 'Tools & Calculators', icon: 'bi-magic' },
-    { id: 'compare', label: 'Compare', icon: 'bi-bar-chart-line' }
+    { id: 'plan', label: '1. Plan', icon: 'bi-pencil-square' },
+    { id: 'strategy', label: '2. Strategy', icon: 'bi-sliders2' },
+    { id: 'dashboard', label: '3. Dashboard', icon: 'bi-speedometer2' },
+    { id: 'projection', label: '4. Projections', icon: 'bi-graph-up' },
+    { id: 'risk', label: '5. Risk', icon: 'bi-shield-check' },
+    { id: 'cashflow', label: '6. Cash Flow', icon: 'bi-cash-stack' },
+    { id: 'optimizers', label: '7. Optimizers', icon: 'bi-magic' },
+    { id: 'compare', label: '8. Compare', icon: 'bi-layout-split' }
   ];
 
   return (
@@ -133,31 +132,21 @@ export default function PlannerPage() {
     >
       <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
 
-      {/* --- STICKY NAVIGATION TABS --- */}
-      <div 
-        className="position-sticky pt-2 pb-2 mb-3 shadow-sm" 
-        style={{ 
-            top: 'var(--global-header-height, 65px)', 
-            backgroundColor: 'var(--bg-body)', 
-            zIndex: 1030,
-            borderBottom: '1px solid var(--border-color)',
-            margin: '0 -0.5rem',
-            padding: '0 0.5rem'
-        }}
-      >
+      {/* --- STICKY NAVIGATION TABS (KUMO CENTRALIZED) --- */}
+      <div className="planner-tabs-bar shadow-sm">
           <div className="row fade-in">
               <div className="col-12">
-              <ul className="nav nav-pills nav-fill gap-2 flex-nowrap overflow-auto hide-scrollbar m-0 px-1" style={{ cursor: 'pointer' }}>
+              <ul className="nav-pills-kumo hide-scrollbar">
                   {tabs.map(tab => (
-                  <li className="nav-item flex-fill" key={tab.id}>
-                      <div 
-                      className={`nav-link rounded-3 fw-bold transition-all d-flex align-items-center justify-content-center py-1 px-2 border ${activeTab === tab.id ? 'bg-primary text-white border-primary shadow' : 'bg-input text-muted border-secondary opacity-75'}`} 
-                      onClick={() => setActiveTab(tab.id)}
-                      style={{ fontSize: '0.85rem' }}
+                  <li className="nav-item" key={tab.id}>
+                      <button 
+                        type="button"
+                        className={`nav-link w-100 ${activeTab === tab.id ? 'active' : ''}`} 
+                        onClick={() => setActiveTab(tab.id)}
                       >
-                      <i className={`bi ${tab.icon} me-2 ${activeTab === tab.id ? 'text-white' : ''}`}></i>
-                      <span className="text-nowrap">{tab.label}</span>
-                      </div>
+                        <i className={`bi ${tab.icon}`}></i>
+                        <span>{tab.label}</span>
+                      </button>
                   </li>
                   ))}
               </ul>
@@ -220,91 +209,19 @@ export default function PlannerPage() {
                     required
                     value={feedbackText}
                     onChange={(e) => setFeedbackText(e.target.value)}
-                    style={{ resize: 'none', fontSize: '0.9rem' }}
-                  ></textarea>
-                  <button 
-                    type="submit" 
-                    disabled={isSending || !feedbackText.trim()}
-                    className="btn btn-primary w-100 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
-                  >
-                    {isSending ? (
-                      <><span className="spinner-border spinner-border-sm"></span> Sending...</>
-                    ) : (
-                      <><i className="bi bi-send"></i> Submit Feedback</>
-                    )}
-                  </button>
+                  />
+                  <div className="d-flex justify-content-end gap-2">
+                    <button type="button" className="btn btn-sm btn-outline-secondary px-3" onClick={() => setShowFeedbackModal(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-sm btn-primary px-3 fw-bold" disabled={isSending}>
+                      {isSending ? 'Sending...' : 'Send'}
+                    </button>
+                  </div>
                 </form>
               )}
             </div>
           </div>
         </div>
       )}
-
-      {/* --- QUICK ADJUST POPUP --- */}
-      {showQuickAdjust && (
-          <div className="position-fixed border border-secondary shadow-lg rounded-4 p-3 pt-2 transition-all" 
-               style={{ bottom: '90px', right: '30px', zIndex: 1040, minWidth: '260px', backgroundColor: 'var(--bg-body)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-              <div className="d-flex justify-content-between align-items-center mb-2 pb-2 mt-1 border-bottom border-secondary">
-                  <h6 className="mb-0 fw-bold text-info text-uppercase ls-1" style={{fontSize: '0.7rem'}}><i className="bi bi-sliders me-2"></i>Quick Adjust</h6>
-              </div>
-              {isCouple && (
-                  <div className="form-check form-switch mb-2 pb-2 border-bottom border-secondary border-opacity-50 d-flex align-items-center justify-content-between px-0">
-                      <label className="form-check-label fw-bold text-muted cursor-pointer text-nowrap" style={{fontSize: '0.75rem'}} htmlFor="syncRetireFAB">Retire at same time</label>
-                      <input className="form-check-input ms-0 mt-0 cursor-pointer flex-shrink-0" style={{transform: 'scale(0.8)'}} type="checkbox" id="syncRetireFAB" checked={data.inputs.retire_same_time ?? false} onChange={e => handleSyncToggle(e.target.checked)} />
-                  </div>
-              )}
-              <div className="d-flex flex-column gap-2">
-                  <div className="d-flex justify-content-between align-items-center gap-2">
-                      <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>P1 Retire Age</span>
-                      <div style={{width: '120px'}}><StepperInput min={data.inputs.p1_age ?? 18} max={data.inputs.p1_lifeExp ?? 90} value={data.inputs.p1_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p1', val)} /></div>
-                  </div>
-                  {isCouple && (
-                      <div className="d-flex justify-content-between align-items-center gap-2">
-                          <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>P2 Retire Age</span>
-                          <div style={{width: '120px'}}><StepperInput disabled={data.inputs.retire_same_time} min={data.inputs.p2_age ?? 18} max={data.inputs.p2_lifeExp ?? 90} value={data.inputs.p2_retireAge ?? 60} onChange={(val: any) => handleRetireAgeChange('p2', val)} /></div>
-                      </div>
-                  )}
-                  <div className="d-flex justify-content-between align-items-center gap-2 pt-1 border-top border-secondary border-opacity-50">
-                      <span className="fw-bold text-muted text-nowrap" style={{fontSize: '0.75rem'}}>Inflation Rate</span>
-                      <div style={{width: '120px'}}><PercentInput className="form-control form-control-sm text-end" value={data.inputs.inflation_rate ?? 2.1} onChange={(val: any) => updateInput('inflation_rate', val)} /></div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* --- FEEDBACK BUTTON (Right Side, Indigo Pop) --- */}
-      <button 
-          onClick={() => setShowFeedbackModal(true)}
-          className="btn shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all border-0" 
-          style={{ 
-              width: '48px', 
-              height: '48px', 
-              bottom: '30px', 
-              right: '90px', 
-              zIndex: 1050,
-              backgroundColor: '#6366f1', 
-              color: 'white'
-          }} 
-          title="Send Feedback" 
-      >
-          <i className="bi bi-chat-left-dots fs-5"></i>
-      </button>
-
-      {/* --- QUICK ADJUST BUTTON (Bottom Right, Primary Blue) --- */}
-      <button 
-          className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
-          style={{ 
-              width: '48px', 
-              height: '48px', 
-              bottom: '30px', 
-              right: '30px', 
-              zIndex: 1050 
-          }} 
-          title="Quick Adjust Variables" 
-          onClick={() => setShowQuickAdjust(!showQuickAdjust)}
-      >
-          <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
-      </button>
     </div>
   );
 }
