@@ -260,7 +260,7 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
 
     const modalContent = (
         <div 
-            className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-start px-2 px-md-3 py-2 py-md-3" 
+            className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center px-3 py-4 py-md-5" 
             style={{ 
                 zIndex: 9999, 
                 backgroundColor: 'rgba(0, 0, 0, 0.8)', 
@@ -269,8 +269,8 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
             }}
         >
             <div 
-                className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column mt-1 mt-md-2 mb-4" 
-                style={{ maxWidth: '820px', maxHeight: 'calc(100vh - 32px)' }}
+                className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column my-auto" 
+                style={{ maxWidth: '820px', maxHeight: 'calc(100vh - 80px)' }}
             >
                 
                 {/* MODAL HEADER */}

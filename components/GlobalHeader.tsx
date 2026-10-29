@@ -7,8 +7,6 @@ import { signOut, useSession } from 'next-auth/react';
 import { useFinance } from '../lib/FinanceContext';
 import ExpenseHeaderActions from './expenses/ExpenseHeaderActions';
 import { ENGINE_VERSION } from '../lib/financeEngine';
-import RollForwardModal from './history/RollForwardModal';
-import DataBankModal from './history/DataBankModal';
 
 export default function GlobalHeader() {
     const { data: session } = useSession();
@@ -37,8 +35,6 @@ export default function GlobalHeader() {
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showLoadModal, setShowLoadModal] = useState(false);
     const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
-    const [showRollForward, setShowRollForward] = useState(false);
-    const [showDataBank, setShowDataBank] = useState(false);
     const [planToLoad, setPlanToLoad] = useState<string | null>(null);
     const [planToDelete, setPlanToDelete] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -338,9 +334,6 @@ export default function GlobalHeader() {
                                                 <span className="badge bg-secondary bg-opacity-25 text-secondary">v{ENGINE_VERSION}</span>
                                             </h6>
                                         </li>
-                                        <li><button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setShowRollForward(true); setFileMenuOpen(false); }}><i className="bi bi-calendar-plus me-2"></i> Roll Forward 1 Year...</button></li>
-                                        <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setShowDataBank(true); setFileMenuOpen(false); }}><i className="bi bi-clock-history me-2"></i> Plan Data Bank (History)</button></li>
-                                        <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setNewPlanName(`${activePlanName} (Copy)`); setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-copy text-info me-2"></i> Save As Copy...</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
@@ -546,18 +539,7 @@ export default function GlobalHeader() {
                     </div>
                 </div>
             )}
-            {/* --- ROLL FORWARD & DATA BANK MODALS --- */}
-            <RollForwardModal 
-                isOpen={showRollForward} 
-                onClose={() => setShowRollForward(false)} 
-                showToast={showToast} 
-            />
-            <DataBankModal 
-                isOpen={showDataBank} 
-                onClose={() => setShowDataBank(false)} 
-                onOpenRollForward={() => setShowRollForward(true)}
-                showToast={showToast} 
-            />
+
         </>
     );
 }
