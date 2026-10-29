@@ -12,22 +12,18 @@ import WindfallsCard from './plan/WindfallsCard';
 import GovtBenefitsCard from './plan/GovtBenefitsCard';
 import EconomicAssumptionsCard from './plan/EconomicAssumptionsCard';
 import RollForwardModal from './history/RollForwardModal';
-import DataBankModal from './history/DataBankModal';
 import { useFinance } from '../lib/FinanceContext';
 
 export default function PlanTab() {
   const { data, results } = useFinance();
 
   const [showRollForward, setShowRollForward] = useState(false);
-  const [showDataBank, setShowDataBank] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
   };
-
-  const historyCount = (data.history || []).length;
 
   // Collapsed state map for the 10 sections
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
@@ -309,46 +305,33 @@ export default function PlanTab() {
         </div>
       )}
 
-      {/* --- TOP TOOLBAR: ACTIONS, ROLL FORWARD & COLLAPSE --- */}
-      <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <div className="d-flex align-items-center gap-2">
-          <button 
-            type="button" 
-            className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold bg-input shadow-sm d-flex align-items-center gap-2"
-            onClick={() => setShowRollForward(true)}
-            style={{ fontSize: '0.8rem' }}
-            title="Archive current year statement actuals, advance household by +1 year, and rollover into new calendar year"
-          >
-            <i className="bi bi-calendar-plus text-primary"></i> Roll Forward 1 Year
-          </button>
-          <button 
-            type="button" 
-            className="btn btn-sm btn-outline-info rounded-pill px-3 fw-bold bg-input shadow-sm d-flex align-items-center gap-2"
-            onClick={() => setShowDataBank(true)}
-            style={{ fontSize: '0.8rem' }}
-            title="View archived past calendar years and statement actuals"
-          >
-            <i className="bi bi-clock-history text-info"></i> Data Bank {historyCount > 0 && <span className="badge bg-info bg-opacity-25 text-info ms-1 rounded-pill">{historyCount}</span>}
-          </button>
-        </div>
-        <div className="d-flex align-items-center gap-2">
-          <button 
-            type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
-            onClick={expandAll}
-            style={{ fontSize: '0.78rem' }}
-          >
-            <i className="bi bi-arrows-expand me-1"></i> Expand All
-          </button>
-          <button 
-            type="button" 
-            className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
-            onClick={collapseAll}
-            style={{ fontSize: '0.78rem' }}
-          >
-            <i className="bi bi-arrows-collapse me-1"></i> Collapse All
-          </button>
-        </div>
+      {/* --- TOP TOOLBAR: ROLL FORWARD & EXPAND / COLLAPSE ALL --- */}
+      <div className="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-3">
+        <button 
+          type="button" 
+          className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold bg-input shadow-sm d-flex align-items-center gap-1.5"
+          onClick={() => setShowRollForward(true)}
+          style={{ fontSize: '0.78rem' }}
+          title="Archive current year statement actuals, advance household by +1 year, and rollover into new calendar year"
+        >
+          <i className="bi bi-calendar-plus text-primary"></i> Roll Forward 1 Year
+        </button>
+        <button 
+          type="button" 
+          className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
+          onClick={expandAll}
+          style={{ fontSize: '0.78rem' }}
+        >
+          <i className="bi bi-arrows-expand me-1"></i> Expand All
+        </button>
+        <button 
+          type="button" 
+          className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
+          onClick={collapseAll}
+          style={{ fontSize: '0.78rem' }}
+        >
+          <i className="bi bi-arrows-collapse me-1"></i> Collapse All
+        </button>
       </div>
 
       {/* --- FORM WITH THE 10 EXISTING CARDS --- */}
@@ -590,16 +573,10 @@ export default function PlanTab() {
         </div>
       )}
       
-      {/* --- ROLL FORWARD & DATA BANK MODALS --- */}
+      {/* --- ROLL FORWARD WIZARD MODAL --- */}
       <RollForwardModal 
         isOpen={showRollForward} 
         onClose={() => setShowRollForward(false)} 
-        showToast={showToast} 
-      />
-      <DataBankModal 
-        isOpen={showDataBank} 
-        onClose={() => setShowDataBank(false)} 
-        onOpenRollForward={() => setShowRollForward(true)}
         showToast={showToast} 
       />
     </div>

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useFinance } from '../../lib/FinanceContext';
 import { CurrencyInput, InfoBtn } from '../SharedUI';
 
@@ -245,9 +246,28 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
         onClose();
     };
 
-    return (
-        <div className="position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-75 d-flex align-items-center justify-content-center p-3" style={{ zIndex: 2000, backdropFilter: 'blur(6px)' }}>
-            <div className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column" style={{ maxWidth: '780px', maxHeight: '90vh' }}>
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+        if (isOpen) {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+    }, [isOpen]);
+
+    const modalContent = (
+        <div 
+            className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-start px-2 px-md-3 py-2 py-md-3" 
+            style={{ 
+                zIndex: 9999, 
+                backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                backdropFilter: 'blur(6px)',
+                overflowY: 'auto'
+            }}
+        >
+            <div 
+                className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column mt-1 mt-md-2 mb-4" 
+                style={{ maxWidth: '820px', maxHeight: 'calc(100vh - 32px)' }}
+            >
                 
                 {/* MODAL HEADER */}
                 <div className="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
@@ -570,4 +590,7 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
             </div>
         </div>
     );
+
+    if (!mounted || typeof document === 'undefined') return null;
+    return createPortal(modalContent, document.body);
 }

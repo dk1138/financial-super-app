@@ -9,6 +9,7 @@ import RiskTab from '../../components/RiskTab';
 import CashFlowTab from '../../components/CashFlowTab';
 import OptimizersTab from '../../components/OptimizersTab';
 import CompareTab from '../../components/CompareTab';
+import DataBankTab from '../../components/DataBankTab';
 import { useFinance } from '../../lib/FinanceContext';
 import { StepperInput, PercentInput } from '../../components/SharedUI'; 
 
@@ -123,7 +124,8 @@ export default function PlannerPage() {
     { id: 'risk', label: 'Risk', icon: 'bi-activity' },
     { id: 'cashflow', label: 'Cash Flow', icon: 'bi-diagram-3' },
     { id: 'optimizers', label: 'Tools & Calculators', icon: 'bi-magic' },
-    { id: 'compare', label: 'Compare', icon: 'bi-bar-chart-line' }
+    { id: 'compare', label: 'Compare', icon: 'bi-bar-chart-line' },
+    { id: 'databank', label: 'Data Bank', icon: 'bi-clock-history' }
   ];
 
   return (
@@ -168,6 +170,7 @@ export default function PlannerPage() {
               {activeTab === 'cashflow' && <CashFlowTab />}
               {activeTab === 'optimizers' && <OptimizersTab />}
               {activeTab === 'compare' && <CompareTab />}
+              {activeTab === 'databank' && <DataBankTab />}
             </div>
           </div>
         </div>
