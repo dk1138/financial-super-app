@@ -12,7 +12,18 @@ interface RollForwardModalProps {
 export default function RollForwardModal({ isOpen, onClose, showToast }: RollForwardModalProps) {
     const { data, results, rollForwardPlan } = useFinance();
 
-    const isCouple = data.mode === 'Couple';
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+    }, [isOpen]);
+
+    const isCouple = data?.mode === 'Couple';
     const p1Name = data.inputs.p1_name || 'Player 1';
     const p2Name = data.inputs.p2_name || 'Player 2';
 
@@ -126,8 +137,7 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
         }
     }, [isOpen, items, data.properties, data.customAssets]);
 
-    if (!isOpen) return null;
-
+    
     // Net worth and gain math
     let openingTotal = 0;
     let closingTotal = 0;
@@ -246,13 +256,7 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
         onClose();
     };
 
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => {
-        setMounted(true);
-        if (isOpen) {
-            window.scrollTo({ top: 0, behavior: 'instant' });
-        }
-    }, [isOpen]);
+
 
     const modalContent = (
         <div 
@@ -591,6 +595,6 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
         </div>
     );
 
-    if (!mounted || typeof document === 'undefined') return null;
+    if (!isOpen || !mounted || typeof document === 'undefined') return null;
     return createPortal(modalContent, document.body);
 }
