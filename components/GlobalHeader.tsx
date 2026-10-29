@@ -7,6 +7,8 @@ import { signOut, useSession } from 'next-auth/react';
 import { useFinance } from '../lib/FinanceContext';
 import ExpenseHeaderActions from './expenses/ExpenseHeaderActions';
 import { ENGINE_VERSION } from '../lib/financeEngine';
+import RollForwardModal from './history/RollForwardModal';
+import DataBankModal from './history/DataBankModal';
 
 export default function GlobalHeader() {
     const { data: session } = useSession();
