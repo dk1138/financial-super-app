@@ -1,10 +1,10 @@
 /**
  * financeEngine.ts
- * Version: 1.2.2 (CRA 2026 Engine)
+ * Version: 1.2.3 (CRA 2026 Engine)
  * The core orchestrator. 
  * Heavy logic has been extracted to lib/engine/ modules for maintainability.
  */
-export const ENGINE_VERSION = '1.2.2';
+export const ENGINE_VERSION = '1.2.3';
 import { parseFormattedNumber } from './utils';
 import { getInflatedTaxData, calculateTaxDetailed } from './engine/tax';
 import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getRrifFactor, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
