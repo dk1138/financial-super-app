@@ -88,12 +88,14 @@ body {
   margin-bottom: 1.5rem; 
 }
 
-/* --- CARD HEADER & FOOTER CORNER RADIUS HARMONIZATION --- */
-/* Ensures card headers match the 16px (1rem) card radius with 1px border inner inset */
+/* --- CARD & INNER CONTAINER CORNER RADIUS HARMONIZATION --- */
+/* Ensures all card headers match the 16px (1rem) card radius with 1px border inner inset */
 .card-header,
 .rp-card > .card-header:first-child,
 .card > .card-header:first-child,
-.rounded-4 > .card-header:first-child {
+.rounded-4 > .card-header:first-child,
+.rounded-4 > .rounded-top-4:first-child,
+.rounded-4 > [class*="rounded-top"]:first-child {
   border-top-left-radius: calc(var(--radius) - 1px) !important;
   border-top-right-radius: calc(var(--radius) - 1px) !important;
 }
@@ -107,9 +109,23 @@ body {
   border-bottom-right-radius: calc(var(--radius) - 1px) !important;
 }
 
+/* Footers and bottom inner containers */
 .card-footer,
 .rp-card > .card-footer:last-child,
-.card > .card-footer:last-child {
+.card > .card-footer:last-child,
+.rounded-4 > .rounded-bottom-4:last-child,
+.rounded-4 > [class*="rounded-bottom"]:last-child {
+  border-bottom-left-radius: calc(var(--radius) - 1px) !important;
+  border-bottom-right-radius: calc(var(--radius) - 1px) !important;
+}
+
+/* Automatic child radius inheritance for inner rounded-4 boxes */
+.rounded-4 > *:first-child:not(.rounded-pill):not(.modal-dialog):not(.dropdown-menu) {
+  border-top-left-radius: calc(var(--radius) - 1px) !important;
+  border-top-right-radius: calc(var(--radius) - 1px) !important;
+}
+
+.rounded-4 > *:last-child:not(.rounded-pill):not(.modal-dialog):not(.dropdown-menu) {
   border-bottom-left-radius: calc(var(--radius) - 1px) !important;
   border-bottom-right-radius: calc(var(--radius) - 1px) !important;
 }
@@ -119,8 +135,13 @@ body {
   background-color: var(--bg-surface) !important;
 }
 
+/* Universal Background Utilities */
+.bg-input {
+  background-color: var(--bg-input) !important;
+}
+
 /* Universal Input & Control Styling */
-.form-control, .form-select, .input-group-text, .bg-input {
+.form-control, .form-select, .input-group-text {
   background-color: var(--bg-input) !important;
   border: 1px solid var(--border-color) !important;
   color: var(--text-main) !important;

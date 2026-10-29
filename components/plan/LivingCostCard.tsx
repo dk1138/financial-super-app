@@ -323,7 +323,7 @@ export default function LivingCostCard() {
             <div className="row g-4">
                 {rentals.map((prop: any, idx: number) => (
                     <div className="col-12 col-xl-6" key={`rental_${idx}`}>
-                        <div className="p-0 border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column">
+                        <div className="p-0 border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column overflow-hidden">
                             
                             <div className="bg-success bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center rounded-top-4">
                                 <div className="d-flex align-items-center gap-3 w-75">
@@ -335,7 +335,7 @@ export default function LivingCostCard() {
                                 <button type="button" className="btn btn-sm btn-link text-danger p-0 opacity-75 hover-opacity-100" onClick={() => removeArrayItem('properties', idx)}><i className="bi bi-x-lg fs-5"></i></button>
                             </div>
 
-                            <div className="p-3 bg-input flex-grow-1">
+                            <div className="p-3 bg-input flex-grow-1 rounded-bottom-4">
                                 <div className="row g-3 mb-3 align-items-end">
                                     <div className="col-12 col-sm-6">
                                         <label className="form-label small text-muted fw-bold mb-1">Value ($)</label>

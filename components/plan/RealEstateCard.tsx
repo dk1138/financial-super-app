@@ -53,7 +53,7 @@ export default function RealEstateCard() {
             const displayOwnerLabel = currentOwner === 'p2' ? p2Name : p1Name;
 
             return (
-            <div className="p-0 border border-secondary rounded-4 mb-4 shadow-sm" key={`prop_${idx}`}>
+            <div className="p-0 border border-secondary rounded-4 mb-4 shadow-sm overflow-hidden" key={`prop_${idx}`}>
                 
                 <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex justify-content-between align-items-center rounded-top-4">
                     <div className="d-flex align-items-center gap-3 w-75">

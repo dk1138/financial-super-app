@@ -126,7 +126,7 @@ export default function PersonalInformationCard() {
 
         <div className="row g-4">
           <div className="col-12 col-xl-6">
-            <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
+            <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100 overflow-hidden">
                 
                 {/* Player 1 Unified Input and Pen Flex Box Row */}
                 <div className="bg-info bg-opacity-10 border-bottom border-secondary p-3 d-flex align-items-center gap-2 rounded-top-4 flex-shrink-0">
@@ -196,7 +196,7 @@ export default function PersonalInformationCard() {
           
           {isCouple && (
             <div className="col-12 col-xl-6">
-                <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100">
+                <div className="p-0 border border-secondary rounded-4 shadow-sm surface-card d-flex flex-column h-100 overflow-hidden">
                     
                     {/* Player 2 Unified Input and Pen Flex Box Row */}
                     <div className="border-bottom border-secondary p-3 d-flex align-items-center gap-2 rounded-top-4 flex-shrink-0" style={{ backgroundColor: 'rgba(111, 66, 193, 0.1)' }}>
