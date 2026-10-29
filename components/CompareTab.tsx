@@ -471,38 +471,38 @@ export default function CompareTab() {
                         </div>
 
                         <div className="d-flex flex-wrap align-items-center gap-2">
-                            {/* Metric Mode Switcher */}
-                            <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1">
+                            {/* Metric Mode Switcher (KUMO) */}
+                            <div className="segmented-kumo">
                                 {(['NW', 'TAX', 'SPEND'] as const).map((m: any) => (
                                     <button 
                                         key={m} 
                                         onClick={() => setChartMode(m)} 
-                                        className={`btn btn-sm rounded-pill fw-bold border-0 px-3 py-1 ${chartMode === m ? 'bg-primary text-white shadow' : 'text-muted bg-transparent'}`}
+                                        className={`seg-btn ${chartMode === m ? 'active' : ''}`}
                                     >
                                         {m === 'NW' ? 'Net Worth' : m === 'TAX' ? 'Taxes' : 'Spending'}
                                     </button>
                                 ))}
                             </div>
 
-                            {/* View Mode Switcher: Chart vs Table vs Both */}
-                            <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1">
+                            {/* View Mode Switcher: Chart vs Table vs Both (KUMO) */}
+                            <div className="segmented-kumo">
                                 <button 
                                     onClick={() => setViewMode('both')} 
-                                    className={`btn btn-sm rounded-pill fw-bold border-0 px-2.5 py-1 ${viewMode === 'both' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent'}`}
+                                    className={`seg-btn ${viewMode === 'both' ? 'active' : ''}`}
                                     title="Show both Chart and Table"
                                 >
                                     <i className="bi bi-layout-split me-1"></i> Both
                                 </button>
                                 <button 
                                     onClick={() => setViewMode('chart')} 
-                                    className={`btn btn-sm rounded-pill fw-bold border-0 px-2.5 py-1 ${viewMode === 'chart' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent'}`}
+                                    className={`seg-btn ${viewMode === 'chart' ? 'active' : ''}`}
                                     title="Chart only"
                                 >
                                     <i className="bi bi-graph-up me-1"></i> Chart
                                 </button>
                                 <button 
                                     onClick={() => setViewMode('table')} 
-                                    className={`btn btn-sm rounded-pill fw-bold border-0 px-2.5 py-1 ${viewMode === 'table' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent'}`}
+                                    className={`seg-btn ${viewMode === 'table' ? 'active' : ''}`}
                                     title="Table only"
                                 >
                                     <i className="bi bi-table me-1"></i> Table

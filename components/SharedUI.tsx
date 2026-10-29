@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 // --- FLUID TOOLTIP ---
 export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title: string, text: string, align?: 'center'|'right'|'left', direction?: 'up'|'down' }) => {
     const [open, setOpen] = useState(false);
-    let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '280px' };
+    let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '290px', maxWidth: '340px', maxHeight: '420px', overflowY: 'auto', zIndex: 1060 };
     
     if (direction === 'up') { posStyles.bottom = '140%'; } 
     else { posStyles.top = '140%'; }
@@ -143,7 +143,7 @@ export const PercentInput = ({ value, onChange, className, placeholder, noBg, di
 
 // --- CONTROLS & STEPPERS ---
 export const SegmentedControl = ({ options, value, onChange }: any) => (
-    <div className="d-flex flex-wrap bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100">
+    <div className="segmented-kumo w-100 d-flex flex-wrap">
         {options.map((opt: any) => {
             const isActive = value === opt.value;
             return (
@@ -151,8 +151,7 @@ export const SegmentedControl = ({ options, value, onChange }: any) => (
                     key={opt.value}
                     type="button"
                     onClick={() => onChange(opt.value)}
-                    className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 flex-grow-1 ${isActive ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
-                    style={{ fontSize: '0.75rem' }}
+                    className={`seg-btn flex-grow-1 ${isActive ? 'active' : ''}`}
                 >
                     {opt.label}
                 </button>
@@ -182,9 +181,9 @@ export const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) =>
     };
     
     return (
-        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm w-100 justify-content-between" style={{ height: "38px" }}>
-            <button type="button" className="btn btn-sm btn-link text-muted p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
-            <div className="d-flex align-items-center justify-content-center flex-grow-1">
+        <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm w-100 justify-content-between" style={{ height: "38px", minWidth: "95px" }}>
+            <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1.5 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
+            <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minWidth: "32px" }}>
                 <input 
                     type="text" 
                     maxLength={4} 
@@ -299,9 +298,9 @@ export const FrequencyToggle = ({ value, onChange, mode = 'number' }: { value: a
     const isYr = localVal === 1 || localVal === 'year';
 
     return (
-        <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100">
-            <button type="button" onClick={() => handleToggle(true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 w-50 ${isMo ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>/mo</button>
-            <button type="button" onClick={() => handleToggle(false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 w-50 ${isYr ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>/yr</button>
+        <div className="segmented-kumo w-100 d-flex">
+            <button type="button" onClick={() => handleToggle(true)} className={`seg-btn w-50 ${isMo ? 'active' : ''}`}>/mo</button>
+            <button type="button" onClick={() => handleToggle(false)} className={`seg-btn w-50 ${isYr ? 'active' : ''}`}>/yr</button>
         </div>
     );
 };

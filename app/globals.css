@@ -24,11 +24,11 @@
   --purple: #818cf8;                    /* Soft violet / indigo accent */
   --bs-purple: #818cf8;                  /* Bootstrap alias */
 
-  /* Kumo Typography & Spatial Tokens */
+  /* Kumo Typography & Spatial Tokens (Aligned with Bootstrap rounded-4) */
   --text-main: #f9fafb;                 /* High-luminance primary text */
   --text-muted: #94a3b8;                /* Secondary text & labels */
-  --radius: 10px;                       /* Compact, clean Kumo card radius */
-  --radius-sm: 6px;                     /* Small control radius */
+  --radius: 16px;                       /* Aligned with rounded-4 (1rem) for smooth, flush card geometry */
+  --radius-sm: 8px;                     /* Small control radius */
   --radius-pill: 9999px;                /* Seamless pill radius */
   --shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
 }
@@ -86,6 +86,32 @@ body {
 
 .rp-card { 
   margin-bottom: 1.5rem; 
+}
+
+/* --- CARD HEADER & FOOTER CORNER RADIUS HARMONIZATION --- */
+/* Ensures card headers match the 16px (1rem) card radius with 1px border inner inset */
+.card-header,
+.rp-card > .card-header:first-child,
+.card > .card-header:first-child,
+.rounded-4 > .card-header:first-child {
+  border-top-left-radius: calc(var(--radius) - 1px) !important;
+  border-top-right-radius: calc(var(--radius) - 1px) !important;
+}
+
+/* When collapsed in PlanTab or when header is the only visible child */
+.plan-card-wrapper.is-collapsed .card-header,
+.plan-card-wrapper.is-collapsed .rp-card > .card-header,
+.rp-card > .card-header:last-child,
+.card > .card-header:last-child {
+  border-bottom-left-radius: calc(var(--radius) - 1px) !important;
+  border-bottom-right-radius: calc(var(--radius) - 1px) !important;
+}
+
+.card-footer,
+.rp-card > .card-footer:last-child,
+.card > .card-footer:last-child {
+  border-bottom-left-radius: calc(var(--radius) - 1px) !important;
+  border-bottom-right-radius: calc(var(--radius) - 1px) !important;
 }
 
 /* Surface Overlays (Headers, highlighted stat boxes) */
@@ -193,4 +219,121 @@ body {
 
 .fade-in-tab {
   animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================================================== */
+/* UNIFIED KUMO TABS & SEGMENTED CONTROLS                         */
+/* ============================================================== */
+/* Sticky Navigation Tab Bar Container */
+.planner-tabs-bar {
+  position: sticky;
+  top: var(--global-header-height, 65px);
+  background-color: var(--bg-body);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1030;
+  padding: 8px 0;
+  margin: 0 -0.5rem 1rem -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Primary Navigation Pill Container */
+.nav-pills-kumo {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  padding: 4px;
+  margin: 0;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+
+.nav-pills-kumo .nav-item {
+  flex: 1 1 auto;
+}
+
+.nav-pills-kumo .nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  background-color: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-pills-kumo .nav-link:hover {
+  color: var(--text-main);
+  background-color: var(--bg-surface);
+}
+
+.nav-pills-kumo .nav-link.active {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+
+.nav-pills-kumo .nav-link.active i {
+  color: #ffffff !important;
+}
+
+/* Secondary & Sub-Tab Segmented Controls */
+.segmented-kumo {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.segmented-kumo .seg-btn,
+.segmented-kumo button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.segmented-kumo .seg-btn:hover,
+.segmented-kumo button:hover {
+  color: var(--text-main);
+}
+
+.segmented-kumo .seg-btn.active,
+.segmented-kumo button.active {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.3);
+}
+
+.segmented-kumo .seg-btn.active.purple,
+.segmented-kumo button.active.purple {
+  background-color: var(--purple) !important;
+  box-shadow: 0 1px 4px rgba(129, 140, 248, 0.3);
 }

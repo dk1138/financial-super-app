@@ -704,8 +704,12 @@ export default function ProjectionTab() {
 
       content += `<b class="text-main" style="font-size: 0.75rem;">This Year (${year}):</b>`;
       if (depositThisYear > 0 || grantThisYear > 0) {
-          content += `<div class="d-flex justify-content-between text-muted small mt-1 mb-1"><span>• Parent Deposit:</span><span class="text-main fw-bold">+$${formatStr(depositThisYear, year)}</span></div>`;
-          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Gov't Grant Match (20% CESG):</span><span class="text-success fw-bold">+$${formatStr(grantThisYear, year)}</span></div>`;
+          const isReal = !!data.useRealDollars;
+          const nominalDepStr = isReal && Math.round(depositThisYear) !== Math.round(getRealValue(depositThisYear, year)) ? ` <span class="text-muted fw-normal" style="font-size: 0.68rem;">($${Math.round(depositThisYear).toLocaleString()} nom.)</span>` : '';
+          const nominalGrantStr = isReal && Math.round(grantThisYear) !== Math.round(getRealValue(grantThisYear, year)) ? ` <span class="text-muted fw-normal" style="font-size: 0.68rem;">($${Math.round(grantThisYear).toLocaleString()} nom.)</span>` : '';
+
+          content += `<div class="d-flex justify-content-between text-muted small mt-1 mb-1"><span>• Parent Deposit:</span><span class="text-main fw-bold">+$${formatStr(depositThisYear, year)}${nominalDepStr}</span></div>`;
+          content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Gov't Grant Match (20% CESG):</span><span class="text-success fw-bold">+$${formatStr(grantThisYear, year)}${nominalGrantStr}</span></div>`;
           if (growthThisYear !== 0) {
               content += `<div class="d-flex justify-content-between text-muted small mb-1"><span>• Investment Growth (${(rm.growthRate || 6).toFixed(1)}%):</span><span class="${growthThisYear >= 0 ? 'text-info' : 'text-danger'} fw-bold">${growthThisYear >= 0 ? '+' : ''}$${formatStr(growthThisYear, year)}</span></div>`;
           }
@@ -736,6 +740,11 @@ export default function ProjectionTab() {
       content += `<div class="small text-muted mt-2 pt-1 border-top border-secondary" style="font-size: 0.7rem; line-height: 1.4;">`;
       content += `<i>CRA CESG Rules: 20% match on first $2,500/yr per child ($500 max/yr) up to age 17; lifetime cap of $7,200 per child.</i>`;
       content += `</div>`;
+      if (data.useRealDollars) {
+          content += `<div class="small text-warning text-opacity-75 mt-1" style="font-size: 0.68rem; line-height: 1.3;">`;
+          content += `<i>* Displayed in Today's Dollars. Because CRA's $2,500 limit is fixed in nominal dollars, its purchasing power discounts with inflation over time (actual bank deposit is flat $2,500/yr).</i>`;
+          content += `</div>`;
+      }
       return content;
   };
 
@@ -1079,8 +1088,8 @@ export default function ProjectionTab() {
 
       {/* DEDICATED TOOLBAR: PHASE FILTERS (LEFT) & ACTIONS (RIGHT) */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          {/* Phase Filter Segmented Pills */}
-          <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm">
+          {/* Phase Filter Segmented Pills (KUMO) */}
+          <div className="segmented-kumo">
               {[
                 { id: 'all', label: `All Years (${results.timeline.length})`, icon: 'bi-grid-fill' },
                 { id: 'pre', label: 'Pre-Ret', icon: 'bi-briefcase-fill' },
@@ -1091,10 +1100,9 @@ export default function ProjectionTab() {
                   key={tab.id}
                   type="button"
                   onClick={() => setPhaseFilter(tab.id as any)}
-                  className={`btn btn-sm rounded-pill py-1 px-3 fw-bold transition-all d-flex align-items-center gap-1.5 border-0 ${phaseFilter === tab.id ? 'bg-primary text-white shadow-sm' : 'text-muted hover-text-main'}`}
-                  style={{ fontSize: '0.75rem', height: '30px' }}
+                  className={`seg-btn ${phaseFilter === tab.id ? 'active' : ''}`}
                 >
-                  <i className={`bi ${tab.icon}`} style={{ fontSize: '0.72rem' }}></i>
+                  <i className={`bi ${tab.icon}`}></i>
                   <span>{tab.label}</span>
                 </button>
               ))}

@@ -116,9 +116,9 @@ export default function PersonalInformationCard() {
                     </label>
                 </div>
             )}
-            <div className="d-inline-flex bg-input rounded-pill p-1 border border-secondary shadow-sm">
-                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${!isCouple ? 'bg-primary shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} onClick={() => updateMode('Single')}>Single</button>
-                <button type="button" className={`btn btn-sm rounded-pill px-4 fw-bold transition-all border-0 ${isCouple ? 'shadow text-white' : 'text-muted bg-transparent hover-opacity-100'}`} style={isCouple ? {backgroundColor: 'var(--bs-purple)'} : {}} onClick={() => updateMode('Couple')}>Couple</button>
+            <div className="segmented-kumo shadow-sm">
+                <button type="button" className={`seg-btn px-4 ${!isCouple ? 'active' : ''}`} onClick={() => updateMode('Single')}>Single</button>
+                <button type="button" className={`seg-btn px-4 ${isCouple ? 'active purple' : ''}`} onClick={() => updateMode('Couple')}>Couple</button>
             </div>
         </div>
       </div>
