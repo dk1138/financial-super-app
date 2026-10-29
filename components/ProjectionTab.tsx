@@ -659,6 +659,60 @@ export default function ProjectionTab() {
       return `${incStr}<b>Federal Tax:</b> $${formatStr(taxData.fed, year)}<br><b>Provincial Tax:</b> $${formatStr(taxData.prov, year)}<br><b>CPP/EI Premiums:</b> $${formatStr(taxData.cpp_ei, year)}${clawbackStr}<hr class="my-1 border-secondary"><b>Total Tax Generated:</b> $${formatStr(taxData.totalTax, year)}<br><b>Est. Tax Savings/Refund:</b> <span class="text-success">+$${formatStr(refund, year)}</span><br><b>Marginal Rate:</b> ${(taxData.margRate * 100).toFixed(1)}%`;
   };
 
+  const buildCdnDivTooltip = (math: any, year: number, useRealDollars: boolean) => {
+      if (!math) return "No dividend yield.";
+      const cdnRate = (math.rate || 0) * 100;
+      const cdnAmt = math.amt || 0;
+      const subs = math.subAccounts;
+
+      let html = `<span class='text-info fw-bold'>Eligible Canadian Dividends.</span><br>`;
+      html += `Subject to 38% gross-up and federal/provincial Dividend Tax Credit.<hr class="my-1 border-secondary">`;
+
+      if (subs && subs.customAccounts && subs.customAccounts.length > 0) {
+          html += `<div class="mb-1"><b class="text-main" style="font-size: 0.72rem;">Accounts in Non-Reg Pool:</b></div>`;
+          html += `<div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;"><span>• Base Non-Reg:</span> <span>$${Math.round(subs.baseBal || 0).toLocaleString()} @ ${(subs.baseCdnYield || 0).toFixed(2)}%</span></div>`;
+          subs.customAccounts.forEach((ca: any) => {
+              html += `<div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;"><span>• ${ca.name}:</span> <span>$${Math.round(ca.bal || 0).toLocaleString()} @ ${(ca.cdnYield || 0).toFixed(2)}%</span></div>`;
+          });
+          html += `<hr class="my-1 border-secondary opacity-50">`;
+          html += `<div class="d-flex justify-content-between"><span><b>Consolidated Balance:</b></span> <span>$${Math.round(math.bal || 0).toLocaleString()}</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Weighted Blended Yield:</b></span> <span>${cdnRate.toFixed(2)}%</span></div>`;
+      } else {
+          html += `<div class="d-flex justify-content-between"><span><b>Nominal Balance:</b></span> <span>$${Math.round(math.bal || 0).toLocaleString()}</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Cdn Dividend Yield:</b></span> <span>${cdnRate.toFixed(2)}%</span></div>`;
+      }
+
+      html += `<div class="d-flex justify-content-between mt-1 pt-1 border-top border-secondary"><span><b>Cash Received:</b></span> <span class="text-success fw-bold">+$${formatStr(cdnAmt, year)}</span></div>`;
+      return html;
+  };
+
+  const buildForeignDivTooltip = (math: any, year: number, useRealDollars: boolean) => {
+      if (!math) return "No foreign dividend yield.";
+      const forRate = (math.foreignRate || 0) * 100;
+      const forAmt = math.foreignAmt || 0;
+      const subs = math.subAccounts;
+
+      let html = `<span class='text-info fw-bold'>Foreign Dividends (100% Taxable).</span><br>`;
+      html += `Taxed as ordinary foreign income at your marginal rate (no Canadian gross-up or dividend tax credit).<hr class="my-1 border-secondary">`;
+
+      if (subs && subs.customAccounts && subs.customAccounts.length > 0) {
+          html += `<div class="mb-1"><b class="text-main" style="font-size: 0.72rem;">Accounts in Non-Reg Pool:</b></div>`;
+          html += `<div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;"><span>• Base Non-Reg:</span> <span>$${Math.round(subs.baseBal || 0).toLocaleString()} @ ${(subs.baseForeignYield || 0).toFixed(2)}%</span></div>`;
+          subs.customAccounts.forEach((ca: any) => {
+              html += `<div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;"><span>• ${ca.name}:</span> <span>$${Math.round(ca.bal || 0).toLocaleString()} @ ${(ca.foreignYield || 0).toFixed(2)}%</span></div>`;
+          });
+          html += `<hr class="my-1 border-secondary opacity-50">`;
+          html += `<div class="d-flex justify-content-between"><span><b>Consolidated Balance:</b></span> <span>$${Math.round(math.bal || 0).toLocaleString()}</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Weighted Blended Yield:</b></span> <span>${forRate.toFixed(2)}%</span></div>`;
+      } else {
+          html += `<div class="d-flex justify-content-between"><span><b>Nominal Balance:</b></span> <span>$${Math.round(math.bal || 0).toLocaleString()}</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Foreign Dividend Yield:</b></span> <span>${forRate.toFixed(2)}%</span></div>`;
+      }
+
+      html += `<div class="d-flex justify-content-between mt-1 pt-1 border-top border-secondary"><span><b>Cash Received:</b></span> <span class="text-success fw-bold">+$${formatStr(forAmt, year)}</span></div>`;
+      return html;
+  };
+
   const buildYieldTooltip = (math: any, year: number, useRealDollars: boolean) => {
       if (!math) return "No yield.";
       const cdnRate = (math.rate || 0) * 100;
@@ -666,14 +720,30 @@ export default function ProjectionTab() {
       const forRate = (math.foreignRate || 0) * 100;
       const forAmt = math.foreignAmt || 0;
       const totalAmt = cdnAmt + forAmt;
+      const subs = math.subAccounts;
 
-      let cdnStr = `<b>Cdn Div Yield:</b> ${cdnRate.toFixed(2)}%<br><b>Cdn Cash:</b> <span class="text-success">+$${formatStr(cdnAmt, year)}</span> <i>(Eligible DTC)</i>`;
-      let forStr = `<br><b>Foreign Div Yield:</b> ${forRate.toFixed(2)}%<br><b>Foreign Cash:</b> <span class="text-success">+$${formatStr(forAmt, year)}</span> <i>(100% Taxable)</i>`;
+      let html = `<span class="text-info fw-bold">Taxable Non-Reg Portfolio.</span><br>`;
+      html += `Generates eligible Canadian dividends and ordinary foreign dividends.<hr class="my-1 border-secondary">`;
 
-      if (useRealDollars) {
-          return `<b>Nominal Balance:</b> $${Math.round(math.bal || 0).toLocaleString()}<br>${cdnStr}${forStr}<hr class="my-1 border-secondary"><b>Total Yield Cash:</b> <span class="text-success">+$${Math.round(totalAmt).toLocaleString()}</span><br><b>In Today's $:</b> <span class="text-success">+$${formatStr(totalAmt, year)}</span>`;
+      if (subs && subs.customAccounts && subs.customAccounts.length > 0) {
+          html += `<div class="mb-1"><b class="text-main" style="font-size: 0.72rem;">Accounts in Non-Reg Pool:</b></div>`;
+          html += `<div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;"><span>• Base Non-Reg:</span> <span>$${Math.round(subs.baseBal || 0).toLocaleString()} (Cdn: ${(subs.baseCdnYield || 0).toFixed(2)}%, For: ${(subs.baseForeignYield || 0).toFixed(2)}%)</span></div>`;
+          subs.customAccounts.forEach((ca: any) => {
+              html += `<div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;"><span>• ${ca.name}:</span> <span>$${Math.round(ca.bal || 0).toLocaleString()} (Cdn: ${(ca.cdnYield || 0).toFixed(2)}%, For: ${(ca.foreignYield || 0).toFixed(2)}%)</span></div>`;
+          });
+          html += `<hr class="my-1 border-secondary opacity-50">`;
+          html += `<div class="d-flex justify-content-between"><span><b>Consolidated Balance:</b></span> <span>$${Math.round(math.bal || 0).toLocaleString()}</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Blended Cdn Yield:</b></span> <span>${cdnRate.toFixed(2)}% (+$${formatStr(cdnAmt, year)})</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Blended Foreign Yield:</b></span> <span>${forRate.toFixed(2)}% (+$${formatStr(forAmt, year)})</span></div>`;
+      } else {
+          html += `<div class="d-flex justify-content-between"><span><b>Nominal Balance:</b></span> <span>$${Math.round(math.bal || 0).toLocaleString()}</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Cdn Div Yield:</b></span> <span>${cdnRate.toFixed(2)}% (+$${formatStr(cdnAmt, year)})</span></div>`;
+          html += `<div class="d-flex justify-content-between"><span><b>Foreign Div Yield:</b></span> <span>${forRate.toFixed(2)}% (+$${formatStr(forAmt, year)})</span></div>`;
       }
-      return `<b>Asset Balance:</b> $${formatStr(math.bal || 0, year)}<br>${cdnStr}${forStr}<hr class="my-1 border-secondary"><b>Total Yield Cash:</b> <span class="text-success">+$${formatStr(totalAmt, year)}</span>`;
+
+      html += `<hr class="my-1 border-secondary">`;
+      html += `<div class="d-flex justify-content-between"><span><b>Total Yield Cash:</b></span> <span class="text-success fw-bold">+$${formatStr(totalAmt, year)}</span></div>`;
+      return html;
   };
 
   const buildOasTooltip = (gross: number, clawback: number, taxInc: number, year: number, threshold: number) => {
@@ -887,13 +957,13 @@ export default function ProjectionTab() {
               )}
               {invYieldMath?.amt > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Cdn Div Yield <InfoBtn title="Canadian Eligible Dividends" text={`<span class='text-info fw-bold'>Eligible Dividend.</span><br>Subject to 38% gross-up and federal/provincial Dividend Tax Credit.<hr class="my-1 border-secondary"><b>Nominal Balance:</b> $${Math.round(invYieldMath.bal || 0).toLocaleString()}<br><b>Yield:</b> ${(invYieldMath.rate * 100).toFixed(2)}%<br><b>Cash Received:</b> <span class='text-success'>+$${formatStr(invYieldMath.amt, year)}</span>`} align="left" /></span>
+                      <span className="d-flex align-items-center text-muted ms-2">Cdn Div Yield <InfoBtn title="Canadian Eligible Dividends" text={buildCdnDivTooltip(invYieldMath, year, data.useRealDollars)} align="left" /></span>
                       <span className="text-success">+{formatCurrency(invYieldMath.amt, year)}</span>
                   </div>
               )}
               {invYieldMath?.foreignAmt > 0 && (
                   <div className="d-flex justify-content-between small mb-1 mt-1">
-                      <span className="d-flex align-items-center text-muted ms-2">Foreign Div Yield <InfoBtn title="Foreign Dividends" text={`<span class='text-info fw-bold'>100% Taxable.</span><br>Taxed as ordinary foreign income at your marginal rate (no Canadian gross-up or dividend tax credit).<hr class="my-1 border-secondary"><b>Nominal Balance:</b> $${Math.round(invYieldMath.bal || 0).toLocaleString()}<br><b>Yield:</b> ${(invYieldMath.foreignRate * 100).toFixed(2)}%<br><b>Cash Received:</b> <span class='text-success'>+$${formatStr(invYieldMath.foreignAmt, year)}</span>`} align="left" /></span>
+                      <span className="d-flex align-items-center text-muted ms-2">Foreign Div Yield <InfoBtn title="Foreign Dividends" text={buildForeignDivTooltip(invYieldMath, year, data.useRealDollars)} align="left" /></span>
                       <span className="text-success">+{formatCurrency(invYieldMath.foreignAmt, year)}</span>
                   </div>
               )}

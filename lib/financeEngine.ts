@@ -53,6 +53,36 @@ export class FinanceEngine {
         this.CONSTANTS = data.constants || {};
         this.strategyLabels = data.strategyLabels || {};
 
+        // Track sub-account breakdowns for transparent tooltips
+        (this as any).nonregBreakdown = {
+            p1: {
+                baseBal: this.getVal('p1_nonreg'),
+                baseCdnYield: this.inputs['p1_nonreg_yield'] !== undefined ? Number(this.inputs['p1_nonreg_yield']) : 2.0,
+                baseForeignYield: this.inputs['p1_nonreg_foreign_yield'] !== undefined ? Number(this.inputs['p1_nonreg_foreign_yield']) : 0,
+                customAccounts: (data.customAssets || [])
+                    .filter((ca: any) => (ca.owner === 'p1' || !ca.owner) && ca.type === 'nonreg')
+                    .map((ca: any) => ({
+                        name: ca.name || 'Additional Non-Reg',
+                        bal: Number(ca.balance) || 0,
+                        cdnYield: Number(ca.yield) || 0,
+                        foreignYield: Number(ca.foreignYield) || 0
+                    }))
+            },
+            p2: {
+                baseBal: this.getVal('p2_nonreg'),
+                baseCdnYield: this.inputs['p2_nonreg_yield'] !== undefined ? Number(this.inputs['p2_nonreg_yield']) : 2.0,
+                baseForeignYield: this.inputs['p2_nonreg_foreign_yield'] !== undefined ? Number(this.inputs['p2_nonreg_foreign_yield']) : 0,
+                customAccounts: (data.customAssets || [])
+                    .filter((ca: any) => ca.owner === 'p2' && ca.type === 'nonreg')
+                    .map((ca: any) => ({
+                        name: ca.name || 'Additional Non-Reg',
+                        bal: Number(ca.balance) || 0,
+                        cdnYield: Number(ca.yield) || 0,
+                        foreignYield: Number(ca.foreignYield) || 0
+                    }))
+            }
+        };
+
         if (this.customAssets.length > 0) {
             this.customAssets.forEach(ca => {
                 let p = ca.owner; 
@@ -1445,8 +1475,8 @@ export class FinanceEngine {
                     visualExpenses: expenses + mortgagePayment + rentPayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
                     reIncludedEq: realEstateValue - realEstateDebt, reExcludedEq: reExcludedValue - reExcludedDebt, reIncludedValue: realEstateValue,
                     windfall: inflows.p1.windfallTaxable + (inflows.p1.windfallNonTax - appliedRefundP1) + inflows.p2.windfallTaxable + (inflows.p2.windfallNonTax - appliedRefundP2),
-                    postRetP1: inflows.p1.postRet, postRetP2: inflows.p2.postRet, invIncP1: divInc1 + foreignDiv1 + cryptoYield1, invIncP2: divInc2 + foreignDiv2 + cryptoYield2, invYieldMathP1: { bal: preGrowthNonreg1, rate: person1.nonreg_yield, foreignRate: person1.nonreg_foreign_yield, amt: divInc1, foreignAmt: foreignDiv1 },
-                    invYieldMathP2: { bal: preGrowthNonreg2, rate: person2.nonreg_yield, foreignRate: person2.nonreg_foreign_yield, amt: divInc2, foreignAmt: foreignDiv2 }, debugTotalInflow: grossInflow, rrspRoomP1: rrspRoom1, rrspRoomP2: rrspRoom2,
+                    postRetP1: inflows.p1.postRet, postRetP2: inflows.p2.postRet, invIncP1: divInc1 + foreignDiv1 + cryptoYield1, invIncP2: divInc2 + foreignDiv2 + cryptoYield2, invYieldMathP1: { bal: preGrowthNonreg1, rate: person1.nonreg_yield, foreignRate: person1.nonreg_foreign_yield, amt: divInc1, foreignAmt: foreignDiv1, subAccounts: (this as any).nonregBreakdown?.p1 },
+                    invYieldMathP2: { bal: preGrowthNonreg2, rate: person2.nonreg_yield, foreignRate: person2.nonreg_foreign_yield, amt: divInc2, foreignAmt: foreignDiv2, subAccounts: (this as any).nonregBreakdown?.p2 }, debugTotalInflow: grossInflow, rrspRoomP1: rrspRoom1, rrspRoomP2: rrspRoom2,
                     rrspMatchP1: matchTracking.p1MatchAdded, rrspTotalMatch1: matchTracking.totalMatch1, rrspMatchP2: matchTracking.p2MatchAdded, rrspTotalMatch2: matchTracking.totalMatch2, rrspRefundP1: appliedRefundP1, rrspRefundP2: appliedRefundP2,
                     matchTaxSavingsP1: matchTaxSavings1, matchTaxSavingsP2: matchTaxSavings2, discTaxSavingsP1: pendingRefund.p1, discTaxSavingsP2: pendingRefund.p2,
                     afterTaxEstate: afterTaxEstateValue 
