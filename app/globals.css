@@ -1,96 +1,140 @@
 @import "tailwindcss";
 
-/* --- PREMIUM FINTECH THEME (DARK MODE DEFAULT) --- */
+/* ============================================================== */
+/* CLOUDFLARE KUMO DESIGN SYSTEM: DARK MODE (DEFAULT)             */
+/* ============================================================== */
 :root {
-  --bg-body: #0f172a;       /* Deep slate for background */
-  --bg-card: #1e293b;       /* Slightly lighter slate for cards */
-  --bg-surface: rgba(255, 255, 255, 0.03); /* Subtle overlays */
-  --bg-input: #020617;      /* Very dark for input fields */
-  --border-color: #334155;  /* Soft borders */
+  /* Kumo Dark Neutral Surface Tiers */
+  --bg-body: #0b0f17;                    /* Page canvas */
+  --bg-card: #141c2b;                    /* Elevated container surface */
+  --bg-surface: #1c273c;                 /* Header bands & nested panels */
+  --bg-surface-warm: #1a2538;            /* Tertiary surface tier */
+  --bg-input: #080c14;                   /* Inset input & control background */
+  --border-color: #2c3b52;               /* Card boundaries & structural borders */
+  --border-soft: #212d40;                /* Subtle row separators & dividers */
   
-  --primary: #3b82f6;       /* Vibrant blue */
-  --success: #10b981;       /* Mint green */
-  --warning: #f59e0b;       /* Amber (more readable than standard yellow on dark) */
-  --bs-warning: #f59e0b;    /* Bootstrap alias */
-  --danger: #ef4444;        /* Rose red */
-  --info: #0ea5e9;          /* Cyan */
-  --purple: #8b5cf6;        /* Violet */
-  --bs-purple: #8b5cf6;     /* Bootstrap alias */
+  /* Kumo Signal & Accent Roles */
+  --primary: #0284c7;                   /* Core brand blue */
+  --primary-hover: #0369a1;
+  --info: #38bdf8;                      /* High-visibility cyan */
+  --success: #22c55e;                   /* Surplus, equity & growth green */
+  --warning: #f59e0b;                   /* High-contrast amber */
+  --bs-warning: #f59e0b;                 /* Bootstrap alias */
+  --danger: #ef4444;                    /* Tax friction, debt & drag coral/red */
+  --purple: #818cf8;                    /* Soft violet / indigo accent */
+  --bs-purple: #818cf8;                  /* Bootstrap alias */
 
-  --text-main: #f8fafc;     /* Bright white text */
-  --text-muted: #94a3b8;    /* Soft gray text */
-  --radius: 16px;           /* Modern rounded corners */
-  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  /* Kumo Typography & Spatial Tokens */
+  --text-main: #f9fafb;                 /* High-luminance primary text */
+  --text-muted: #94a3b8;                /* Secondary text & labels */
+  --radius: 10px;                       /* Compact, clean Kumo card radius */
+  --radius-sm: 6px;                     /* Small control radius */
+  --radius-pill: 9999px;                /* Seamless pill radius */
+  --shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
 }
 
-/* --- LIGHT MODE OVERRIDES --- */
+/* ============================================================== */
+/* CLOUDFLARE KUMO DESIGN SYSTEM: LIGHT MODE OVERRIDES            */
+/* ============================================================== */
 [data-bs-theme="light"] {
-  --bg-body: #f8fafc;       /* Off-white background */
-  --bg-card: #ffffff;       /* Pure white cards */
-  --bg-surface: rgba(0, 0, 0, 0.02); /* Subtle gray overlays */
-  --bg-input: #f1f5f9;      /* Light gray for inputs */
-  --border-color: #e2e8f0;  /* Very light borders */
+  /* Kumo Light Neutral Surface Tiers */
+  --bg-body: #f8fafc;                    /* Soft slate canvas */
+  --bg-card: #ffffff;                    /* Pure white cards */
+  --bg-surface: #f1f5f9;                 /* Subtle gray panel overlays */
+  --bg-surface-warm: #e2e8f0;            /* Tertiary surface tier */
+  --bg-input: #ffffff;                   /* Crisp white inputs */
+  --border-color: #e2e8f0;               /* Hairline borders */
+  --border-soft: #f1f5f9;                /* Table inner row dividers */
   
-  --primary: #2563eb;       /* Darker blue for contrast */
-  --warning: #d97706;       /* Darker amber/orange for strong contrast on light backgrounds */
-  --bs-warning: #d97706;    /* Bootstrap alias */
-  --text-main: #0f172a;     /* Dark slate text */
-  --text-muted: #64748b;    /* Medium gray text */
-  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.025);
+  /* Kumo Light Signal & Accent Roles */
+  --primary: #0284c7;                   /* Accessible brand blue */
+  --primary-hover: #0369a1;
+  --info: #0369a1;                      /* Deep ocean cyan */
+  --success: #16a34a;                   /* High-contrast emerald green */
+  --warning: #d97706;                   /* Darker amber/orange for strong contrast */
+  --bs-warning: #d97706;
+  --danger: #dc2626;                    /* Clear scarlet red */
+  --purple: #6366f1;                    /* Indigo */
+  --bs-purple: #6366f1;
+
+  /* Typography & Shadows */
+  --text-main: #0f172a;                 /* Deep slate primary text */
+  --text-muted: #64748b;                /* Medium slate subtext */
+  --shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
-/* --- CORE ELEMENTS --- */
+/* ============================================================== */
+/* CORE ELEMENTS & APP-WIDE RESETS                                */
+/* ============================================================== */
 body {
   background-color: var(--bg-body) !important;
   color: var(--text-main) !important;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 0.9rem;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  letter-spacing: -0.01em;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Base Card Styling */
+/* Base Card & Container Styling */
 .card, .rp-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-.rp-card { margin-bottom: 1.5rem; }
+.rp-card { 
+  margin-bottom: 1.5rem; 
+}
 
-/* Surface Overlays (Headers, highlighted areas) */
+/* Surface Overlays (Headers, highlighted stat boxes) */
 .surface-card {
   background-color: var(--bg-surface) !important;
 }
 
-/* Universal Input Styling */
+/* Universal Input & Control Styling */
 .form-control, .form-select, .input-group-text, .bg-input {
   background-color: var(--bg-input) !important;
   border: 1px solid var(--border-color) !important;
   color: var(--text-main) !important;
   font-size: 0.9rem;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
-.input-group-text { color: var(--text-muted) !important; border-right: none !important; }
-.input-group .form-control { border-left: none !important; }
+.input-group-text { 
+  color: var(--text-muted) !important; 
+  border-right: none !important; 
+}
+.input-group .form-control { 
+  border-left: none !important; 
+}
 
 .form-control:focus, .form-select:focus {
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25) !important;
+  outline: none !important;
 }
 
-/* Text Overrides */
+/* Rounded Pill Controls */
+.rounded-pill {
+  border-radius: var(--radius-pill) !important;
+}
+
+/* Typography & Text Overrides */
 .text-muted { color: var(--text-muted) !important; }
 .text-main { color: var(--text-main) !important; }
-.text-warning { color: var(--warning) !important; } /* Forces standard bootstrap classes to use our readable amber */
+.text-warning { color: var(--warning) !important; }
+.text-info { color: var(--info) !important; }
+.text-success { color: var(--success) !important; }
+.text-danger { color: var(--danger) !important; }
 
-/* Hide scrollbar */
+/* Scrollbar Utility */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* --- SLIDER FIXES --- */
+/* Range Slider Styling */
 .form-range::-webkit-slider-runnable-track {
   background-color: var(--border-color) !important;
   height: 6px;
@@ -104,28 +148,42 @@ body {
   background-color: var(--border-color) !important;
 }
 
-/* --- EXPENSE TABLE FIXES (Overrides Bootstrap .table-dark in Light Mode) --- */
+/* ============================================================== */
+/* DATA TABLES & CASHFLOW PROJECTIONS                             */
+/* ============================================================== */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+/* Table Dark Inversion for Light Mode */
 [data-bs-theme="light"] .table-dark {
   --bs-table-bg: #ffffff;
   --bs-table-color: var(--text-main);
-  --bs-table-border-color: var(--border-color);
+  --bs-table-border-color: var(--border-soft);
 }
 [data-bs-theme="light"] .table-dark th,
 [data-bs-theme="light"] .table-dark td {
   background-color: #ffffff !important;
   color: var(--text-main) !important;
-  border-bottom-color: var(--border-color) !important;
+  border-bottom-color: var(--border-soft) !important;
 }
 [data-bs-theme="light"] .table-dark .surface-card,
 [data-bs-theme="light"] .table-dark thead tr {
   background-color: var(--bg-surface) !important;
 }
 
-/* Premium UI Transitions */
+/* Row Separator Accents */
+.border-secondary {
+  border-color: var(--border-color) !important;
+}
+
+/* Animated Tab Transitions */
 @keyframes fadeInUp {
   0% { 
     opacity: 0; 
-    transform: translateY(12px); 
+    transform: translateY(10px); 
   }
   100% { 
     opacity: 1; 
@@ -134,5 +192,5 @@ body {
 }
 
 .fade-in-tab {
-  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
