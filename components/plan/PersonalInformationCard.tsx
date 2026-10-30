@@ -1,4 +1,14 @@
- // Fallbacks for custom names if they aren't initialized yet
+import React from 'react';
+import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
+import { InfoBtn, MonthYearStepper, StepperInput } from '../SharedUI';
+
+export default function PersonalInformationCard() {
+  const { t } = useTranslation();
+  const { data, updateInput, updateMultipleInputs, updateMode } = useFinance();
+  const isCouple = data.mode === 'Couple';
+
+  // Fallbacks for custom names if they aren't initialized yet
   const p1Name = data.inputs.p1_name || 'Player 1';
   const p2Name = data.inputs.p2_name || 'Player 2';
 
@@ -49,7 +59,6 @@
   const handleRetireChange = (player: 'p1'|'p2', newRetAge: number) => {
       const updates: Record<string, any> = { [`${player}_retireAge`]: newRetAge };
       if (newRetAge > (data.inputs[`${player}_lifeExp`] || 90)) {
-          updates[`${updates}`] = newRetAge;
           updates[`${player}_lifeExp`] = newRetAge;
       }
 
@@ -262,4 +271,4 @@
       </div>
     </div>
   );
-}//gogo
+}
