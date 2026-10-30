@@ -453,7 +453,7 @@ export default function IncomeTaxCard() {
 
   const calculatePlayerMetrics = (p: 'p1' | 'p2') => {
       const yData = results?.timeline?.[0];
-      if (!yData) return { gross: getActiveIncome(p), netIncome: getActiveIncome(p) };
+      if (!yData) return { actualGross: getActiveIncome(p), netIncome: getActiveIncome(p) };
 
       const salary = p === 'p1' ? ((yData.incomeP1 || 0) - (yData.rrspMatchP1 || 0)) : ((yData.incomeP2 || 0) - (yData.rrspMatchP2 || 0));
       const match = p === 'p1' ? (yData.rrspMatchP1 || 0) : (yData.rrspMatchP2 || 0);
@@ -1050,7 +1050,7 @@ export default function IncomeTaxCard() {
                       </div>
                   </div>
 
-                  {/* NEW PAYCHEQUE DEDUCTIONS SECTION */}
+                  {/* PAYCHEQUE DEDUCTIONS SECTION */}
                   <div className="d-flex justify-content-between align-items-center mb-2 mt-4">
                       <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0">Paycheque Deductions</h6>
                       <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 fw-bold" style={{fontSize: '0.75rem'}} onClick={() => addArrayItem('deductions', { owner: p, name: 'LTD / Health', amount: 50, freq: 'bi-weekly' })}>+ Add</button>
@@ -1270,7 +1270,9 @@ export default function IncomeTaxCard() {
                                   <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
                                   <input type="text" maxLength={50} className="form-control bg-transparent border-0 text-main fw-bold p-0 shadow-none" value={inc.name || ''} onChange={(e) => updateInc('name', e.target.value)} placeholder="Stream Name" />
                               </div>
-                              <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('additionalIncome', realIdx)}><i className="bi bi-x-lg fs-5"></i></button>
+                              <div className="d-flex align-items-center gap-2">
+                                  <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('additionalIncome', realIdx)}><i className="bi bi-x-lg fs-5"></i></button>
+                              </div>
                           </div>
                           <div className="p-3 bg-input rounded-bottom-4">
                               <div className="row g-3 mb-3">
@@ -1287,6 +1289,36 @@ export default function IncomeTaxCard() {
                                       <PercentInput className="form-control form-control-sm" value={inc.growth ?? 2.0} onChange={(val: any) => updateInc('growth', val)} />
                                   </div>
                               </div>
+
+                              {/* TAX-FREE INCOME TOGGLE */}
+                              <div className="d-flex align-items-center justify-content-between p-2 px-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 mb-3">
+                                  <span className="small text-main fw-bold d-flex align-items-center gap-1.5">
+                                      <i className="bi bi-shield-check text-success"></i>
+                                      <span>Tax-Free Income</span>
+                                      <InfoBtn 
+                                          title="Tax-Free Income Stream" 
+                                          text="Check this if this income stream is non-taxable (such as tax-free disability benefits, structured settlements, life insurance payouts, non-taxable gifts, or tax-exempt allowances).<br><br>When enabled, 100% of the funds are deposited directly into your net cash flow without increasing your taxable income." 
+                                          align="left" 
+                                      />
+                                  </span>
+                                  <div className="form-check form-switch mb-0 d-flex align-items-center">
+                                      <input 
+                                          className="form-check-input cursor-pointer m-0 fs-5" 
+                                          type="checkbox" 
+                                          id={`taxFree_${realIdx}`}
+                                          checked={inc.taxable === false} 
+                                          onChange={(e) => updateInc('taxable', !e.target.checked)} 
+                                      />
+                                      <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer" htmlFor={`taxFree_${realIdx}`}>
+                                          {inc.taxable === false ? (
+                                              <span className="text-success">Tax-Free</span>
+                                          ) : (
+                                              <span>Taxable</span>
+                                          )}
+                                      </label>
+                                  </div>
+                              </div>
+
                               <div className="row g-3">
                                   <div className="col-12 col-md-6">
                                       <label className="small text-muted mb-1 fw-medium d-block border-bottom border-secondary border-opacity-50 pb-1">Starts</label>
