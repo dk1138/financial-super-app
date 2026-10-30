@@ -251,7 +251,7 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
     merged.useRealDollars = parsedData.useRealDollars ?? parsedData.inputs?.useRealDollars ?? false;
     merged.expenseMode = parsedData.expenseMode || (parsedData.inputs?.expense_mode_advanced ? 'Advanced' : 'Simple');
 
-    ['properties', 'housingTransitions', 'expensePhases', 'windfalls', 'additionalIncome', 'customAssets', 'deductions', 'leaves', 'dependents', 'debt'].forEach(arr => {
+    ['properties', 'housingTransitions', 'expensePhases', 'windfalls', 'additionalIncome', 'customAssets', 'deductions', 'leaves', 'dependents', 'debt', 'history'].forEach(arr => {
         if (parsedData[arr]) merged[arr] = parsedData[arr];
     });
 

@@ -10,6 +10,7 @@ import CashFlowTab from '../../components/CashFlowTab';
 import OptimizersTab from '../../components/OptimizersTab';
 import CompareTab from '../../components/CompareTab';
 import DataBankTab from '../../components/DataBankTab';
+import { useTranslation } from '../../lib/LanguageContext';
 import { useFinance } from '../../lib/FinanceContext';
 import { StepperInput, PercentInput } from '../../components/SharedUI'; 
 
@@ -19,6 +20,7 @@ import { sampleProfile } from '../../lib/sampleData';
 export default function PlannerPage() {
   const financeContext = useFinance() as any; 
   const { data, updateInput, updateMultipleInputs, resetData } = financeContext;
+  const { t } = useTranslation();
   
   // --- UI STATE ---
   const [activeTab, setActiveTab] = useState('plan');
@@ -117,15 +119,15 @@ export default function PlannerPage() {
     };
 
   const tabs = [
-    { id: 'plan', label: 'Inputs', icon: 'bi-pencil-square' },
-    { id: 'strategy', label: 'Strategy', icon: 'bi-sliders' },
-    { id: 'dashboard', label: 'Summary', icon: 'bi-clipboard2-data' },
-    { id: 'projection', label: 'Projection', icon: 'bi-table' },
-    { id: 'risk', label: 'Risk', icon: 'bi-activity' },
-    { id: 'cashflow', label: 'Cash Flow', icon: 'bi-diagram-3' },
-    { id: 'optimizers', label: 'Tools & Calculators', icon: 'bi-magic' },
-    { id: 'compare', label: 'Compare', icon: 'bi-bar-chart-line' },
-    { id: 'databank', label: 'Data Bank', icon: 'bi-clock-history' }
+    { id: 'plan', label: t('tabs.inputs', 'Inputs'), icon: 'bi-pencil-square' },
+    { id: 'strategy', label: t('tabs.strategy', 'Strategy'), icon: 'bi-sliders' },
+    { id: 'dashboard', label: t('tabs.summary', 'Summary'), icon: 'bi-clipboard2-data' },
+    { id: 'projection', label: t('tabs.projection', 'Projection'), icon: 'bi-table' },
+    { id: 'risk', label: t('tabs.risk', 'Risk'), icon: 'bi-activity' },
+    { id: 'cashflow', label: t('tabs.cashflow', 'Cash Flow'), icon: 'bi-diagram-3' },
+    { id: 'optimizers', label: t('tabs.tools', 'Tools & Calculators'), icon: 'bi-magic' },
+    { id: 'compare', label: t('tabs.compare', 'Compare'), icon: 'bi-bar-chart-line' },
+    { id: 'databank', label: t('tabs.dataBank', 'Data Bank'), icon: 'bi-clock-history' }
   ];
 
   return (

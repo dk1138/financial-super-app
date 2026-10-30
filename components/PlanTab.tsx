@@ -13,9 +13,11 @@ import GovtBenefitsCard from './plan/GovtBenefitsCard';
 import EconomicAssumptionsCard from './plan/EconomicAssumptionsCard';
 import RollForwardModal from './history/RollForwardModal';
 import { useFinance } from '../lib/FinanceContext';
+import { useTranslation } from '../lib/LanguageContext';
 
 export default function PlanTab() {
   const { data, results } = useFinance();
+  const { t } = useTranslation();
 
   const [showRollForward, setShowRollForward] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -312,9 +314,9 @@ export default function PlanTab() {
           className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold bg-input shadow-sm d-flex align-items-center gap-1.5"
           onClick={() => setShowRollForward(true)}
           style={{ fontSize: '0.78rem' }}
-          title="Archive current year statement actuals, advance household by +1 year, and rollover into new calendar year"
+          title={t('rollForward.title', 'Archive current year statement actuals, advance household by +1 year, and rollover into new calendar year')}
         >
-          <i className="bi bi-calendar-plus text-primary"></i> Roll Forward 1 Year
+          <i className="bi bi-calendar-plus text-primary"></i> {t('actions.rollForward', 'Roll Forward 1 Year')}
         </button>
         <button 
           type="button" 
@@ -322,7 +324,7 @@ export default function PlanTab() {
           onClick={expandAll}
           style={{ fontSize: '0.78rem' }}
         >
-          <i className="bi bi-arrows-expand me-1"></i> Expand All
+          <i className="bi bi-arrows-expand me-1"></i> {t('actions.expandAll', 'Expand All')}
         </button>
         <button 
           type="button" 
@@ -330,7 +332,7 @@ export default function PlanTab() {
           onClick={collapseAll}
           style={{ fontSize: '0.78rem' }}
         >
-          <i className="bi bi-arrows-collapse me-1"></i> Collapse All
+          <i className="bi bi-arrows-collapse me-1"></i> {t('actions.collapseAll', 'Collapse All')}
         </button>
       </div>
 

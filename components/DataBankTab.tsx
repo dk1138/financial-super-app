@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { useTranslation } from '../lib/LanguageContext';
 import RollForwardModal from './history/RollForwardModal';
 import { CurrencyInput } from './SharedUI';
 
@@ -9,6 +10,7 @@ interface DataBankTabProps {
 
 export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const { data, restoreHistorySnapshot, setData } = useFinance();
+    const { t } = useTranslation();
     const historyList = (data.history || []) as any[];
 
     const [expandedYear, setExpandedYear] = useState<number | null>(null);
@@ -165,9 +167,9 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                             <i className="bi bi-clock-history fs-3"></i>
                         </div>
                         <div>
-                            <h4 className="mb-0 fw-bold">Plan Data Bank & Historical Ledger</h4>
+                            <h4 className="mb-0 fw-bold">{t('dataBank.title', 'Plan Data Bank & Historical Ledger')}</h4>
                             <p className="text-muted small mb-0 mt-1">
-                                Permanent archive of completed calendar years, December 31 statement actuals, and recorded investment gains.
+                                {t('dataBank.subtitle', 'Permanent archive of completed calendar years, December 31 statement actuals, and recorded investment gains.')}
                             </p>
                         </div>
                     </div>
@@ -175,10 +177,10 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                         {historyList.length > 0 && (
                             <>
                                 <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm" onClick={handleExportCsv}>
-                                    <i className="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+                                    <i className="bi bi-file-earmark-spreadsheet me-1"></i> {t('actions.exportCsv', 'Export CSV')}
                                 </button>
                                 <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm" onClick={handleExportJson}>
-                                    <i className="bi bi-download me-1"></i> Export JSON
+                                    <i className="bi bi-download me-1"></i> {t('actions.exportJson', 'Export JSON')}
                                 </button>
                             </>
                         )}
@@ -186,7 +188,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                             <i className="bi bi-plus-circle"></i> Add Past Year
                         </button>
                         <button type="button" className="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold shadow-sm d-flex align-items-center gap-1.5" onClick={handleOpenRollForward}>
-                            <i className="bi bi-calendar-plus"></i> Roll Forward 1 Year
+                            <i className="bi bi-calendar-plus"></i> {t('actions.rollForward', 'Roll Forward 1 Year')}
                         </button>
                     </div>
                 </div>
@@ -230,7 +232,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                     <div className="bg-secondary bg-opacity-10 text-muted rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '72px', height: '72px' }}>
                         <i className="bi bi-database-exclamation fs-1"></i>
                     </div>
-                    <h5 className="fw-bold mb-2">No Historical Years in Your Data Bank Yet</h5>
+                    <h5 className="fw-bold mb-2">{t('dataBank.emptyTitle', 'No Historical Years in Your Data Bank Yet')}</h5>
                     <p className="text-muted small mx-auto mb-4" style={{ maxWidth: '520px', lineHeight: '1.6' }}>
                         When you sit down at year-end or in January to update your financial plan, use <b>Roll Forward 1 Year</b>. Planfolio will snapshot your actual closing statement balances, record your exact investment gains, and advance your household ages into the new year.
                     </p>
@@ -247,7 +249,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                 <div className="rp-card border border-secondary rounded-4 shadow-sm overflow-hidden surface-card">
                     <div className="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center">
                         <h6 className="mb-0 fw-bold text-uppercase ls-1 small">
-                            <i className="bi bi-table text-primary me-2"></i> Historical Annual Ledger
+                            <i className="bi bi-table text-primary me-2"></i> {t('dataBank.ledgerTitle', 'Historical Annual Ledger')}
                         </h6>
                         <span className="small text-muted">{historyList.length} archived {historyList.length === 1 ? 'entry' : 'entries'}</span>
                     </div>
