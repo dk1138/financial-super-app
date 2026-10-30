@@ -14,7 +14,9 @@ export default function GlobalHeader() {
     const pathname = usePathname();
     const financeContext = useFinance() as any;
     const { data, updateUseRealDollars, resetData } = financeContext;
-    const { lang, setLanguage } = useTranslation();
+    const translationCtx = useTranslation() as any;
+    const { lang } = translationCtx;
+    const setLanguage = translationCtx.setLang || translationCtx.setLanguage;
 
     // --- REFS ---
     const headerRef = useRef<HTMLDivElement>(null);
