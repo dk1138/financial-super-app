@@ -70,9 +70,9 @@ export default function PlanTab() {
         // Measure sticky headers dynamically for exact pixel alignment
         const jumpBar = document.querySelector('.sticky-jump-bar-wrapper') as HTMLElement;
         const globalHeader = document.querySelector('[style*="var(--bg-body)"]') as HTMLElement;
-        const jumpBarHeight = jumpBar ? jumpBar.offsetHeight : 52;
-        const globalHeaderHeight = globalHeader ? globalHeader.offsetHeight : 56;
-        const totalOffset = jumpBarHeight + globalHeaderHeight + 24;
+        const jumpBarHeight = jumpBar ? jumpBar.offsetHeight : 54;
+        const globalHeaderHeight = globalHeader ? globalHeader.offsetHeight : 64;
+        const totalOffset = jumpBarHeight + globalHeaderHeight + 20;
 
         const elementPosition = el.getBoundingClientRect().top;
         const offsetPosition = elementPosition + window.pageYOffset - totalOffset;
@@ -276,7 +276,8 @@ export default function PlanTab() {
         /* Direct accordion styling on existing cards */
         .plan-card-wrapper {
             position: relative;
-            scroll-margin-top: 130px;
+            scroll-margin-top: 140px;
+            border-radius: 1rem;
         }
         .plan-card-wrapper .card-header {
             padding-right: 48px !important;
@@ -332,18 +333,25 @@ export default function PlanTab() {
             margin-bottom: 0.75rem !important;
         }
 
-        /* Sticky Section Jump Pill Bar */
+        /* Sticky Section Jump Pill Bar: Docks directly under GlobalHeader */
         .sticky-jump-bar-wrapper {
+            position: -webkit-sticky;
             position: sticky;
-            top: 0;
-            z-index: 1020;
+            top: var(--global-header-height, 56px);
+            z-index: 1030;
             background: var(--bg-body, #0b0f17);
-            padding: 8px 4px 12px;
-            margin-bottom: 12px;
+            padding: 10px 16px 14px;
+            margin: -0.75rem -0.75rem 1.25rem -0.75rem;
             border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        @media (min-width: 768px) {
+            .sticky-jump-bar-wrapper {
+                margin: -1rem -1rem 1.5rem -1rem;
+                padding: 10px 20px 14px;
+            }
         }
         .jump-pills-scroll {
             display: flex;
@@ -386,30 +394,39 @@ export default function PlanTab() {
             box-shadow: 0 0 12px rgba(2, 132, 199, 0.55);
         }
 
-        /* High-contrast highlight glow when jumped to */
+        /* High-contrast rounded highlight glow with perfect corner curvature */
         .jump-highlight {
-            animation: jumpGlow 2.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 1rem !important;
+            animation: jumpGlowRounded 2.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .jump-highlight .rp-card {
+            border-radius: 1rem !important;
         }
         .jump-highlight .card-header {
-            animation: headerFlash 2.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-top-left-radius: 1rem !important;
+            border-top-right-radius: 1rem !important;
+            animation: headerFlashRounded 2.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes jumpGlow {
+        @keyframes jumpGlowRounded {
             0% {
-                box-shadow: 0 0 0 4px #00d2ff, 0 0 28px rgba(0, 210, 255, 0.65);
+                border-radius: 1rem !important;
+                box-shadow: 0 0 0 4px #00d2ff, 0 0 35px rgba(0, 210, 255, 0.75), inset 0 0 15px rgba(0, 210, 255, 0.15);
                 transform: scale(1.006);
             }
             50% {
-                box-shadow: 0 0 0 3px #0284c7, 0 0 16px rgba(2, 132, 199, 0.4);
+                border-radius: 1rem !important;
+                box-shadow: 0 0 0 3px #0284c7, 0 0 18px rgba(2, 132, 199, 0.45);
                 transform: scale(1);
             }
             100% {
+                border-radius: 1rem !important;
                 box-shadow: 0 0 0 0 transparent, 0 0 0 transparent;
                 transform: scale(1);
             }
         }
-        @keyframes headerFlash {
+        @keyframes headerFlashRounded {
             0% {
-                background-color: rgba(2, 132, 199, 0.35) !important;
+                background-color: rgba(2, 132, 199, 0.38) !important;
             }
             100% {
                 background-color: transparent;
