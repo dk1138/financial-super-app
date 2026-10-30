@@ -1518,45 +1518,65 @@ export default function ProjectionTab() {
                                         {y.p1Alive && renderPlayerInflows('p1', y, y.year, index, results.timeline)}
                                         {isCouple && y.p2Alive && renderPlayerInflows('p2', y, y.year, index, results.timeline)}
 
-                                        {/* TAX-FREE SIDE HUSTLE (DEDICATED LINE SEPARATE FROM WINDFALL) */}
+                                                                                {/* TAX-FREE SIDE HUSTLE (DEDICATED LINE SEPARATE FROM WINDFALL) */}
                                         {(() => {
+                                            const calcStreamAmount = (s: any, yr: number) => {
+                                                const owner = s.owner === 'p2' ? 'p2' : 'p1';
+                                                const dobStr = data.inputs[`${owner}_dob`] || "1990-01";
+                                                const dobYear = new Date(dobStr).getFullYear();
+                                                const retAge = Number(data.inputs[`${owner}_retireAge`]) || 65;
+                                                const retYear = dobYear + retAge;
+
+                                                let startYear: number;
+                                                if (s.startMode === 'ret_relative') {
+                                                    startYear = retYear + (Number(s.startRelative ?? s.startRel) || 0);
+                                                } else {
+                                                    startYear = new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                }
+
+                                                let endYear: number;
+                                                if (s.endMode === 'never') {
+                                                    endYear = 2100;
+                                                } else if (s.endMode === 'ret_relative') {
+                                                    endYear = retYear + (Number(s.endRelative ?? s.duration) || 0);
+                                                } else if (s.endMode === 'duration') {
+                                                    endYear = startYear + (Number(s.duration ?? s.endRelative) || 0);
+                                                } else if (s.endMode === 'date') {
+                                                    endYear = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                } else {
+                                                    endYear = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                }
+
+                                                if (yr < startYear || yr > endYear) return 0;
+
+                                                let baseYear = s.startMode === 'ret_relative' ? startYear : new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                let growthRate = (Number(s.growth) || 0) / 100;
+                                                let amt = (Number(s.amount) || 0) * Math.pow(1 + growthRate, Math.max(0, yr - baseYear)) * (s.freq === 'month' ? 12 : 1);
+
+                                                if (s.startMode === 'date' && yr === startYear && s.start) {
+                                                    amt *= (12 - new Date(s.start + "-01").getMonth()) / 12;
+                                                }
+                                                if (s.endMode === 'date' && yr === endYear && s.end) {
+                                                    amt *= Math.min(1, (new Date(s.end + "-01").getMonth() + 1) / 12);
+                                                }
+                                                return amt;
+                                            };
+
                                             const taxFreeSideHustleAmt = (y.taxFreeSideHustle !== undefined)
                                                 ? (y.taxFreeSideHustle || 0)
                                                 : (data.additionalIncome || [])
                                                     .filter((s: any) => s.taxable === false)
-                                                    .reduce((sum: number, s: any) => {
-                                                        let startYr = new Date((s.start || "2026-01") + "-01").getFullYear();
-                                                        let endYr = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
-                                                        if (y.year >= startYr && y.year <= endYr) {
-                                                            let baseYr = startYr;
-                                                            return sum + ((Number(s.amount) || 0) * Math.pow(1 + ((s.growth ?? 2) / 100), y.year - baseYr) * (s.freq === 'month' ? 12 : 1));
-                                                        }
-                                                        return sum;
-                                                    }, 0);
+                                                    .reduce((sum: number, s: any) => sum + calcStreamAmount(s, y.year), 0);
 
                                             if (taxFreeSideHustleAmt <= 0) return null;
 
                                             const p1Amt = y.taxFreeSideHustleP1 ?? (data.additionalIncome || [])
                                                 .filter((s: any) => s.owner === 'p1' && s.taxable === false)
-                                                .reduce((sum: number, s: any) => {
-                                                    let startYr = new Date((s.start || "2026-01") + "-01").getFullYear();
-                                                    let endYr = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
-                                                    if (y.year >= startYr && y.year <= endYr) {
-                                                        return sum + ((Number(s.amount) || 0) * Math.pow(1 + ((s.growth ?? 2) / 100), y.year - startYr) * (s.freq === 'month' ? 12 : 1));
-                                                    }
-                                                    return sum;
-                                                }, 0);
+                                                .reduce((sum: number, s: any) => sum + calcStreamAmount(s, y.year), 0);
 
                                             const p2Amt = y.taxFreeSideHustleP2 ?? (data.additionalIncome || [])
                                                 .filter((s: any) => s.owner === 'p2' && s.taxable === false)
-                                                .reduce((sum: number, s: any) => {
-                                                    let startYr = new Date((s.start || "2026-01") + "-01").getFullYear();
-                                                    let endYr = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
-                                                    if (y.year >= startYr && y.year <= endYr) {
-                                                        return sum + ((Number(s.amount) || 0) * Math.pow(1 + ((s.growth ?? 2) / 100), y.year - startYr) * (s.freq === 'month' ? 12 : 1));
-                                                    }
-                                                    return sum;
-                                                }, 0);
+                                                .reduce((sum: number, s: any) => sum + calcStreamAmount(s, y.year), 0);
 
                                             return (
                                                 <div className="d-flex justify-content-between small mb-2 pt-2">
@@ -1570,6 +1590,65 @@ export default function ProjectionTab() {
                                                         <InfoBtn align="left" title="Tax-Free Side Hustle" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Non-taxable side hustle / additional income stream deposited directly into net cash flow without increasing CRA taxable income." />
                                                     </span>
                                                     <span className="fw-medium text-success">+{formatCurrency(taxFreeSideHustleAmt, y.year)}</span>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {(() => {
+                                            const calcStreamAmount = (s: any, yr: number) => {
+                                                const owner = s.owner === 'p2' ? 'p2' : 'p1';
+                                                const dobStr = data.inputs[`${owner}_dob`] || "1990-01";
+                                                const dobYear = new Date(dobStr).getFullYear();
+                                                const retAge = Number(data.inputs[`${owner}_retireAge`]) || 65;
+                                                const retYear = dobYear + retAge;
+
+                                                let startYear: number;
+                                                if (s.startMode === 'ret_relative') {
+                                                    startYear = retYear + (Number(s.startRelative ?? s.startRel) || 0);
+                                                } else {
+                                                    startYear = new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                }
+
+                                                let endYear: number;
+                                                if (s.endMode === 'never') {
+                                                    endYear = 2100;
+                                                } else if (s.endMode === 'ret_relative') {
+                                                    endYear = retYear + (Number(s.endRelative ?? s.duration) || 0);
+                                                } else if (s.endMode === 'duration') {
+                                                    endYear = startYear + (Number(s.duration ?? s.endRelative) || 0);
+                                                } else if (s.endMode === 'date') {
+                                                    endYear = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                } else {
+                                                    endYear = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                }
+
+                                                if (yr < startYear || yr > endYear) return 0;
+
+                                                let baseYear = s.startMode === 'ret_relative' ? startYear : new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                let growthRate = (Number(s.growth) || 0) / 100;
+                                                let amt = (Number(s.amount) || 0) * Math.pow(1 + growthRate, Math.max(0, yr - baseYear)) * (s.freq === 'month' ? 12 : 1);
+
+                                                if (s.startMode === 'date' && yr === startYear && s.start) {
+                                                    amt *= (12 - new Date(s.start + "-01").getMonth()) / 12;
+                                                }
+                                                if (s.endMode === 'date' && yr === endYear && s.end) {
+                                                    amt *= Math.min(1, (new Date(s.end + "-01").getMonth() + 1) / 12);
+                                                }
+                                                return amt;
+                                            };
+
+                                            const displayWindfall = (y.taxFreeSideHustle !== undefined)
+                                                ? (y.windfall || 0)
+                                                : Math.max(0, (y.windfall || 0) - (data.additionalIncome || [])
+                                                    .filter((s: any) => s.taxable === false)
+                                                    .reduce((sum: number, s: any) => sum + calcStreamAmount(s, y.year), 0));
+
+                                            if (displayWindfall <= 0) return null;
+
+                                            return (
+                                                <div className="d-flex justify-content-between small mb-2 pt-2">
+                                                    <span className="text-muted fw-bold text-success d-flex align-items-center">Windfalls / Property Sale <InfoBtn align="left" title="Windfalls" text="Taxable status depends on the source. Mapped accordingly in Net Worth." /></span>
+                                                    <span className="fw-medium text-success">{formatCurrency(displayWindfall, y.year)}</span>
                                                 </div>
                                             );
                                         })()}

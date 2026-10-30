@@ -432,22 +432,41 @@ export class FinanceEngine {
         });
 
         this.additionalIncome.forEach(stream => {
-            let startYear, endYear;
+            const ownerPerson = stream.owner === 'p2' ? person2 : person1;
+            const retAgeVal = Number(ownerPerson.retAge ?? ownerPerson.retireAge) || 65;
+            const retYear = ownerPerson.dob.getFullYear() + retAgeVal;
+
+            let startYear: number;
             if (stream.startMode === 'ret_relative') {
-                const ownerPerson = stream.owner === 'p2' ? person2 : person1;
-                startYear = ownerPerson.dob.getFullYear() + ownerPerson.retireAge + (stream.startRel || 0);
+                startYear = retYear + (Number(stream.startRelative ?? stream.startRel) || 0);
             } else {
                 startYear = new Date((stream.start || "2026-01") + "-01").getFullYear();
             }
 
-            endYear = stream.endMode === 'duration' ? (startYear + (stream.duration || 0)) : (stream.end ? new Date(stream.end + "-01") : new Date("2100-01-01")).getFullYear();
+            let endYear: number;
+            if (stream.endMode === 'never') {
+                endYear = 2100;
+            } else if (stream.endMode === 'ret_relative') {
+                endYear = retYear + (Number(stream.endRelative ?? stream.duration) || 0);
+            } else if (stream.endMode === 'duration') {
+                endYear = startYear + (Number(stream.duration ?? stream.endRelative) || 0);
+            } else if (stream.endMode === 'date') {
+                endYear = stream.end ? new Date(stream.end + "-01").getFullYear() : 2100;
+            } else {
+                endYear = stream.end ? new Date(stream.end + "-01").getFullYear() : 2100;
+            }
 
             if (currentYear >= startYear && currentYear <= endYear) {
                 let baseYear = stream.startMode === 'ret_relative' ? startYear : new Date((stream.start || "2026-01") + "-01").getFullYear();
-                let amount = stream.amount * Math.pow(1 + (stream.growth / 100), currentYear - baseYear) * (stream.freq === 'month' ? 12 : 1);
+                let growthRate = (Number(stream.growth) || 0) / 100;
+                let amount = (Number(stream.amount) || 0) * Math.pow(1 + growthRate, Math.max(0, currentYear - baseYear)) * (stream.freq === 'month' ? 12 : 1);
                 
-                if (stream.startMode === 'date' && currentYear === startYear) amount *= (12 - new Date((stream.start || "2026-01") + "-01").getMonth()) / 12;
-                if (stream.endMode === 'date' && stream.end && currentYear === endYear) amount *= Math.min(1, (new Date(stream.end + "-01").getMonth() + 1) / 12);
+                if (stream.startMode === 'date' && currentYear === startYear && stream.start) {
+                    amount *= (12 - new Date(stream.start + "-01").getMonth()) / 12;
+                }
+                if (stream.endMode === 'date' && currentYear === endYear && stream.end) {
+                    amount *= Math.min(1, (new Date(stream.end + "-01").getMonth() + 1) / 12);
+                }
 
                 if (amount > 0) { 
                     let targetPerson = (stream.owner === 'p2' && alive2) ? result.p2 : result.p1;
