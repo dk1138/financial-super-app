@@ -11,24 +11,16 @@ import FutureExpensesCard from './plan/FutureExpensesCard';
 import WindfallsCard from './plan/WindfallsCard';
 import GovtBenefitsCard from './plan/GovtBenefitsCard';
 import EconomicAssumptionsCard from './plan/EconomicAssumptionsCard';
-import RollForwardModal from './history/RollForwardModal';
 import { useFinance } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 
 export default function PlanTab() {
+  const { t, lang } = useTranslation();
   const { data, results } = useFinance();
-  const { t } = useTranslation();
-
-  const [showRollForward, setShowRollForward] = useState(false);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3500);
-  };
 
   // Collapsed state map for the 10 sections
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
+  const [activeJumpSection, setActiveJumpSection] = useState<string>('personal');
 
   const toggleSection = (id: string) => {
     setCollapsedMap(prev => ({ ...prev, [id]: !prev[id] }));
@@ -48,6 +40,47 @@ export default function PlanTab() {
       govt: true,
       economic: true
     });
+  };
+
+  const isFr = lang === 'fr';
+
+  const jumpSections = useMemo(() => [
+    { id: 'personal', label: isFr ? 'Personnel' : 'Personal', icon: 'bi-person-vcard' },
+    { id: 'dependents', label: isFr ? 'Enfants / ACE' : 'Dependents', icon: 'bi-people' },
+    { id: 'portfolio', label: isFr ? 'Portefeuille' : 'Portfolio', icon: 'bi-wallet2' },
+    { id: 'realestate', label: isFr ? 'Logement' : 'Real Estate', icon: 'bi-house-heart' },
+    { id: 'tax', label: isFr ? 'Revenus & Impôts' : 'Income & Tax', icon: 'bi-cash-coin' },
+    { id: 'living', label: isFr ? 'Dépenses' : 'Expenses', icon: 'bi-cart4' },
+    { id: 'future', label: isFr ? 'Dettes / Achats' : 'Debts & Goals', icon: 'bi-cart-dash' },
+    { id: 'windfalls', label: isFr ? 'Héritage' : 'Windfalls', icon: 'bi-gift' },
+    { id: 'govt', label: isFr ? 'RPC / SV' : 'Govt Benefits', icon: 'bi-bank' },
+    { id: 'economic', label: isFr ? 'Hypothèses' : 'Economic', icon: 'bi-graph-up-arrow' }
+  ], [isFr]);
+
+  const scrollToSection = (id: string) => {
+    setActiveJumpSection(id);
+    // If the section is currently collapsed, expand it so user sees content
+    if (collapsedMap[id]) {
+      setCollapsedMap(prev => ({ ...prev, [id]: false }));
+    }
+
+    setTimeout(() => {
+      const el = document.getElementById(`section-${id}`);
+      if (el) {
+        const headerOffset = 110; // account for global header + sticky jump bar
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: Math.max(0, offsetPosition),
+          behavior: 'smooth'
+        });
+
+        // Brief highlight pulse
+        el.classList.add('jump-highlight');
+        setTimeout(() => el.classList.remove('jump-highlight'), 1800);
+      }
+    }, 50);
   };
 
   const formatShort = (val: number) => {
@@ -113,7 +146,7 @@ export default function PlanTab() {
     const primaryMort = Number(data.inputs.primary_mortgage) || 0;
     const primaryRent = Number(data.inputs.primary_rent) || 0;
     const realestateText = primaryVal > 0 
-      ? `Home: ${formatShort(primaryVal)}${primaryMort > 0 ? `  |  Mortgage: \${formatShort(primaryMort)}` : '  |  Mortgage-Free'}`
+      ? `Home: ${formatShort(primaryVal)}${primaryMort > 0 ? `  |  Mortgage: ${formatShort(primaryMort)}` : '  |  Mortgage-Free'}`
       : `Residence: ${formatShort(primaryRent)}/mo Rent`;
 
     // 5. Income & Taxes
@@ -295,52 +328,119 @@ export default function PlanTab() {
             background-color: rgba(15, 23, 42, 0.92);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
         }
+
+        /* Sticky Section Jump Pill Bar */
+        .sticky-jump-bar-wrapper {
+            position: sticky;
+            top: var(--global-header-height, 60px);
+            z-index: 1025;
+            background: var(--bg-body, #0b0f17);
+            padding: 8px 0 12px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .jump-pills-scroll {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 2px 2px 4px;
+        }
+        .jump-pills-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .jump-pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            border: 1px solid var(--border-color, #2c3b52);
+            background: var(--bg-input, #101826);
+            color: var(--text-muted, #94a3b8);
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            flex-shrink: 0;
+            line-height: 1.2;
+        }
+        .jump-pill-btn:hover {
+            color: var(--text-main, #ffffff);
+            border-color: var(--bs-primary, #0284c7);
+            background: rgba(2, 132, 199, 0.12);
+        }
+        .jump-pill-btn.active {
+            background: var(--bs-primary, #0284c7);
+            border-color: var(--bs-primary, #0284c7);
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+        }
+        .jump-highlight {
+            animation: jumpGlow 1.8s ease-out;
+        }
+        @keyframes jumpGlow {
+            0% { box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.65); }
+            70% { box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25); }
+            100% { box-shadow: 0 0 0 0 transparent; }
+        }
       `}</style>
 
-      {/* --- TOAST NOTIFICATION --- */}
-      {toastMsg && (
-        <div className="position-fixed top-0 start-50 translate-middle-x pt-4 transition-all" style={{ zIndex: 2050 }}>
-          <div className="bg-success text-white px-4 py-2.5 rounded-pill shadow-lg d-flex align-items-center fw-bold border border-success small">
-            <i className="bi bi-check-circle-fill me-2 fs-6"></i>
-            {toastMsg}
+      {/* --- STICKY SECTION JUMP BAR --- */}
+      <div className="sticky-jump-bar-wrapper">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          {/* Scrollable Pills Row */}
+          <div className="jump-pills-scroll flex-grow-1">
+            {jumpSections.map((sec) => (
+              <button
+                key={sec.id}
+                type="button"
+                className={`jump-pill-btn ${activeJumpSection === sec.id ? 'active' : ''}`}
+                onClick={() => scrollToSection(sec.id)}
+                title={sec.label}
+              >
+                <i className={`bi ${sec.icon}`}></i>
+                <span>{sec.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Actions (Expand / Collapse All) */}
+          <div className="d-flex align-items-center gap-1.5 flex-shrink-0 ms-auto">
+            <button 
+              type="button" 
+              className="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold bg-input shadow-sm"
+              onClick={expandAll}
+              style={{ fontSize: '0.72rem' }}
+              title={t('actions.expandAll', 'Expand All')}
+            >
+              <i className="bi bi-arrows-expand me-1"></i>
+              <span className="d-none d-sm-inline">{t('actions.expandAll', 'Expand All')}</span>
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold bg-input shadow-sm"
+              onClick={collapseAll}
+              style={{ fontSize: '0.72rem' }}
+              title={t('actions.collapseAll', 'Collapse All')}
+            >
+              <i className="bi bi-arrows-collapse me-1"></i>
+              <span className="d-none d-sm-inline">{t('actions.collapseAll', 'Collapse All')}</span>
+            </button>
           </div>
         </div>
-      )}
-
-      {/* --- TOP TOOLBAR: ROLL FORWARD & EXPAND / COLLAPSE ALL --- */}
-      <div className="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-3">
-        <button 
-          type="button" 
-          className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold bg-input shadow-sm d-flex align-items-center gap-1.5"
-          onClick={() => setShowRollForward(true)}
-          style={{ fontSize: '0.78rem' }}
-          title={t('rollForward.title', 'Archive current year statement actuals, advance household by +1 year, and rollover into new calendar year')}
-        >
-          <i className="bi bi-calendar-plus text-primary"></i> {t('actions.rollForward', 'Roll Forward 1 Year')}
-        </button>
-        <button 
-          type="button" 
-          className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
-          onClick={expandAll}
-          style={{ fontSize: '0.78rem' }}
-        >
-          <i className="bi bi-arrows-expand me-1"></i> {t('actions.expandAll', 'Expand All')}
-        </button>
-        <button 
-          type="button" 
-          className="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold bg-input shadow-sm"
-          onClick={collapseAll}
-          style={{ fontSize: '0.78rem' }}
-        >
-          <i className="bi bi-arrows-collapse me-1"></i> {t('actions.collapseAll', 'Collapse All')}
-        </button>
       </div>
 
       {/* --- FORM WITH THE 10 EXISTING CARDS --- */}
       <form id="financialForm" onSubmit={e => e.preventDefault()}>
         
         {/* 1. Personal Information */}
-        <div className={`plan-card-wrapper ${collapsedMap['personal'] ? 'is-collapsed' : ''}`}>
+        <div id="section-personal" className={`plan-card-wrapper ${collapsedMap['personal'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['personal'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.personal}
@@ -358,7 +458,7 @@ export default function PlanTab() {
         </div>
 
         {/* 2. Dependents & Family */}
-        <div className={`plan-card-wrapper ${collapsedMap['dependents'] ? 'is-collapsed' : ''}`}>
+        <div id="section-dependents" className={`plan-card-wrapper ${collapsedMap['dependents'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['dependents'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.dependents}
@@ -376,7 +476,7 @@ export default function PlanTab() {
         </div>
 
         {/* 3. Portfolio Assets */}
-        <div className={`plan-card-wrapper ${collapsedMap['portfolio'] ? 'is-collapsed' : ''}`}>
+        <div id="section-portfolio" className={`plan-card-wrapper ${collapsedMap['portfolio'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['portfolio'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.portfolio}
@@ -394,7 +494,7 @@ export default function PlanTab() {
         </div>
 
         {/* 4. Real Estate & Living Costs */}
-        <div className={`plan-card-wrapper ${collapsedMap['realestate'] ? 'is-collapsed' : ''}`}>
+        <div id="section-realestate" className={`plan-card-wrapper ${collapsedMap['realestate'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['realestate'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.realestate}
@@ -412,7 +512,7 @@ export default function PlanTab() {
         </div>
 
         {/* 5. Income & Taxes */}
-        <div className={`plan-card-wrapper ${collapsedMap['tax'] ? 'is-collapsed' : ''}`}>
+        <div id="section-tax" className={`plan-card-wrapper ${collapsedMap['tax'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['tax'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.tax}
@@ -430,7 +530,7 @@ export default function PlanTab() {
         </div>
 
         {/* 6. Living Expenses */}
-        <div className={`plan-card-wrapper ${collapsedMap['living'] ? 'is-collapsed' : ''}`}>
+        <div id="section-living" className={`plan-card-wrapper ${collapsedMap['living'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['living'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.living}
@@ -448,7 +548,7 @@ export default function PlanTab() {
         </div>
 
         {/* 7. Future Milestone Expenses */}
-        <div className={`plan-card-wrapper ${collapsedMap['future'] ? 'is-collapsed' : ''}`}>
+        <div id="section-future" className={`plan-card-wrapper ${collapsedMap['future'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['future'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.future}
@@ -466,7 +566,7 @@ export default function PlanTab() {
         </div>
 
         {/* 8. Windfalls */}
-        <div className={`plan-card-wrapper ${collapsedMap['windfalls'] ? 'is-collapsed' : ''}`}>
+        <div id="section-windfalls" className={`plan-card-wrapper ${collapsedMap['windfalls'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['windfalls'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.windfalls}
@@ -484,7 +584,7 @@ export default function PlanTab() {
         </div>
 
         {/* 9. Government Benefits */}
-        <div className={`plan-card-wrapper ${collapsedMap['govt'] ? 'is-collapsed' : ''}`}>
+        <div id="section-govt" className={`plan-card-wrapper ${collapsedMap['govt'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['govt'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.govt}
@@ -502,7 +602,7 @@ export default function PlanTab() {
         </div>
 
         {/* 10. Economic Assumptions */}
-        <div className={`plan-card-wrapper ${collapsedMap['economic'] ? 'is-collapsed' : ''}`}>
+        <div id="section-economic" className={`plan-card-wrapper ${collapsedMap['economic'] ? 'is-collapsed' : ''}`}>
           {collapsedMap['economic'] && (
             <div className="collapse-summary-text d-none d-md-flex">
               {sectionSummaries.economic}
@@ -521,7 +621,7 @@ export default function PlanTab() {
 
       </form>
 
-      {/* --- CENTERED FLOATING READINESS ISLAND (Option 1) --- */}
+      {/* --- CENTERED FLOATING READINESS ISLAND --- */}
       {liveStats && (
         <div 
           className="position-sticky bottom-0 z-3 mt-4 pt-2 d-flex justify-content-center"
@@ -575,12 +675,6 @@ export default function PlanTab() {
         </div>
       )}
       
-      {/* --- ROLL FORWARD WIZARD MODAL --- */}
-      <RollForwardModal 
-        isOpen={showRollForward} 
-        onClose={() => setShowRollForward(false)} 
-        showToast={showToast} 
-      />
     </div>
   );
 }
