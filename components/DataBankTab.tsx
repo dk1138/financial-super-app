@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import RollForwardModal from './history/RollForwardModal';
+import { CurrencyInput } from './SharedUI';
 
 interface DataBankTabProps {
     onOpenRollForward?: () => void;
@@ -12,7 +13,17 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
     const [expandedYear, setExpandedYear] = useState<number | null>(null);
     const [showLocalRollForward, setShowLocalRollForward] = useState<boolean>(false);
+    const [showAddPastYear, setShowAddPastYear] = useState<boolean>(false);
     const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+    // State for manual past year entry
+    const [pastYearNum, setPastYearNum] = useState<number>(new Date().getFullYear() - 1);
+    const [pastOpeningNW, setPastOpeningNW] = useState<number | ''>('');
+    const [pastClosingNW, setPastClosingNW] = useState<number | ''>('');
+    const [pastSavings, setPastSavings] = useState<number | ''>(0);
+    const [pastGain, setPastGain] = useState<number | ''>('');
+    const [pastLifGain, setPastLifGain] = useState<number | ''>('');
+    const [pastNotes, setPastNotes] = useState<string>('');
 
     const showToast = (msg: string) => {
         setToastMsg(msg);
@@ -64,6 +75,58 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             restoreHistorySnapshot(h.id);
             showToast(`Restored plan to ${h.calendarYear} snapshot!`);
         }
+    };
+
+    const handleSavePastYear = (e: React.FormEvent) => {
+        e.preventDefault();
+        const year = Number(pastYearNum);
+        if (!year || year < 1950 || year > new Date().getFullYear()) {
+            alert('Please enter a valid calendar year in the past.');
+            return;
+        }
+
+        const openNW = Number(pastOpeningNW) || 0;
+        const closeNW = Number(pastClosingNW) || 0;
+        const savings = Number(pastSavings) || 0;
+        const dollarGain = pastGain !== '' ? Number(pastGain) : (closeNW - openNW - savings);
+        const returnPct = openNW > 0 ? (dollarGain / openNW) * 100 : 0;
+
+        const newRecord = {
+            id: `hist_${year}_manual`,
+            calendarYear: year,
+            archiveDate: new Date().toISOString().split('T')[0],
+            openingNetWorth: openNW,
+            closingNetWorth: closeNW,
+            netSavingsAdded: savings,
+            totalInvestmentGainDollar: dollarGain,
+            effectiveAnnualReturnPct: Number(returnPct.toFixed(2)),
+            actualBalances: {
+                p1: {},
+                p2: {}
+            },
+            priorYearGains: {
+                p1_lif_dollar_gain: pastLifGain !== '' ? Number(pastLifGain) : undefined
+            },
+            notes: pastNotes || 'Historical actual entry',
+            fullSnapshot: null
+        };
+
+        setData(prev => {
+            const existing = (prev.history || []).filter((h: any) => h.calendarYear !== year);
+            const updated = [...existing, newRecord].sort((a, b) => a.calendarYear - b.calendarYear);
+            return {
+                ...prev,
+                history: updated
+            };
+        });
+
+        showToast(`Saved historical actuals for Year ${year}!`);
+        setShowAddPastYear(false);
+        setPastOpeningNW('');
+        setPastClosingNW('');
+        setPastGain('');
+        setPastLifGain('');
+        setPastNotes('');
     };
 
     const handleDeleteEntry = (hId: string) => {
@@ -119,6 +182,9 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 </button>
                             </>
                         )}
+                        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 bg-input" onClick={() => setShowAddPastYear(true)}>
+                            <i className="bi bi-plus-circle"></i> Add Past Year
+                        </button>
                         <button type="button" className="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold shadow-sm d-flex align-items-center gap-1.5" onClick={handleOpenRollForward}>
                             <i className="bi bi-calendar-plus"></i> Roll Forward 1 Year
                         </button>
@@ -168,9 +234,14 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                     <p className="text-muted small mx-auto mb-4" style={{ maxWidth: '520px', lineHeight: '1.6' }}>
                         When you sit down at year-end or in January to update your financial plan, use <b>Roll Forward 1 Year</b>. Planfolio will snapshot your actual closing statement balances, record your exact investment gains, and advance your household ages into the new year.
                     </p>
-                    <button type="button" className="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" onClick={handleOpenRollForward}>
-                        <i className="bi bi-calendar-plus me-1.5"></i> Perform Your First Roll-Forward
-                    </button>
+                    <div className="d-flex justify-content-center gap-2">
+                        <button type="button" className="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold shadow-sm bg-input" onClick={() => setShowAddPastYear(true)}>
+                            <i className="bi bi-plus-circle me-1.5"></i> Add Past Year Actuals
+                        </button>
+                        <button type="button" className="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" onClick={handleOpenRollForward}>
+                            <i className="bi bi-calendar-plus me-1.5"></i> Roll Forward 1 Year
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <div className="rp-card border border-secondary rounded-4 shadow-sm overflow-hidden surface-card">
@@ -304,6 +375,119 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 })}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+                        {/* ADD PAST YEAR MODAL */}
+            {showAddPastYear && (
+                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center px-3 py-4" style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(6px)' }}>
+                    <div className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column my-auto" style={{ maxWidth: '580px' }}>
+                        <div className="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
+                            <div className="d-flex align-items-center gap-2">
+                                <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{ width: '36px', height: '36px' }}>
+                                    <i className="bi bi-calendar-plus fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 className="mb-0 fw-bold">Add Historical Past Year</h5>
+                                    <span className="small text-muted">Input known historical actuals (e.g. from prior years or past retirement years).</span>
+                                </div>
+                            </div>
+                            <button type="button" className="btn btn-sm btn-link text-muted p-0" onClick={() => setShowAddPastYear(false)}>
+                                <i className="bi bi-x-lg fs-5"></i>
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSavePastYear}>
+                            <div className="card-body p-4">
+                                <div className="row g-3 mb-3">
+                                    <div className="col-6">
+                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Calendar Year</label>
+                                        <input 
+                                            type="number" 
+                                            className="form-control fw-bold" 
+                                            value={pastYearNum} 
+                                            max={new Date().getFullYear()} 
+                                            onChange={(e) => setPastYearNum(parseInt(e.target.value, 10) || (new Date().getFullYear() - 1))} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Net Savings Added ($)</label>
+                                        <CurrencyInput 
+                                            className="form-control" 
+                                            placeholder="$0" 
+                                            value={pastSavings} 
+                                            onChange={(val: any) => setPastSavings(val)} 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="row g-3 mb-3">
+                                    <div className="col-6">
+                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Jan 1 Opening NW ($)</label>
+                                        <CurrencyInput 
+                                            className="form-control" 
+                                            placeholder="$0" 
+                                            value={pastOpeningNW} 
+                                            onChange={(val: any) => setPastOpeningNW(val)} 
+                                        />
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Dec 31 Closing NW ($)</label>
+                                        <CurrencyInput 
+                                            className="form-control fw-bold text-success" 
+                                            placeholder="$0" 
+                                            value={pastClosingNW} 
+                                            onChange={(val: any) => setPastClosingNW(val)} 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="row g-3 mb-3">
+                                    <div className="col-6">
+                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Investment Dollar Gain ($)</label>
+                                        <CurrencyInput 
+                                            className="form-control" 
+                                            placeholder="Auto-calculated if blank" 
+                                            value={pastGain} 
+                                            onChange={(val: any) => setPastGain(val)} 
+                                        />
+                                        <span className="small text-muted" style={{ fontSize: '0.7rem' }}>Defaults to Closing &minus; Opening &minus; Savings</span>
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">LIF Dollar Gain ($)</label>
+                                        <CurrencyInput 
+                                            className="form-control" 
+                                            placeholder="Optional" 
+                                            value={pastLifGain} 
+                                            onChange={(val: any) => setPastLifGain(val)} 
+                                        />
+                                        <span className="small text-muted" style={{ fontSize: '0.7rem' }}>For prior year LIF limit calculations</span>
+                                    </div>
+                                </div>
+
+                                <div className="mb-2">
+                                    <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Notes / Milestones</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control form-control-sm" 
+                                        placeholder="e.g. Retired in June, Downsized home, Actual tax return..." 
+                                        value={pastNotes} 
+                                        onChange={(e) => setPastNotes(e.target.value)} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="card-footer border-top border-secondary p-3 d-flex justify-content-end gap-2">
+                                <button type="button" className="btn btn-sm btn-secondary rounded-pill px-3" onClick={() => setShowAddPastYear(false)}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
+                                    Save Historical Year
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

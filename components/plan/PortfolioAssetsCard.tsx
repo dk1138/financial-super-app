@@ -220,7 +220,7 @@ export default function PortfolioAssetsCard() {
                                                <div style={{flex: '1 1 0%', minWidth: '40px'}} className="text-end pe-1">
                                                </div>
                                                <div style={{flex: '0 0 95px'}} className="position-relative">
-                                                   <CurrencyInput className="form-control form-control-sm px-1" value={data.inputs[`${p}_lif_prior_return`] ?? ''} onChange={(val: any) => updateInput(`${p}_lif_prior_return`, val)} placeholder={`$${Math.round(bal * ((data.inputs[`${p}_lif_ret`] ?? 6.0) / 100)).toLocaleString()}`} />
+                                                   <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_lif_prior_return`] ?? ''} onChange={(val: any) => updateInput(`${p}_lif_prior_return`, val)} placeholder={`$${Math.round(bal * ((data.inputs[`${p}_lif_ret`] ?? 6.0) / 100)).toLocaleString()}`} />
                                                </div>
                                                {showAssetMixUI && <div style={{flex: '0 0 75px'}}></div>}
                                            </div>

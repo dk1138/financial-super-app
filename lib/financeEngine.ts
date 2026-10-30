@@ -1,10 +1,10 @@
 /**
  * financeEngine.ts
- * Version: 1.2.3 (CRA 2026 Engine)
+ * Version: 1.2.2 (CRA 2026 Engine)
  * The core orchestrator. 
  * Heavy logic has been extracted to lib/engine/ modules for maintainability.
  */
-export const ENGINE_VERSION = '1.2.3';
+export const ENGINE_VERSION = '1.2.2';
 import { parseFormattedNumber } from './utils';
 import { getInflatedTaxData, calculateTaxDetailed } from './engine/tax';
 import { calcBenefitAmount, calculateCCBForYear, calcRegMinimums, getRrifFactor, getLifMaxFactor, calcLifMaxLimit } from './engine/benefits';
@@ -29,7 +29,10 @@ export class FinanceEngine {
     CONSTANTS: any;
     strategyLabels: any;
 
+    rawInputs: any;
+
     constructor(data: any) {
+        this.rawInputs = JSON.parse(JSON.stringify(data.inputs || {}));
         this.inputs = JSON.parse(JSON.stringify(data.inputs || {}));
         
         // CLEANUP: Automatically strip out legacy "Primary Residence" objects or old "Future Purchase" 
@@ -540,7 +543,7 @@ export class FinanceEngine {
             for (let decumOrder of perms) {
                 let cleanedOrder = filterDecum(decumOrder);
                 let tempData = JSON.parse(JSON.stringify({
-                    inputs: this.inputs, properties: this.properties, housingTransitions: this.housingTransitions, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: this.strategies, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
+                    inputs: this.rawInputs, properties: this.properties, housingTransitions: this.housingTransitions, windfalls: this.windfalls, additionalIncome: this.additionalIncome, customAssets: this.customAssets, leaves: this.leaves, strategies: this.strategies, dependents: this.dependents, debt: this.debt, mode: this.mode, expenseMode: this.expenseMode, expensesByCategory: this.expensesByCategory, expensePhases: this.expensePhases, constants: this.CONSTANTS, strategyLabels: this.strategyLabels
                 }));
                 
                 let tempEngine = new FinanceEngine(tempData);
