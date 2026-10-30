@@ -110,7 +110,9 @@ export default function GlobalHeader() {
 
     const toggleLanguage = () => {
         const nextLang = lang === 'en' ? 'fr' : 'en';
-        setLanguage(nextLang);
+        if (typeof setLanguage === 'function') {
+            setLanguage(nextLang);
+        }
     };
 
     // ==========================================
@@ -162,8 +164,11 @@ export default function GlobalHeader() {
     //        RETIREMENT PLANNER OPERATIONS
     // ==========================================
     const executeSave = () => {
-        if (!newPlanName.trim()) { alert('Please enter a plan name.'); return; }
         const name = newPlanName.trim();
+        if (!name) { 
+            showToast('Please enter a valid plan name.'); 
+            return; 
+        }
         localStorage.setItem(`rp_saved_plan_${name}`, JSON.stringify(data));
         localStorage.setItem('active_plan_name', name);
         setActivePlanName(name);
@@ -218,10 +223,12 @@ export default function GlobalHeader() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${activePlanName.replace(/\s+/g, '_')}_v${ENGINE_VERSION}_${new Date().toISOString().slice(0,10)}.json`;
+        // Clean download filename without suffixes
+        const cleanFileName = activePlanName.trim().replace(/[\\/:*?"<>|]/g, '_');
+        a.download = `${cleanFileName}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        showToast(`Plan exported to PC (v${ENGINE_VERSION})!`);
+        showToast(`Plan exported as "${cleanFileName}.json"!`);
         setFileMenuOpen(false);
     };
 
@@ -248,7 +255,9 @@ export default function GlobalHeader() {
                     setActivePlanName(importedName);
                     showToast(`Successfully loaded ${importedName}!`);
                 }
-            } catch (err) { alert("Error loading file. Invalid JSON."); }
+            } catch (err) { 
+                showToast("Error loading file. Invalid JSON structure."); 
+            }
         };
         reader.readAsText(file);
         if (plannerFileInputRef.current) plannerFileInputRef.current.value = '';
@@ -277,7 +286,9 @@ export default function GlobalHeader() {
             }
             setShowPasteJsonModal(false);
             setPastedJsonText('');
-        } catch (err) { alert("Error loading pasted text. Invalid JSON."); }
+        } catch (err) { 
+            showToast("Error loading pasted text. Invalid JSON."); 
+        }
     };
 
     const confirmResetPlanner = () => {
@@ -451,7 +462,7 @@ export default function GlobalHeader() {
                                             </button>
                                         </li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-floppy-fill text-primary me-2"></i> Save Current Plan</button></li>
-                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setNewPlanName(`${activePlanName} (Copy)`); setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-copy text-info me-2"></i> Save As Copy...</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setNewPlanName(activePlanName); setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-copy text-info me-2"></i> Save As Copy...</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
                                         <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
