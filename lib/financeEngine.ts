@@ -241,8 +241,8 @@ export class FinanceEngine {
 
     calcInflows(currentYear: number, yearIndex: number, person1: any, person2: any, age1: number, age2: number, alive1: boolean, alive2: boolean, isRet1: boolean, isRet2: boolean, constants: any, baseInflation: number, trackedEvents: any) {
         let result = { 
-            p1: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0, rental:0, other:0 }, 
-            p2: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, postRet:0, ccb:0, eiMat:0, topUp:0, rental:0, other:0 },
+            p1: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, taxFreeSideHustle:0, postRet:0, ccb:0, eiMat:0, topUp:0, rental:0, other:0 }, 
+            p2: { gross:0, earned:0, cpp:0, oas:0, pension:0, rrspMeltdown:0, windfallTaxable:0, windfallNonTax:0, taxFreeSideHustle:0, postRet:0, ccb:0, eiMat:0, topUp:0, rental:0, other:0 },
             events: [] as string[]
         };
         
@@ -458,7 +458,7 @@ export class FinanceEngine {
                             targetPerson.other += amount; 
                             if ((stream.owner === 'p2' ? isRet2 : isRet1)) targetPerson.postRet += amount;
                         } else {
-                            targetPerson.windfallNonTax += amount;
+                            targetPerson.taxFreeSideHustle += amount;
                         }
                     }
                 }
@@ -1207,7 +1207,7 @@ export class FinanceEngine {
             }
 
             let netSurplus = handleSurplus(
-                cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? inflows.p2.windfallNonTax : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
+                cashIncome1 + (this.mode === 'Couple' ? cashIncome2 : 0) - (tax1.totalTax + tax2.totalTax) + inflows.p1.windfallNonTax + (inflows.p1.taxFreeSideHustle || 0) + (inflows.p1.ccb || 0) + (this.mode === 'Couple' ? (inflows.p2.windfallNonTax + (inflows.p2.taxFreeSideHustle || 0)) : 0) - (expenses + mortgagePayment + rentPayment + debtRepayment),
                 person1, person2, alive1, alive2, flowLog, i, 
                 consts.tfsaLimit * baseInflation, rrspRoom1, rrspRoom2, consts.cryptoLimit * baseInflation, 
                 actFhsaLim1, actFhsaLim2, actRespLim, actualDeductions, fhsaLifetimeRooms, 
@@ -1285,7 +1285,7 @@ export class FinanceEngine {
                     let dynTax2 = calculateTaxDetailed(craTaxableIncome2, provinceStr, taxBrackets, this.CONSTANTS, inflows.p2.oas, oasThresholdInf, inflows.p2.earned, baseInflation, divInc2, age2, getEligPension2(), alive1 ? craTaxableIncome1 : -1, isEligibleDividend, credits2);
                     tax1 = dynTax1; tax2 = dynTax2;
 
-                    let currentDeficit = (expenses + mortgagePayment + rentPayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax : 0));
+                    let currentDeficit = (expenses + mortgagePayment + rentPayment + debtRepayment) - ((cashIncome1 - dynTax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.taxFreeSideHustle || 0) + (inflows.p1.ccb || 0)) + (alive2 ? cashIncome2 - dynTax2.totalTax + inflows.p2.windfallNonTax + (inflows.p2.taxFreeSideHustle || 0) : 0));
                     if (currentDeficit < 1) break; 
                     
                     handleDeficit(
@@ -1404,7 +1404,7 @@ export class FinanceEngine {
                 }
 
                 const totalWithdrawals = Object.values(flowLog.withdrawals).reduce((sum: any, val: any) => sum + val, 0);
-                const grossInflow = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0) + inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax + divInc1 + divInc2 + foreignDiv1 + foreignDiv2 + cryptoYield1 + cryptoYield2 + (totalWithdrawals as number);
+                const grossInflow = inflows.p1.gross + inflows.p1.cpp + inflows.p1.oas + inflows.p1.pension + inflows.p1.windfallTaxable + inflows.p1.windfallNonTax + (inflows.p1.taxFreeSideHustle || 0) + (inflows.p1.ccb || 0) + inflows.p2.gross + inflows.p2.cpp + inflows.p2.oas + inflows.p2.pension + inflows.p2.windfallTaxable + inflows.p2.windfallNonTax + (inflows.p2.taxFreeSideHustle || 0) + divInc1 + divInc2 + foreignDiv1 + foreignDiv2 + cryptoYield1 + cryptoYield2 + (totalWithdrawals as number);
                 
                 lastLifGain1 = preGrowthLif1 * (ratesP1?.lif || 0);
                 lastLifGain2 = preGrowthLif2 * (ratesP2?.lif || 0);
@@ -1472,12 +1472,15 @@ export class FinanceEngine {
                     taxIncP1: Math.max(0, craTaxableIncome1 - actualDeductions.p1), taxIncP2: Math.max(0, craTaxableIncome2 - actualDeductions.p2), oasThreshold: oasThresholdInf,                    
                     actualDeductionsP1: actualDeductions.p1, actualDeductionsP2: actualDeductions.p2,
                     benefitsP1: inflows.p1.cpp + inflows.p1.oas, benefitsP2: inflows.p2.cpp + inflows.p2.oas, dbP1: inflows.p1.pension, dbP2: inflows.p2.pension,
-                    taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.ccb || 0), p2Net: alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax : 0, pensionSplit: pensionSplitTransfer,
+                    taxP1: tax1.totalTax, taxP2: tax2.totalTax, taxDetailsP1: tax1, taxDetailsP2: tax2, p1Net: cashIncome1 - tax1.totalTax + inflows.p1.windfallNonTax + (inflows.p1.taxFreeSideHustle || 0) + (inflows.p1.ccb || 0), p2Net: alive2 ? cashIncome2 - tax2.totalTax + inflows.p2.windfallNonTax + (inflows.p2.taxFreeSideHustle || 0) : 0, pensionSplit: pensionSplitTransfer,
                     expenses: expenses, rentPay: rentPayment, activeExpensePhases: activeExpensePhases, mortgagePay: mortgagePayment, debtRepayment, eduExpense, debtRemaining: 0, debugNW: finalNetWorth, liquidNW: liquidNetWorth, assetsP1: {...person1}, assetsP2: {...person2},
                     wdBreakdown: wdBreakdown, flows: flowLog, cesgGrant: (flowLog?.cesg || 0), events: inflows.events, householdNet: grossInflow, grossInflow: grossInflow, 
                     visualExpenses: expenses + mortgagePayment + rentPayment + debtRepayment + tax1.totalTax + tax2.totalTax, mortgage: realEstateDebt + reExcludedDebt, homeValue: realEstateValue + reExcludedValue,
                     reIncludedEq: realEstateValue - realEstateDebt, reExcludedEq: reExcludedValue - reExcludedDebt, reIncludedValue: realEstateValue,
                     windfall: inflows.p1.windfallTaxable + (inflows.p1.windfallNonTax - appliedRefundP1) + inflows.p2.windfallTaxable + (inflows.p2.windfallNonTax - appliedRefundP2),
+                    taxFreeSideHustle: (inflows.p1.taxFreeSideHustle || 0) + (inflows.p2.taxFreeSideHustle || 0),
+                    taxFreeSideHustleP1: inflows.p1.taxFreeSideHustle || 0,
+                    taxFreeSideHustleP2: inflows.p2.taxFreeSideHustle || 0,
                     postRetP1: inflows.p1.postRet, postRetP2: inflows.p2.postRet, invIncP1: divInc1 + foreignDiv1 + cryptoYield1, invIncP2: divInc2 + foreignDiv2 + cryptoYield2, invYieldMathP1: { bal: preGrowthNonreg1, rate: person1.nonreg_yield, foreignRate: person1.nonreg_foreign_yield, amt: divInc1, foreignAmt: foreignDiv1, subAccounts: (this as any).nonregBreakdown?.p1 },
                     invYieldMathP2: { bal: preGrowthNonreg2, rate: person2.nonreg_yield, foreignRate: person2.nonreg_foreign_yield, amt: divInc2, foreignAmt: foreignDiv2, subAccounts: (this as any).nonregBreakdown?.p2 }, debugTotalInflow: grossInflow, rrspRoomP1: rrspRoom1, rrspRoomP2: rrspRoom2,
                     rrspMatchP1: matchTracking.p1MatchAdded, rrspTotalMatch1: matchTracking.totalMatch1, rrspMatchP2: matchTracking.p2MatchAdded, rrspTotalMatch2: matchTracking.totalMatch2, rrspRefundP1: appliedRefundP1, rrspRefundP2: appliedRefundP2,

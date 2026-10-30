@@ -1321,31 +1321,99 @@ export default function IncomeTaxCard() {
 
                               <div className="row g-3">
                                   <div className="col-12 col-md-6">
-                                      <label className="small text-muted mb-1 fw-medium d-block border-bottom border-secondary border-opacity-50 pb-1">Starts</label>
+                                      <div className="d-flex justify-content-between align-items-center mb-1 border-bottom border-secondary border-opacity-50 pb-1">
+                                          <label className="small text-muted mb-0 fw-medium">Starts</label>
+                                          {inc.startMode === 'ret_relative' && (
+                                              <span className="small text-info fw-bold" style={{ fontSize: '0.68rem' }}>
+                                                  {(() => {
+                                                      const ownerRetAge = Number(data.inputs[`${p}_retireAge`]) || 60;
+                                                      const offset = Number(inc.startRelative ?? inc.startRel) || 0;
+                                                      const calcAge = ownerRetAge + offset;
+                                                      return `At Age ${calcAge} (${offset === 0 ? 'Retirement' : offset > 0 ? `+${offset} yrs` : `${offset} yrs`})`;
+                                                  })()}
+                                              </span>
+                                          )}
+                                      </div>
                                       <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm mb-2 w-100">
                                           <button type="button" onClick={() => updateInc('startMode', 'date')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.startMode === 'date' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Specific Date</button>
                                           <button type="button" onClick={() => updateInc('startMode', 'ret_relative')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.startMode === 'ret_relative' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>At Retirement</button>
                                       </div>
                                       {inc.startMode === 'ret_relative' ? (
-                                          <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
-                                            <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" placeholder="Yrs" value={inc.startRelative ?? 0} onChange={e => updateInc('startRelative', e.target.value)} />
-                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                          <div>
+                                              <div className="d-flex align-items-center gap-2">
+                                                  <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm flex-grow-1">
+                                                      <input 
+                                                          type="number" 
+                                                          className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" 
+                                                          placeholder="0" 
+                                                          value={inc.startRelative ?? inc.startRel ?? 0} 
+                                                          onChange={e => {
+                                                              const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                                                              updateInc('startRelative', val);
+                                                              updateInc('startRel', val);
+                                                          }} 
+                                                      />
+                                                      <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs offset</span>
+                                                  </div>
+                                                  <InfoBtn 
+                                                      title="Retirement Offset Years" 
+                                                      text="<b>0</b> = starts the exact year you retire.<br><b>+2</b> = starts 2 years after retirement.<br><b>-3</b> = starts 3 years before retirement." 
+                                                      align="right" 
+                                                  />
+                                              </div>
+                                              <span className="text-muted d-block mt-1 ps-1" style={{ fontSize: '0.65rem' }}>
+                                                  Enter 0 for retirement year, or positive/negative for offset years.
+                                              </span>
                                           </div>
                                       ) : (
                                           <MonthYearStepper value={inc.start} onChange={(val: string) => updateInc('start', val)} />
                                       )}
                                   </div>
                                   <div className="col-12 col-md-6">
-                                      <label className="small text-muted mb-1 fw-medium d-block border-bottom border-secondary border-opacity-50 pb-1">Ends</label>
+                                      <div className="d-flex justify-content-between align-items-center mb-1 border-bottom border-secondary border-opacity-50 pb-1">
+                                          <label className="small text-muted mb-0 fw-medium">Ends</label>
+                                          {inc.endMode === 'ret_relative' && (
+                                              <span className="small text-info fw-bold" style={{ fontSize: '0.68rem' }}>
+                                                  {(() => {
+                                                      const ownerRetAge = Number(data.inputs[`${p}_retireAge`]) || 60;
+                                                      const offset = Number(inc.endRelative ?? inc.endRel) || 0;
+                                                      const calcAge = ownerRetAge + offset;
+                                                      return `At Age ${calcAge} (${offset === 0 ? 'Retirement' : offset > 0 ? `+${offset} yrs` : `${offset} yrs`})`;
+                                                  })()}
+                                              </span>
+                                          )}
+                                      </div>
                                       <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm mb-2 w-100">
                                           <button type="button" onClick={() => updateInc('endMode', 'never')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'never' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Never</button>
                                           <button type="button" onClick={() => updateInc('endMode', 'date')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'date' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Specific Date</button>
                                           <button type="button" onClick={() => updateInc('endMode', 'ret_relative')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'ret_relative' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>At Retirement</button>
                                       </div>
                                       {inc.endMode === 'ret_relative' ? (
-                                          <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
-                                            <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" placeholder="Yrs" value={inc.endRelative ?? 0} onChange={e => updateInc('endRelative', e.target.value)} />
-                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                          <div>
+                                              <div className="d-flex align-items-center gap-2">
+                                                  <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm flex-grow-1">
+                                                      <input 
+                                                          type="number" 
+                                                          className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" 
+                                                          placeholder="0" 
+                                                          value={inc.endRelative ?? inc.endRel ?? 0} 
+                                                          onChange={e => {
+                                                              const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                                                              updateInc('endRelative', val);
+                                                              updateInc('endRel', val);
+                                                          }} 
+                                                      />
+                                                      <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs offset</span>
+                                                  </div>
+                                                  <InfoBtn 
+                                                      title="Retirement Offset Years" 
+                                                      text="<b>0</b> = ends the exact year you retire.<br><b>+5</b> = continues for 5 years after retirement then ends.<br><b>-1</b> = ends 1 year before retirement." 
+                                                      align="right" 
+                                                  />
+                                              </div>
+                                              <span className="text-muted d-block mt-1 ps-1" style={{ fontSize: '0.65rem' }}>
+                                                  Enter 0 to stop at retirement, or offset years after retirement.
+                                              </span>
                                           </div>
                                       ) : inc.endMode === 'date' ? (
                                           <MonthYearStepper value={inc.end} onChange={(val: string) => updateInc('end', val)} />

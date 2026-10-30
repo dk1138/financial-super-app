@@ -1518,12 +1518,85 @@ export default function ProjectionTab() {
                                         {y.p1Alive && renderPlayerInflows('p1', y, y.year, index, results.timeline)}
                                         {isCouple && y.p2Alive && renderPlayerInflows('p2', y, y.year, index, results.timeline)}
 
-                                        {y.windfall > 0 && (
-                                            <div className="d-flex justify-content-between small mb-2 pt-2">
-                                                <span className="text-muted fw-bold text-success d-flex align-items-center">Windfalls / Property Sale <InfoBtn align="left" title="Windfalls" text="Taxable status depends on the source. Mapped accordingly in Net Worth." /></span>
-                                                <span className="fw-medium text-success">{formatCurrency(y.windfall, y.year)}</span>
-                                            </div>
-                                        )}
+                                        {/* TAX-FREE SIDE HUSTLE (DEDICATED LINE SEPARATE FROM WINDFALL) */}
+                                        {(() => {
+                                            const taxFreeSideHustleAmt = (y.taxFreeSideHustle !== undefined)
+                                                ? (y.taxFreeSideHustle || 0)
+                                                : (data.additionalIncome || [])
+                                                    .filter((s: any) => s.taxable === false)
+                                                    .reduce((sum: number, s: any) => {
+                                                        let startYr = new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                        let endYr = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                        if (y.year >= startYr && y.year <= endYr) {
+                                                            let baseYr = startYr;
+                                                            return sum + ((Number(s.amount) || 0) * Math.pow(1 + ((s.growth ?? 2) / 100), y.year - baseYr) * (s.freq === 'month' ? 12 : 1));
+                                                        }
+                                                        return sum;
+                                                    }, 0);
+
+                                            if (taxFreeSideHustleAmt <= 0) return null;
+
+                                            const p1Amt = y.taxFreeSideHustleP1 ?? (data.additionalIncome || [])
+                                                .filter((s: any) => s.owner === 'p1' && s.taxable === false)
+                                                .reduce((sum: number, s: any) => {
+                                                    let startYr = new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                    let endYr = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                    if (y.year >= startYr && y.year <= endYr) {
+                                                        return sum + ((Number(s.amount) || 0) * Math.pow(1 + ((s.growth ?? 2) / 100), y.year - startYr) * (s.freq === 'month' ? 12 : 1));
+                                                    }
+                                                    return sum;
+                                                }, 0);
+
+                                            const p2Amt = y.taxFreeSideHustleP2 ?? (data.additionalIncome || [])
+                                                .filter((s: any) => s.owner === 'p2' && s.taxable === false)
+                                                .reduce((sum: number, s: any) => {
+                                                    let startYr = new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                    let endYr = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                    if (y.year >= startYr && y.year <= endYr) {
+                                                        return sum + ((Number(s.amount) || 0) * Math.pow(1 + ((s.growth ?? 2) / 100), y.year - startYr) * (s.freq === 'month' ? 12 : 1));
+                                                    }
+                                                    return sum;
+                                                }, 0);
+
+                                            return (
+                                                <div className="d-flex justify-content-between small mb-2 pt-2">
+                                                    <span className="text-muted fw-bold text-success d-flex align-items-center">
+                                                        Tax-Free Side Hustle
+                                                        {isCouple && (p1Amt > 0 || p2Amt > 0) && (
+                                                            <span className="text-muted fw-normal ms-1" style={{ fontSize: '0.75rem' }}>
+                                                                ({p1Amt > 0 ? `P1: ${formatCurrency(p1Amt, y.year)}` : ''}{p1Amt > 0 && p2Amt > 0 ? ', ' : ''}{p2Amt > 0 ? `P2: ${formatCurrency(p2Amt, y.year)}` : ''})
+                                                            </span>
+                                                        )}
+                                                        <InfoBtn align="left" title="Tax-Free Side Hustle" text="<span class='text-info fw-bold'>0% Taxable.</span><br>Non-taxable side hustle / additional income stream deposited directly into net cash flow without increasing CRA taxable income." />
+                                                    </span>
+                                                    <span className="fw-medium text-success">+{formatCurrency(taxFreeSideHustleAmt, y.year)}</span>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {(() => {
+                                            const displayWindfall = (y.taxFreeSideHustle !== undefined)
+                                                ? (y.windfall || 0)
+                                                : Math.max(0, (y.windfall || 0) - (data.additionalIncome || [])
+                                                    .filter((s: any) => s.taxable === false)
+                                                    .reduce((sum: number, s: any) => {
+                                                        let startYr = new Date((s.start || "2026-01") + "-01").getFullYear();
+                                                        let endYr = s.end ? new Date(s.end + "-01").getFullYear() : 2100;
+                                                        if (y.year >= startYr && y.year <= endYr) {
+                                                            return sum + ((Number(s.amount) || 0) * Math.pow(1 + ((s.growth ?? 2) / 100), y.year - startYr) * (s.freq === 'month' ? 12 : 1));
+                                                        }
+                                                        return sum;
+                                                    }, 0));
+
+                                            if (displayWindfall <= 0) return null;
+
+                                            return (
+                                                <div className="d-flex justify-content-between small mb-2 pt-2">
+                                                    <span className="text-muted fw-bold text-success d-flex align-items-center">Windfalls / Property Sale <InfoBtn align="left" title="Windfalls" text="Taxable status depends on the source. Mapped accordingly in Net Worth." /></span>
+                                                    <span className="fw-medium text-success">{formatCurrency(displayWindfall, y.year)}</span>
+                                                </div>
+                                            );
+                                        })()}
                                         
                                         {shortfall > 0 && (
                                             <div className="d-flex justify-content-between small mb-2 pt-2 border-top border-secondary border-opacity-25">
