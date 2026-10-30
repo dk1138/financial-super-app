@@ -7,6 +7,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import GlobalHeader from "@/components/GlobalHeader";
 import SessionWrapper from "@/components/SessionWrapper";
 import { FinanceProvider } from "@/lib/FinanceContext";
+import { LanguageProvider } from "@/lib/LanguageContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -37,10 +38,12 @@ export default function RootLayout({
       <body className={inter.className}>
         <SessionWrapper>
           <FinanceProvider>
-            {/* The wrapper safely segregates the navigation checks away from the html/body bounds */}
-            <MainLayoutContent>
-              {children}
-            </MainLayoutContent>
+            <LanguageProvider>
+              {/* The wrapper safely segregates the navigation checks away from the html/body bounds */}
+              <MainLayoutContent>
+                {children}
+              </MainLayoutContent>
+            </LanguageProvider>
           </FinanceProvider>
         </SessionWrapper>
       </body>
