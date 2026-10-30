@@ -15,8 +15,9 @@ import { useFinance } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 
 export default function PlanTab() {
-  const { t, lang } = useTranslation();
   const { data, results } = useFinance();
+  const { t, lang } = useTranslation();
+  const isFr = lang === 'fr';
 
   // Collapsed state map for the 10 sections
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
@@ -42,19 +43,18 @@ export default function PlanTab() {
     });
   };
 
-  const isFr = lang === 'fr';
-
+  // Sections navigation metadata
   const jumpSections = useMemo(() => [
-    { id: 'personal', label: isFr ? 'Personnel' : 'Personal', icon: 'bi-person-vcard' },
-    { id: 'dependents', label: isFr ? 'Enfants / ACE' : 'Dependents', icon: 'bi-people' },
-    { id: 'portfolio', label: isFr ? 'Portefeuille' : 'Portfolio', icon: 'bi-wallet2' },
-    { id: 'realestate', label: isFr ? 'Logement' : 'Real Estate', icon: 'bi-house-heart' },
-    { id: 'tax', label: isFr ? 'Revenus & Impôts' : 'Income & Tax', icon: 'bi-cash-coin' },
-    { id: 'living', label: isFr ? 'Dépenses' : 'Expenses', icon: 'bi-cart4' },
-    { id: 'future', label: isFr ? 'Dettes / Achats' : 'Debts & Goals', icon: 'bi-cart-dash' },
-    { id: 'windfalls', label: isFr ? 'Héritage' : 'Windfalls', icon: 'bi-gift' },
-    { id: 'govt', label: isFr ? 'RPC / SV' : 'Govt Benefits', icon: 'bi-bank' },
-    { id: 'economic', label: isFr ? 'Hypothèses' : 'Economic', icon: 'bi-graph-up-arrow' }
+    { id: 'personal', label: isFr ? '1. Personnel' : '1. Personal', icon: 'bi-person-vcard' },
+    { id: 'dependents', label: isFr ? '2. Personnes à charge' : '2. Dependents', icon: 'bi-people' },
+    { id: 'portfolio', label: isFr ? '3. Portefeuille' : '3. Portfolio', icon: 'bi-wallet2' },
+    { id: 'realestate', label: isFr ? '4. Logement' : '4. Housing', icon: 'bi-house-heart' },
+    { id: 'tax', label: isFr ? '5. Revenus & Impôts' : '5. Income & Tax', icon: 'bi-cash-coin' },
+    { id: 'living', label: isFr ? '6. Dépenses' : '6. Expenses', icon: 'bi-cart4' },
+    { id: 'future', label: isFr ? '7. Dettes & Achats' : '7. Debts & Goals', icon: 'bi-cart-dash' },
+    { id: 'windfalls', label: isFr ? '8. Entrées de fonds' : '8. Windfalls', icon: 'bi-gift' },
+    { id: 'govt', label: isFr ? '9. Prestations' : '9. Govt Benefits', icon: 'bi-bank' },
+    { id: 'economic', label: isFr ? '10. Économie' : '10. Economic', icon: 'bi-graph-up-arrow' },
   ], [isFr]);
 
   const scrollToSection = (id: string) => {
@@ -67,20 +67,29 @@ export default function PlanTab() {
     setTimeout(() => {
       const el = document.getElementById(`section-${id}`);
       if (el) {
-        const headerOffset = 110; // account for global header + sticky jump bar
+        // Measure sticky headers dynamically for exact pixel alignment
+        const jumpBar = document.querySelector('.sticky-jump-bar-wrapper') as HTMLElement;
+        const globalHeader = document.querySelector('[style*="var(--bg-body)"]') as HTMLElement;
+        const jumpBarHeight = jumpBar ? jumpBar.offsetHeight : 52;
+        const globalHeaderHeight = globalHeader ? globalHeader.offsetHeight : 56;
+        const totalOffset = jumpBarHeight + globalHeaderHeight + 24;
+
         const elementPosition = el.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        const offsetPosition = elementPosition + window.pageYOffset - totalOffset;
 
         window.scrollTo({
           top: Math.max(0, offsetPosition),
           behavior: 'smooth'
         });
 
-        // Brief highlight pulse
+        // Trigger prominent highlight pulse
+        el.classList.remove('jump-highlight');
+        // Force reflow
+        void el.offsetWidth;
         el.classList.add('jump-highlight');
-        setTimeout(() => el.classList.remove('jump-highlight'), 1800);
+        setTimeout(() => el.classList.remove('jump-highlight'), 2600);
       }
-    }, 50);
+    }, 60);
   };
 
   const formatShort = (val: number) => {
@@ -106,8 +115,8 @@ export default function PlanTab() {
 
     if (!data || !data.inputs) return fallback;
     const isCouple = data.mode === 'Couple';
-    const p1Name = data.inputs.p1_name || 'Player 1';
-    const p2Name = data.inputs.p2_name || 'Player 2';
+    const p1Name = data.inputs.p1_name || (isFr ? 'Partenaire 1' : 'Player 1');
+    const p2Name = data.inputs.p2_name || (isFr ? 'Partenaire 2' : 'Player 2');
 
     // 1. Personal Information
     const p1Age = data.inputs.p1_age ?? 38;
@@ -115,12 +124,14 @@ export default function PlanTab() {
     const p2Age = data.inputs.p2_age ?? 34;
     const p2Ret = data.inputs.p2_retireAge ?? 60;
     const personalText = isCouple 
-      ? `${p1Name}: Age ${p1Age} (Retire ${p1Ret})  |  ${p2Name}: Age ${p2Age} (Retire ${p2Ret})` 
-      : `${p1Name}: Age ${p1Age}  |  Target Retirement: Age ${p1Ret}`;
+      ? `${p1Name}: ${isFr ? 'Âge' : 'Age'} ${p1Age} (${isFr ? 'Retraite' : 'Retire'} ${p1Ret})  |  ${p2Name}: ${isFr ? 'Âge' : 'Age'} ${p2Age} (${isFr ? 'Retraite' : 'Retire'} ${p2Ret})` 
+      : `${p1Name}: ${isFr ? 'Âge' : 'Age'} ${p1Age}  |  ${isFr ? 'Cible de retraite: Âge' : 'Target Retirement: Age'} ${p1Ret}`;
 
     // 2. Dependents & Family
     const depCount = data.dependents?.length || 0;
-    const depText = depCount === 0 ? 'No Dependents' : `${depCount} ${depCount === 1 ? 'Child' : 'Children'} Registered`;
+    const depText = depCount === 0 
+      ? (isFr ? 'Aucune personne à charge' : 'No Dependents') 
+      : `${depCount} ${isFr ? (depCount === 1 ? 'enfant enregistré' : 'enfants enregistrés') : (depCount === 1 ? 'Child' : 'Children')} Registered`;
 
     // 3. Portfolio Assets
     const acctKeys = ['cash', 'tfsa', 'fhsa', 'rrsp', 'resp', 'lirf', 'lif', 'rrif_acct', 'nonreg', 'crypto'];
@@ -138,22 +149,22 @@ export default function PlanTab() {
     }
     const alloc = data.inputs.portfolio_allocation 
       ? data.inputs.portfolio_allocation.charAt(0).toUpperCase() + data.inputs.portfolio_allocation.slice(1) 
-      : 'Custom';
-    const portText = `${formatShort(totalPort)} Total Portfolio  |  ${alloc} Allocation`;
+      : (isFr ? 'Personnalisé' : 'Custom');
+    const portText = `${formatShort(totalPort)} ${isFr ? 'Portefeuille total' : 'Total Portfolio'}  |  ${isFr ? 'Allocation' : 'Allocation'}: ${alloc}`;
 
     // 4. Real Estate & Living Costs
     const primaryVal = Number(data.inputs.primary_value) || 0;
     const primaryMort = Number(data.inputs.primary_mortgage) || 0;
     const primaryRent = Number(data.inputs.primary_rent) || 0;
     const realestateText = primaryVal > 0 
-      ? `Home: ${formatShort(primaryVal)}${primaryMort > 0 ? `  |  Mortgage: ${formatShort(primaryMort)}` : '  |  Mortgage-Free'}`
-      : `Residence: ${formatShort(primaryRent)}/mo Rent`;
+      ? `${isFr ? 'Maison' : 'Home'}: ${formatShort(primaryVal)}${primaryMort > 0 ? `  |  ${isFr ? 'Hypothèque' : 'Mortgage'}: ${formatShort(primaryMort)}` : (isFr ? '  |  Sans hypothèque' : '  |  Mortgage-Free')}`
+      : `${isFr ? 'Résidence' : 'Residence'}: ${formatShort(primaryRent)}${isFr ? '/mois loyer' : '/mo Rent'}`;
 
     // 5. Income & Taxes
     const prov = data.inputs.province || 'ON';
     const p1Inc = Number(data.inputs.p1_income) || 0;
     const p2Inc = isCouple ? (Number(data.inputs.p2_income) || 0) : 0;
-    const taxText = `${prov}  |  Household Income: ${formatShort(p1Inc + p2Inc)}/yr`;
+    const taxText = `${prov}  |  ${isFr ? 'Revenu du ménage' : 'Household Income'}: ${formatShort(p1Inc + p2Inc)}${isFr ? '/an' : '/yr'}`;
 
     // 6. Living Expenses
     let annualSpend = 60000;
@@ -162,15 +173,19 @@ export default function PlanTab() {
     } else if (data.expensePhases && data.expensePhases[0]?.amount) {
       annualSpend = Number(data.expensePhases[0].amount);
     }
-    const livingText = `Living Expenses: ${formatShort(annualSpend / 12)}/mo (${formatShort(annualSpend)}/yr)`;
+    const livingText = `${isFr ? 'Dépenses de vie' : 'Living Expenses'}: ${formatShort(annualSpend / 12)}${isFr ? '/mois' : '/mo'} (${formatShort(annualSpend)}${isFr ? '/an' : '/yr'})`;
 
     // 7. Future Milestone Expenses
     const futureCount = data.debt?.length || 0;
-    const futureText = futureCount === 0 ? 'No Milestone Expenses' : `${futureCount} Planned ${futureCount === 1 ? 'Milestone Expense' : 'Milestone Expenses'}`;
+    const futureText = futureCount === 0 
+      ? (isFr ? 'Aucune dépense planifiée' : 'No Milestone Expenses') 
+      : `${futureCount} ${isFr ? (futureCount === 1 ? 'dépense planifiée' : 'dépenses planifiées') : (futureCount === 1 ? 'Planned Expense' : 'Planned Expenses')}`;
 
     // 8. Windfalls
     const windfallCount = data.windfalls?.length || 0;
-    const windfallsText = windfallCount === 0 ? 'No Windfalls Scheduled' : `${windfallCount} Future ${windfallCount === 1 ? 'Windfall' : 'Windfalls'} Scheduled`;
+    const windfallsText = windfallCount === 0 
+      ? (isFr ? 'Aucune rentrée de fonds' : 'No Windfalls Scheduled') 
+      : `${windfallCount} ${isFr ? (windfallCount === 1 ? 'rentrée prévue' : 'rentrées prévues') : (futureCount === 1 ? 'Future Windfall' : 'Future Windfalls')}`;
 
     // 9. Government Benefits
     const p1Cpp = data.inputs.p1_cpp_start || 65;
@@ -178,12 +193,12 @@ export default function PlanTab() {
     const p2Cpp = data.inputs.p2_cpp_start || 65;
     const p2Oas = data.inputs.p2_oas_start || 65;
     const govtText = isCouple 
-      ? `P1: CPP @ ${p1Cpp}, OAS @ ${p1Oas}  |  P2: CPP @ ${p2Cpp}, OAS @ ${p2Oas}`
-      : `CPP Start: Age ${p1Cpp}  |  OAS Start: Age ${p1Oas}`;
+      ? `P1: ${isFr ? 'RPC/RRQ' : 'CPP'} @ ${p1Cpp}, ${isFr ? 'SV' : 'OAS'} @ ${p1Oas}  |  P2: ${isFr ? 'RPC/RRQ' : 'CPP'} @ ${p2Cpp}, ${isFr ? 'SV' : 'OAS'} @ ${p2Oas}`
+      : `${isFr ? 'Début RPC/RRQ: Âge' : 'CPP Start: Age'} ${p1Cpp}  |  ${isFr ? 'Début SV: Âge' : 'OAS Start: Age'} ${p1Oas}`;
 
     // 10. Economic Assumptions
     const inf = data.inputs.inflation_rate !== undefined && data.inputs.inflation_rate !== '' ? data.inputs.inflation_rate : 2.1;
-    const economicText = `Inflation: ${inf}%  |  Simulation Horizon: Age ${data.inputs.p1_lifeExp || 90}`;
+    const economicText = `${isFr ? 'Inflation' : 'Inflation'}: ${inf}%  |  ${isFr ? 'Horizon: Âge' : 'Simulation Horizon: Age'} ${data.inputs.p1_lifeExp || 90}`;
 
     return {
       personal: personalText,
@@ -197,7 +212,7 @@ export default function PlanTab() {
       govt: govtText,
       economic: economicText
     };
-  }, [data, results]);
+  }, [data, results, isFr]);
 
   // --- LIVE READINESS MATH ---
   const liveStats = useMemo(() => {
@@ -261,6 +276,7 @@ export default function PlanTab() {
         /* Direct accordion styling on existing cards */
         .plan-card-wrapper {
             position: relative;
+            scroll-margin-top: 130px;
         }
         .plan-card-wrapper .card-header {
             padding-right: 48px !important;
@@ -316,30 +332,18 @@ export default function PlanTab() {
             margin-bottom: 0.75rem !important;
         }
 
-        /* Floating Readiness Island styling */
-        .floating-readiness-island {
-            max-width: 680px;
-            width: 100%;
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-        }
-        [data-bs-theme="dark"] .floating-readiness-island {
-            background-color: rgba(15, 23, 42, 0.92);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-        }
-
         /* Sticky Section Jump Pill Bar */
         .sticky-jump-bar-wrapper {
             position: sticky;
-            top: var(--global-header-height, 60px);
-            z-index: 1025;
+            top: 0;
+            z-index: 1020;
             background: var(--bg-body, #0b0f17);
-            padding: 8px 0 12px;
-            margin-bottom: 8px;
-            border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            padding: 8px 4px 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         .jump-pills-scroll {
             display: flex;
@@ -356,10 +360,10 @@ export default function PlanTab() {
         .jump-pill-btn {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 6px 12px;
+            gap: 6px;
+            padding: 6px 13px;
             border-radius: 9999px;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             font-weight: 600;
             white-space: nowrap;
             border: 1px solid var(--border-color, #2c3b52);
@@ -371,30 +375,64 @@ export default function PlanTab() {
             line-height: 1.2;
         }
         .jump-pill-btn:hover {
-            color: var(--text-main, #ffffff);
-            border-color: var(--bs-primary, #0284c7);
-            background: rgba(2, 132, 199, 0.12);
+            color: #ffffff;
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.15);
         }
         .jump-pill-btn.active {
-            background: var(--bs-primary, #0284c7);
-            border-color: var(--bs-primary, #0284c7);
+            background: #0284c7;
+            border-color: #38bdf8;
             color: #ffffff !important;
-            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+            box-shadow: 0 0 12px rgba(2, 132, 199, 0.55);
         }
+
+        /* High-contrast highlight glow when jumped to */
         .jump-highlight {
-            animation: jumpGlow 1.8s ease-out;
+            animation: jumpGlow 2.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .jump-highlight .card-header {
+            animation: headerFlash 2.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes jumpGlow {
-            0% { box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.65); }
-            70% { box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25); }
-            100% { box-shadow: 0 0 0 0 transparent; }
+            0% {
+                box-shadow: 0 0 0 4px #00d2ff, 0 0 28px rgba(0, 210, 255, 0.65);
+                transform: scale(1.006);
+            }
+            50% {
+                box-shadow: 0 0 0 3px #0284c7, 0 0 16px rgba(2, 132, 199, 0.4);
+                transform: scale(1);
+            }
+            100% {
+                box-shadow: 0 0 0 0 transparent, 0 0 0 transparent;
+                transform: scale(1);
+            }
+        }
+        @keyframes headerFlash {
+            0% {
+                background-color: rgba(2, 132, 199, 0.35) !important;
+            }
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        /* Floating Readiness Island styling */
+        .floating-readiness-island {
+            max-width: 680px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+        [data-bs-theme="dark"] .floating-readiness-island {
+            background-color: rgba(15, 23, 42, 0.92);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
         }
       `}</style>
 
       {/* --- STICKY SECTION JUMP BAR --- */}
       <div className="sticky-jump-bar-wrapper">
-        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-          {/* Scrollable Pills Row */}
+        <div className="d-flex align-items-center justify-content-between gap-2">
           <div className="jump-pills-scroll flex-grow-1">
             {jumpSections.map((sec) => (
               <button
@@ -402,41 +440,39 @@ export default function PlanTab() {
                 type="button"
                 className={`jump-pill-btn ${activeJumpSection === sec.id ? 'active' : ''}`}
                 onClick={() => scrollToSection(sec.id)}
-                title={sec.label}
               >
-                <i className={`bi ${sec.icon}`}></i>
+                <i className={`bi ${sec.icon}`} style={{ fontSize: '0.8rem' }}></i>
                 <span>{sec.label}</span>
               </button>
             ))}
           </div>
 
-          {/* Quick Actions (Expand / Collapse All) */}
-          <div className="d-flex align-items-center gap-1.5 flex-shrink-0 ms-auto">
+          <div className="d-flex align-items-center gap-1.5 flex-shrink-0 ms-1 border-start border-secondary ps-2">
             <button 
               type="button" 
               className="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold bg-input shadow-sm"
               onClick={expandAll}
-              style={{ fontSize: '0.72rem' }}
-              title={t('actions.expandAll', 'Expand All')}
+              style={{ fontSize: '0.74rem' }}
+              title={isFr ? "Tout déplier" : "Expand All"}
             >
-              <i className="bi bi-arrows-expand me-1"></i>
-              <span className="d-none d-sm-inline">{t('actions.expandAll', 'Expand All')}</span>
+              <i className="bi bi-arrows-expand"></i>
+              <span className="d-none d-lg-inline ms-1">{t('actions.expandAll', 'Expand All')}</span>
             </button>
             <button 
               type="button" 
               className="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold bg-input shadow-sm"
               onClick={collapseAll}
-              style={{ fontSize: '0.72rem' }}
-              title={t('actions.collapseAll', 'Collapse All')}
+              style={{ fontSize: '0.74rem' }}
+              title={isFr ? "Tout replier" : "Collapse All"}
             >
-              <i className="bi bi-arrows-collapse me-1"></i>
-              <span className="d-none d-sm-inline">{t('actions.collapseAll', 'Collapse All')}</span>
+              <i className="bi bi-arrows-collapse"></i>
+              <span className="d-none d-lg-inline ms-1">{t('actions.collapseAll', 'Collapse All')}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* --- FORM WITH THE 10 EXISTING CARDS --- */}
+      {/* --- FORM WITH THE 10 CARDS --- */}
       <form id="financialForm" onSubmit={e => e.preventDefault()}>
         
         {/* 1. Personal Information */}
@@ -646,11 +682,13 @@ export default function PlanTab() {
               </div>
               <div className="d-flex align-items-center gap-2 overflow-hidden">
                 <span className={`fw-bold text-uppercase ls-1 text-truncate ${liveStats.isFullyFunded ? 'text-success' : 'text-warning'}`} style={{ fontSize: '0.78rem' }}>
-                  {liveStats.isFullyFunded ? `Fully Funded (to Age ${liveStats.lifeExp})` : `Depletes at Age ${liveStats.failureAge}`}
+                  {liveStats.isFullyFunded 
+                    ? (isFr ? `Entièrement financé (jusqu'à l'âge ${liveStats.lifeExp})` : `Fully Funded (to Age ${liveStats.lifeExp})`) 
+                    : (isFr ? `Épuisé à l'âge ${liveStats.failureAge}` : `Depletes at Age ${liveStats.failureAge}`)}
                 </span>
                 {liveStats.useRealDollars && (
                   <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 d-none d-sm-inline-block" style={{ fontSize: '0.62rem' }}>
-                    Today's $
+                    {isFr ? "Dollars d'ajourd'hui" : "Today's $"}
                   </span>
                 )}
               </div>
@@ -660,13 +698,13 @@ export default function PlanTab() {
             <div className="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
               <div className="border-start border-secondary opacity-50" style={{ height: '18px' }}></div>
               <div className="d-flex align-items-baseline gap-1">
-                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>LIQ @ {liveStats.retAge}:</span>
+                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>{isFr ? 'LIQ. RETRAITE' : 'LIQ @'} {liveStats.retAge}:</span>
                 <span className="fw-bold text-main" style={{ fontSize: '0.85rem' }}>{formatShort(liveStats.liquidAtRet)}</span>
               </div>
 
               <div className="border-start border-secondary opacity-50" style={{ height: '18px' }}></div>
               <div className="d-flex align-items-baseline gap-1">
-                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>ESTATE:</span>
+                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>{isFr ? 'SUCCESSION' : 'ESTATE'}:</span>
                 <span className="fw-bold text-success" style={{ fontSize: '0.85rem' }}>{formatShort(liveStats.finalEstate)}</span>
               </div>
             </div>
