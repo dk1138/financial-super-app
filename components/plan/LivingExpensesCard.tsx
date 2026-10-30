@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, StepperInput, FrequencyToggle, ModernDropdown } from '../SharedUI';
 
 export default function LivingExpensesCard() {
+  const { t } = useTranslation();
   const { data, updateInput, updateExpenseCategory, addArrayItem, updateArrayItem, removeArrayItem } = useFinance(); 
   const [expenseAdvancedMode, setExpenseAdvancedMode] = useState(false);
 
@@ -131,7 +133,7 @@ export default function LivingExpensesCard() {
         <div className="d-flex align-items-center">
             <i className="bi bi-cart4 text-main fs-4 me-3"></i>
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                6. Living Expenses
+                {t('cards.expenses', '6. Living Expenses')}
                 <InfoBtn align="left" title="Budgeting" text="Enter your current monthly or annual spending." />
             </h5>
             

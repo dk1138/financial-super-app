@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
 import { InfoBtn, CurrencyInput, StepperInput, ModernDropdown } from '../SharedUI';
 
@@ -38,6 +39,7 @@ const getAdjustedOAS = (yearsInCanada: number, startAge: number, startMonth: num
 };
 
 export default function GovtBenefitsCard() {
+  const { t } = useTranslation();
   const { data, updateInput } = useFinance();
   const isCouple = data.mode === 'Couple';
 
@@ -57,7 +59,7 @@ export default function GovtBenefitsCard() {
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
               <div className="d-flex align-items-center">
                     <i className="bi bi-bank text-primary fs-4 me-3"></i>
-                    <h5 className="mb-0 fw-bold text-uppercase ls-1">9. Government Benefits</h5>
+                    <h5 className="mb-0 fw-bold text-uppercase ls-1">{t('cards.govt', '9. Government Benefits')}</h5>
                     <InfoBtn 
                         align="left" 
                         title="CPP / OAS / Pension" 

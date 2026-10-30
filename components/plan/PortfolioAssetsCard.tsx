@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, SegmentedControl, ModernDropdown } from '../SharedUI';
 
 const ACCOUNT_TYPES = [
@@ -27,6 +28,7 @@ const EXTENDED_ACCOUNT_TYPES = [
 ];
 
 export default function PortfolioAssetsCard() {
+  const { t } = useTranslation();
   const { data, updateInput, updateMultipleInputs, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   
   const isCouple = data.mode === 'Couple';
@@ -106,7 +108,7 @@ export default function PortfolioAssetsCard() {
         <div className="d-flex align-items-center">
           <i className="bi bi-wallet2 text-success fs-4 me-3"></i>
           <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-              3. Portfolio Assets 
+              {t('cards.portfolio', '3. Portfolio Assets')} 
           </h5>
         </div>
         <div className="form-check form-switch mb-0">

@@ -1,8 +1,10 @@
 import React from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, MonthYearStepper, CurrencyInput } from '../SharedUI';
 
 export default function DependentsCard() {
+  const { t } = useTranslation();
   const { data, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
 
   return (
@@ -11,7 +13,7 @@ export default function DependentsCard() {
         <div className="d-flex align-items-center">
           <i className="bi bi-people text-info fs-4 me-3"></i>
           <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-              2. Dependents (CCB & RESP) 
+              {t('cards.dependents', '2. Dependents (CCB & RESP)')} 
               <InfoBtn title="Dependents" text="Adding dependents automatically calculates Canada Child Benefit (CCB) payments and applies any RESP strategy rules." />
           </h5>
         </div>

@@ -1,4 +1,28 @@
 export const en = {
+  cards: {
+    personal: '1. Personal Information',
+    dependents: '2. Dependents (CCB & RESP)',
+    portfolio: '3. Portfolio Assets',
+    housing: '4. Housing & Living Costs',
+    tax: '5. Income & Taxation',
+    expenses: '6. Living Expenses',
+    future: '7. Future Expenses & Debts',
+    windfalls: '8. Windfalls & Inheritance',
+    govt: '9. Government Benefits',
+    economic: '10. Economic Assumptions'
+  },
+  accounts: {
+    cash: 'Cash',
+    tfsa: 'TFSA',
+    fhsa: 'FHSA',
+    rrsp: 'RRSP',
+    resp: 'RESP',
+    lirf: 'LIRA',
+    lif: 'LIF',
+    rrif_acct: 'RRIF',
+    nonreg: 'Non-Reg',
+    crypto: 'Crypto'
+  },
   nav: {
     planner: 'Planner',
     expenses: 'Expenses',

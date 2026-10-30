@@ -1,15 +1,17 @@
 import React from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, PercentInput, SegmentedControl } from '../SharedUI';
 
 export default function EconomicAssumptionsCard() {
+  const { t } = useTranslation();
   const { data, updateInput } = useFinance();
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
       <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
           <i className="bi bi-graph-up-arrow text-secondary fs-4 me-3"></i>
-          <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">10. Economic Assumptions</h5>
+          <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">{t('cards.economic', '10. Economic Assumptions')}</h5>
       </div>
       <div className="card-body p-4">
           <div className="row g-4">

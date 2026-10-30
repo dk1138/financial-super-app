@@ -1,8 +1,10 @@
 import React from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, MonthYearStepper, SegmentedControl } from '../SharedUI';
 
 export default function FutureExpensesCard() {
+  const { t } = useTranslation();
   const { data, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   const isCouple = data.mode === 'Couple';
 
@@ -16,7 +18,7 @@ export default function FutureExpensesCard() {
         <div className="d-flex align-items-center">
             <i className="bi bi-cart-dash text-danger fs-4 me-3"></i>
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                7. Future Expenses & Debts
+                {t('cards.future', '7. Future Expenses & Debts')}
                 <InfoBtn align="left" title="Large Purchases" text="Plan for future large expenses (like buying a car, renovation, or wedding) or lump-sum debt payoffs. <br><br>The amount will be deducted directly from your cash flow in the selected year." />
             </h5>
         </div>

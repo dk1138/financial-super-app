@@ -1,8 +1,10 @@
 import React from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, MonthYearStepper, SegmentedControl } from '../SharedUI';
 
 export default function WindfallsCard() {
+  const { t } = useTranslation();
   const { data, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   const isCouple = data.mode === 'Couple';
 
@@ -15,7 +17,7 @@ export default function WindfallsCard() {
       <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
         <div className="d-flex align-items-center">
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                <i className="bi bi-gift text-success me-3"></i>8. Windfalls & Inheritance
+                <i className="bi bi-gift text-success me-3"></i>{t('cards.windfalls', '8. Windfalls & Inheritance')}
                 <InfoBtn align="left" title="Windfalls" text="One-time cash inflows like inheritance, selling a business, or downsizing property. <br><b>Taxable:</b> Check this if the amount will be added to your taxable income for that year (e.g. severance, RRSP deregistration)." />
             </h5>
         </div>

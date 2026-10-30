@@ -1,4 +1,28 @@
 export const fr = {
+  cards: {
+    personal: '1. Informations personnelles',
+    dependents: '2. Personnes à charge (ACE & REEE)',
+    portfolio: '3. Actifs de portefeuille',
+    housing: '4. Logement & Coûts de vie',
+    tax: '5. Revenus & Fiscalité',
+    expenses: '6. Dépenses de subsistance',
+    future: '7. Dépenses futures & Dettes',
+    windfalls: '8. Entrées de fonds & Héritage',
+    govt: '9. Prestations gouvernementales',
+    economic: '10. Hypothèses économiques'
+  },
+  accounts: {
+    cash: 'Liquidités',
+    tfsa: 'CELI',
+    fhsa: 'CELIAPP',
+    rrsp: 'REER',
+    resp: 'REEE',
+    lirf: 'CRI',
+    lif: 'FRV',
+    rrif_acct: 'FERR',
+    nonreg: 'Non enregistré',
+    crypto: 'Crypto'
+  },
   nav: {
     planner: 'Planificateur',
     expenses: 'Dépenses',

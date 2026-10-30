@@ -1,5 +1,6 @@
 import React from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, StepperInput, SegmentedControl } from '../SharedUI';
 
 const calcAmortization = (principal: number, rate: number, payment: number) => {
@@ -20,6 +21,7 @@ const calc25YearPayment = (principal: number, rate: number) => {
 };
 
 export default function LivingCostCard() {
+  const { t } = useTranslation();
   const { data, updateInput, updateArrayItem, addArrayItem, removeArrayItem } = useFinance();
 
   const currentMode = data.inputs.housing_mode || 'own';
@@ -47,7 +49,7 @@ export default function LivingCostCard() {
         <div className="d-flex align-items-center">
             <i className="bi bi-house-heart text-danger fs-4 me-3"></i>
             <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-                4. Housing & Living Costs
+                {t('cards.housing', '4. Housing & Living Costs')}
                 <InfoBtn title="Housing Timeline" text="Map out your entire housing journey.<br><br>Start with your <b>Current Situation</b>. Then, add <b>Future Phases</b> to automatically simulate selling your home to downsize, moving into a rental, or transitioning to Long-Term Care (LTC) later in life.<br><br>Any net cash from selling a home will automatically flow into your portfolio." />
             </h5>
         </div>

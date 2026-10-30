@@ -1,12 +1,4 @@
-import React from 'react';
-import { useFinance } from '../../lib/FinanceContext';
-import { InfoBtn, MonthYearStepper, StepperInput } from '../SharedUI';
-
-export default function PersonalInformationCard() {
-  const { data, updateInput, updateMultipleInputs, updateMode } = useFinance();
-  const isCouple = data.mode === 'Couple';
-
-  // Fallbacks for custom names if they aren't initialized yet
+ // Fallbacks for custom names if they aren't initialized yet
   const p1Name = data.inputs.p1_name || 'Player 1';
   const p2Name = data.inputs.p2_name || 'Player 2';
 
@@ -102,7 +94,7 @@ export default function PersonalInformationCard() {
       <div className="card-header d-flex flex-wrap align-items-center justify-content-between border-bottom border-secondary p-3 surface-card gap-3">
         <div className="d-flex align-items-center">
           <i className="bi bi-person-vcard text-primary fs-4 me-3"></i>
-          <h5 className="mb-0 fw-bold text-uppercase ls-1">1. Personal Information</h5>
+          <h5 className="mb-0 fw-bold text-uppercase ls-1">{t('cards.personal', '1. Personal Information')}</h5>
           <InfoBtn title="Personal Details" text="Set your Age (or Date of Birth) and targeted Retirement Age. <br><br><b>Life Expectancy</b> defines how long the simulation runs (ensuring you don't run out of money too early)." />
         </div>
         

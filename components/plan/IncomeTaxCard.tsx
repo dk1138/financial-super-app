@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper, StepperInput } from '../SharedUI';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
 
@@ -424,6 +425,7 @@ const DetailedCreditInfoButton = ({ title, desc, link, details }: { title: strin
 // ---------------------------------------
 
 export default function IncomeTaxCard() {
+  const { t } = useTranslation();
   const { data, results, updateInput, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   const isCouple = data.mode === 'Couple';
   
@@ -974,7 +976,7 @@ export default function IncomeTaxCard() {
       <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
           <i className="bi bi-cash-coin text-success fs-4 me-3"></i>
           <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
-              5. Income & Taxation
+              {t('cards.tax', '5. Income & Taxation')}
               <InfoBtn align="left" title="Income & Tax" text="Enter <b>Gross Annual Income</b> (before tax). The system automatically calculates Federal and Provincial taxes based on your selected Province, automatically applying basic, age, and pension tax credits where eligible." />
           </h5>
       </div>
