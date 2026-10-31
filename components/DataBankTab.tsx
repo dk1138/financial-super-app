@@ -41,6 +41,9 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     });
 
     const isCouple = data?.mode === 'Couple';
+    const p1Name = data?.inputs?.p1_name || 'Player 1';
+    const p2Name = data?.inputs?.p2_name || 'Player 2';
+    const [modalPlayerTab, setModalPlayerTab] = useState<'p1' | 'p2'>('p1');
     const assumedReturnRate = Number(data?.inputs?.p1_nonreg_rate ?? data?.inputs?.balanced_return ?? 6.0);
 
     // Calculate historical average return
@@ -80,20 +83,18 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         if (total > 0) setPastClosingNW(total);
     };
 
-    const handleRebaselineAcb = (h: any) => {
-        const p1Acb = Number(h.actualBalances?.p1?.acb);
-        const p2Acb = Number(h.actualBalances?.p2?.acb);
-        
-        if (p1Acb > 0 || (isCouple && p2Acb > 0)) {
+    const handleRebaselineAcb = (h: any, player: 'p1' | 'p2' = 'p1') => {
+        const pAcb = Number(h.actualBalances?.[player]?.acb);
+        const name = player === 'p1' ? p1Name : p2Name;
+        if (pAcb > 0) {
             setData(prev => {
                 const updatedInputs = { ...prev.inputs };
-                if (p1Acb > 0) updatedInputs.p1_nonreg_acb = p1Acb;
-                if (isCouple && p2Acb > 0) updatedInputs.p2_nonreg_acb = p2Acb;
+                updatedInputs[`${player}_nonreg_acb`] = pAcb;
                 return { ...prev, inputs: updatedInputs };
             });
-            showToast(`Rebaselined active plan Non-Reg ACB using ${h.calendarYear} actuals!`);
+            showToast(`Rebaselined active plan ${name} Non-Reg ACB to $${pAcb.toLocaleString()}!`);
         } else {
-            alert('No prescribed Non-Reg ACB recorded in this historical entry.');
+            alert(`No prescribed Non-Reg ACB recorded for ${name}.`);
         }
     };
 
@@ -478,7 +479,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                                     <div className="col-12 col-md-6">
                                                                         <div className="p-2.5 bg-input border border-secondary rounded-3">
                                                                             <div className="d-flex justify-content-between align-items-center">
-                                                                                <span className="fw-bold text-muted small text-uppercase" style={{ fontSize: '0.65rem' }}>Player 1 Balances</span>
+                                                                                <span className="fw-bold text-muted small text-uppercase" style={{ fontSize: '0.65rem' }}>{p1Name} Balances</span>
                                                                                 {Number(h.actualBalances.p1.acb) > 0 && (
                                                                                     <button 
                                                                                         type="button" 
@@ -520,7 +521,20 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                                 {h.actualBalances.p2 && Object.keys(h.actualBalances.p2).length > 0 && (
                                                                     <div className="col-12 col-md-6">
                                                                         <div className="p-2.5 bg-input border border-secondary rounded-3">
-                                                                            <span className="fw-bold text-muted small text-uppercase" style={{ fontSize: '0.65rem' }}>Player 2 Balances</span>
+                                                                            <div className="d-flex justify-content-between align-items-center">
+                                                                                <span className="fw-bold text-muted small text-uppercase" style={{ fontSize: '0.65rem' }}>{p2Name} Balances</span>
+                                                                                {Number(h.actualBalances.p2.acb) > 0 && (
+                                                                                    <button 
+                                                                                        type="button" 
+                                                                                        className="btn btn-sm btn-outline-info rounded-pill py-0 px-2 fw-bold" 
+                                                                                        style={{ fontSize: '0.65rem' }}
+                                                                                        onClick={() => handleRebaselineAcb(h, 'p2')}
+                                                                                        title="Set this year's recorded ACB as the active plan baseline"
+                                                                                    >
+                                                                                        <i className="bi bi-arrow-repeat me-1"></i> Rebaseline P2 ACB
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
                                                                             <div className="d-flex flex-wrap gap-2 mt-1.5">
                                                                                 {Object.entries(h.actualBalances.p2).map(([acct, val]: [string, any]) => {
                                                                                     if (acct === 'acb') return null;
@@ -665,75 +679,164 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 {/* DETAILED ACCOUNT BREAKDOWN SECTION (OPEN BY DEFAULT) */}
                                 {showAccountBreakdown && (
                                     <div className="p-3 bg-secondary bg-opacity-10 border border-secondary rounded-4 mb-3 shadow-inner">
-                                        <div className="d-flex justify-content-between align-items-center mb-2.5">
-                                            <span className="small text-main fw-bold d-flex align-items-center gap-1.5">
-                                                <i className="bi bi-person-fill text-primary"></i>
-                                                <span className="text-uppercase ls-1" style={{ fontSize: '0.75rem' }}>Player 1 Balances (Dec 31)</span>
-                                            </span>
-                                            <span className="badge bg-secondary bg-opacity-25 text-muted fw-normal" style={{ fontSize: '0.68rem' }}>Closing Statement Values</span>
-                                        </div>
                                         
-                                        <div className="row g-2 mb-2">
-                                            <div className="col-6 col-sm-4">
-                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>TFSA ($)</label>
-                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.tfsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, tfsa: val }))} />
-                                            </div>
-                                            <div className="col-6 col-sm-4">
-                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRSP ($)</label>
-                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.rrsp} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrsp: val }))} />
-                                            </div>
-                                            <div className="col-12 col-sm-4">
-                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Cash / HYSA ($)</label>
-                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.cash} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, cash: val }))} />
-                                            </div>
-                                        </div>
-
-                                        <div className="row g-2 mb-2">
-                                            <div className="col-12 col-sm-6">
-                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg Value ($)</label>
-                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.nonreg} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, nonreg: val }))} />
-                                            </div>
-                                            <div className="col-12 col-sm-6">
-                                                <div className="d-flex justify-content-between align-items-center mb-0">
-                                                    <label className="small text-info fw-bold mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg ACB (Book Value)</label>
-                                                    <span className="badge bg-info bg-opacity-10 text-info fw-normal" style={{ fontSize: '0.6rem' }}>Rebaseline Target</span>
+                                        {/* COUPLE TAB SWITCHER (P1 VS P2) */}
+                                        {isCouple ? (
+                                            <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                                                <div className="d-flex bg-secondary bg-opacity-25 border border-secondary rounded-pill p-1 gap-1">
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => setModalPlayerTab('p1')} 
+                                                        className={`btn btn-sm rounded-pill fw-bold border-0 transition-all px-3 py-1 ${modalPlayerTab === 'p1' ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
+                                                        style={{ fontSize: '0.75rem' }}
+                                                    >
+                                                        <i className="bi bi-person-fill me-1"></i> {p1Name}
+                                                    </button>
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => setModalPlayerTab('p2')} 
+                                                        className={`btn btn-sm rounded-pill fw-bold border-0 transition-all px-3 py-1 ${modalPlayerTab === 'p2' ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
+                                                        style={{ fontSize: '0.75rem' }}
+                                                    >
+                                                        <i className="bi bi-person-fill me-1"></i> {p2Name}
+                                                    </button>
                                                 </div>
-                                                <CurrencyInput className="form-control form-control-sm border-info" placeholder="$0" value={manualBalancesP1.acb} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, acb: val }))} />
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <span className="badge bg-secondary bg-opacity-25 text-muted fw-normal" style={{ fontSize: '0.68rem' }}>
+                                                        Switch tabs to enter each partner's balances
+                                                    </span>
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold" 
+                                                        style={{ fontSize: '0.72rem' }}
+                                                        onClick={handleSumAccountsToClosing}
+                                                        title="Sum all accounts from both partners into Closing Net Worth"
+                                                    >
+                                                        <i className="bi bi-calculator me-1"></i> Auto-Sum Both &rarr;
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-
-                                        <div className="row g-2">
-                                            <div className="col-4">
-                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Crypto ($)</label>
-                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.crypto} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, crypto: val }))} />
-                                            </div>
-                                            <div className="col-4">
-                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>FHSA ($)</label>
-                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.fhsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, fhsa: val }))} />
-                                            </div>
-                                            <div className="col-4">
-                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRIF / LIF ($)</label>
-                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.rrif} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrif: val }))} />
-                                            </div>
-                                        </div>
-
-                                        {isCouple && (
-                                            <div className="mt-3 pt-3 border-top border-secondary border-opacity-25">
-                                                <span className="small text-main fw-bold d-block mb-2 text-uppercase ls-1" style={{ fontSize: '0.75rem' }}>
-                                                    <i className="bi bi-person-fill text-purple me-1"></i> Player 2 Balances (Dec 31)
+                                        ) : (
+                                            <div className="d-flex justify-content-between align-items-center mb-2.5">
+                                                <span className="small text-main fw-bold d-flex align-items-center gap-1.5">
+                                                    <i className="bi bi-person-fill text-primary"></i>
+                                                    <span className="text-uppercase ls-1" style={{ fontSize: '0.75rem' }}>{p1Name} Balances (Dec 31)</span>
                                                 </span>
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold" 
+                                                    style={{ fontSize: '0.72rem' }}
+                                                    onClick={handleSumAccountsToClosing}
+                                                    title="Auto-sum all entered accounts into closing Net Worth"
+                                                >
+                                                    <i className="bi bi-calculator me-1"></i> Sum to Closing NW &rarr;
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* PLAYER 1 ACCOUNT FIELDS */}
+                                        {modalPlayerTab === 'p1' && (
+                                            <div>
+                                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                                    <span className="small text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>
+                                                        <i className="bi bi-person-fill text-primary me-1"></i> {p1Name} &mdash; Registered &amp; Liquid Accounts
+                                                    </span>
+                                                </div>
                                                 <div className="row g-2 mb-2">
+                                                    <div className="col-6 col-sm-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>TFSA ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.tfsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, tfsa: val }))} />
+                                                    </div>
+                                                    <div className="col-6 col-sm-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRSP ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.rrsp} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrsp: val }))} />
+                                                    </div>
+                                                    <div className="col-12 col-sm-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Cash / HYSA ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.cash} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, cash: val }))} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="row g-2 mb-2">
+                                                    <div className="col-12 col-sm-6">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg Value ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.nonreg} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, nonreg: val }))} />
+                                                    </div>
+                                                    <div className="col-12 col-sm-6">
+                                                        <div className="d-flex justify-content-between align-items-center mb-0">
+                                                            <label className="small text-info fw-bold mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg ACB (Book Value)</label>
+                                                            <span className="badge bg-info bg-opacity-10 text-info fw-normal" style={{ fontSize: '0.6rem' }}>Rebaseline Target</span>
+                                                        </div>
+                                                        <CurrencyInput className="form-control form-control-sm border-info" placeholder="$0" value={manualBalancesP1.acb} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, acb: val }))} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="row g-2">
                                                     <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Crypto ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.crypto} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, crypto: val }))} />
+                                                    </div>
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>FHSA ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.fhsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, fhsa: val }))} />
+                                                    </div>
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRIF / LIF ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.rrif} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrif: val }))} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* PLAYER 2 ACCOUNT FIELDS */}
+                                        {isCouple && modalPlayerTab === 'p2' && (
+                                            <div>
+                                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                                    <span className="small text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>
+                                                        <i className="bi bi-person-fill text-purple me-1"></i> {p2Name} &mdash; Registered &amp; Liquid Accounts
+                                                    </span>
+                                                </div>
+                                                <div className="row g-2 mb-2">
+                                                    <div className="col-6 col-sm-4">
                                                         <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 TFSA ($)</label>
                                                         <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.tfsa} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, tfsa: val }))} />
                                                     </div>
-                                                    <div className="col-4">
+                                                    <div className="col-6 col-sm-4">
                                                         <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 RRSP ($)</label>
                                                         <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.rrsp} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, rrsp: val }))} />
                                                     </div>
-                                                    <div className="col-4">
-                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 Non-Reg ($)</label>
+                                                    <div className="col-12 col-sm-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 Cash / HYSA ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.cash} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, cash: val }))} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="row g-2 mb-2">
+                                                    <div className="col-12 col-sm-6">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 Non-Reg Value ($)</label>
                                                         <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.nonreg} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, nonreg: val }))} />
+                                                    </div>
+                                                    <div className="col-12 col-sm-6">
+                                                        <div className="d-flex justify-content-between align-items-center mb-0">
+                                                            <label className="small text-info fw-bold mb-0" style={{ fontSize: '0.68rem' }}>P2 Non-Reg ACB (Book Value)</label>
+                                                            <span className="badge bg-info bg-opacity-10 text-info fw-normal" style={{ fontSize: '0.6rem' }}>Rebaseline Target</span>
+                                                        </div>
+                                                        <CurrencyInput className="form-control form-control-sm border-info" placeholder="$0" value={manualBalancesP2.acb} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, acb: val }))} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="row g-2">
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 Crypto ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.crypto} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, crypto: val }))} />
+                                                    </div>
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 FHSA ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.fhsa} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, fhsa: val }))} />
+                                                    </div>
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 RRIF / LIF ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.rrif} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, rrif: val }))} />
                                                     </div>
                                                 </div>
                                             </div>
