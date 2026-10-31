@@ -11,6 +11,27 @@ const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, displa
     const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '320px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
   
     return (
+      <>
+      <style>{`
+        @keyframes dtcJumpPulse {
+          0% {
+            box-shadow: 0 0 0 3px #0dcaf0, 0 0 24px rgba(13, 202, 240, 0.7);
+            background-color: rgba(13, 202, 240, 0.28) !important;
+          }
+          50% {
+            box-shadow: 0 0 0 4px #0dcaf0, 0 0 32px rgba(13, 202, 240, 0.9);
+            background-color: rgba(13, 202, 240, 0.4) !important;
+          }
+          100% {
+            box-shadow: 0 0 0 0 transparent;
+            background-color: transparent;
+          }
+        }
+        .dtc-jump-highlight {
+          animation: dtcJumpPulse 2.8s ease-in-out !important;
+          border-color: #0dcaf0 !important;
+        }
+      `}</style>
       <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
           <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
               <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
@@ -94,6 +115,7 @@ const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvi
             </div>
         )}
     </div>
+      </>
   );
 };
 
@@ -431,6 +453,25 @@ export default function IncomeTaxCard() {
   
   // State for collapsible panels
   const [showCredits, setShowCredits] = useState<Record<string, boolean>>({ p1: false, p2: false });
+
+    // Listener to auto-expand Tax Credits and highlight DTC when toggled from Housing/LTC
+    useEffect(() => {
+        const handleFocusDtc = (e: any) => {
+            const player = e.detail?.player || 'p1';
+            setShowCredits(prev => ({ ...prev, [player]: true }));
+            setTimeout(() => {
+                const el = document.getElementById(`${player}_disability_container`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('dtc-jump-highlight');
+                    setTimeout(() => el.classList.remove('dtc-jump-highlight'), 3500);
+                }
+            }, 350);
+        };
+
+        window.addEventListener('focusDtcCredit', handleFocusDtc);
+        return () => window.removeEventListener('focusDtcCredit', handleFocusDtc);
+    }, []);
   const [showGross, setShowGross] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showDeductions, setShowDeductions] = useState<Record<string, boolean>>({ p1: false, p2: false });
   const [showFedTax, setShowFedTax] = useState<Record<string, boolean>>({ p1: false, p2: false });
@@ -1129,7 +1170,7 @@ export default function IncomeTaxCard() {
                                   <div className="col-12 col-md-6 d-flex flex-column gap-2 pt-1">
                                       
                                       {/* Disability Tax Credit (Line 31600 / 58440) */}
-                                      <div className="bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2">
+                                      <div id={`${p}_disability_container`} className="bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2 transition-all">
                                           <div className="d-flex align-items-center justify-content-between px-1">
                                               <span className="small fw-medium text-main d-flex align-items-center gap-1">
                                                   Disability Tax Credit
@@ -1321,99 +1362,31 @@ export default function IncomeTaxCard() {
 
                               <div className="row g-3">
                                   <div className="col-12 col-md-6">
-                                      <div className="d-flex justify-content-between align-items-center mb-1 border-bottom border-secondary border-opacity-50 pb-1">
-                                          <label className="small text-muted mb-0 fw-medium">Starts</label>
-                                          {inc.startMode === 'ret_relative' && (
-                                              <span className="small text-info fw-bold" style={{ fontSize: '0.68rem' }}>
-                                                  {(() => {
-                                                      const ownerRetAge = Number(data.inputs[`${p}_retireAge`]) || 60;
-                                                      const offset = Number(inc.startRelative ?? inc.startRel) || 0;
-                                                      const calcAge = ownerRetAge + offset;
-                                                      return `At Age ${calcAge} (${offset === 0 ? 'Retirement' : offset > 0 ? `+${offset} yrs` : `${offset} yrs`})`;
-                                                  })()}
-                                              </span>
-                                          )}
-                                      </div>
+                                      <label className="small text-muted mb-1 fw-medium d-block border-bottom border-secondary border-opacity-50 pb-1">Starts</label>
                                       <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm mb-2 w-100">
                                           <button type="button" onClick={() => updateInc('startMode', 'date')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.startMode === 'date' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Specific Date</button>
                                           <button type="button" onClick={() => updateInc('startMode', 'ret_relative')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.startMode === 'ret_relative' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>At Retirement</button>
                                       </div>
                                       {inc.startMode === 'ret_relative' ? (
-                                          <div>
-                                              <div className="d-flex align-items-center gap-2">
-                                                  <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm flex-grow-1">
-                                                      <input 
-                                                          type="number" 
-                                                          className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" 
-                                                          placeholder="0" 
-                                                          value={inc.startRelative ?? inc.startRel ?? 0} 
-                                                          onChange={e => {
-                                                              const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
-                                                              updateInc('startRelative', val);
-                                                              updateInc('startRel', val);
-                                                          }} 
-                                                      />
-                                                      <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs offset</span>
-                                                  </div>
-                                                  <InfoBtn 
-                                                      title="Retirement Offset Years" 
-                                                      text="<b>0</b> = starts the exact year you retire.<br><b>+2</b> = starts 2 years after retirement.<br><b>-3</b> = starts 3 years before retirement." 
-                                                      align="right" 
-                                                  />
-                                              </div>
-                                              <span className="text-muted d-block mt-1 ps-1" style={{ fontSize: '0.65rem' }}>
-                                                  Enter 0 for retirement year, or positive/negative for offset years.
-                                              </span>
+                                          <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
+                                            <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" placeholder="Yrs" value={inc.startRelative ?? 0} onChange={e => updateInc('startRelative', e.target.value)} />
+                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
                                           </div>
                                       ) : (
                                           <MonthYearStepper value={inc.start} onChange={(val: string) => updateInc('start', val)} />
                                       )}
                                   </div>
                                   <div className="col-12 col-md-6">
-                                      <div className="d-flex justify-content-between align-items-center mb-1 border-bottom border-secondary border-opacity-50 pb-1">
-                                          <label className="small text-muted mb-0 fw-medium">Ends</label>
-                                          {inc.endMode === 'ret_relative' && (
-                                              <span className="small text-info fw-bold" style={{ fontSize: '0.68rem' }}>
-                                                  {(() => {
-                                                      const ownerRetAge = Number(data.inputs[`${p}_retireAge`]) || 60;
-                                                      const offset = Number(inc.endRelative ?? inc.endRel) || 0;
-                                                      const calcAge = ownerRetAge + offset;
-                                                      return `At Age ${calcAge} (${offset === 0 ? 'Retirement' : offset > 0 ? `+${offset} yrs` : `${offset} yrs`})`;
-                                                  })()}
-                                              </span>
-                                          )}
-                                      </div>
+                                      <label className="small text-muted mb-1 fw-medium d-block border-bottom border-secondary border-opacity-50 pb-1">Ends</label>
                                       <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm mb-2 w-100">
                                           <button type="button" onClick={() => updateInc('endMode', 'never')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'never' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Never</button>
                                           <button type="button" onClick={() => updateInc('endMode', 'date')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'date' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Specific Date</button>
                                           <button type="button" onClick={() => updateInc('endMode', 'ret_relative')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${inc.endMode === 'ret_relative' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>At Retirement</button>
                                       </div>
                                       {inc.endMode === 'ret_relative' ? (
-                                          <div>
-                                              <div className="d-flex align-items-center gap-2">
-                                                  <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm flex-grow-1">
-                                                      <input 
-                                                          type="number" 
-                                                          className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" 
-                                                          placeholder="0" 
-                                                          value={inc.endRelative ?? inc.endRel ?? 0} 
-                                                          onChange={e => {
-                                                              const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
-                                                              updateInc('endRelative', val);
-                                                              updateInc('endRel', val);
-                                                          }} 
-                                                      />
-                                                      <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs offset</span>
-                                                  </div>
-                                                  <InfoBtn 
-                                                      title="Retirement Offset Years" 
-                                                      text="<b>0</b> = ends the exact year you retire.<br><b>+5</b> = continues for 5 years after retirement then ends.<br><b>-1</b> = ends 1 year before retirement." 
-                                                      align="right" 
-                                                  />
-                                              </div>
-                                              <span className="text-muted d-block mt-1 ps-1" style={{ fontSize: '0.65rem' }}>
-                                                  Enter 0 to stop at retirement, or offset years after retirement.
-                                              </span>
+                                          <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
+                                            <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" placeholder="Yrs" value={inc.endRelative ?? 0} onChange={e => updateInc('endRelative', e.target.value)} />
+                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
                                           </div>
                                       ) : inc.endMode === 'date' ? (
                                           <MonthYearStepper value={inc.end} onChange={(val: string) => updateInc('end', val)} />
@@ -1453,5 +1426,6 @@ export default function IncomeTaxCard() {
 
       </div>
     </div>
+      </>
   );
 }

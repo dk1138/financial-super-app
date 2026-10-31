@@ -1970,8 +1970,8 @@ export default function ProjectionTab() {
                                             <div className="text-muted fw-bold small mb-2 ls-1" style={{ fontSize: '0.65rem' }}>ESTATE & DEEMED DISPOSITION</div>
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="text-muted d-flex align-items-center">
-                                                    Unrealized Tax Bite
-                                                    <InfoBtn align="left" title="Deemed Disposition Tax" text="Estimated terminal tax if all registered assets (RRSP, RRIF, LIF) were fully liquidated and capital gains in non-registered/crypto were taxed at death." />
+                                                    Estimated Estate Tax
+                                                    <InfoBtn align="left" title="Estimated Estate Tax (Deemed Disposition)" text="Estimated terminal tax if all registered assets (RRSP, RRIF, LIF) were fully liquidated and capital gains in non-registered/crypto were taxed at death." />
                                                 </span>
                                                 <span className="text-danger fw-medium">
                                                     -{formatCurrency(y.terminalTax !== undefined ? y.terminalTax : Math.max(0, totalNW - (y.afterTaxEstate || totalNW)), y.year)}

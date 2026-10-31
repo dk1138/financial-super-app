@@ -307,15 +307,15 @@ export default function LivingCostCard() {
                                         {phase.action === 'ltc' && (
                                             <div className="mt-3 p-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
                                                 <div className="d-flex align-items-center gap-2.5">
-                                                    <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '36px', height: '36px' }}>
+                                                    <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '38px', height: '38px' }}>
                                                         <i className="bi bi-shield-plus fs-5"></i>
                                                     </div>
                                                     <div>
                                                         <span className="small fw-bold text-main d-block">Disability Tax Credit (DTC) Linkage</span>
-                                                        <span className="small text-muted">Entering Long-Term Care typically qualifies residents for Canada's non-refundable Disability Tax Credit (Line 31600 & 58440), providing ~$1,500–$2,500+/yr in tax reduction.</span>
+                                                        <span className="small text-muted">Entering Long-Term Care typically qualifies residents for Canada's non-refundable Disability Tax Credit (Line 31600 & 58440), saving ~$1,500–$2,500+/yr in taxes.</span>
                                                     </div>
                                                 </div>
-                                                <div className="d-flex align-items-center gap-3">
+                                                <div className="d-flex align-items-center gap-3 flex-wrap">
                                                     <div className="form-check form-switch mb-0 d-flex align-items-center">
                                                         <input 
                                                             className="form-check-input cursor-pointer fs-5 m-0" 
@@ -325,8 +325,9 @@ export default function LivingCostCard() {
                                                             onChange={(e) => {
                                                                 const checked = e.target.checked;
                                                                 updateInput('p1_disability', checked);
-                                                                if (checked && !data.inputs.p1_disability_start_age) {
+                                                                if (checked) {
                                                                     updateInput('p1_disability_start_age', phase.age || 65);
+                                                                    window.dispatchEvent(new CustomEvent('focusDtcCredit', { detail: { player: 'p1', startAge: phase.age || 65 } }));
                                                                 }
                                                             }} 
                                                         />
@@ -334,10 +335,26 @@ export default function LivingCostCard() {
                                                             {data.inputs.p1_disability ? (
                                                                 <span className="text-success fw-bold">DTC Enabled (Age {data.inputs.p1_disability_start_age || phase.age || 65}+)</span>
                                                             ) : (
-                                                                <span>Enable DTC (Age {phase.age || 65}+)</span>
+                                                                <span>Enable DTC</span>
                                                             )}
                                                         </label>
                                                     </div>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm"
+                                                        style={{ fontSize: '0.75rem' }}
+                                                        onClick={() => {
+                                                            if (!data.inputs.p1_disability) {
+                                                                updateInput('p1_disability', true);
+                                                                updateInput('p1_disability_start_age', phase.age || 65);
+                                                            }
+                                                            window.dispatchEvent(new CustomEvent('focusDtcCredit', { detail: { player: 'p1', startAge: phase.age || 65 } }));
+                                                        }}
+                                                        title="Jump to Card 5 and highlight Disability Tax Credit"
+                                                    >
+                                                        <span>Configure in Tax Card</span>
+                                                        <i className="bi bi-arrow-down-right"></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}

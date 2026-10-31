@@ -32,7 +32,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const [pastNotes, setPastNotes] = useState<string>('');
 
     // Detailed account breakdowns for manual past year
-    const [showAccountBreakdown, setShowAccountBreakdown] = useState<boolean>(false);
+    const [showAccountBreakdown, setShowAccountBreakdown] = useState<boolean>(true);
     const [manualBalancesP1, setManualBalancesP1] = useState<Record<string, number | ''>>({
         tfsa: '', rrsp: '', nonreg: '', acb: '', cash: '', crypto: '', fhsa: '', rrif: '', lif: ''
     });
@@ -564,16 +564,16 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
                         {/* ADD PAST YEAR MODAL */}
             {showAddPastYear && (
-                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center px-3 py-4" style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(6px)' }}>
-                    <div className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column my-auto" style={{ maxWidth: '580px' }}>
-                        <div className="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center">
-                            <div className="d-flex align-items-center gap-2">
-                                <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{ width: '36px', height: '36px' }}>
+                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center px-3 py-4" style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.82)', backdropFilter: 'blur(6px)', overflowY: 'auto' }}>
+                    <div className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column my-auto" style={{ maxWidth: '680px', maxHeight: '92vh', overflowY: 'auto' }}>
+                        <div className="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center sticky-top surface-card" style={{ zIndex: 10 }}>
+                            <div className="d-flex align-items-center gap-2.5">
+                                <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '38px', height: '38px' }}>
                                     <i className="bi bi-calendar-plus fs-5"></i>
                                 </div>
                                 <div>
                                     <h5 className="mb-0 fw-bold">Add Historical Past Year</h5>
-                                    <span className="small text-muted">Input known historical actuals (e.g. from prior years or past retirement years).</span>
+                                    <span className="small text-muted">Archive prior year statement actuals, record ACB, and track real-world investment returns.</span>
                                 </div>
                             </div>
                             <button type="button" className="btn btn-sm btn-link text-muted p-0" onClick={() => setShowAddPastYear(false)}>
@@ -583,22 +583,44 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
                         <form onSubmit={handleSavePastYear}>
                             <div className="card-body p-4">
+                                
+                                {/* MODE SELECTOR: DETAILED (DEFAULT) VS SIMPLE */}
+                                <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 mb-3">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowAccountBreakdown(true)} 
+                                        className={`btn btn-sm rounded-pill fw-bold border-0 transition-all flex-grow-1 py-1.5 ${showAccountBreakdown ? 'bg-primary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
+                                        style={{ fontSize: '0.78rem' }}
+                                    >
+                                        <i className="bi bi-wallet2 me-1.5"></i> Detailed Accounts &amp; ACB (Recommended)
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowAccountBreakdown(false)} 
+                                        className={`btn btn-sm rounded-pill fw-bold border-0 transition-all flex-grow-1 py-1.5 ${!showAccountBreakdown ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}
+                                        style={{ fontSize: '0.78rem' }}
+                                    >
+                                        <i className="bi bi-cash-stack me-1.5"></i> Simple Totals Only
+                                    </button>
+                                </div>
+
+                                {/* CORE TIMELINE METRICS */}
                                 <div className="row g-3 mb-3">
-                                    <div className="col-6">
+                                    <div className="col-12 col-sm-6">
                                         <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Calendar Year</label>
                                         <input 
                                             type="number" 
-                                            className="form-control fw-bold" 
+                                            className="form-control fw-bold border-secondary" 
                                             value={pastYearNum} 
                                             max={new Date().getFullYear()} 
                                             onChange={(e) => setPastYearNum(parseInt(e.target.value, 10) || (new Date().getFullYear() - 1))} 
                                             required 
                                         />
                                     </div>
-                                    <div className="col-6">
+                                    <div className="col-12 col-sm-6">
                                         <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Net Savings Added ($)</label>
                                         <CurrencyInput 
-                                            className="form-control" 
+                                            className="form-control border-secondary" 
                                             placeholder="$0" 
                                             value={pastSavings} 
                                             onChange={(val: any) => setPastSavings(val)} 
@@ -607,19 +629,32 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 </div>
 
                                 <div className="row g-3 mb-3">
-                                    <div className="col-6">
+                                    <div className="col-12 col-sm-6">
                                         <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Jan 1 Opening NW ($)</label>
                                         <CurrencyInput 
-                                            className="form-control" 
+                                            className="form-control border-secondary" 
                                             placeholder="$0" 
                                             value={pastOpeningNW} 
                                             onChange={(val: any) => setPastOpeningNW(val)} 
                                         />
                                     </div>
-                                    <div className="col-6">
-                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Dec 31 Closing NW ($)</label>
+                                    <div className="col-12 col-sm-6">
+                                        <div className="d-flex justify-content-between align-items-center mb-1">
+                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1">Dec 31 Closing NW ($)</label>
+                                            {showAccountBreakdown && (
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold" 
+                                                    style={{ fontSize: '0.7rem' }}
+                                                    onClick={handleSumAccountsToClosing}
+                                                    title="Auto-sum all entered accounts below into closing Net Worth"
+                                                >
+                                                    <i className="bi bi-calculator me-1"></i> Auto-Sum Accounts
+                                                </button>
+                                            )}
+                                        </div>
                                         <CurrencyInput 
-                                            className="form-control fw-bold text-success" 
+                                            className="form-control fw-bold text-success border-secondary" 
                                             placeholder="$0" 
                                             value={pastClosingNW} 
                                             onChange={(val: any) => setPastClosingNW(val)} 
@@ -627,147 +662,138 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                     </div>
                                 </div>
 
+                                {/* DETAILED ACCOUNT BREAKDOWN SECTION (OPEN BY DEFAULT) */}
+                                {showAccountBreakdown && (
+                                    <div className="p-3 bg-secondary bg-opacity-10 border border-secondary rounded-4 mb-3 shadow-inner">
+                                        <div className="d-flex justify-content-between align-items-center mb-2.5">
+                                            <span className="small text-main fw-bold d-flex align-items-center gap-1.5">
+                                                <i className="bi bi-person-fill text-primary"></i>
+                                                <span className="text-uppercase ls-1" style={{ fontSize: '0.75rem' }}>Player 1 Balances (Dec 31)</span>
+                                            </span>
+                                            <span className="badge bg-secondary bg-opacity-25 text-muted fw-normal" style={{ fontSize: '0.68rem' }}>Closing Statement Values</span>
+                                        </div>
+                                        
+                                        <div className="row g-2 mb-2">
+                                            <div className="col-6 col-sm-4">
+                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>TFSA ($)</label>
+                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.tfsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, tfsa: val }))} />
+                                            </div>
+                                            <div className="col-6 col-sm-4">
+                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRSP ($)</label>
+                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.rrsp} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrsp: val }))} />
+                                            </div>
+                                            <div className="col-12 col-sm-4">
+                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Cash / HYSA ($)</label>
+                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.cash} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, cash: val }))} />
+                                            </div>
+                                        </div>
+
+                                        <div className="row g-2 mb-2">
+                                            <div className="col-12 col-sm-6">
+                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg Value ($)</label>
+                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.nonreg} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, nonreg: val }))} />
+                                            </div>
+                                            <div className="col-12 col-sm-6">
+                                                <div className="d-flex justify-content-between align-items-center mb-0">
+                                                    <label className="small text-info fw-bold mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg ACB (Book Value)</label>
+                                                    <span className="badge bg-info bg-opacity-10 text-info fw-normal" style={{ fontSize: '0.6rem' }}>Rebaseline Target</span>
+                                                </div>
+                                                <CurrencyInput className="form-control form-control-sm border-info" placeholder="$0" value={manualBalancesP1.acb} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, acb: val }))} />
+                                            </div>
+                                        </div>
+
+                                        <div className="row g-2">
+                                            <div className="col-4">
+                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Crypto ($)</label>
+                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.crypto} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, crypto: val }))} />
+                                            </div>
+                                            <div className="col-4">
+                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>FHSA ($)</label>
+                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.fhsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, fhsa: val }))} />
+                                            </div>
+                                            <div className="col-4">
+                                                <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRIF / LIF ($)</label>
+                                                <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP1.rrif} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrif: val }))} />
+                                            </div>
+                                        </div>
+
+                                        {isCouple && (
+                                            <div className="mt-3 pt-3 border-top border-secondary border-opacity-25">
+                                                <span className="small text-main fw-bold d-block mb-2 text-uppercase ls-1" style={{ fontSize: '0.75rem' }}>
+                                                    <i className="bi bi-person-fill text-purple me-1"></i> Player 2 Balances (Dec 31)
+                                                </span>
+                                                <div className="row g-2 mb-2">
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 TFSA ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.tfsa} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, tfsa: val }))} />
+                                                    </div>
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 RRSP ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.rrsp} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, rrsp: val }))} />
+                                                    </div>
+                                                    <div className="col-4">
+                                                        <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 Non-Reg ($)</label>
+                                                        <CurrencyInput className="form-control form-control-sm border-secondary" placeholder="$0" value={manualBalancesP2.nonreg} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, nonreg: val }))} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* INVESTMENT RETURN LIVE MATH DISPLAY */}
                                 <div className="row g-3 mb-3">
-                                    <div className="col-6">
+                                    <div className="col-12 col-sm-6">
                                         <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Investment Dollar Gain ($)</label>
                                         <CurrencyInput 
-                                            className="form-control" 
+                                            className="form-control border-secondary" 
                                             placeholder="Auto-calculated if blank" 
                                             value={pastGain} 
                                             onChange={(val: any) => setPastGain(val)} 
                                         />
-                                        <span className="small text-muted" style={{ fontSize: '0.7rem' }}>Defaults to Closing &minus; Opening &minus; Savings</span>
+                                        <span className="small text-muted d-block mt-1" style={{ fontSize: '0.7rem' }}>
+                                            {pastClosingNW && pastOpeningNW ? (
+                                                <span className="text-info fw-bold">Live Calc: ${(Number(pastClosingNW) - Number(pastOpeningNW) - Number(pastSavings || 0)).toLocaleString()}</span>
+                                            ) : 'Defaults to Closing &minus; Opening &minus; Savings'}
+                                        </span>
                                     </div>
-                                    <div className="col-6">
+                                    <div className="col-12 col-sm-6">
                                         <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">LIF Dollar Gain ($)</label>
                                         <CurrencyInput 
-                                            className="form-control" 
+                                            className="form-control border-secondary" 
                                             placeholder="Optional" 
                                             value={pastLifGain} 
                                             onChange={(val: any) => setPastLifGain(val)} 
                                         />
-                                        <span className="small text-muted" style={{ fontSize: '0.7rem' }}>For prior year LIF limit calculations</span>
+                                        <span className="small text-muted d-block mt-1" style={{ fontSize: '0.7rem' }}>Used for calculating prior-year LIF maximum withdrawal room</span>
                                     </div>
-                                </div>
-
-                                {/* OPTIONAL DETAILED ACCOUNT BREAKDOWN */}
-                                <div className="p-3 bg-secondary bg-opacity-10 border border-secondary rounded-3 mb-3">
-                                    <div className="d-flex justify-content-between align-items-center">
-                                        <div className="d-flex align-items-center gap-2">
-                                            <i className="bi bi-wallet2 text-info"></i>
-                                            <span className="small fw-bold text-main">Record Account Balances & Non-Reg ACB (Optional)</span>
-                                        </div>
-                                        <button 
-                                            type="button" 
-                                            className="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 fw-bold"
-                                            style={{ fontSize: '0.7rem' }}
-                                            onClick={() => setShowAccountBreakdown(prev => !prev)}
-                                        >
-                                            {showAccountBreakdown ? 'Hide Breakdown' : '+ Add Account Breakdown'}
-                                        </button>
-                                    </div>
-
-                                    {showAccountBreakdown && (
-                                        <div className="mt-3 pt-3 border-top border-secondary border-opacity-25">
-                                            <div className="d-flex justify-content-between align-items-center mb-2">
-                                                <span className="small text-muted fw-bold text-uppercase" style={{ fontSize: '0.65rem' }}>Player 1 Balances (Dec 31)</span>
-                                                <button 
-                                                    type="button" 
-                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold" 
-                                                    style={{ fontSize: '0.7rem' }}
-                                                    onClick={handleSumAccountsToClosing}
-                                                >
-                                                    Sum to Closing NW &rarr;
-                                                </button>
-                                            </div>
-                                            <div className="row g-2 mb-2">
-                                                <div className="col-4">
-                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>TFSA ($)</label>
-                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.tfsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, tfsa: val }))} />
-                                                </div>
-                                                <div className="col-4">
-                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRSP ($)</label>
-                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.rrsp} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrsp: val }))} />
-                                                </div>
-                                                <div className="col-4">
-                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Cash / HYSA ($)</label>
-                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.cash} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, cash: val }))} />
-                                                </div>
-                                            </div>
-                                            <div className="row g-2 mb-2">
-                                                <div className="col-6">
-                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg Value ($)</label>
-                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.nonreg} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, nonreg: val }))} />
-                                                </div>
-                                                <div className="col-6">
-                                                    <label className="small text-info fw-bold mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg ACB ($) &mdash; Book Value</label>
-                                                    <CurrencyInput className="form-control form-control-sm border-info" placeholder="$0" value={manualBalancesP1.acb} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, acb: val }))} />
-                                                </div>
-                                            </div>
-                                            <div className="row g-2">
-                                                <div className="col-4">
-                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Crypto ($)</label>
-                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.crypto} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, crypto: val }))} />
-                                                </div>
-                                                <div className="col-4">
-                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>FHSA ($)</label>
-                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.fhsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, fhsa: val }))} />
-                                                </div>
-                                                <div className="col-4">
-                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRIF / LIF ($)</label>
-                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.rrif} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrif: val }))} />
-                                                </div>
-                                            </div>
-
-                                            {isCouple && (
-                                                <div className="mt-3 pt-2 border-top border-secondary border-opacity-25">
-                                                    <span className="small text-muted fw-bold text-uppercase d-block mb-2" style={{ fontSize: '0.65rem' }}>Player 2 Balances (Dec 31)</span>
-                                                    <div className="row g-2 mb-2">
-                                                        <div className="col-4">
-                                                            <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 TFSA ($)</label>
-                                                            <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP2.tfsa} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, tfsa: val }))} />
-                                                        </div>
-                                                        <div className="col-4">
-                                                            <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 RRSP ($)</label>
-                                                            <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP2.rrsp} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, rrsp: val }))} />
-                                                        </div>
-                                                        <div className="col-4">
-                                                            <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 Non-Reg ($)</label>
-                                                            <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP2.nonreg} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, nonreg: val }))} />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
 
                                 <div className="mb-2">
                                     <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Notes / Milestones</label>
                                     <input 
                                         type="text" 
-                                        className="form-control form-control-sm" 
-                                        placeholder="e.g. Retired in June, Downsized home, Actual tax return..." 
+                                        className="form-control form-control-sm border-secondary" 
+                                        placeholder="e.g. Rebalanced portfolio, Downsized home, Maxed out TFSA..." 
                                         value={pastNotes} 
                                         onChange={(e) => setPastNotes(e.target.value)} 
                                     />
                                 </div>
                             </div>
 
-                            <div className="card-footer border-top border-secondary p-3 d-flex justify-content-end gap-2">
-                                <button type="button" className="btn btn-sm btn-secondary rounded-pill px-3" onClick={() => setShowAddPastYear(false)}>
+                            <div className="card-footer border-top border-secondary p-3 d-flex justify-content-between align-items-center sticky-bottom surface-card" style={{ zIndex: 10 }}>
+                                <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-3" onClick={() => setShowAddPastYear(false)}>
                                     Cancel
                                 </button>
-                                <button type="submit" className="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
-                                    Save Historical Year
+                                <button type="submit" className="btn btn-sm btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                    Save Historical Actuals
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-
-            {/* LOCAL ROLL FORWARD MODAL TRIGGER IF ACCESSED FROM TAB */}
+{/* LOCAL ROLL FORWARD MODAL TRIGGER IF ACCESSED FROM TAB */}
             <RollForwardModal 
                 isOpen={showLocalRollForward} 
                 onClose={() => setShowLocalRollForward(false)} 

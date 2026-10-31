@@ -23,6 +23,25 @@ export default function PlanTab() {
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
   const [activeJumpSection, setActiveJumpSection] = useState<string>('personal');
 
+  // Auto-expand and scroll to Tax Card when DTC is toggled from LTC housing phase
+  useEffect(() => {
+    const handleFocusDtc = (e: any) => {
+      // 1. Expand Card 5 (tax) if collapsed
+      setCollapsedMap(prev => ({ ...prev, tax: false }));
+      setActiveJumpSection('tax');
+      // 2. Smoothly scroll into view
+      setTimeout(() => {
+        const el = document.getElementById('section-tax');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    };
+
+    window.addEventListener('focusDtcCredit', handleFocusDtc);
+    return () => window.removeEventListener('focusDtcCredit', handleFocusDtc);
+  }, []);
+
   const toggleSection = (id: string) => {
     setCollapsedMap(prev => ({ ...prev, [id]: !prev[id] }));
   };
