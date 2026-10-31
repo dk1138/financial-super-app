@@ -11,27 +11,6 @@ const TaxableIncomeInfoButton = ({ grossTaxable, splitAmt, employerMatch, displa
     const posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '320px', bottom: '140%', left: '50%', transform: 'translateX(-50%)' };
   
     return (
-      <>
-      <style>{`
-        @keyframes dtcJumpPulse {
-          0% {
-            box-shadow: 0 0 0 3px #0dcaf0, 0 0 24px rgba(13, 202, 240, 0.7);
-            background-color: rgba(13, 202, 240, 0.28) !important;
-          }
-          50% {
-            box-shadow: 0 0 0 4px #0dcaf0, 0 0 32px rgba(13, 202, 240, 0.9);
-            background-color: rgba(13, 202, 240, 0.4) !important;
-          }
-          100% {
-            box-shadow: 0 0 0 0 transparent;
-            background-color: transparent;
-          }
-        }
-        .dtc-jump-highlight {
-          animation: dtcJumpPulse 2.8s ease-in-out !important;
-          border-color: #0dcaf0 !important;
-        }
-      `}</style>
       <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
           <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
               <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
@@ -115,7 +94,6 @@ const SurtaxInfoButton = ({ basicProvincialTax, calculatedSurtax }: { basicProvi
             </div>
         )}
     </div>
-      </>
   );
 };
 
@@ -1014,6 +992,26 @@ export default function IncomeTaxCard() {
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">
+      <style>{`
+        @keyframes dtcJumpPulse {
+          0% {
+            box-shadow: 0 0 0 3px #0dcaf0, 0 0 24px rgba(13, 202, 240, 0.7);
+            background-color: rgba(13, 202, 240, 0.28) !important;
+          }
+          50% {
+            box-shadow: 0 0 0 4px #0dcaf0, 0 0 32px rgba(13, 202, 240, 0.9);
+            background-color: rgba(13, 202, 240, 0.4) !important;
+          }
+          100% {
+            box-shadow: 0 0 0 0 transparent;
+            background-color: transparent;
+          }
+        }
+        .dtc-jump-highlight {
+          animation: dtcJumpPulse 2.8s ease-in-out !important;
+          border-color: #0dcaf0 !important;
+        }
+      `}</style>
       <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
           <i className="bi bi-cash-coin text-success fs-4 me-3"></i>
           <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">
@@ -1426,6 +1424,5 @@ export default function IncomeTaxCard() {
 
       </div>
     </div>
-      </>
   );
 }
