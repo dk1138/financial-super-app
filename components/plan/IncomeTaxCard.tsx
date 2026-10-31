@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper, StepperInput } from '../SharedUI';
