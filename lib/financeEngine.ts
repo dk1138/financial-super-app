@@ -1504,7 +1504,10 @@ export class FinanceEngine {
                     invYieldMathP2: { bal: preGrowthNonreg2, rate: person2.nonreg_yield, foreignRate: person2.nonreg_foreign_yield, amt: divInc2, foreignAmt: foreignDiv2, subAccounts: (this as any).nonregBreakdown?.p2 }, debugTotalInflow: grossInflow, rrspRoomP1: rrspRoom1, rrspRoomP2: rrspRoom2,
                     rrspMatchP1: matchTracking.p1MatchAdded, rrspTotalMatch1: matchTracking.totalMatch1, rrspMatchP2: matchTracking.p2MatchAdded, rrspTotalMatch2: matchTracking.totalMatch2, rrspRefundP1: appliedRefundP1, rrspRefundP2: appliedRefundP2,
                     matchTaxSavingsP1: matchTaxSavings1, matchTaxSavingsP2: matchTaxSavings2, discTaxSavingsP1: pendingRefund.p1, discTaxSavingsP2: pendingRefund.p2,
-                    afterTaxEstate: afterTaxEstateValue 
+                    afterTaxEstate: afterTaxEstateValue,
+                    terminalTax: termTax1 + termTax2,
+                    terminalTaxP1: termTax1,
+                    terminalTaxP2: termTax2 
                 });
             }
 

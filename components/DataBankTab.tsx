@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { 
+    ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
+    CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine 
+} from 'recharts';
 import { useFinance } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import RollForwardModal from './history/RollForwardModal';
@@ -26,6 +30,72 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const [pastGain, setPastGain] = useState<number | ''>('');
     const [pastLifGain, setPastLifGain] = useState<number | ''>('');
     const [pastNotes, setPastNotes] = useState<string>('');
+
+    // Detailed account breakdowns for manual past year
+    const [showAccountBreakdown, setShowAccountBreakdown] = useState<boolean>(false);
+    const [manualBalancesP1, setManualBalancesP1] = useState<Record<string, number | ''>>({
+        tfsa: '', rrsp: '', nonreg: '', acb: '', cash: '', crypto: '', fhsa: '', rrif: '', lif: ''
+    });
+    const [manualBalancesP2, setManualBalancesP2] = useState<Record<string, number | ''>>({
+        tfsa: '', rrsp: '', nonreg: '', acb: '', cash: '', crypto: '', fhsa: '', rrif: '', lif: ''
+    });
+
+    const isCouple = data?.mode === 'Couple';
+    const assumedReturnRate = Number(data?.inputs?.p1_nonreg_rate ?? data?.inputs?.balanced_return ?? 6.0);
+
+    // Calculate historical average return
+    const historicalStats = useMemo(() => {
+        if (!historyList || historyList.length === 0) return null;
+        const validRates = historyList
+            .map(h => {
+                if (h.effectiveAnnualReturnPct !== undefined) return Number(h.effectiveAnnualReturnPct);
+                const gain = Number(h.totalInvestmentGainDollar) || (Number(h.closingNetWorth) - Number(h.openingNetWorth));
+                return Number(h.openingNetWorth) > 0 ? (gain / Number(h.openingNetWorth)) * 100 : 0;
+            })
+            .filter(r => !isNaN(r));
+
+        if (validRates.length === 0) return null;
+        const avgReturn = validRates.reduce((a, b) => a + b, 0) / validRates.length;
+        const chartData = historyList.map(h => {
+            const gain = Number(h.totalInvestmentGainDollar) || (Number(h.closingNetWorth) - Number(h.openingNetWorth));
+            const returnPct = h.effectiveAnnualReturnPct !== undefined 
+                ? Number(h.effectiveAnnualReturnPct) 
+                : (Number(h.openingNetWorth) > 0 ? (gain / Number(h.openingNetWorth)) * 100 : 0);
+            return {
+                year: h.calendarYear,
+                actualReturn: Number(returnPct.toFixed(2)),
+                assumedReturn: Number(assumedReturnRate.toFixed(2))
+            };
+        });
+
+        return { avgReturn, count: validRates.length, chartData, delta: avgReturn - assumedReturnRate };
+    }, [historyList, assumedReturnRate]);
+
+    const handleSumAccountsToClosing = () => {
+        let total = 0;
+        ['tfsa', 'rrsp', 'nonreg', 'cash', 'crypto', 'fhsa', 'rrif', 'lif'].forEach(k => {
+            total += Number(manualBalancesP1[k]) || 0;
+            if (isCouple) total += Number(manualBalancesP2[k]) || 0;
+        });
+        if (total > 0) setPastClosingNW(total);
+    };
+
+    const handleRebaselineAcb = (h: any) => {
+        const p1Acb = Number(h.actualBalances?.p1?.acb);
+        const p2Acb = Number(h.actualBalances?.p2?.acb);
+        
+        if (p1Acb > 0 || (isCouple && p2Acb > 0)) {
+            setData(prev => {
+                const updatedInputs = { ...prev.inputs };
+                if (p1Acb > 0) updatedInputs.p1_nonreg_acb = p1Acb;
+                if (isCouple && p2Acb > 0) updatedInputs.p2_nonreg_acb = p2Acb;
+                return { ...prev, inputs: updatedInputs };
+            });
+            showToast(`Rebaselined active plan Non-Reg ACB using ${h.calendarYear} actuals!`);
+        } else {
+            alert('No prescribed Non-Reg ACB recorded in this historical entry.');
+        }
+    };
 
     const showToast = (msg: string) => {
         setToastMsg(msg);
@@ -93,6 +163,18 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         const dollarGain = pastGain !== '' ? Number(pastGain) : (closeNW - openNW - savings);
         const returnPct = openNW > 0 ? (dollarGain / openNW) * 100 : 0;
 
+        // Clean up manual balances
+        const p1Clean: Record<string, number> = {};
+        Object.entries(manualBalancesP1).forEach(([k, v]) => {
+            if (v !== '' && Number(v) > 0) p1Clean[k] = Number(v);
+        });
+        const p2Clean: Record<string, number> = {};
+        if (isCouple) {
+            Object.entries(manualBalancesP2).forEach(([k, v]) => {
+                if (v !== '' && Number(v) > 0) p2Clean[k] = Number(v);
+            });
+        }
+
         const newRecord = {
             id: `hist_${year}_manual`,
             calendarYear: year,
@@ -103,8 +185,8 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             totalInvestmentGainDollar: dollarGain,
             effectiveAnnualReturnPct: Number(returnPct.toFixed(2)),
             actualBalances: {
-                p1: {},
-                p2: {}
+                p1: p1Clean,
+                p2: isCouple ? p2Clean : undefined
             },
             priorYearGains: {
                 p1_lif_dollar_gain: pastLifGain !== '' ? Number(pastLifGain) : undefined
@@ -129,6 +211,9 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         setPastGain('');
         setPastLifGain('');
         setPastNotes('');
+        setShowAccountBreakdown(false);
+        setManualBalancesP1({ tfsa: '', rrsp: '', nonreg: '', acb: '', cash: '', crypto: '', fhsa: '', rrif: '', lif: '' });
+        setManualBalancesP2({ tfsa: '', rrsp: '', nonreg: '', acb: '', cash: '', crypto: '', fhsa: '', rrif: '', lif: '' });
     };
 
     const handleDeleteEntry = (hId: string) => {
@@ -225,6 +310,62 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                     </div>
                 )}
             </div>
+
+            {/* PERFORMANCE BENCHMARK & CALIBRATION (PAST ACTUALS VS. ASSUMED PLAN RETURN) */}
+            {historicalStats && historicalStats.count > 0 && (
+                <div className="rp-card border border-secondary rounded-4 p-4 mb-4 shadow-sm surface-card">
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 border-bottom border-secondary pb-3">
+                        <div>
+                            <h6 className="mb-0 fw-bold text-uppercase ls-1 small d-flex align-items-center">
+                                <i className="bi bi-graph-up-arrow text-success me-2"></i> Track Record vs. Plan Assumption Calibration
+                            </h6>
+                            <span className="text-muted small">Compare your real-world historical returns to your active plan benchmark ({assumedReturnRate.toFixed(1)}%).</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                            <span className={`badge ${historicalStats.delta >= 0 ? 'bg-success' : 'bg-warning text-dark'} fw-bold px-3 py-1.5 rounded-pill`}>
+                                Historical Avg: {historicalStats.avgReturn >= 0 ? '+' : ''}{historicalStats.avgReturn.toFixed(2)}% / yr
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="row g-3 align-items-center">
+                        <div className="col-12 col-lg-8">
+                            <div style={{ height: '220px', width: '100%' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={historicalStats.chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                                        <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#888' }} />
+                                        <YAxis tick={{ fontSize: 11, fill: '#888' }} tickFormatter={(v) => `${v}%`} />
+                                        <RechartsTooltip 
+                                            formatter={(value: any, name: any) => [`${value}%`, name === 'actualReturn' ? 'Actual Return' : 'Assumed Return']} 
+                                            contentStyle={{ backgroundColor: 'rgba(20, 24, 33, 0.95)', borderColor: '#444', borderRadius: '8px', fontSize: '12px' }} 
+                                        />
+                                        <ReferenceLine y={assumedReturnRate} stroke="#0dcaf0" strokeDasharray="4 4" label={{ value: `Assumed ${assumedReturnRate.toFixed(1)}%`, fill: '#0dcaf0', fontSize: 11, position: 'top' }} />
+                                        <Bar dataKey="actualReturn" fill="#198754" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-lg-4">
+                            <div className="p-3 bg-input border border-secondary rounded-3">
+                                <span className="small text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>Assumptions Guidance</span>
+                                <p className="small text-main mt-1.5 mb-2" style={{ lineHeight: '1.5' }}>
+                                    {historicalStats.delta >= 0 ? (
+                                        <>Your archived actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are running <span className="text-success fw-bold">+{historicalStats.delta.toFixed(2)}% ahead</span> of your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>). Your projections are comfortably grounded with a conservative safety margin.</>
+                                    ) : (
+                                        <>Your archived actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are trailing your plan's assumed growth rate (<b>{assumedReturnRate.toFixed(1)}%</b>) by <span className="text-warning fw-bold">{Math.abs(historicalStats.delta).toFixed(2)}%</span>. Consider recalibrating your investment growth rate in Card 3 to test lower return scenarios.</>
+                                    )}
+                                </p>
+                                <div className="d-flex justify-content-between small text-muted pt-2 border-top border-secondary border-opacity-25" style={{ fontSize: '0.72rem' }}>
+                                    <span>Plan Benchmark: <b>{assumedReturnRate.toFixed(1)}%</b></span>
+                                    <span>Years Measured: <b>{historicalStats.count}</b></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MAIN CONTENT AREA */}
             {historyList.length === 0 ? (
@@ -336,13 +477,42 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                                 {h.actualBalances.p1 && (
                                                                     <div className="col-12 col-md-6">
                                                                         <div className="p-2.5 bg-input border border-secondary rounded-3">
-                                                                            <span className="fw-bold text-muted small text-uppercase" style={{ fontSize: '0.65rem' }}>Player 1 Balances</span>
+                                                                            <div className="d-flex justify-content-between align-items-center">
+                                                                                <span className="fw-bold text-muted small text-uppercase" style={{ fontSize: '0.65rem' }}>Player 1 Balances</span>
+                                                                                {Number(h.actualBalances.p1.acb) > 0 && (
+                                                                                    <button 
+                                                                                        type="button" 
+                                                                                        className="btn btn-sm btn-outline-info rounded-pill py-0 px-2 fw-bold" 
+                                                                                        style={{ fontSize: '0.65rem' }}
+                                                                                        onClick={() => handleRebaselineAcb(h)}
+                                                                                        title="Set this year's recorded ACB as the active plan baseline"
+                                                                                    >
+                                                                                        <i className="bi bi-arrow-repeat me-1"></i> Rebaseline Non-Reg ACB
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
                                                                             <div className="d-flex flex-wrap gap-2 mt-1.5">
-                                                                                {Object.entries(h.actualBalances.p1).map(([acct, val]: [string, any]) => Number(val) > 0 && (
-                                                                                    <span key={acct} className="badge bg-secondary bg-opacity-25 text-main">
-                                                                                        {acct.toUpperCase()}: ${(Number(val)).toLocaleString()}
+                                                                                {Object.entries(h.actualBalances.p1).map(([acct, val]: [string, any]) => {
+                                                                                    if (acct === 'acb') return null;
+                                                                                    if (Number(val) <= 0) return null;
+                                                                                    const isNonReg = acct === 'nonreg';
+                                                                                    const acbVal = Number(h.actualBalances.p1.acb) || 0;
+                                                                                    return (
+                                                                                        <span key={acct} className="badge bg-secondary bg-opacity-25 text-main d-inline-flex align-items-center gap-1.5 py-1 px-2">
+                                                                                            <span>{acct.toUpperCase()}: ${(Number(val)).toLocaleString()}</span>
+                                                                                            {isNonReg && acbVal > 0 && (
+                                                                                                <span className="text-info fw-normal" style={{ fontSize: '0.68rem' }}>
+                                                                                                    (ACB: ${acbVal.toLocaleString()} | Gain: +${Math.max(0, Number(val) - acbVal).toLocaleString()})
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </span>
+                                                                                    );
+                                                                                })}
+                                                                                {h.actualBalances.p1.acb && !h.actualBalances.p1.nonreg && (
+                                                                                    <span className="badge bg-info bg-opacity-10 text-info py-1 px-2">
+                                                                                        NON-REG ACB: ${Number(h.actualBalances.p1.acb).toLocaleString()}
                                                                                     </span>
-                                                                                ))}
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -352,11 +522,22 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                                         <div className="p-2.5 bg-input border border-secondary rounded-3">
                                                                             <span className="fw-bold text-muted small text-uppercase" style={{ fontSize: '0.65rem' }}>Player 2 Balances</span>
                                                                             <div className="d-flex flex-wrap gap-2 mt-1.5">
-                                                                                {Object.entries(h.actualBalances.p2).map(([acct, val]: [string, any]) => Number(val) > 0 && (
-                                                                                    <span key={acct} className="badge bg-secondary bg-opacity-25 text-main">
-                                                                                        {acct.toUpperCase()}: ${(Number(val)).toLocaleString()}
-                                                                                    </span>
-                                                                                ))}
+                                                                                {Object.entries(h.actualBalances.p2).map(([acct, val]: [string, any]) => {
+                                                                                    if (acct === 'acb') return null;
+                                                                                    if (Number(val) <= 0) return null;
+                                                                                    const isNonReg = acct === 'nonreg';
+                                                                                    const acbVal = Number(h.actualBalances.p2.acb) || 0;
+                                                                                    return (
+                                                                                        <span key={acct} className="badge bg-secondary bg-opacity-25 text-main d-inline-flex align-items-center gap-1.5 py-1 px-2">
+                                                                                            <span>{acct.toUpperCase()}: ${(Number(val)).toLocaleString()}</span>
+                                                                                            {isNonReg && acbVal > 0 && (
+                                                                                                <span className="text-info fw-normal" style={{ fontSize: '0.68rem' }}>
+                                                                                                    (ACB: ${acbVal.toLocaleString()})
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </span>
+                                                                                    );
+                                                                                })}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -467,6 +648,98 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                         />
                                         <span className="small text-muted" style={{ fontSize: '0.7rem' }}>For prior year LIF limit calculations</span>
                                     </div>
+                                </div>
+
+                                {/* OPTIONAL DETAILED ACCOUNT BREAKDOWN */}
+                                <div className="p-3 bg-secondary bg-opacity-10 border border-secondary rounded-3 mb-3">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div className="d-flex align-items-center gap-2">
+                                            <i className="bi bi-wallet2 text-info"></i>
+                                            <span className="small fw-bold text-main">Record Account Balances & Non-Reg ACB (Optional)</span>
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 fw-bold"
+                                            style={{ fontSize: '0.7rem' }}
+                                            onClick={() => setShowAccountBreakdown(prev => !prev)}
+                                        >
+                                            {showAccountBreakdown ? 'Hide Breakdown' : '+ Add Account Breakdown'}
+                                        </button>
+                                    </div>
+
+                                    {showAccountBreakdown && (
+                                        <div className="mt-3 pt-3 border-top border-secondary border-opacity-25">
+                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                <span className="small text-muted fw-bold text-uppercase" style={{ fontSize: '0.65rem' }}>Player 1 Balances (Dec 31)</span>
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold" 
+                                                    style={{ fontSize: '0.7rem' }}
+                                                    onClick={handleSumAccountsToClosing}
+                                                >
+                                                    Sum to Closing NW &rarr;
+                                                </button>
+                                            </div>
+                                            <div className="row g-2 mb-2">
+                                                <div className="col-4">
+                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>TFSA ($)</label>
+                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.tfsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, tfsa: val }))} />
+                                                </div>
+                                                <div className="col-4">
+                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRSP ($)</label>
+                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.rrsp} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrsp: val }))} />
+                                                </div>
+                                                <div className="col-4">
+                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Cash / HYSA ($)</label>
+                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.cash} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, cash: val }))} />
+                                                </div>
+                                            </div>
+                                            <div className="row g-2 mb-2">
+                                                <div className="col-6">
+                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg Value ($)</label>
+                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.nonreg} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, nonreg: val }))} />
+                                                </div>
+                                                <div className="col-6">
+                                                    <label className="small text-info fw-bold mb-0" style={{ fontSize: '0.68rem' }}>Non-Reg ACB ($) &mdash; Book Value</label>
+                                                    <CurrencyInput className="form-control form-control-sm border-info" placeholder="$0" value={manualBalancesP1.acb} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, acb: val }))} />
+                                                </div>
+                                            </div>
+                                            <div className="row g-2">
+                                                <div className="col-4">
+                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>Crypto ($)</label>
+                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.crypto} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, crypto: val }))} />
+                                                </div>
+                                                <div className="col-4">
+                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>FHSA ($)</label>
+                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.fhsa} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, fhsa: val }))} />
+                                                </div>
+                                                <div className="col-4">
+                                                    <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>RRIF / LIF ($)</label>
+                                                    <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP1.rrif} onChange={(val: any) => setManualBalancesP1(prev => ({ ...prev, rrif: val }))} />
+                                                </div>
+                                            </div>
+
+                                            {isCouple && (
+                                                <div className="mt-3 pt-2 border-top border-secondary border-opacity-25">
+                                                    <span className="small text-muted fw-bold text-uppercase d-block mb-2" style={{ fontSize: '0.65rem' }}>Player 2 Balances (Dec 31)</span>
+                                                    <div className="row g-2 mb-2">
+                                                        <div className="col-4">
+                                                            <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 TFSA ($)</label>
+                                                            <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP2.tfsa} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, tfsa: val }))} />
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 RRSP ($)</label>
+                                                            <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP2.rrsp} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, rrsp: val }))} />
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <label className="small text-muted mb-0" style={{ fontSize: '0.68rem' }}>P2 Non-Reg ($)</label>
+                                                            <CurrencyInput className="form-control form-control-sm" placeholder="$0" value={manualBalancesP2.nonreg} onChange={(val: any) => setManualBalancesP2(prev => ({ ...prev, nonreg: val }))} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mb-2">

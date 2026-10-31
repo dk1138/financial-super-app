@@ -141,7 +141,7 @@ export default function ProjectionTab() {
               Math.round(getRealValue(engineContributions, y.year)),
               Math.round(getRealValue(totalWithdrawals as number, y.year)),
               Math.round(getRealValue(y.liquidNW || 0, y.year)),
-              Math.round(getRealValue((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)),
+              Math.round(getRealValue((y.reIncludedEq || 0) + (y.reExcludedEq || 0), y.year)),
               Math.round(getRealValue(totalEstate, y.year))
           ].join(",");
       });
@@ -1961,8 +1961,31 @@ export default function ProjectionTab() {
                                             <span className="text-muted d-flex align-items-center">Real Estate Equity</span>
                                             <span className="d-flex align-items-center">
                                                 {y.reIncludedEq > 0 && <span className="badge bg-secondary bg-opacity-25 text-muted border border-secondary fw-normal py-1 me-2" style={{fontSize: '0.6rem'}}>INCLUDED</span>}
-                                                {formatCurrency((y.reIncludedEq || 0) + (y.reNonIncludedEq || 0), y.year)}
+                                                {formatCurrency((y.reIncludedEq || 0) + (y.reExcludedEq || 0), y.year)}
                                             </span>
+                                        </div>
+
+                                        {/* ESTATE & UNREALIZED TERMINAL TAX BITE */}
+                                        <div className="mt-3 pt-2 border-top border-secondary border-opacity-25">
+                                            <div className="text-muted fw-bold small mb-2 ls-1" style={{ fontSize: '0.65rem' }}>ESTATE & DEEMED DISPOSITION</div>
+                                            <div className="d-flex justify-content-between small mb-1 align-items-center">
+                                                <span className="text-muted d-flex align-items-center">
+                                                    Unrealized Tax Bite
+                                                    <InfoBtn align="left" title="Deemed Disposition Tax" text="Estimated terminal tax if all registered assets (RRSP, RRIF, LIF) were fully liquidated and capital gains in non-registered/crypto were taxed at death." />
+                                                </span>
+                                                <span className="text-danger fw-medium">
+                                                    -{formatCurrency(y.terminalTax !== undefined ? y.terminalTax : Math.max(0, totalNW - (y.afterTaxEstate || totalNW)), y.year)}
+                                                </span>
+                                            </div>
+                                            <div className="d-flex justify-content-between small mb-1 align-items-center">
+                                                <span className="text-success fw-bold d-flex align-items-center">
+                                                    Net After-Tax Estate
+                                                    <InfoBtn align="left" title="Net Estate to Heirs" text="Total wealth transferred to beneficiaries after paying deemed disposition taxes upon death." />
+                                                </span>
+                                                <span className="text-success fw-bold">
+                                                    {formatCurrency(y.afterTaxEstate !== undefined ? y.afterTaxEstate : totalNW, y.year)}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="mt-3"></div>

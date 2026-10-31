@@ -289,18 +289,59 @@ export default function LivingCostCard() {
 
                                 {/* IF RENTING OR LTC */}
                                 {(phase.action === 'rent' || phase.action === 'ltc') && (
-                                    <div className="row g-3 align-items-center">
-                                        <div className="col-12 col-md-6 col-lg-4">
-                                            <label className="form-label small text-muted fw-bold mb-1">Monthly Cost (Today's $)</label>
-                                            <CurrencyInput className="form-control border-primary border-opacity-50 text-main fw-bold shadow-sm text-center" value={phase.rent ?? 4000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rent', val)} />
+                                    <>
+                                        <div className="row g-3 align-items-center">
+                                            <div className="col-12 col-md-6 col-lg-4">
+                                                <label className="form-label small text-muted fw-bold mb-1">{phase.action === 'ltc' ? "Monthly LTC Facility Cost (Today's $)" : "Monthly Rent (Today's $)"}</label>
+                                                <CurrencyInput className="form-control border-primary border-opacity-50 text-main fw-bold shadow-sm text-center" value={phase.rent ?? 4000} onChange={(val: any) => updateArrayItem('housingTransitions', idx, 'rent', val)} />
+                                            </div>
+                                            <div className="col-12 col-md-6 col-lg-8">
+                                                <span className="small text-muted fst-italic">
+                                                    <i className="bi bi-info-circle me-1"></i>
+                                                    {isOwningPrior && !phase.keepPrevious ? "Net cash from your home sale will be added to your portfolio to help fund this cost." : "This new amount will override your previous rent/housing costs."}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="col-12 col-md-6 col-lg-8">
-                                            <span className="small text-muted fst-italic">
-                                                <i className="bi bi-info-circle me-1"></i>
-                                                {isOwningPrior && !phase.keepPrevious ? "Net cash from your home sale will be added to your portfolio to help fund this cost." : "This new amount will override your previous rent/housing costs."}
-                                            </span>
-                                        </div>
-                                    </div>
+
+                                        {/* DISABILITY TAX CREDIT (DTC) INTEGRATION FOR LTC */}
+                                        {phase.action === 'ltc' && (
+                                            <div className="mt-3 p-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                                <div className="d-flex align-items-center gap-2.5">
+                                                    <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '36px', height: '36px' }}>
+                                                        <i className="bi bi-shield-plus fs-5"></i>
+                                                    </div>
+                                                    <div>
+                                                        <span className="small fw-bold text-main d-block">Disability Tax Credit (DTC) Linkage</span>
+                                                        <span className="small text-muted">Entering Long-Term Care typically qualifies residents for Canada's non-refundable Disability Tax Credit (Line 31600 & 58440), providing ~$1,500–$2,500+/yr in tax reduction.</span>
+                                                    </div>
+                                                </div>
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <div className="form-check form-switch mb-0 d-flex align-items-center">
+                                                        <input 
+                                                            className="form-check-input cursor-pointer fs-5 m-0" 
+                                                            type="checkbox" 
+                                                            id={`dtc_toggle_p1_${idx}`}
+                                                            checked={Boolean(data.inputs.p1_disability)} 
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                updateInput('p1_disability', checked);
+                                                                if (checked && !data.inputs.p1_disability_start_age) {
+                                                                    updateInput('p1_disability_start_age', phase.age || 65);
+                                                                }
+                                                            }} 
+                                                        />
+                                                        <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer" htmlFor={`dtc_toggle_p1_${idx}`}>
+                                                            {data.inputs.p1_disability ? (
+                                                                <span className="text-success fw-bold">DTC Enabled (Age {data.inputs.p1_disability_start_age || phase.age || 65}+)</span>
+                                                            ) : (
+                                                                <span>Enable DTC (Age {phase.age || 65}+)</span>
+                                                            )}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
