@@ -101,14 +101,14 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
 
 
-    // Calculate historical average return with full automatic fallback and chaining
+    // Calculate historical average return with full automatic fallback and chaining (excluding unmeasured baseline year)
     const historicalStats = useMemo(() => {
         if (!historyList || historyList.length === 0) return null;
 
         // Sort chronologically by calendar year
         const sorted = [...historyList].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
 
-        const chartData = sorted.map((h: any, idx: number) => {
+        const allMapped = sorted.map((h: any, idx: number) => {
             let close = getRecordClosingNW(h);
             let open = Number(h.openingNetWorth) || 0;
             const savings = Number(h.netSavingsAdded) || 0;
@@ -119,7 +119,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                 if (prevClose > 0) open = prevClose;
             }
 
-            let returnPct = 0;
+            let returnPct: number | null = null;
             if (h.effectiveAnnualReturnPct !== undefined && Number(h.effectiveAnnualReturnPct) !== 0) {
                 returnPct = Number(h.effectiveAnnualReturnPct);
             } else if (open > 0) {
@@ -129,15 +129,22 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                 returnPct = (gain / open) * 100;
             }
 
+            const hasValidMeasurement = returnPct !== null && (open > 0 || (h.effectiveAnnualReturnPct !== undefined && Number(h.effectiveAnnualReturnPct) !== 0));
+
             return {
                 year: String(h.calendarYear),
                 calendarYear: h.calendarYear,
-                actualReturn: Number(returnPct.toFixed(2)),
+                actualReturn: returnPct !== null ? Number(returnPct.toFixed(2)) : 0,
                 assumedReturn: Number(assumedReturnRate.toFixed(2)),
                 openingNetWorth: open,
-                closingNetWorth: close
+                closingNetWorth: close,
+                hasValidMeasurement
             };
         });
+
+        // Filter out initial baseline year with no prior opening balance
+        const chartData = allMapped.filter(d => d.hasValidMeasurement);
+        if (chartData.length === 0) return null;
 
         const validReturns = chartData.map(d => d.actualReturn);
         const avgReturn = validReturns.length > 0 ? (validReturns.reduce((a, b) => a + b, 0) / validReturns.length) : 0;
@@ -666,6 +673,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                     if (openDisplay === 0 && hIdx > 0) {
                                         openDisplay = getRecordClosingNW(historyList[hIdx - 1]);
                                     }
+                                    const isBaselineYear = openDisplay === 0 && (h.effectiveAnnualReturnPct === undefined || Number(h.effectiveAnnualReturnPct) === 0);
                                     const savingsDisplay = Number(h.netSavingsAdded) || 0;
                                     const gainDisplay = h.totalInvestmentGainDollar !== undefined && Number(h.totalInvestmentGainDollar) !== 0
                                         ? Number(h.totalInvestmentGainDollar)
@@ -681,14 +689,24 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                     <i className="bi bi-calendar2-check-fill me-1.5"></i> {h.calendarYear}
                                                 </td>
                                                 <td className="small text-muted">{h.archiveDate || '—'}</td>
-                                                <td className="text-end text-muted small">${(openDisplay).toLocaleString()}</td>
+                                                <td className="text-end text-muted small">{openDisplay > 0 ? `$${openDisplay.toLocaleString()}` : '—'}</td>
                                                 <td className="text-end">
-                                                    <span className={`badge ${gainDisplay >= 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'} fw-bold px-2 py-1`}>
-                                                        {gainDisplay >= 0 ? '+' : ''}${Math.round(gainDisplay).toLocaleString()}
-                                                    </span>
+                                                    {isBaselineYear ? (
+                                                        <span className="badge bg-secondary bg-opacity-25 text-muted fw-normal px-2 py-1">
+                                                            Baseline Snapshot
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`badge ${gainDisplay >= 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'} fw-bold px-2 py-1`}>
+                                                            {gainDisplay >= 0 ? '+' : ''}${Math.round(gainDisplay).toLocaleString()}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="text-end fw-bold text-main small">
-                                                    {returnPctDisplay >= 0 ? '+' : ''}{returnPctDisplay.toFixed(2)}%
+                                                    {isBaselineYear ? (
+                                                        <span className="text-muted fw-normal">—</span>
+                                                    ) : (
+                                                        `${returnPctDisplay >= 0 ? '+' : ''}${returnPctDisplay.toFixed(2)}%`
+                                                    )}
                                                 </td>
                                                 <td className="text-end pe-3 fw-bold text-success">
                                                     ${(closeDisplay).toLocaleString()}
