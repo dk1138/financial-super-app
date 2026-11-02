@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
-    ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
+    ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, 
     CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine 
 } from 'recharts';
 import { useFinance } from '../lib/FinanceContext';
@@ -68,7 +68,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const p1Name = data?.inputs?.p1_name || 'Player 1';
     const p2Name = data?.inputs?.p2_name || 'Player 2';
     const [modalPlayerTab, setModalPlayerTab] = useState<'p1' | 'p2'>('p1');
-    const assumedReturnRate = Number(data?.inputs?.p1_nonreg_rate ?? data?.inputs?.balanced_return ?? 6.0);
+    const assumedReturnRate = Number(data?.inputs?.p1_tfsa_ret ?? data?.inputs?.p1_rrsp_ret ?? data?.inputs?.p1_nonreg_ret ?? 6.0);
 
     // Helpers to resolve net worths even if not explicitly stored (defined first to prevent TDZ ReferenceError)
     const getRecordClosingNW = (h: any) => {
@@ -157,8 +157,8 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     }, [historicalStats]);
 
     const yDomainMax = useMemo(() => {
-        if (!historicalStats?.chartData?.length) return 10;
-        const maxVal = Math.max(...historicalStats.chartData.map((d: any) => Math.max(Number(d.actualReturn) || 0, Number(d.assumedReturn) || 0)));
+        if (!historicalStats?.chartData?.length) return Math.ceil(assumedReturnRate + 3);
+        const maxVal = Math.max(...historicalStats.chartData.map((d: any) => Number(d.actualReturn) || 0));
         return Math.max(Math.ceil(assumedReturnRate + 3), Math.ceil(maxVal + 2));
     }, [historicalStats, assumedReturnRate]);
 
@@ -578,12 +578,15 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                 axisLine={{ stroke: '#444' }}
                                             />
                                             <RechartsTooltip 
-                                                formatter={(value: any, name: any) => [`${Number(value || 0).toFixed(1)}%`, name === 'actualReturn' ? 'Actual Return' : 'Plan Benchmark']} 
+                                                formatter={(value: any) => [`${Number(value || 0).toFixed(2)}%`, 'Actual Return']} 
                                                 contentStyle={{ backgroundColor: 'rgba(20, 24, 33, 0.95)', borderColor: '#444', borderRadius: '8px', fontSize: '12px' }} 
                                             />
                                             <ReferenceLine y={assumedReturnRate} stroke="#0dcaf0" strokeDasharray="4 4" label={{ value: `Plan Benchmark ${assumedReturnRate.toFixed(1)}%`, fill: '#0dcaf0', fontSize: 11, position: 'top' }} />
-                                            <Bar dataKey="actualReturn" name="Actual Return" fill="#198754" radius={[4, 4, 0, 0]} maxBarSize={55} />
-                                            <Bar dataKey="assumedReturn" name="Plan Benchmark" fill="#0dcaf0" opacity={0.3} radius={[4, 4, 0, 0]} maxBarSize={55} />
+                                            <Bar dataKey="actualReturn" name="Actual Return" fill="#198754" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                                {historicalStats.chartData.map((entry: any, index: number) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.actualReturn >= 0 ? '#198754' : '#dc3545'} />
+                                                ))}
+                                            </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
                                 ) : (
@@ -899,7 +902,9 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 {/* CORE TIMELINE METRICS */}
                                 <div className="row g-3 mb-3">
                                     <div className="col-12 col-sm-6">
-                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Calendar Year</label>
+                                        <div className="d-flex justify-content-between align-items-center mb-1" style={{ minHeight: '22px' }}>
+                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1 text-nowrap">Calendar Year</label>
+                                        </div>
                                         <input 
                                             type="number" 
                                             className="form-control fw-bold border-secondary" 
@@ -910,10 +915,12 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                         />
                                     </div>
                                     <div className="col-12 col-sm-6">
-                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Net Savings Added ($)</label>
+                                        <div className="d-flex justify-content-between align-items-center mb-1" style={{ minHeight: '22px' }}>
+                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1 text-nowrap">Net Savings Added</label>
+                                        </div>
                                         <CurrencyInput 
                                             className="form-control border-secondary" 
-                                            placeholder="$0" 
+                                            placeholder="0" 
                                             value={pastSavings} 
                                             onChange={(val: any) => setPastSavings(val)} 
                                         />
@@ -922,40 +929,41 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
                                 <div className="row g-3 mb-3">
                                     <div className="col-12 col-sm-6">
-                                        <div className="d-flex justify-content-between align-items-center mb-1">
-                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1">Jan 1 Opening NW ($)</label>
+                                        <div className="d-flex justify-content-between align-items-center mb-1" style={{ minHeight: '22px' }}>
+                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1 text-nowrap">Jan 1 Opening NW</label>
                                             {priorYearClosingNW > 0 && (
-                                                <button 
-                                                    type="button" 
-                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold d-flex align-items-center" 
-                                                    style={{ fontSize: '0.7rem' }}
-                                                    onClick={() => setPastOpeningNW(priorYearClosingNW)}
-                                                    title={`Auto-populate with ${pastYearNum - 1} Dec 31 Ending Net Worth ($${priorYearClosingNW.toLocaleString()})`}
-                                                >
-                                                    <i className="bi bi-clock-history me-1"></i> From {pastYearNum - 1} Ending (${priorYearClosingNW.toLocaleString()})
-                                                </button>
+                                                Number(pastOpeningNW) === priorYearClosingNW ? (
+                                                    <span className="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 py-0.5 px-2 fw-semibold d-inline-flex align-items-center text-nowrap" style={{ fontSize: '0.7rem' }}>
+                                                        <i className="bi bi-check2-circle me-1"></i> From {pastYearNum - 1} Ending
+                                                    </span>
+                                                ) : (
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold d-flex align-items-center text-nowrap" 
+                                                        style={{ fontSize: '0.72rem' }}
+                                                        onClick={() => setPastOpeningNW(priorYearClosingNW)}
+                                                        title={`Auto-populate with ${pastYearNum - 1} Dec 31 Ending Net Worth ($${priorYearClosingNW.toLocaleString()})`}
+                                                    >
+                                                        <i className="bi bi-clock-history me-1"></i> Copy {pastYearNum - 1} Ending
+                                                    </button>
+                                                )
                                             )}
                                         </div>
                                         <CurrencyInput 
                                             className="form-control border-secondary" 
-                                            placeholder="$0" 
+                                            placeholder="0" 
                                             value={pastOpeningNW} 
                                             onChange={(val: any) => setPastOpeningNW(val)} 
                                         />
-                                        {priorYearClosingNW > 0 && Number(pastOpeningNW) === priorYearClosingNW && (
-                                            <div className="small text-success mt-1" style={{ fontSize: '0.68rem' }}>
-                                                <i className="bi bi-check-circle-fill me-1"></i> Auto-populated from {pastYearNum - 1} ending net worth
-                                            </div>
-                                        )}
                                     </div>
                                     <div className="col-12 col-sm-6">
-                                        <div className="d-flex justify-content-between align-items-center mb-1">
-                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1">Dec 31 Closing NW ($)</label>
+                                        <div className="d-flex justify-content-between align-items-center mb-1" style={{ minHeight: '22px' }}>
+                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1 text-nowrap">Dec 31 Closing NW</label>
                                             {showAccountBreakdown && (
                                                 <button 
                                                     type="button" 
-                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold" 
-                                                    style={{ fontSize: '0.7rem' }}
+                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold d-flex align-items-center text-nowrap" 
+                                                    style={{ fontSize: '0.72rem' }}
                                                     onClick={handleSumAccountsToClosing}
                                                     title="Auto-sum all entered accounts below into closing Net Worth"
                                                 >
@@ -965,7 +973,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                         </div>
                                         <CurrencyInput 
                                             className="form-control fw-bold text-success border-secondary" 
-                                            placeholder="$0" 
+                                            placeholder="0" 
                                             value={pastClosingNW} 
                                             onChange={(val: any) => setPastClosingNW(val)} 
                                         />
