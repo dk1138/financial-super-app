@@ -28,7 +28,9 @@ interface DataBankTabProps {
 export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const { data, restoreHistorySnapshot, setData } = useFinance();
     const { t } = useTranslation();
-    const historyList = (data.history || []) as any[];
+    const historyList = useMemo(() => {
+        return [...(data.history || [])].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
+    }, [data.history]);
 
     const [expandedYear, setExpandedYear] = useState<number | null>(null);
     const [showLocalRollForward, setShowLocalRollForward] = useState<boolean>(false);
@@ -61,6 +63,25 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const p2Name = data?.inputs?.p2_name || 'Player 2';
     const [modalPlayerTab, setModalPlayerTab] = useState<'p1' | 'p2'>('p1');
     const assumedReturnRate = Number(data?.inputs?.p1_nonreg_rate ?? data?.inputs?.balanced_return ?? 6.0);
+
+    // Helper to resolve net worths even if not explicitly stored
+    const getPriorYearEndingNW = (year: number) => {
+        const prior = (data.history || []).find((h: any) => Number(h.calendarYear) === year - 1);
+        if (!prior) return 0;
+        return getRecordClosingNW(prior);
+    };
+
+    const priorYearClosingNW = useMemo(() => {
+        return getPriorYearEndingNW(pastYearNum);
+    }, [data.history, pastYearNum]);
+
+    const handleYearChange = (newYear: number) => {
+        setPastYearNum(newYear);
+        const priorClose = getPriorYearEndingNW(newYear);
+        if (priorClose > 0) {
+            setPastOpeningNW(priorClose);
+        }
+    };
 
     // Helpers to resolve net worths even if not explicitly stored
     const getRecordClosingNW = (h: any) => {
@@ -195,8 +216,20 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
     const handleOpenAddPastYear = () => {
         setEditingRecordId(null);
-        setPastYearNum(new Date().getFullYear() - 1);
-        setPastOpeningNW('');
+        // Default to next sequential year if prior years exist, else last year
+        const sortedYears = [...(data.history || [])].map((h: any) => Number(h.calendarYear)).sort((a, b) => a - b);
+        let defaultYear = new Date().getFullYear() - 1;
+        if (sortedYears.length > 0) {
+            const maxYear = sortedYears[sortedYears.length - 1];
+            if (maxYear < new Date().getFullYear()) {
+                defaultYear = maxYear + 1;
+            }
+        }
+        setPastYearNum(defaultYear);
+
+        // Auto-populate opening NW from prior year's ending NW if available
+        const priorClose = getPriorYearEndingNW(defaultYear);
+        setPastOpeningNW(priorClose > 0 ? priorClose : '');
         setPastClosingNW('');
         setPastSavings(0);
         setPastGain('');
@@ -213,7 +246,12 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const handleEditRecord = (h: any) => {
         setEditingRecordId(h.id);
         setPastYearNum(h.calendarYear);
-        setPastOpeningNW(h.openingNetWorth ?? '');
+        let openVal = h.openingNetWorth ?? '';
+        if ((openVal === '' || openVal === 0) && h.calendarYear) {
+            const priorClose = getPriorYearEndingNW(h.calendarYear);
+            if (priorClose > 0) openVal = priorClose;
+        }
+        setPastOpeningNW(openVal);
         setPastClosingNW(h.closingNetWorth ?? '');
         setPastSavings(h.netSavingsAdded ?? 0);
         setPastGain(h.totalInvestmentGainDollar ?? '');
@@ -841,7 +879,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                             className="form-control fw-bold border-secondary" 
                                             value={pastYearNum} 
                                             max={new Date().getFullYear()} 
-                                            onChange={(e) => setPastYearNum(parseInt(e.target.value, 10) || (new Date().getFullYear() - 1))} 
+                                            onChange={(e) => handleYearChange(parseInt(e.target.value, 10) || (new Date().getFullYear() - 1))} 
                                             required 
                                         />
                                     </div>
@@ -858,13 +896,31 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
                                 <div className="row g-3 mb-3">
                                     <div className="col-12 col-sm-6">
-                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">Jan 1 Opening NW ($)</label>
+                                        <div className="d-flex justify-content-between align-items-center mb-1">
+                                            <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1">Jan 1 Opening NW ($)</label>
+                                            {priorYearClosingNW > 0 && (
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-sm btn-link text-info p-0 text-decoration-none fw-bold d-flex align-items-center" 
+                                                    style={{ fontSize: '0.7rem' }}
+                                                    onClick={() => setPastOpeningNW(priorYearClosingNW)}
+                                                    title={`Auto-populate with ${pastYearNum - 1} Dec 31 Ending Net Worth ($${priorYearClosingNW.toLocaleString()})`}
+                                                >
+                                                    <i className="bi bi-clock-history me-1"></i> From {pastYearNum - 1} Ending (${priorYearClosingNW.toLocaleString()})
+                                                </button>
+                                            )}
+                                        </div>
                                         <CurrencyInput 
                                             className="form-control border-secondary" 
                                             placeholder="$0" 
                                             value={pastOpeningNW} 
                                             onChange={(val: any) => setPastOpeningNW(val)} 
                                         />
+                                        {priorYearClosingNW > 0 && Number(pastOpeningNW) === priorYearClosingNW && (
+                                            <div className="small text-success mt-1" style={{ fontSize: '0.68rem' }}>
+                                                <i className="bi bi-check-circle-fill me-1"></i> Auto-populated from {pastYearNum - 1} ending net worth
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="col-12 col-sm-6">
                                         <div className="d-flex justify-content-between align-items-center mb-1">
