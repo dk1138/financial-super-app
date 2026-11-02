@@ -110,41 +110,36 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
         return list;
     }, [data, isCouple, p1Name, p2Name, initialProjectionYear, priorHistoryRecord]);
 
-    // Populate initial state if not yet modified
+    // Populate initial state: default closing balances directly to current live plan balances!
     React.useEffect(() => {
         if (isOpen) {
             const defaults: Record<string, number> = {};
             items.forEach(it => {
-                defaults[it.key] = it.projBal;
+                // Closing balances for the concluding year default to the user's CURRENT live balances in Card 3
+                const currentPlanBal = Number(data.inputs[it.key]);
+                defaults[it.key] = !isNaN(currentPlanBal) && currentPlanBal > 0 ? currentPlanBal : it.projBal;
             });
             setClosingBalances(defaults);
 
+            // Real estate closing values default to the user's current live property values and mortgages
             const propDefaults: Record<string, { value: number; mortgage: number }> = {};
             (data.properties || []).forEach((prop, idx) => {
-                // Approximate 1 year mortgage principal amortization
-                const currentMortgage = Number(prop.mortgage) || 0;
-                const annualPmt = (Number(prop.payment) || 0) * 12;
-                const approxInterest = currentMortgage * ((Number(prop.rate) || 4.5) / 100);
-                const amortizedMortgage = Math.max(0, currentMortgage - Math.max(0, annualPmt - approxInterest));
-                const growthRate = (Number(prop.growth) || 3.0) / 100;
-                const estValue = Math.round((Number(prop.value) || 0) * (1 + growthRate));
-
                 propDefaults[`prop_${idx}`] = {
-                    value: estValue,
-                    mortgage: Math.round(amortizedMortgage)
+                    value: Number(prop.value) || 0,
+                    mortgage: Number(prop.mortgage) || 0
                 };
             });
             setPropertyValues(propDefaults);
 
+            // Custom assets closing values default to the user's current live custom asset balances
             const caDefaults: Record<string, number> = {};
             (data.customAssets || []).forEach((ca, idx) => {
-                const growthRate = (Number(ca.rate) || 6.0) / 100;
-                caDefaults[`ca_${idx}`] = Math.round((Number(ca.balance) || 0) * (1 + growthRate));
+                caDefaults[`ca_${idx}`] = Number(ca.balance) || 0;
             });
             setCustomAssetBalances(caDefaults);
             setStep(1);
         }
-    }, [isOpen, items, data.properties, data.customAssets]);
+    }, [isOpen, items, data.properties, data.customAssets, data.inputs]);
 
     
     // Net worth and gain math
