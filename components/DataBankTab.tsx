@@ -933,8 +933,8 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                             <label className="form-label small fw-bold text-muted mb-0 text-uppercase ls-1 text-nowrap">Jan 1 Opening NW</label>
                                             {priorYearClosingNW > 0 && (
                                                 Number(pastOpeningNW) === priorYearClosingNW ? (
-                                                    <span className="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 py-0.5 px-2 fw-semibold d-inline-flex align-items-center text-nowrap" style={{ fontSize: '0.7rem' }}>
-                                                        <i className="bi bi-check2-circle me-1"></i> From {pastYearNum - 1} Ending
+                                                    <span className="text-success fw-bold d-inline-flex align-items-center text-nowrap" style={{ fontSize: '0.72rem' }}>
+                                                        <i className="bi bi-check2-circle me-1 text-success"></i> From {pastYearNum - 1} Ending
                                                     </span>
                                                 ) : (
                                                     <button 
