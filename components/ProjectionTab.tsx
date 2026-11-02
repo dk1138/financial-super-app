@@ -880,6 +880,108 @@ export default function ProjectionTab() {
       return content;
   };
 
+  const buildEstateTooltip = (y: any, year: number, totalNW: number) => {
+      const p1 = y.assetsP1 || {};
+      const p2 = y.assetsP2 || {};
+      
+      const regP1 = (p1.rrsp || 0) + (p1.rrif_acct || 0) + (p1.lif || 0) + (p1.lirf || 0);
+      const regP2 = (p2.rrsp || 0) + (p2.rrif_acct || 0) + (p2.lif || 0) + (p2.lirf || 0);
+      const regTotal = regP1 + (isCouple ? regP2 : 0);
+
+      const nrGainP1 = Math.max(0, (p1.nonreg || 0) - (p1.acb || 0));
+      const nrGainP2 = Math.max(0, (p2.nonreg || 0) - (p2.acb || 0));
+      const cryptoGainP1 = Math.max(0, (p1.crypto || 0) - (p1.crypto_acb || 0));
+      const cryptoGainP2 = Math.max(0, (p2.crypto || 0) - (p2.crypto_acb || 0));
+
+      const totalCapitalGains = nrGainP1 + cryptoGainP1 + (isCouple ? (nrGainP2 + cryptoGainP2) : 0);
+      const taxableCapitalGains = totalCapitalGains * 0.5;
+
+      const tfsaTotal = (p1.tfsa || 0) + (p1.tfsa_successor || 0) + (isCouple ? ((p2.tfsa || 0) + (p2.tfsa_successor || 0)) : 0);
+      const cashTotal = (p1.cash || 0) + (isCouple ? (p2.cash || 0) : 0);
+      const reTotal = (y.reIncludedEq || 0) + (y.reExcludedEq || 0);
+      const taxFreeTotal = tfsaTotal + cashTotal + reTotal;
+
+      const terminalTaxVal = y.terminalTax !== undefined ? y.terminalTax : Math.max(0, totalNW - (y.afterTaxEstate || totalNW));
+      const netEstateVal = y.afterTaxEstate !== undefined ? y.afterTaxEstate : (totalNW - terminalTaxVal);
+
+      let html = `<span class="text-success fw-bold">Net After-Tax Estate Math</span><br>`;
+      html += `<span class="text-muted" style="font-size: 0.72rem;">Estimated inheritance transferred to heirs after deemed disposition at death</span><hr class="my-1 border-secondary">`;
+
+      html += `<div class="d-flex justify-content-between mb-1"><span><b>Total Net Worth (Gross Estate):</b></span><span class="fw-bold">+$${formatStr(totalNW, year)}</span></div>`;
+
+      html += `<hr class="my-1 border-secondary opacity-50">`;
+      html += `<div class="mb-1"><b class="text-main" style="font-size: 0.72rem;">Asset Tax Classification on Death:</b></div>`;
+
+      if (regTotal > 0) {
+          html += `<div class="d-flex justify-content-between text-muted small mb-0.5"><span>• Registered Accounts (100% Taxable):</span><span class="text-danger fw-medium">$${formatStr(regTotal, year)}</span></div>`;
+          html += `<div class="text-muted ms-2 fst-italic mb-1" style="font-size: 0.65rem; margin-top: -3px;">(RRSP, RRIF, LIF collapsed as regular income in final return)</div>`;
+      }
+
+      if (totalCapitalGains > 0) {
+          html += `<div class="d-flex justify-content-between text-muted small mb-0.5"><span>• Taxable Capital Gains (50% Inclusion):</span><span class="text-danger fw-medium">$${formatStr(taxableCapitalGains, year)}</span></div>`;
+          html += `<div class="text-muted ms-2 fst-italic mb-1" style="font-size: 0.65rem; margin-top: -3px;">(50% of $${formatStr(totalCapitalGains, year)} unrealized gains in Non-Reg &amp; Crypto)</div>`;
+      }
+
+      if (taxFreeTotal > 0) {
+          html += `<div class="d-flex justify-content-between text-muted small mb-0.5"><span>• Tax-Free Assets (0% Tax):</span><span class="text-success fw-medium">+$${formatStr(taxFreeTotal, year)}</span></div>`;
+          html += `<div class="text-muted ms-2 fst-italic mb-1" style="font-size: 0.65rem; margin-top: -3px;">(TFSA, Principal Residence exemption, and Cash pass tax-free)</div>`;
+      }
+
+      html += `<hr class="my-1 border-secondary">`;
+      html += `<div class="d-flex justify-content-between text-danger small mb-1"><span><b>Estimated Estate Tax (Final Return):</b></span><span class="fw-bold text-danger">-$${formatStr(terminalTaxVal, year)}</span></div>`;
+
+      html += `<hr class="my-1 border-secondary">`;
+      html += `<div class="d-flex justify-content-between fw-bold text-success small mb-1"><span><b>Net After-Tax Estate:</b></span><span class="fw-bold text-success">+$${formatStr(netEstateVal, year)}</span></div>`;
+
+      html += `<div class="text-muted mt-2 pt-1 border-top border-secondary opacity-75" style="font-size: 0.68rem; line-height: 1.45;">`;
+      html += `<b>Formula Math:</b><br>`;
+      html += `Gross Estate ($${formatStr(totalNW, year)}) &minus; Terminal Taxes ($${formatStr(terminalTaxVal, year)}) = <b class="text-success">$${formatStr(netEstateVal, year)}</b> to beneficiaries.<br>`;
+      html += `<i>Includes federal &amp; provincial marginal tax rates. Assumes spousal rollover where applicable or terminal deemed disposition.</i>`;
+      html += `</div>`;
+
+      return html;
+  };
+
+  const buildEstateTaxTooltip = (y: any, year: number, totalNW: number) => {
+      const p1 = y.assetsP1 || {};
+      const p2 = y.assetsP2 || {};
+      
+      const regP1 = (p1.rrsp || 0) + (p1.rrif_acct || 0) + (p1.lif || 0) + (p1.lirf || 0);
+      const regP2 = (p2.rrsp || 0) + (p2.rrif_acct || 0) + (p2.lif || 0) + (p2.lirf || 0);
+      const regTotal = regP1 + (isCouple ? regP2 : 0);
+
+      const nrGainP1 = Math.max(0, (p1.nonreg || 0) - (p1.acb || 0));
+      const nrGainP2 = Math.max(0, (p2.nonreg || 0) - (p2.acb || 0));
+      const cryptoGainP1 = Math.max(0, (p1.crypto || 0) - (p1.crypto_acb || 0));
+      const cryptoGainP2 = Math.max(0, (p2.crypto || 0) - (p2.crypto_acb || 0));
+
+      const totalCapitalGains = nrGainP1 + cryptoGainP1 + (isCouple ? (nrGainP2 + cryptoGainP2) : 0);
+      const taxableCapitalGains = totalCapitalGains * 0.5;
+      const totalTaxableTerminalIncome = regTotal + taxableCapitalGains;
+
+      const terminalTaxVal = y.terminalTax !== undefined ? y.terminalTax : Math.max(0, totalNW - (y.afterTaxEstate || totalNW));
+      const effectiveTerminalRate = totalTaxableTerminalIncome > 0 ? (terminalTaxVal / totalTaxableTerminalIncome) * 100 : 0;
+
+      let html = `<span class="text-danger fw-bold">Estimated Estate Tax (Deemed Disposition)</span><br>`;
+      html += `<span class="text-muted" style="font-size: 0.72rem;">Final income tax liability on the terminal T1 return upon death</span><hr class="my-1 border-secondary">`;
+
+      html += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Registered Deregistration (100% Taxable):</span><span class="text-main fw-bold">+$${formatStr(regTotal, year)}</span></div>`;
+      html += `<div class="d-flex justify-content-between text-muted small mb-1"><span>Taxable Capital Gains (50% of $${formatStr(totalCapitalGains, year)}):</span><span class="text-main fw-bold">+$${formatStr(taxableCapitalGains, year)}</span></div>`;
+      html += `<hr class="my-1 border-secondary opacity-50">`;
+      html += `<div class="d-flex justify-content-between small mb-1"><span><b>Total Taxable Terminal Income:</b></span><span class="fw-bold">$${formatStr(totalTaxableTerminalIncome, year)}</span></div>`;
+      if (effectiveTerminalRate > 0) {
+          html += `<div class="d-flex justify-content-between text-muted small mb-1"><span><b>Effective Terminal Tax Rate:</b></span><span>${effectiveTerminalRate.toFixed(1)}%</span></div>`;
+      }
+      html += `<hr class="my-1 border-secondary">`;
+      html += `<div class="d-flex justify-content-between fw-bold text-danger small mb-1"><span><b>Estimated Tax Owed to CRA/MRQ:</b></span><span class="text-danger fw-bold">-$${formatStr(terminalTaxVal, year)}</span></div>`;
+      
+      html += `<div class="text-muted mt-2 pt-1 border-top border-secondary opacity-75" style="font-size: 0.68rem; line-height: 1.4;">`;
+      html += `<i>Calculated using Canadian federal and provincial progressive tax brackets on all deemed disposed assets at year-end.</i>`;
+      html += `</div>`;
+
+      return html;
+  };
+
   const renderPlayerInflows = (player: 'p1'|'p2', y: any, year: number, index: number, timeline: any[]) => {
       const isP1 = player === 'p1';
       const pUpper = player.toUpperCase();
@@ -1971,7 +2073,7 @@ export default function ProjectionTab() {
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="text-muted d-flex align-items-center">
                                                     Estimated Estate Tax
-                                                    <InfoBtn align="left" title="Estimated Estate Tax (Deemed Disposition)" text="Estimated terminal tax if all registered assets (RRSP, RRIF, LIF) were fully liquidated and capital gains in non-registered/crypto were taxed at death." />
+                                                    <InfoBtn align="left" direction="up" title="Estimated Estate Tax Math" text={buildEstateTaxTooltip(y, y.year, totalNW)} />
                                                 </span>
                                                 <span className="text-danger fw-medium">
                                                     -{formatCurrency(y.terminalTax !== undefined ? y.terminalTax : Math.max(0, totalNW - (y.afterTaxEstate || totalNW)), y.year)}
@@ -1980,7 +2082,7 @@ export default function ProjectionTab() {
                                             <div className="d-flex justify-content-between small mb-1 align-items-center">
                                                 <span className="text-success fw-bold d-flex align-items-center">
                                                     Net After-Tax Estate
-                                                    <InfoBtn align="left" title="Net Estate to Heirs" text="Total wealth transferred to beneficiaries after paying deemed disposition taxes upon death." />
+                                                    <InfoBtn align="left" direction="up" title="Net After-Tax Estate Math" text={buildEstateTooltip(y, y.year, totalNW)} />
                                                 </span>
                                                 <span className="text-success fw-bold">
                                                     {formatCurrency(y.afterTaxEstate !== undefined ? y.afterTaxEstate : totalNW, y.year)}
