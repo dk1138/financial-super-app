@@ -451,10 +451,23 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         }
     };
 
-    // Calculate cumulative lifetime metrics
+    // Calculate cumulative lifetime investment gains (ignoring baseline snapshot year where opening NW is 0)
     let cumulativeGain = 0;
-    historyList.forEach(h => {
-        cumulativeGain += Number(h.totalInvestmentGainDollar) || (Number(h.closingNetWorth) - Number(h.openingNetWorth)) || 0;
+    historyList.forEach((h, hIdx) => {
+        let open = Number(h.openingNetWorth) || 0;
+        if (open === 0 && hIdx > 0) {
+            open = getRecordClosingNW(historyList[hIdx - 1]);
+        }
+        const isBaseline = open === 0 && (h.effectiveAnnualReturnPct === undefined || Number(h.effectiveAnnualReturnPct) === 0);
+        if (!isBaseline) {
+            if (h.totalInvestmentGainDollar !== undefined && Number(h.totalInvestmentGainDollar) !== 0) {
+                cumulativeGain += Number(h.totalInvestmentGainDollar);
+            } else if (open > 0) {
+                const close = getRecordClosingNW(h);
+                const savings = Number(h.netSavingsAdded) || 0;
+                cumulativeGain += (close - open - savings);
+            }
+        }
     });
 
     const formatAccountBadgeLabel = (key: string) => {

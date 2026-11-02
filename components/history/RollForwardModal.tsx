@@ -32,6 +32,11 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
     const [outgoingYear, setOutgoingYear] = useState<number>(baseYear);
     const [step, setStep] = useState<number>(1);
 
+    // Look up preceding calendar year from archived Data Bank history
+    const priorHistoryRecord = useMemo(() => {
+        return (data?.history || []).find((h: any) => Number(h.calendarYear) === outgoingYear - 1);
+    }, [data?.history, outgoingYear]);
+
     // Track user statement closing inputs (pre-filled with projected values)
     const [closingBalances, setClosingBalances] = useState<Record<string, number>>({});
     const [propertyValues, setPropertyValues] = useState<Record<string, { value: number; mortgage: number }>>({});
@@ -71,7 +76,11 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
             const ownerName = p === 'p1' ? p1Name : p2Name;
 
             accountTypes.forEach(acct => {
-                const bal = Number(data.inputs[`${p}_${acct.id}`]) || 0;
+                let bal = Number(data.inputs[`${p}_${acct.id}`]) || 0;
+                // If prior calendar year exists in history, pull its exact ending balance as Jan 1 start!
+                if (priorHistoryRecord?.actualBalances?.[p]?.[acct.id] !== undefined) {
+                    bal = Number(priorHistoryRecord.actualBalances[p][acct.id]) || 0;
+                }
                 // If account has balance or was used
                 if (bal > 0 || acct.id === 'tfsa' || acct.id === 'rrsp' || acct.id === 'nonreg') {
                     // Projected balance from first year of timeline if available
@@ -99,7 +108,7 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
         });
 
         return list;
-    }, [data, isCouple, p1Name, p2Name, initialProjectionYear]);
+    }, [data, isCouple, p1Name, p2Name, initialProjectionYear, priorHistoryRecord]);
 
     // Populate initial state if not yet modified
     React.useEffect(() => {
@@ -148,7 +157,17 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
     });
 
     (data.properties || []).forEach((p, idx) => {
-        openingTotal += (Number(p.value) || 0) - (Number(p.mortgage) || 0);
+        let startVal = Number(p.value) || 0;
+        let startMort = Number(p.mortgage) || 0;
+        if (priorHistoryRecord?.actualBalances?.properties) {
+            const priorP = priorHistoryRecord.actualBalances.properties[idx] || 
+                           priorHistoryRecord.actualBalances.properties.find((prop: any) => prop.name === p.name);
+            if (priorP) {
+                if (priorP.value !== undefined) startVal = Number(priorP.value) || 0;
+                if (priorP.mortgage !== undefined) startMort = Number(priorP.mortgage) || 0;
+            }
+        }
+        openingTotal += (startVal - startMort);
         const pv = propertyValues[`prop_${idx}`];
         if (pv) {
             closingTotal += (pv.value - pv.mortgage);
@@ -156,10 +175,27 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
     });
 
     (data.customAssets || []).forEach((ca, idx) => {
-        openingTotal += Number(ca.balance) || 0;
+        let startBal = Number(ca.balance) || 0;
+        if (priorHistoryRecord?.actualBalances?.customAssets) {
+            const priorCa = priorHistoryRecord.actualBalances.customAssets[idx] || 
+                            priorHistoryRecord.actualBalances.customAssets.find((c: any) => c.name === ca.name);
+            if (priorCa && priorCa.balance !== undefined) {
+                startBal = Number(priorCa.balance) || 0;
+            }
+        }
+        openingTotal += startBal;
         const cab = customAssetBalances[`ca_${idx}`];
         closingTotal += cab !== undefined ? cab : Number(ca.balance) || 0;
     });
+
+    // If prior year recorded a closing NW and openingTotal doesn't match due to unentered account breakdowns, prioritize prior closing NW!
+    if (priorHistoryRecord?.closingNetWorth && Number(priorHistoryRecord.closingNetWorth) > 0) {
+        const priorClose = Number(priorHistoryRecord.closingNetWorth);
+        // If prior record had simple totals or discrepancy, anchor openingTotal directly to prior close
+        if (Math.abs(openingTotal - priorClose) > 1 && (!priorHistoryRecord.actualBalances || Object.keys(priorHistoryRecord.actualBalances).length === 0)) {
+            openingTotal = priorClose;
+        }
+    }
 
     const netGrowth = closingTotal - openingTotal;
     const growthPct = openingTotal > 0 ? (netGrowth / openingTotal) * 100 : 0;
@@ -366,7 +402,7 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
                             <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-2">Starting Net Worth on Record</h6>
                             <div className="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-3 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span className="small text-muted text-uppercase fw-bold ls-1">Opening Total Portfolio + Equity</span>
+                                    <span className="small text-muted text-uppercase fw-bold ls-1">Opening Total Portfolio + Equity {priorHistoryRecord ? `(Chained from ${outgoingYear - 1} Dec 31)` : '(Current Plan Base)'}</span>
                                     <h4 className="mb-0 fw-bold text-primary">${Math.round(openingTotal).toLocaleString()}</h4>
                                 </div>
                                 <i className="bi bi-shield-lock-fill text-primary fs-2 opacity-50"></i>
