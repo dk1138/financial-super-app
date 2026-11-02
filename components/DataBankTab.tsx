@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+'use client';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
     CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine 
@@ -29,14 +30,19 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const { data, restoreHistorySnapshot, setData } = useFinance();
     const { t } = useTranslation();
     const historyList = useMemo(() => {
-        return [...(data.history || [])].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
-    }, [data.history]);
+        return [...(data?.history || [])].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
+    }, [data?.history]);
 
     const [expandedYear, setExpandedYear] = useState<number | null>(null);
     const [showLocalRollForward, setShowLocalRollForward] = useState<boolean>(false);
     const [showAddPastYear, setShowAddPastYear] = useState<boolean>(false);
     const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
     const [toastMsg, setToastMsg] = useState<string | null>(null);
+    const [mounted, setMounted] = useState<boolean>(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // State for manual past year entry
     const [pastYearNum, setPastYearNum] = useState<number>(new Date().getFullYear() - 1);
@@ -64,16 +70,26 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const [modalPlayerTab, setModalPlayerTab] = useState<'p1' | 'p2'>('p1');
     const assumedReturnRate = Number(data?.inputs?.p1_nonreg_rate ?? data?.inputs?.balanced_return ?? 6.0);
 
-    // Helper to resolve net worths even if not explicitly stored
+    // Helpers to resolve net worths even if not explicitly stored (defined first to prevent TDZ ReferenceError)
+    const getRecordClosingNW = (h: any) => {
+        if (!h) return 0;
+        if (Number(h.closingNetWorth) > 0) return Number(h.closingNetWorth);
+        let accSum = 0;
+        Object.values(h.actualBalances?.p1 || {}).forEach((v: any) => accSum += (Number(v) || 0));
+        Object.values(h.actualBalances?.p2 || {}).forEach((v: any) => accSum += (Number(v) || 0));
+        (h.actualBalances?.customAssets || []).forEach((c: any) => accSum += (Number(c.balance) || 0));
+        return accSum;
+    };
+
     const getPriorYearEndingNW = (year: number) => {
-        const prior = (data.history || []).find((h: any) => Number(h.calendarYear) === year - 1);
+        const prior = (data?.history || []).find((h: any) => Number(h.calendarYear) === year - 1);
         if (!prior) return 0;
         return getRecordClosingNW(prior);
     };
 
     const priorYearClosingNW = useMemo(() => {
         return getPriorYearEndingNW(pastYearNum);
-    }, [data.history, pastYearNum]);
+    }, [data?.history, pastYearNum]);
 
     const handleYearChange = (newYear: number) => {
         setPastYearNum(newYear);
@@ -83,15 +99,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         }
     };
 
-    // Helpers to resolve net worths even if not explicitly stored
-    const getRecordClosingNW = (h: any) => {
-        if (Number(h.closingNetWorth) > 0) return Number(h.closingNetWorth);
-        let accSum = 0;
-        Object.values(h.actualBalances?.p1 || {}).forEach((v: any) => accSum += (Number(v) || 0));
-        Object.values(h.actualBalances?.p2 || {}).forEach((v: any) => accSum += (Number(v) || 0));
-        (h.actualBalances?.customAssets || []).forEach((c: any) => accSum += (Number(c.balance) || 0));
-        return accSum;
-    };
+
 
     // Calculate historical average return with full automatic fallback and chaining
     const historicalStats = useMemo(() => {
@@ -142,13 +150,25 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         };
     }, [historyList, assumedReturnRate]);
 
+    const yDomainMin = useMemo(() => {
+        if (!historicalStats?.chartData?.length) return 0;
+        const minVal = Math.min(...historicalStats.chartData.map((d: any) => Number(d.actualReturn) || 0));
+        return Math.min(0, Math.floor(minVal - 2));
+    }, [historicalStats]);
+
+    const yDomainMax = useMemo(() => {
+        if (!historicalStats?.chartData?.length) return 10;
+        const maxVal = Math.max(...historicalStats.chartData.map((d: any) => Math.max(Number(d.actualReturn) || 0, Number(d.assumedReturn) || 0)));
+        return Math.max(Math.ceil(assumedReturnRate + 3), Math.ceil(maxVal + 2));
+    }, [historicalStats, assumedReturnRate]);
+
     const handleSumAccountsToClosing = () => {
         let total = 0;
         ['tfsa', 'rrsp', 'fhsa', 'resp', 'lirf', 'lif', 'rrif', 'nonreg', 'cash', 'crypto'].forEach(k => {
             total += Number(manualBalancesP1[k]) || 0;
             if (isCouple) total += Number(manualBalancesP2[k]) || 0;
         });
-        (data.customAssets || []).forEach((ca: any, idx: number) => {
+        (data?.customAssets || []).forEach((ca: any, idx: number) => {
             total += Number(manualCustomBalances[`ca_${idx}`]) || 0;
         });
         if (total > 0) setPastClosingNW(total);
@@ -217,7 +237,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const handleOpenAddPastYear = () => {
         setEditingRecordId(null);
         // Default to next sequential year if prior years exist, else last year
-        const sortedYears = [...(data.history || [])].map((h: any) => Number(h.calendarYear)).sort((a, b) => a - b);
+        const sortedYears = [...(data?.history || [])].map((h: any) => Number(h.calendarYear)).sort((a, b) => a - b);
         let defaultYear = new Date().getFullYear() - 1;
         if (sortedYears.length > 0) {
             const maxYear = sortedYears[sortedYears.length - 1];
@@ -283,7 +303,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         const newCustomAcb: Record<string, number | ''> = {};
         if (h.actualBalances?.customAssets && Array.isArray(h.actualBalances.customAssets)) {
             h.actualBalances.customAssets.forEach((ca: any, cIdx: number) => {
-                const matchIdx = (data.customAssets || []).findIndex((origCa: any) => origCa.name === ca.name);
+                const matchIdx = (data?.customAssets || []).findIndex((origCa: any) => origCa.name === ca.name);
                 const targetKey = matchIdx >= 0 ? `ca_${matchIdx}` : `ca_${cIdx}`;
                 newCustomBal[targetKey] = ca.balance ?? '';
                 if (ca.acb !== undefined) newCustomAcb[targetKey] = ca.acb;
@@ -319,7 +339,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                 accSum += Number(manualBalancesP1[k]) || 0;
                 if (isCouple) accSum += Number(manualBalancesP2[k]) || 0;
             });
-            (data.customAssets || []).forEach((ca: any, idx: number) => {
+            (data?.customAssets || []).forEach((ca: any, idx: number) => {
                 accSum += Number(manualCustomBalances[`ca_${idx}`]) || 0;
             });
             if (accSum > 0) closeNW = accSum;
@@ -328,7 +348,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         // Auto-chain Opening NW from previous calendar year if left blank
         let openNW = Number(pastOpeningNW) || 0;
         if (openNW === 0) {
-            const sortedExisting = [...(data.history || [])].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
+            const sortedExisting = [...(data?.history || [])].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
             const priorRec = sortedExisting.find((h: any) => h.calendarYear === year - 1);
             if (priorRec) {
                 const priorClose = getRecordClosingNW(priorRec);
@@ -352,7 +372,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             });
         }
 
-        const customClean = (data.customAssets || []).map((ca: any, idx: number) => {
+        const customClean = (data?.customAssets || []).map((ca: any, idx: number) => {
             const bal = Number(manualCustomBalances[`ca_${idx}`]) || 0;
             const acb = (ca.type === 'nonreg' || ca.type === 'crypto') ? (Number(manualCustomAcb[`ca_${idx}`]) || 0) : undefined;
             return {
@@ -366,7 +386,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
         const recordId = editingRecordId || `hist_${year}_manual`;
         const existingFullSnapshot = editingRecordId 
-            ? ((data.history || []).find((h: any) => h.id === editingRecordId)?.fullSnapshot || null)
+            ? ((data?.history || []).find((h: any) => h.id === editingRecordId)?.fullSnapshot || null)
             : null;
 
         const updatedRecord = {
@@ -546,25 +566,31 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                     <div className="row g-3 align-items-center">
                         <div className="col-12 col-lg-8">
                             <div className="w-100 position-relative" style={{ height: '240px', minHeight: '240px' }}>
-                                <ResponsiveContainer width="100%" height={240}>
-                                    <BarChart data={historicalStats.chartData} margin={{ top: 22, right: 25, left: -5, bottom: 5 }} barGap={8}>
-                                        <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
-                                        <XAxis dataKey="year" type="category" tick={{ fontSize: 12, fill: '#aaa' }} axisLine={{ stroke: '#444' }} />
-                                        <YAxis 
-                                            tick={{ fontSize: 11, fill: '#aaa' }} 
-                                            tickFormatter={(v) => `${v}%`} 
-                                            domain={[(dataMin: number) => Math.min(0, Math.floor(dataMin - 2)), (dataMax: number) => Math.max(Math.ceil(assumedReturnRate + 3), Math.ceil(dataMax + 2))]}
-                                            axisLine={{ stroke: '#444' }}
-                                        />
-                                        <RechartsTooltip 
-                                            formatter={(value: any, name: any) => [`${value}%`, name === 'actualReturn' ? 'Actual Return' : 'Plan Benchmark']} 
-                                            contentStyle={{ backgroundColor: 'rgba(20, 24, 33, 0.95)', borderColor: '#444', borderRadius: '8px', fontSize: '12px' }} 
-                                        />
-                                        <ReferenceLine y={assumedReturnRate} stroke="#0dcaf0" strokeDasharray="4 4" label={{ value: `Plan Benchmark ${assumedReturnRate.toFixed(1)}%`, fill: '#0dcaf0', fontSize: 11, position: 'top' }} />
-                                        <Bar dataKey="actualReturn" name="Actual Return" fill="#198754" radius={[4, 4, 0, 0]} maxBarSize={55} />
-                                        <Bar dataKey="assumedReturn" name="Plan Benchmark" fill="#0dcaf0" opacity={0.3} radius={[4, 4, 0, 0]} maxBarSize={55} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                {mounted ? (
+                                    <ResponsiveContainer width="100%" height={240}>
+                                        <BarChart data={historicalStats.chartData} margin={{ top: 22, right: 25, left: -5, bottom: 5 }} barGap={8}>
+                                            <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
+                                            <XAxis dataKey="year" tick={{ fontSize: 12, fill: '#aaa' }} axisLine={{ stroke: '#444' }} />
+                                            <YAxis 
+                                                domain={[yDomainMin, yDomainMax]}
+                                                tick={{ fontSize: 11, fill: '#aaa' }} 
+                                                tickFormatter={(v) => `${v}%`} 
+                                                axisLine={{ stroke: '#444' }}
+                                            />
+                                            <RechartsTooltip 
+                                                formatter={(value: any, name: any) => [`${Number(value || 0).toFixed(1)}%`, name === 'actualReturn' ? 'Actual Return' : 'Plan Benchmark']} 
+                                                contentStyle={{ backgroundColor: 'rgba(20, 24, 33, 0.95)', borderColor: '#444', borderRadius: '8px', fontSize: '12px' }} 
+                                            />
+                                            <ReferenceLine y={assumedReturnRate} stroke="#0dcaf0" strokeDasharray="4 4" label={{ value: `Plan Benchmark ${assumedReturnRate.toFixed(1)}%`, fill: '#0dcaf0', fontSize: 11, position: 'top' }} />
+                                            <Bar dataKey="actualReturn" name="Actual Return" fill="#198754" radius={[4, 4, 0, 0]} maxBarSize={55} />
+                                            <Bar dataKey="assumedReturn" name="Plan Benchmark" fill="#0dcaf0" opacity={0.3} radius={[4, 4, 0, 0]} maxBarSize={55} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="w-100 h-100 d-flex align-items-center justify-content-center text-muted small">
+                                        Loading chart...
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1019,7 +1045,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                 { id: 'rrif', label: 'RRIF', icon: 'bi-wallet-fill', color: 'text-danger' }
                                             ];
 
-                                            const customAccountsForPlayer = (data.customAssets || []).filter((ca: any) => ca.owner === activeOwner);
+                                            const customAccountsForPlayer = (data?.customAssets || []).filter((ca: any) => ca.owner === activeOwner);
 
                                             return (
                                                 <div className="d-flex flex-column gap-1.5">
@@ -1113,7 +1139,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                             </div>
 
                                                             {customAccountsForPlayer.map((ca: any) => {
-                                                                const globalIdx = (data.customAssets || []).indexOf(ca);
+                                                                const globalIdx = (data?.customAssets || []).indexOf(ca);
                                                                 const caKey = `ca_${globalIdx}`;
                                                                 const isNonRegType = ca.type === 'nonreg' || ca.type === 'crypto';
                                                                 const typeInfo = EXTENDED_ACCOUNT_TYPES.find(t => t.id === ca.type) || { label: ca.type?.toUpperCase() || 'ACCOUNT', icon: 'bi-wallet2', color: 'text-info' };
