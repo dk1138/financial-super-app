@@ -33,6 +33,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const [expandedYear, setExpandedYear] = useState<number | null>(null);
     const [showLocalRollForward, setShowLocalRollForward] = useState<boolean>(false);
     const [showAddPastYear, setShowAddPastYear] = useState<boolean>(false);
+    const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
     const [toastMsg, setToastMsg] = useState<string | null>(null);
 
     // State for manual past year entry
@@ -161,6 +162,71 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         showToast('Exported Data Bank to JSON!');
     };
 
+    const handleOpenAddPastYear = () => {
+        setEditingRecordId(null);
+        setPastYearNum(new Date().getFullYear() - 1);
+        setPastOpeningNW('');
+        setPastClosingNW('');
+        setPastSavings(0);
+        setPastGain('');
+        setPastLifGain('');
+        setPastNotes('');
+        setManualBalancesP1({ tfsa: '', rrsp: '', fhsa: '', resp: '', lirf: '', lif: '', rrif: '', nonreg: '', acb: '', cash: '', crypto: '' });
+        setManualBalancesP2({ tfsa: '', rrsp: '', fhsa: '', resp: '', lirf: '', lif: '', rrif: '', nonreg: '', acb: '', cash: '', crypto: '' });
+        setManualCustomBalances({});
+        setManualCustomAcb({});
+        setShowAccountBreakdown(true);
+        setShowAddPastYear(true);
+    };
+
+    const handleEditRecord = (h: any) => {
+        setEditingRecordId(h.id);
+        setPastYearNum(h.calendarYear);
+        setPastOpeningNW(h.openingNetWorth ?? '');
+        setPastClosingNW(h.closingNetWorth ?? '');
+        setPastSavings(h.netSavingsAdded ?? 0);
+        setPastGain(h.totalInvestmentGainDollar ?? '');
+        setPastLifGain(h.priorYearGains?.p1_lif_dollar_gain ?? '');
+        setPastNotes(h.notes ?? '');
+
+        // Populate P1 balances
+        const p1 = h.actualBalances?.p1 || {};
+        const newBalP1: Record<string, number | ''> = {
+            tfsa: '', rrsp: '', fhsa: '', resp: '', lirf: '', lif: '', rrif: '', nonreg: '', acb: '', cash: '', crypto: ''
+        };
+        Object.keys(newBalP1).forEach(k => {
+            if (p1[k] !== undefined && p1[k] !== null) newBalP1[k] = p1[k];
+        });
+        setManualBalancesP1(newBalP1);
+
+        // Populate P2 balances
+        const p2 = h.actualBalances?.p2 || {};
+        const newBalP2: Record<string, number | ''> = {
+            tfsa: '', rrsp: '', fhsa: '', resp: '', lirf: '', lif: '', rrif: '', nonreg: '', acb: '', cash: '', crypto: ''
+        };
+        Object.keys(newBalP2).forEach(k => {
+            if (p2[k] !== undefined && p2[k] !== null) newBalP2[k] = p2[k];
+        });
+        setManualBalancesP2(newBalP2);
+
+        // Populate Custom Assets
+        const newCustomBal: Record<string, number | ''> = {};
+        const newCustomAcb: Record<string, number | ''> = {};
+        if (h.actualBalances?.customAssets && Array.isArray(h.actualBalances.customAssets)) {
+            h.actualBalances.customAssets.forEach((ca: any, cIdx: number) => {
+                const matchIdx = (data.customAssets || []).findIndex((origCa: any) => origCa.name === ca.name);
+                const targetKey = matchIdx >= 0 ? `ca_${matchIdx}` : `ca_${cIdx}`;
+                newCustomBal[targetKey] = ca.balance ?? '';
+                if (ca.acb !== undefined) newCustomAcb[targetKey] = ca.acb;
+            });
+        }
+        setManualCustomBalances(newCustomBal);
+        setManualCustomAcb(newCustomAcb);
+
+        setShowAccountBreakdown(true);
+        setShowAddPastYear(true);
+    };
+
     const handleRestore = (h: any) => {
         if (confirm(`Restore your active plan to the exact state of ${h.calendarYear}? Your current inputs will be replaced by the ${h.calendarYear} snapshot.`)) {
             restoreHistorySnapshot(h.id);
@@ -206,8 +272,13 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             };
         }).filter((c: any) => c.balance > 0);
 
-        const newRecord = {
-            id: `hist_${year}_manual`,
+        const recordId = editingRecordId || `hist_${year}_manual`;
+        const existingFullSnapshot = editingRecordId 
+            ? ((data.history || []).find((h: any) => h.id === editingRecordId)?.fullSnapshot || null)
+            : null;
+
+        const updatedRecord = {
+            id: recordId,
             calendarYear: year,
             archiveDate: new Date().toISOString().split('T')[0],
             openingNetWorth: openNW,
@@ -223,20 +294,21 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             priorYearGains: {
                 p1_lif_dollar_gain: pastLifGain !== '' ? Number(pastLifGain) : undefined
             },
-            notes: pastNotes || 'Historical actual entry',
-            fullSnapshot: null
+            notes: pastNotes || (editingRecordId ? 'Historical actuals (Edited)' : 'Historical actual entry'),
+            fullSnapshot: existingFullSnapshot
         };
 
         setData(prev => {
-            const existing = (prev.history || []).filter((h: any) => h.calendarYear !== year);
-            const updated = [...existing, newRecord].sort((a, b) => a.calendarYear - b.calendarYear);
+            const existing = (prev.history || []).filter((h: any) => h.id !== recordId && h.calendarYear !== year);
+            const updated = [...existing, updatedRecord].sort((a, b) => a.calendarYear - b.calendarYear);
             return {
                 ...prev,
                 history: updated
             };
         });
 
-        showToast(`Saved historical actuals for Year ${year}!`);
+        showToast(editingRecordId ? `Updated historical actuals for Year ${year}!` : `Saved historical actuals for Year ${year}!`);
+        setEditingRecordId(null);
         setShowAddPastYear(false);
         setPastOpeningNW('');
         setPastClosingNW('');
@@ -320,7 +392,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 </button>
                             </>
                         )}
-                        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 bg-input" onClick={() => setShowAddPastYear(true)}>
+                        <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold shadow-sm d-flex align-items-center gap-1.5 bg-input" onClick={handleOpenAddPastYear}>
                             <i className="bi bi-plus-circle"></i> Add Past Year
                         </button>
                         <button type="button" className="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold shadow-sm d-flex align-items-center gap-1.5" onClick={handleOpenRollForward}>
@@ -429,7 +501,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                         When you sit down at year-end or in January to update your financial plan, use <b>Roll Forward 1 Year</b>. Planfolio will snapshot your actual closing statement balances, record your exact investment gains, and advance your household ages into the new year.
                     </p>
                     <div className="d-flex justify-content-center gap-2">
-                        <button type="button" className="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold shadow-sm bg-input" onClick={() => setShowAddPastYear(true)}>
+                        <button type="button" className="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold shadow-sm bg-input" onClick={handleOpenAddPastYear}>
                             <i className="bi bi-plus-circle me-1.5"></i> Add Past Year Actuals
                         </button>
                         <button type="button" className="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" onClick={handleOpenRollForward}>
@@ -495,6 +567,14 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                             title={isExpanded ? 'Hide Account Breakdown' : 'Show Account Breakdown'}
                                                         >
                                                             <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                                                        </button>
+                                                        <button 
+                                                            type="button" 
+                                                            className="btn btn-outline-info p-1 px-2.5"
+                                                            onClick={() => handleEditRecord(h)}
+                                                            title="Edit this historical year's numbers and account balances"
+                                                        >
+                                                            <i className="bi bi-pencil"></i>
                                                         </button>
                                                         <button 
                                                             type="button" 
@@ -652,8 +732,8 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                     <i className="bi bi-calendar-plus fs-5"></i>
                                 </div>
                                 <div>
-                                    <h5 className="mb-0 fw-bold">Add Historical Past Year</h5>
-                                    <span className="small text-muted">Archive prior year statement actuals, record ACB, and track real-world investment returns.</span>
+                                    <h5 className="mb-0 fw-bold">{editingRecordId ? `Edit Historical Year ${pastYearNum}` : 'Add Historical Past Year'}</h5>
+                                    <span className="small text-muted">{editingRecordId ? `Update recorded balances, cost bases, or returns for calendar year ${pastYearNum}.` : 'Archive prior year statement actuals, record ACB, and track real-world investment returns.'}</span>
                                 </div>
                             </div>
                             <button type="button" className="btn btn-sm btn-link text-muted p-0" onClick={() => setShowAddPastYear(false)}>
@@ -1013,7 +1093,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                     Cancel
                                 </button>
                                 <button type="submit" className="btn btn-sm btn-primary rounded-pill px-4 fw-bold shadow-sm">
-                                    Save Historical Actuals
+                                    {editingRecordId ? 'Update Historical Year' : 'Save Historical Actuals'}
                                 </button>
                             </div>
                         </form>
