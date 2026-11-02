@@ -62,32 +62,63 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const [modalPlayerTab, setModalPlayerTab] = useState<'p1' | 'p2'>('p1');
     const assumedReturnRate = Number(data?.inputs?.p1_nonreg_rate ?? data?.inputs?.balanced_return ?? 6.0);
 
-    // Calculate historical average return
+    // Helpers to resolve net worths even if not explicitly stored
+    const getRecordClosingNW = (h: any) => {
+        if (Number(h.closingNetWorth) > 0) return Number(h.closingNetWorth);
+        let accSum = 0;
+        Object.values(h.actualBalances?.p1 || {}).forEach((v: any) => accSum += (Number(v) || 0));
+        Object.values(h.actualBalances?.p2 || {}).forEach((v: any) => accSum += (Number(v) || 0));
+        (h.actualBalances?.customAssets || []).forEach((c: any) => accSum += (Number(c.balance) || 0));
+        return accSum;
+    };
+
+    // Calculate historical average return with full automatic fallback and chaining
     const historicalStats = useMemo(() => {
         if (!historyList || historyList.length === 0) return null;
-        const validRates = historyList
-            .map(h => {
-                if (h.effectiveAnnualReturnPct !== undefined) return Number(h.effectiveAnnualReturnPct);
-                const gain = Number(h.totalInvestmentGainDollar) || (Number(h.closingNetWorth) - Number(h.openingNetWorth));
-                return Number(h.openingNetWorth) > 0 ? (gain / Number(h.openingNetWorth)) * 100 : 0;
-            })
-            .filter(r => !isNaN(r));
 
-        if (validRates.length === 0) return null;
-        const avgReturn = validRates.reduce((a, b) => a + b, 0) / validRates.length;
-        const chartData = historyList.map(h => {
-            const gain = Number(h.totalInvestmentGainDollar) || (Number(h.closingNetWorth) - Number(h.openingNetWorth));
-            const returnPct = h.effectiveAnnualReturnPct !== undefined 
-                ? Number(h.effectiveAnnualReturnPct) 
-                : (Number(h.openingNetWorth) > 0 ? (gain / Number(h.openingNetWorth)) * 100 : 0);
+        // Sort chronologically by calendar year
+        const sorted = [...historyList].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
+
+        const chartData = sorted.map((h: any, idx: number) => {
+            let close = getRecordClosingNW(h);
+            let open = Number(h.openingNetWorth) || 0;
+            const savings = Number(h.netSavingsAdded) || 0;
+
+            // If opening NW is 0 and previous calendar year exists, chain previous year's closing balance!
+            if (open === 0 && idx > 0) {
+                const prevClose = getRecordClosingNW(sorted[idx - 1]);
+                if (prevClose > 0) open = prevClose;
+            }
+
+            let returnPct = 0;
+            if (h.effectiveAnnualReturnPct !== undefined && Number(h.effectiveAnnualReturnPct) !== 0) {
+                returnPct = Number(h.effectiveAnnualReturnPct);
+            } else if (open > 0) {
+                const gain = h.totalInvestmentGainDollar !== undefined && Number(h.totalInvestmentGainDollar) !== 0
+                    ? Number(h.totalInvestmentGainDollar)
+                    : (close - open - savings);
+                returnPct = (gain / open) * 100;
+            }
+
             return {
-                year: h.calendarYear,
+                year: String(h.calendarYear),
+                calendarYear: h.calendarYear,
                 actualReturn: Number(returnPct.toFixed(2)),
-                assumedReturn: Number(assumedReturnRate.toFixed(2))
+                assumedReturn: Number(assumedReturnRate.toFixed(2)),
+                openingNetWorth: open,
+                closingNetWorth: close
             };
         });
 
-        return { avgReturn, count: validRates.length, chartData, delta: avgReturn - assumedReturnRate };
+        const validReturns = chartData.map(d => d.actualReturn);
+        const avgReturn = validReturns.length > 0 ? (validReturns.reduce((a, b) => a + b, 0) / validReturns.length) : 0;
+
+        return { 
+            avgReturn, 
+            count: chartData.length, 
+            chartData, 
+            delta: avgReturn - assumedReturnRate 
+        };
     }, [historyList, assumedReturnRate]);
 
     const handleSumAccountsToClosing = () => {
@@ -242,8 +273,31 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             return;
         }
 
-        const openNW = Number(pastOpeningNW) || 0;
-        const closeNW = Number(pastClosingNW) || 0;
+        // Auto-calculate Closing NW from accounts if not manually specified
+        let closeNW = Number(pastClosingNW) || 0;
+        if (closeNW === 0) {
+            let accSum = 0;
+            ['tfsa', 'rrsp', 'fhsa', 'resp', 'lirf', 'lif', 'rrif', 'nonreg', 'cash', 'crypto'].forEach(k => {
+                accSum += Number(manualBalancesP1[k]) || 0;
+                if (isCouple) accSum += Number(manualBalancesP2[k]) || 0;
+            });
+            (data.customAssets || []).forEach((ca: any, idx: number) => {
+                accSum += Number(manualCustomBalances[`ca_${idx}`]) || 0;
+            });
+            if (accSum > 0) closeNW = accSum;
+        }
+
+        // Auto-chain Opening NW from previous calendar year if left blank
+        let openNW = Number(pastOpeningNW) || 0;
+        if (openNW === 0) {
+            const sortedExisting = [...(data.history || [])].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
+            const priorRec = sortedExisting.find((h: any) => h.calendarYear === year - 1);
+            if (priorRec) {
+                const priorClose = getRecordClosingNW(priorRec);
+                if (priorClose > 0) openNW = priorClose;
+            }
+        }
+
         const savings = Number(pastSavings) || 0;
         const dollarGain = pastGain !== '' ? Number(pastGain) : (closeNW - openNW - savings);
         const returnPct = openNW > 0 ? (dollarGain / openNW) * 100 : 0;
@@ -453,18 +507,24 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
                     <div className="row g-3 align-items-center">
                         <div className="col-12 col-lg-8">
-                            <div style={{ height: '220px', width: '100%' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={historicalStats.chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                                        <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#888' }} />
-                                        <YAxis tick={{ fontSize: 11, fill: '#888' }} tickFormatter={(v) => `${v}%`} />
+                            <div className="w-100 position-relative" style={{ height: '240px', minHeight: '240px' }}>
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <BarChart data={historicalStats.chartData} margin={{ top: 22, right: 25, left: -5, bottom: 5 }} barGap={8}>
+                                        <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
+                                        <XAxis dataKey="year" type="category" tick={{ fontSize: 12, fill: '#aaa' }} axisLine={{ stroke: '#444' }} />
+                                        <YAxis 
+                                            tick={{ fontSize: 11, fill: '#aaa' }} 
+                                            tickFormatter={(v) => `${v}%`} 
+                                            domain={[(dataMin: number) => Math.min(0, Math.floor(dataMin - 2)), (dataMax: number) => Math.max(Math.ceil(assumedReturnRate + 3), Math.ceil(dataMax + 2))]}
+                                            axisLine={{ stroke: '#444' }}
+                                        />
                                         <RechartsTooltip 
-                                            formatter={(value: any, name: any) => [`${value}%`, name === 'actualReturn' ? 'Actual Return' : 'Assumed Return']} 
+                                            formatter={(value: any, name: any) => [`${value}%`, name === 'actualReturn' ? 'Actual Return' : 'Plan Benchmark']} 
                                             contentStyle={{ backgroundColor: 'rgba(20, 24, 33, 0.95)', borderColor: '#444', borderRadius: '8px', fontSize: '12px' }} 
                                         />
-                                        <ReferenceLine y={assumedReturnRate} stroke="#0dcaf0" strokeDasharray="4 4" label={{ value: `Assumed ${assumedReturnRate.toFixed(1)}%`, fill: '#0dcaf0', fontSize: 11, position: 'top' }} />
-                                        <Bar dataKey="actualReturn" fill="#198754" radius={[4, 4, 0, 0]} />
+                                        <ReferenceLine y={assumedReturnRate} stroke="#0dcaf0" strokeDasharray="4 4" label={{ value: `Plan Benchmark ${assumedReturnRate.toFixed(1)}%`, fill: '#0dcaf0', fontSize: 11, position: 'top' }} />
+                                        <Bar dataKey="actualReturn" name="Actual Return" fill="#198754" radius={[4, 4, 0, 0]} maxBarSize={55} />
+                                        <Bar dataKey="assumedReturn" name="Plan Benchmark" fill="#0dcaf0" opacity={0.3} radius={[4, 4, 0, 0]} maxBarSize={55} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -532,12 +592,20 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {historyList.map(h => {
+                                {historyList.map((h: any, hIdx: number) => {
                                     const isExpanded = expandedYear === h.calendarYear;
-                                    const gain = h.totalInvestmentGainDollar || (h.closingNetWorth - h.openingNetWorth);
-                                    const returnPct = h.effectiveAnnualReturnPct !== undefined 
-                                        ? h.effectiveAnnualReturnPct 
-                                        : (h.openingNetWorth > 0 ? (gain / h.openingNetWorth) * 100 : 0);
+                                    const closeDisplay = getRecordClosingNW(h);
+                                    let openDisplay = Number(h.openingNetWorth) || 0;
+                                    if (openDisplay === 0 && hIdx > 0) {
+                                        openDisplay = getRecordClosingNW(historyList[hIdx - 1]);
+                                    }
+                                    const savingsDisplay = Number(h.netSavingsAdded) || 0;
+                                    const gainDisplay = h.totalInvestmentGainDollar !== undefined && Number(h.totalInvestmentGainDollar) !== 0
+                                        ? Number(h.totalInvestmentGainDollar)
+                                        : (closeDisplay - openDisplay - savingsDisplay);
+                                    const returnPctDisplay = h.effectiveAnnualReturnPct !== undefined && Number(h.effectiveAnnualReturnPct) !== 0
+                                        ? Number(h.effectiveAnnualReturnPct)
+                                        : (openDisplay > 0 ? (gainDisplay / openDisplay) * 100 : 0);
 
                                     return (
                                         <React.Fragment key={h.id || h.calendarYear}>
@@ -546,17 +614,17 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                     <i className="bi bi-calendar2-check-fill me-1.5"></i> {h.calendarYear}
                                                 </td>
                                                 <td className="small text-muted">{h.archiveDate || '—'}</td>
-                                                <td className="text-end text-muted small">${(h.openingNetWorth || 0).toLocaleString()}</td>
+                                                <td className="text-end text-muted small">${(openDisplay).toLocaleString()}</td>
                                                 <td className="text-end">
-                                                    <span className={`badge ${gain >= 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'} fw-bold px-2 py-1`}>
-                                                        {gain >= 0 ? '+' : ''}${Math.round(gain).toLocaleString()}
+                                                    <span className={`badge ${gainDisplay >= 0 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'} fw-bold px-2 py-1`}>
+                                                        {gainDisplay >= 0 ? '+' : ''}${Math.round(gainDisplay).toLocaleString()}
                                                     </span>
                                                 </td>
                                                 <td className="text-end fw-bold text-main small">
-                                                    {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
+                                                    {returnPctDisplay >= 0 ? '+' : ''}{returnPctDisplay.toFixed(2)}%
                                                 </td>
                                                 <td className="text-end pe-3 fw-bold text-success">
-                                                    ${(h.closingNetWorth || 0).toLocaleString()}
+                                                    ${(closeDisplay).toLocaleString()}
                                                 </td>
                                                 <td className="text-center pe-3">
                                                     <div className="btn-group btn-group-sm">
