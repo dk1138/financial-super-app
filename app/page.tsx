@@ -41,7 +41,8 @@ export default function LandingPage() {
           </Link>
           
           <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
-            <a href="#features" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Features</a>
+            <a href="#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</a>
+            <Link href="/features" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Features</Link>
             <a href="#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
               <span>Data Bank</span>
               <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">New</span>
