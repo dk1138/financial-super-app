@@ -53,14 +53,6 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-3">
             <Link 
-              href="/expenses" 
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 px-4 py-2 rounded-full border border-slate-700 transition-all text-decoration-none"
-            >
-              <i className="bi bi-receipt text-blue-400"></i>
-              <span>Expense Tracker</span>
-            </Link>
-
-            <Link 
               href="/planner" 
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
             >
@@ -100,7 +92,7 @@ export default function LandingPage() {
           </h1>
           
           <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-300 mb-10 leading-relaxed font-normal">
-            From daily expense tracking to lifetime decumulation, CRA tax minimization, spousal survivorship, and annual roll-forward calibration — Planfolio delivers institutional-grade modeling directly to your browser with zero cloud tracking.
+            From cash flow forecasting to lifetime decumulation, CRA tax minimization, spousal survivorship, and annual roll-forward calibration — Planfolio delivers institutional-grade modeling directly to your browser with zero cloud tracking.
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-16">
@@ -308,7 +300,7 @@ export default function LandingPage() {
                     Compare Saved Plans
                   </Link>
                   <Link href="/features" className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-3 px-6 rounded-2xl text-center text-sm transition-all text-decoration-none border border-slate-700">
-                    View All 9 Calculators
+                    Explore All 28+ Calculators
                   </Link>
                 </div>
               </div>
@@ -316,21 +308,7 @@ export default function LandingPage() {
 
           </div>
 
-          {/* BONUS STRIP: EXPENSE TRACKER */}
-          <div className="mt-8 max-w-6xl mx-auto p-6 bg-slate-900/60 border border-slate-800/80 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 text-start">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-xl flex-shrink-0">
-                <i className="bi bi-receipt"></i>
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-white mb-0.5">Need help estimating your current living expenses?</h4>
-                <p className="text-xs text-slate-400 mb-0">Use Planfolio's integrated local Expense Tracker with multi-workspace budgets (Personal vs Business) to feed realistic spending into your plan.</p>
-              </div>
-            </div>
-            <Link href="/expenses" className="flex-shrink-0 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold text-xs px-5 py-2.5 rounded-full border border-slate-700 transition-all text-decoration-none">
-              Open Expense Tracker &rarr;
-            </Link>
-          </div>
+
 
         </div>
       </section>
@@ -537,7 +515,7 @@ export default function LandingPage() {
                   <span className="text-blue-400">User Data:</span> <span className="text-emerald-300">localStorage['retirement_plan_data']</span>
                 </div>
                 <div className="text-slate-400">
-                  <span className="text-blue-400">Expense DB:</span> <span className="text-emerald-300">IndexedDB['ExpenseTrackerDB']</span>
+                  <span className="text-blue-400">Local Cache:</span> <span className="text-emerald-300">IndexedDB['PlanfolioLocalDB']</span>
                 </div>
                 <div className="text-slate-400">
                   <span className="text-blue-400">Network Transmission:</span> <span className="text-red-400 font-bold">0 bytes sent to external servers</span>
@@ -585,11 +563,11 @@ export default function LandingPage() {
                 </div>
                 
                 <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-                  Complete uninhibited access to all 9 core simulation modules, the Annual Data Bank, CRA tax optimizations, and local expense tracking.
+                  Complete uninhibited access to all 9 core simulation modules, the Annual Data Bank, and CRA tax optimizations.
                 </p>
 
                 <ul className="space-y-2.5 text-xs text-slate-300 mb-8">
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> All 9 Planning, Risk, and Optimizer Tabs</li>
+                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> All 9 Core Tabs & 28+ Smart Optimizers</li>
                   <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Annual Roll-Forward Wizard & Data Bank</li>
                   <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Full CRA 2026 Tax Engine (Federal & All Provinces)</li>
                   <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Unlimited Scenario Comparisons & Restores</li>
@@ -691,7 +669,6 @@ export default function LandingPage() {
 
             <div className="flex flex-wrap gap-6 text-xs text-slate-400 font-semibold">
               <Link href="/planner" className="hover:text-white transition-colors text-decoration-none">Launch Planner</Link>
-              <Link href="/expenses" className="hover:text-white transition-colors text-decoration-none">Expense Tracker</Link>
               <Link href="/features" className="hover:text-white transition-colors text-decoration-none">Feature Directory</Link>
               <a href="#about" className="hover:text-white transition-colors text-decoration-none">Back to Top</a>
             </div>
