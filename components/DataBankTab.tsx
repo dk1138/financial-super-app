@@ -98,12 +98,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         return total;
     }, [data, isCouple]);
 
-    // Retrieve previous calendar year's ending balance to anchor current live year return
-    const currentYearPriorClose = useMemo(() => {
-        return getPriorYearEndingNW(currentCalendarYear);
-    }, [data?.history, currentCalendarYear]);
-
-    // Helpers to resolve net worths even if not explicitly stored (defined first to prevent TDZ ReferenceError)
+    // Helpers to resolve net worths even if not explicitly stored (defined before useMemo to prevent TDZ ReferenceError)
     const getRecordClosingNW = (h: any) => {
         if (!h) return 0;
         if (Number(h.closingNetWorth) > 0) return Number(h.closingNetWorth);
@@ -119,6 +114,11 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         if (!prior) return 0;
         return getRecordClosingNW(prior);
     };
+
+    // Retrieve previous calendar year's ending balance to anchor current live year return
+    const currentYearPriorClose = useMemo(() => {
+        return getPriorYearEndingNW(currentCalendarYear);
+    }, [data?.history, currentCalendarYear]);
 
     const priorYearClosingNW = useMemo(() => {
         return getPriorYearEndingNW(pastYearNum);
@@ -682,7 +682,11 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                 content={({ active, payload }: any) => {
                                                     if (!active || !payload || !payload.length) return null;
                                                     const d = payload[0].payload;
+                                                    if (!d) return null;
                                                     const isGhost = d.isGhost;
+                                                    const actualRet = Number(d.actualReturn) || 0;
+                                                    const openNW = Number(d.openingNetWorth) || 0;
+                                                    const closeNW = Number(d.closingNetWorth) || 0;
                                                     return (
                                                         <div className="p-2.5 rounded-3 border border-secondary shadow-lg text-start" style={{ backgroundColor: 'rgba(15, 23, 42, 0.96)', fontSize: '12px', minWidth: '200px' }}>
                                                             <div className="d-flex justify-content-between align-items-center mb-1.5 pb-1 border-bottom border-secondary border-opacity-50">
@@ -695,17 +699,17 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                             </div>
                                                             <div className="d-flex justify-content-between my-1">
                                                                 <span className="text-muted">Return Rate:</span>
-                                                                <span className={`fw-bold ${d.actualReturn >= 0 ? 'text-success' : 'text-danger'}`}>
-                                                                    {d.actualReturn >= 0 ? '+' : ''}{d.actualReturn.toFixed(2)}%
+                                                                <span className={`fw-bold ${actualRet >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                                    {actualRet >= 0 ? '+' : ''}{actualRet.toFixed(2)}%
                                                                 </span>
                                                             </div>
                                                             <div className="d-flex justify-content-between my-1 text-muted" style={{ fontSize: '11px' }}>
                                                                 <span>Jan 1 Opening:</span>
-                                                                <span>${Math.round(d.openingNetWorth).toLocaleString()}</span>
+                                                                <span>${Math.round(openNW).toLocaleString()}</span>
                                                             </div>
                                                             <div className="d-flex justify-content-between my-1 text-muted" style={{ fontSize: '11px' }}>
                                                                 <span>{isGhost ? 'Current Live NW:' : 'Dec 31 Closing:'}</span>
-                                                                <span className="fw-semibold text-main">${Math.round(d.closingNetWorth).toLocaleString()}</span>
+                                                                <span className="fw-semibold text-main">${Math.round(closeNW).toLocaleString()}</span>
                                                             </div>
                                                             <div className="d-flex justify-content-between pt-1 border-top border-secondary border-opacity-25 text-muted" style={{ fontSize: '11px' }}>
                                                                 <span>Plan Benchmark:</span>
@@ -750,9 +754,9 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 <span className="small text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>Assumptions Guidance</span>
                                 <p className="small text-main mt-1.5 mb-2" style={{ lineHeight: '1.5' }}>
                                     {historicalStats.delta >= 0 ? (
-                                        <>Your closed actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are running <span className="text-success fw-bold">+{historicalStats.delta.toFixed(2)}% ahead</span> of your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>). Projections are grounded with a healthy safety margin.</>
+                                        <>Your closed actuals (<b>{historicalStats.avgReturn >= 0 ? '+' : ''}{historicalStats.avgReturn.toFixed(2)}%</b>) are running <span className="text-success fw-bold">+{historicalStats.delta.toFixed(2)}% ahead</span> of your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>). Projections are grounded with a healthy safety margin.</>
                                     ) : (
-                                        <>Your closed actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are trailing your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>) by <span className="text-warning fw-bold">{Math.abs(historicalStats.delta).toFixed(2)}%</span>. Consider testing conservative growth scenarios.</>
+                                        <>Your closed actuals (<b>{historicalStats.avgReturn >= 0 ? '+' : ''}{historicalStats.avgReturn.toFixed(2)}%</b>) are trailing your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>) by <span className="text-warning fw-bold">{Math.abs(historicalStats.delta).toFixed(2)}%</span>. Consider testing conservative growth scenarios.</>
                                     )}
                                 </p>
                                 <div className="d-flex justify-content-between small text-muted pt-2 border-top border-secondary border-opacity-25" style={{ fontSize: '0.72rem' }}>
