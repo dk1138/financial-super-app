@@ -51,6 +51,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const [pastSavings, setPastSavings] = useState<number | ''>(0);
     const [pastGain, setPastGain] = useState<number | ''>('');
     const [pastLifGain, setPastLifGain] = useState<number | ''>('');
+    const [pastLifGainP2, setPastLifGainP2] = useState<number | ''>('');
     const [pastNotes, setPastNotes] = useState<string>('');
 
     // Detailed account breakdowns for manual past year
@@ -69,6 +70,38 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     const p2Name = data?.inputs?.p2_name || 'Player 2';
     const [modalPlayerTab, setModalPlayerTab] = useState<'p1' | 'p2'>('p1');
     const assumedReturnRate = Number(data?.inputs?.p1_tfsa_ret ?? data?.inputs?.p1_rrsp_ret ?? data?.inputs?.p1_nonreg_ret ?? 6.0);
+
+    // Current calendar year (e.g. 2026)
+    const currentCalendarYear = new Date().getFullYear();
+
+    // Check if the current calendar year has already been archived in history
+    const isCurrentYearArchived = useMemo(() => {
+        return (data?.history || []).some((h: any) => Number(h.calendarYear) === currentCalendarYear);
+    }, [data?.history, currentCalendarYear]);
+
+    // Calculate current live net worth directly from active plan inputs (Card 3 accounts, real estate equity, custom assets)
+    const currentLiveNetWorth = useMemo(() => {
+        if (!data || !data.inputs) return 0;
+        let total = 0;
+        ['cash', 'tfsa', 'fhsa', 'rrsp', 'resp', 'lirf', 'lif', 'rrif_acct', 'nonreg', 'crypto'].forEach(acct => {
+            total += Number(data.inputs[`p1_${acct}`]) || 0;
+            if (isCouple) {
+                total += Number(data.inputs[`p2_${acct}`]) || 0;
+            }
+        });
+        (data.properties || []).forEach((prop: any) => {
+            total += (Number(prop.value) || 0) - (Number(prop.mortgage) || 0);
+        });
+        (data.customAssets || []).forEach((ca: any) => {
+            total += Number(ca.balance) || 0;
+        });
+        return total;
+    }, [data, isCouple]);
+
+    // Retrieve previous calendar year's ending balance to anchor current live year return
+    const currentYearPriorClose = useMemo(() => {
+        return getPriorYearEndingNW(currentCalendarYear);
+    }, [data?.history, currentCalendarYear]);
 
     // Helpers to resolve net worths even if not explicitly stored (defined first to prevent TDZ ReferenceError)
     const getRecordClosingNW = (h: any) => {
@@ -101,12 +134,12 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
 
 
-    // Calculate historical average return with full automatic fallback and chaining (excluding unmeasured baseline year)
+    // Calculate historical average return and append live ghosted bar for current calendar year
     const historicalStats = useMemo(() => {
-        if (!historyList || historyList.length === 0) return null;
+        if ((!historyList || historyList.length === 0) && currentYearPriorClose === 0) return null;
 
         // Sort chronologically by calendar year
-        const sorted = [...historyList].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
+        const sorted = [...(historyList || [])].sort((a: any, b: any) => a.calendarYear - b.calendarYear);
 
         const allMapped = sorted.map((h: any, idx: number) => {
             let close = getRecordClosingNW(h);
@@ -138,24 +171,48 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                 assumedReturn: Number(assumedReturnRate.toFixed(2)),
                 openingNetWorth: open,
                 closingNetWorth: close,
-                hasValidMeasurement
+                hasValidMeasurement,
+                isGhost: false
             };
         });
 
         // Filter out initial baseline year with no prior opening balance
         const chartData = allMapped.filter(d => d.hasValidMeasurement);
+
+        // Append ghosted bar for current calendar year based on active live inputs
+        let liveReturnPct: number | null = null;
+        if (!isCurrentYearArchived && currentYearPriorClose > 0 && currentLiveNetWorth > 0) {
+            const liveGain = currentLiveNetWorth - currentYearPriorClose;
+            liveReturnPct = Number(((liveGain / currentYearPriorClose) * 100).toFixed(2));
+            chartData.push({
+                year: `${currentCalendarYear} (Live)`,
+                calendarYear: currentCalendarYear,
+                actualReturn: liveReturnPct,
+                assumedReturn: Number(assumedReturnRate.toFixed(2)),
+                openingNetWorth: currentYearPriorClose,
+                closingNetWorth: currentLiveNetWorth,
+                hasValidMeasurement: true,
+                isGhost: true
+            });
+        }
+
         if (chartData.length === 0) return null;
 
-        const validReturns = chartData.map(d => d.actualReturn);
-        const avgReturn = validReturns.length > 0 ? (validReturns.reduce((a, b) => a + b, 0) / validReturns.length) : 0;
+        // Completed historical returns for official benchmark comparison
+        const archivedReturns = chartData.filter(d => !d.isGhost).map(d => d.actualReturn);
+        const avgReturn = archivedReturns.length > 0 
+            ? (archivedReturns.reduce((a, b) => a + b, 0) / archivedReturns.length) 
+            : (liveReturnPct ?? 0);
 
         return { 
             avgReturn, 
-            count: chartData.length, 
+            count: archivedReturns.length, 
             chartData, 
-            delta: avgReturn - assumedReturnRate 
+            delta: avgReturn - assumedReturnRate,
+            liveReturnPct,
+            hasGhostBar: liveReturnPct !== null
         };
-    }, [historyList, assumedReturnRate]);
+    }, [historyList, assumedReturnRate, isCurrentYearArchived, currentYearPriorClose, currentLiveNetWorth, currentCalendarYear]);
 
     const yDomainMin = useMemo(() => {
         if (!historicalStats?.chartData?.length) return 0;
@@ -261,6 +318,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         setPastSavings(0);
         setPastGain('');
         setPastLifGain('');
+        setPastLifGainP2('');
         setPastNotes('');
         setManualBalancesP1({ tfsa: '', rrsp: '', fhsa: '', resp: '', lirf: '', lif: '', rrif: '', nonreg: '', acb: '', cash: '', crypto: '' });
         setManualBalancesP2({ tfsa: '', rrsp: '', fhsa: '', resp: '', lirf: '', lif: '', rrif: '', nonreg: '', acb: '', cash: '', crypto: '' });
@@ -283,6 +341,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         setPastSavings(h.netSavingsAdded ?? 0);
         setPastGain(h.totalInvestmentGainDollar ?? '');
         setPastLifGain(h.priorYearGains?.p1_lif_dollar_gain ?? '');
+        setPastLifGainP2(h.priorYearGains?.p2_lif_dollar_gain ?? '');
         setPastNotes(h.notes ?? '');
 
         // Populate P1 balances
@@ -411,7 +470,8 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                 customAssets: customClean.length > 0 ? customClean : undefined
             },
             priorYearGains: {
-                p1_lif_dollar_gain: pastLifGain !== '' ? Number(pastLifGain) : undefined
+                p1_lif_dollar_gain: pastLifGain !== '' ? Number(pastLifGain) : undefined,
+                p2_lif_dollar_gain: isCouple && pastLifGainP2 !== '' ? Number(pastLifGainP2) : undefined
             },
             notes: pastNotes || (editingRecordId ? 'Historical actuals (Edited)' : 'Historical actual entry'),
             fullSnapshot: existingFullSnapshot
@@ -433,6 +493,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         setPastClosingNW('');
         setPastGain('');
         setPastLifGain('');
+        setPastLifGainP2('');
         setPastNotes('');
         setShowAccountBreakdown(false);
         setManualBalancesP1({ tfsa: '', rrsp: '', fhsa: '', resp: '', lirf: '', lif: '', rrif: '', nonreg: '', acb: '', cash: '', crypto: '' });
@@ -567,7 +628,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             </div>
 
             {/* PERFORMANCE BENCHMARK & CALIBRATION (PAST ACTUALS VS. ASSUMED PLAN RETURN) */}
-            {historicalStats && historicalStats.count > 0 && (
+            {historicalStats && (
                 <div className="rp-card border border-secondary rounded-4 p-4 mb-4 shadow-sm surface-card">
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 border-bottom border-secondary pb-3">
                         <div>
@@ -575,11 +636,31 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 <i className="bi bi-graph-up-arrow text-success me-2"></i> Track Record vs. Plan Assumption Calibration
                             </h6>
                             <span className="text-muted small">Compare your real-world historical returns to your active plan benchmark ({assumedReturnRate.toFixed(1)}%).</span>
+                            
+                            {/* Visual Legend for solid vs ghosted bar */}
+                            <div className="d-flex flex-wrap align-items-center gap-3 mt-2" style={{ fontSize: '0.72rem' }}>
+                                <span className="d-flex align-items-center gap-1.5 text-muted">
+                                    <span className="d-inline-block rounded-1 bg-success" style={{ width: '10px', height: '10px' }}></span> Closed Past Years
+                                </span>
+                                {historicalStats.hasGhostBar && (
+                                    <span className="d-flex align-items-center gap-1.5 text-muted">
+                                        <span className="d-inline-block rounded-1 border border-success" style={{ width: '10px', height: '10px', backgroundColor: 'rgba(25, 135, 84, 0.35)', borderStyle: 'dashed' }}></span> {currentCalendarYear} Live Input (Ghosted)
+                                    </span>
+                                )}
+                                <span className="d-flex align-items-center gap-1.5 text-muted">
+                                    <span className="d-inline-block" style={{ width: '14px', height: '0px', borderTop: '2px dashed #0dcaf0' }}></span> Plan Benchmark ({assumedReturnRate.toFixed(1)}%)
+                                </span>
+                            </div>
                         </div>
-                        <div className="d-flex align-items-center gap-2">
+                        <div className="d-flex flex-column align-items-md-end gap-1">
                             <span className={`badge ${historicalStats.delta >= 0 ? 'bg-success' : 'bg-warning text-dark'} fw-bold px-3 py-1.5 rounded-pill`}>
                                 Historical Avg: {historicalStats.avgReturn >= 0 ? '+' : ''}{historicalStats.avgReturn.toFixed(2)}% / yr
                             </span>
+                            {historicalStats.hasGhostBar && (
+                                <span className="badge bg-secondary bg-opacity-25 text-info px-2.5 py-1 rounded-pill" style={{ fontSize: '0.7rem' }}>
+                                    {currentCalendarYear} Live: {historicalStats.liveReturnPct >= 0 ? '+' : ''}{historicalStats.liveReturnPct.toFixed(2)}%
+                                </span>
+                            )}
                         </div>
                     </div>
 
@@ -590,7 +671,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                     <ResponsiveContainer width="100%" height={240}>
                                         <BarChart data={historicalStats.chartData} margin={{ top: 22, right: 25, left: -5, bottom: 5 }} barGap={8}>
                                             <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
-                                            <XAxis dataKey="year" tick={{ fontSize: 12, fill: '#aaa' }} axisLine={{ stroke: '#444' }} />
+                                            <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#aaa' }} axisLine={{ stroke: '#444' }} />
                                             <YAxis 
                                                 domain={[yDomainMin, yDomainMax]}
                                                 tick={{ fontSize: 11, fill: '#aaa' }} 
@@ -598,14 +679,61 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                 axisLine={{ stroke: '#444' }}
                                             />
                                             <RechartsTooltip 
-                                                formatter={(value: any) => [`${Number(value || 0).toFixed(2)}%`, 'Actual Return']} 
-                                                contentStyle={{ backgroundColor: 'rgba(20, 24, 33, 0.95)', borderColor: '#444', borderRadius: '8px', fontSize: '12px' }} 
+                                                content={({ active, payload }: any) => {
+                                                    if (!active || !payload || !payload.length) return null;
+                                                    const d = payload[0].payload;
+                                                    const isGhost = d.isGhost;
+                                                    return (
+                                                        <div className="p-2.5 rounded-3 border border-secondary shadow-lg text-start" style={{ backgroundColor: 'rgba(15, 23, 42, 0.96)', fontSize: '12px', minWidth: '200px' }}>
+                                                            <div className="d-flex justify-content-between align-items-center mb-1.5 pb-1 border-bottom border-secondary border-opacity-50">
+                                                                <span className="fw-bold text-main">{d.year}</span>
+                                                                {isGhost ? (
+                                                                    <span className="badge bg-info bg-opacity-20 text-info px-1.5 py-0.5" style={{ fontSize: '10px' }}>Live Input</span>
+                                                                ) : (
+                                                                    <span className="badge bg-secondary bg-opacity-25 text-muted px-1.5 py-0.5" style={{ fontSize: '10px' }}>Archived Actual</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="d-flex justify-content-between my-1">
+                                                                <span className="text-muted">Return Rate:</span>
+                                                                <span className={`fw-bold ${d.actualReturn >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                                    {d.actualReturn >= 0 ? '+' : ''}{d.actualReturn.toFixed(2)}%
+                                                                </span>
+                                                            </div>
+                                                            <div className="d-flex justify-content-between my-1 text-muted" style={{ fontSize: '11px' }}>
+                                                                <span>Jan 1 Opening:</span>
+                                                                <span>${Math.round(d.openingNetWorth).toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="d-flex justify-content-between my-1 text-muted" style={{ fontSize: '11px' }}>
+                                                                <span>{isGhost ? 'Current Live NW:' : 'Dec 31 Closing:'}</span>
+                                                                <span className="fw-semibold text-main">${Math.round(d.closingNetWorth).toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="d-flex justify-content-between pt-1 border-top border-secondary border-opacity-25 text-muted" style={{ fontSize: '11px' }}>
+                                                                <span>Plan Benchmark:</span>
+                                                                <span className="text-info">{assumedReturnRate.toFixed(1)}%</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }}
                                             />
                                             <ReferenceLine y={assumedReturnRate} stroke="#0dcaf0" strokeDasharray="4 4" label={{ value: `Plan Benchmark ${assumedReturnRate.toFixed(1)}%`, fill: '#0dcaf0', fontSize: 11, position: 'top' }} />
-                                            <Bar dataKey="actualReturn" name="Actual Return" fill="#198754" radius={[4, 4, 0, 0]} maxBarSize={60}>
-                                                {historicalStats.chartData.map((entry: any, index: number) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.actualReturn >= 0 ? '#198754' : '#dc3545'} />
-                                                ))}
+                                            <Bar dataKey="actualReturn" name="Actual Return" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                                {historicalStats.chartData.map((entry: any, index: number) => {
+                                                    const isPos = entry.actualReturn >= 0;
+                                                    if (entry.isGhost) {
+                                                        return (
+                                                            <Cell 
+                                                                key={`cell-${index}`} 
+                                                                fill={isPos ? 'rgba(25, 135, 84, 0.35)' : 'rgba(220, 53, 69, 0.35)'} 
+                                                                stroke={isPos ? '#198754' : '#dc3545'} 
+                                                                strokeWidth={2} 
+                                                                strokeDasharray="4 4" 
+                                                            />
+                                                        );
+                                                    }
+                                                    return (
+                                                        <Cell key={`cell-${index}`} fill={isPos ? '#198754' : '#dc3545'} />
+                                                    );
+                                                })}
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -618,19 +746,27 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                         </div>
 
                         <div className="col-12 col-lg-4">
-                            <div className="p-3 bg-input border border-secondary rounded-3">
+                            <div className="p-3 bg-input border border-secondary rounded-3 text-start">
                                 <span className="small text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>Assumptions Guidance</span>
                                 <p className="small text-main mt-1.5 mb-2" style={{ lineHeight: '1.5' }}>
                                     {historicalStats.delta >= 0 ? (
-                                        <>Your archived actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are running <span className="text-success fw-bold">+{historicalStats.delta.toFixed(2)}% ahead</span> of your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>). Your projections are comfortably grounded with a conservative safety margin.</>
+                                        <>Your closed actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are running <span className="text-success fw-bold">+{historicalStats.delta.toFixed(2)}% ahead</span> of your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>). Projections are grounded with a healthy safety margin.</>
                                     ) : (
-                                        <>Your archived actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are trailing your plan's assumed growth rate (<b>{assumedReturnRate.toFixed(1)}%</b>) by <span className="text-warning fw-bold">{Math.abs(historicalStats.delta).toFixed(2)}%</span>. Consider recalibrating your investment growth rate in Card 3 to test lower return scenarios.</>
+                                        <>Your closed actuals (<b>+{historicalStats.avgReturn.toFixed(2)}%</b>) are trailing your plan benchmark (<b>{assumedReturnRate.toFixed(1)}%</b>) by <span className="text-warning fw-bold">{Math.abs(historicalStats.delta).toFixed(2)}%</span>. Consider testing conservative growth scenarios.</>
                                     )}
                                 </p>
                                 <div className="d-flex justify-content-between small text-muted pt-2 border-top border-secondary border-opacity-25" style={{ fontSize: '0.72rem' }}>
                                     <span>Plan Benchmark: <b>{assumedReturnRate.toFixed(1)}%</b></span>
-                                    <span>Years Measured: <b>{historicalStats.count}</b></span>
+                                    <span>Years Closed: <b>{historicalStats.count}</b></span>
                                 </div>
+                                {historicalStats.hasGhostBar && (
+                                    <div className="d-flex justify-content-between small text-muted pt-1.5 mt-1 border-top border-secondary border-opacity-10" style={{ fontSize: '0.72rem' }}>
+                                        <span>Current Live ({currentCalendarYear}):</span>
+                                        <b className={historicalStats.liveReturnPct >= 0 ? 'text-success' : 'text-danger'}>
+                                            {historicalStats.liveReturnPct >= 0 ? '+' : ''}{historicalStats.liveReturnPct.toFixed(2)}%
+                                        </b>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1254,15 +1390,31 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                         </span>
                                     </div>
                                     <div className="col-12 col-sm-6">
-                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">LIF Dollar Gain ($)</label>
+                                        <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1">
+                                            {isCouple ? `${p1Name} LIF Gain ($)` : 'LIF Dollar Gain ($)'}
+                                        </label>
                                         <CurrencyInput 
                                             className="form-control border-secondary" 
                                             placeholder="Optional" 
                                             value={pastLifGain} 
                                             onChange={(val: any) => setPastLifGain(val)} 
                                         />
-                                        <span className="small text-muted d-block mt-1" style={{ fontSize: '0.7rem' }}>Used for calculating prior-year LIF maximum withdrawal room</span>
+                                        <span className="small text-muted d-block mt-1" style={{ fontSize: '0.7rem' }}>For prior-year LIF max withdrawal limit</span>
                                     </div>
+                                    {isCouple && (
+                                        <div className="col-12 col-sm-6">
+                                            <label className="form-label small fw-bold text-muted mb-1 text-uppercase ls-1" style={{ color: 'var(--bs-purple)' }}>
+                                                {p2Name} LIF Gain ($)
+                                            </label>
+                                            <CurrencyInput 
+                                                className="form-control border-secondary" 
+                                                placeholder="Optional" 
+                                                value={pastLifGainP2} 
+                                                onChange={(val: any) => setPastLifGainP2(val)} 
+                                            />
+                                            <span className="small text-muted d-block mt-1" style={{ fontSize: '0.7rem' }}>For prior-year LIF max withdrawal limit</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mb-2">
