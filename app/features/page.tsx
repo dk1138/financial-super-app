@@ -687,11 +687,11 @@ export default function FeaturesPage() {
       {/* --- BOTTOM CTA --- */}
       <section className="py-20 border-t border-slate-800 bg-[#0b1220] text-center">
         <div className="container mx-auto px-6 max-w-5xl">
-          <div className="p-10 md:p-14 rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 shadow-2xl shadow-blue-500/20 relative overflow-hidden">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 tracking-tight whitespace-nowrap">
-              Ready to explore all {totalToolCount} smart optimizers?
+          <div className="p-8 sm:p-10 md:p-12 rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 shadow-2xl shadow-blue-500/20 relative overflow-hidden">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight max-w-3xl mx-auto">
+              Ready to explore all {totalToolCount} optimizers?
             </h2>
-            <p className="text-blue-100 text-xs sm:text-sm md:text-base mb-8 opacity-95 font-normal whitespace-nowrap">
+            <p className="text-blue-100 text-xs sm:text-sm md:text-base mb-8 opacity-95 font-normal max-w-2xl mx-auto leading-relaxed">
               No account required. All calculations run locally in your browser. Launch Planfolio now.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
