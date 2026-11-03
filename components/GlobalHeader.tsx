@@ -321,22 +321,24 @@ export default function GlobalHeader() {
                     
                     {/* 1. LEFT: Branding & Navigation Modules */}
                     <div className="d-flex align-items-center gap-2">
-                        {/* BRAND ICON */}
-                        <div className="d-flex align-items-center justify-content-center text-primary ms-1" title="Planfolio" style={{ flexShrink: 0 }}>
-                            <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                viewBox="0 0 24 24" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="2.5" 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                style={{ width: '28px', height: '28px' }}
+                        {/* BRAND ICON (Matching Landing Page Arrow Badge) */}
+                        <Link href="/" className="d-flex align-items-center gap-2 text-decoration-none ms-1" title="Planfolio Home" style={{ flexShrink: 0 }}>
+                            <div 
+                                className="d-flex align-items-center justify-content-center text-white shadow-sm"
+                                style={{ 
+                                    width: '32px', 
+                                    height: '32px', 
+                                    borderRadius: '10px', 
+                                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                                }}
                             >
-                                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                            </svg>
-                        </div>
+                                <i className="bi bi-graph-up-arrow" style={{ fontSize: '0.95rem' }}></i>
+                            </div>
+                            <span className="fw-bold text-main d-none d-lg-inline" style={{ fontSize: '1.15rem', letterSpacing: '-0.02em', fontWeight: 800 }}>
+                                Planfolio
+                            </span>
+                        </Link>
 
                         {/* MODULE PILL SELECTOR */}
                         <div className="bg-input border border-secondary rounded-pill p-1 d-flex align-items-center shadow-sm" style={{ width: 'fit-content', whiteSpace: 'nowrap' }}>
