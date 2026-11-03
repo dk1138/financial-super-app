@@ -656,9 +656,9 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                             <span className={`badge ${historicalStats.delta >= 0 ? 'bg-success' : 'bg-warning text-dark'} fw-bold px-3 py-1.5 rounded-pill`}>
                                 Historical Avg: {historicalStats.avgReturn >= 0 ? '+' : ''}{historicalStats.avgReturn.toFixed(2)}% / yr
                             </span>
-                            {historicalStats.hasGhostBar && (
+                            {historicalStats.hasGhostBar && historicalStats.liveReturnPct !== null && (
                                 <span className="badge bg-secondary bg-opacity-25 text-info px-2.5 py-1 rounded-pill" style={{ fontSize: '0.7rem' }}>
-                                    {currentCalendarYear} Live: {historicalStats.liveReturnPct >= 0 ? '+' : ''}{historicalStats.liveReturnPct.toFixed(2)}%
+                                    {currentCalendarYear} Live: {(historicalStats.liveReturnPct ?? 0) >= 0 ? '+' : ''}{(historicalStats.liveReturnPct ?? 0).toFixed(2)}%
                                 </span>
                             )}
                         </div>
@@ -759,11 +759,11 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                     <span>Plan Benchmark: <b>{assumedReturnRate.toFixed(1)}%</b></span>
                                     <span>Years Closed: <b>{historicalStats.count}</b></span>
                                 </div>
-                                {historicalStats.hasGhostBar && (
+                                {historicalStats.hasGhostBar && historicalStats.liveReturnPct !== null && (
                                     <div className="d-flex justify-content-between small text-muted pt-1.5 mt-1 border-top border-secondary border-opacity-10" style={{ fontSize: '0.72rem' }}>
                                         <span>Current Live ({currentCalendarYear}):</span>
-                                        <b className={historicalStats.liveReturnPct >= 0 ? 'text-success' : 'text-danger'}>
-                                            {historicalStats.liveReturnPct >= 0 ? '+' : ''}{historicalStats.liveReturnPct.toFixed(2)}%
+                                        <b className={(historicalStats.liveReturnPct ?? 0) >= 0 ? 'text-success' : 'text-danger'}>
+                                            {(historicalStats.liveReturnPct ?? 0) >= 0 ? '+' : ''}{(historicalStats.liveReturnPct ?? 0).toFixed(2)}%
                                         </b>
                                     </div>
                                 )}
