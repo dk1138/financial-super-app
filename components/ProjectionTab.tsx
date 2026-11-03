@@ -562,7 +562,11 @@ export default function ProjectionTab() {
       const isP1 = player === 'p1';
       const pUpper = player.toUpperCase();
 
-      const salary = isP1 ? (y.incomeP1 - (y.rrspMatchP1 || 0)) : (y.incomeP2 - (y.rrspMatchP2 || 0));
+      const otherInc = isP1 ? (y.otherP1 || 0) : (y.otherP2 || 0);
+      const rentalInc = isP1 ? (y.rentalP1 || 0) : (y.rentalP2 || 0);
+      const salary = isP1 
+          ? Math.max(0, (y.salaryP1 !== undefined ? y.salaryP1 : (y.incomeP1 - otherInc - rentalInc)) - (y.rrspMatchP1 || 0)) 
+          : Math.max(0, (y.salaryP2 !== undefined ? y.salaryP2 : (y.incomeP2 - otherInc - rentalInc)) - (y.rrspMatchP2 || 0));
       const match = isP1 ? (y.rrspMatchP1 || 0) : (y.rrspMatchP2 || 0);
       
       const cpp = isP1 ? y.cppP1 : y.cppP2;
@@ -573,7 +577,9 @@ export default function ProjectionTab() {
       let breakdownStr = '';
       let sum = 0;
       
-      if (salary > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Salary:</span> <span>$${formatStr(salary, year)}</span></div>`; sum += salary; }
+      if (salary > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Base Salary:</span> <span>$${formatStr(salary, year)}</span></div>`; sum += salary; }
+      if (otherInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Side Hustle:</span> <span>$${formatStr(otherInc, year)}</span></div>`; sum += otherInc; }
+      if (rentalInc > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Rental Income:</span> <span>$${formatStr(rentalInc, year)}</span></div>`; sum += rentalInc; }
       if (match > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>Employer Match:</span> <span>$${formatStr(match, year)}</span></div>`; sum += match; }
       if (cpp > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>CPP:</span> <span>$${formatStr(cpp, year)}</span></div>`; sum += cpp; }
       if (oas > 0) { breakdownStr += `<div class="d-flex justify-content-between"><span>OAS:</span> <span>$${formatStr(oas, year)}</span></div>`; sum += oas; }
@@ -1039,7 +1045,11 @@ export default function ProjectionTab() {
       const pUpper = player.toUpperCase();
       const age = isP1 ? (y.p1Age || y.ageP1) : (y.p2Age || y.ageP2);
       
-      const salary = isP1 ? y.incomeP1 - (y.rrspMatchP1 || 0) : y.incomeP2 - (y.rrspMatchP2 || 0);
+      const otherInc = isP1 ? (y.otherP1 || 0) : (y.otherP2 || 0);
+      const rentalInc = isP1 ? (y.rentalP1 || 0) : (y.rentalP2 || 0);
+      const salary = isP1 
+          ? Math.max(0, (y.salaryP1 !== undefined ? y.salaryP1 : (y.incomeP1 - otherInc - rentalInc)) - (y.rrspMatchP1 || 0)) 
+          : Math.max(0, (y.salaryP2 !== undefined ? y.salaryP2 : (y.incomeP2 - otherInc - rentalInc)) - (y.rrspMatchP2 || 0));
       const match = isP1 ? y.rrspMatchP1 : y.rrspMatchP2;
       const cpp = isP1 ? y.cppP1 : y.cppP2;
       const oas = isP1 ? y.oasP1 : y.oasP2;
@@ -1075,8 +1085,20 @@ export default function ProjectionTab() {
               
               {salary > 0 && (
                   <div className="d-flex justify-content-between small mb-1">
-                      <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Base employment/other income." align="left" /></span>
+                      <span className="text-muted ms-2 d-flex align-items-center">Base Salary <InfoBtn title="Base Salary" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Primary employment income." align="left" /></span>
                       <span className="fw-medium">{formatCurrency(salary, year)}</span>
+                  </div>
+              )}
+              {otherInc > 0 && (
+                  <div className="d-flex justify-content-between small mb-1">
+                      <span className="text-muted ms-2 d-flex align-items-center">Side Hustle <InfoBtn title="Side Hustle / Additional Income" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Secondary employment, freelance, consulting, or side business income streams." align="left" /></span>
+                      <span className="text-success fw-medium">+{formatCurrency(otherInc, year)}</span>
+                  </div>
+              )}
+              {rentalInc > 0 && (
+                  <div className="d-flex justify-content-between small mb-1">
+                      <span className="text-muted ms-2 d-flex align-items-center">Rental Income <InfoBtn title="Rental Income" text="<span class='text-info fw-bold'>100% Taxable.</span><br>Gross annual rental revenue from investment real estate properties." align="left" /></span>
+                      <span className="text-success fw-medium">+{formatCurrency(rentalInc, year)}</span>
                   </div>
               )}
               {match > 0 && (
