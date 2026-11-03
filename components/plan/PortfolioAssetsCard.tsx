@@ -209,7 +209,7 @@ export default function PortfolioAssetsCard() {
                                               </div>
                                               <div style={{flex: '0 0 75px'}}>
                                                   <PercentInput 
-                                                      disabled={hasAutoAllocation && acct.id !== 'cash'} 
+                                                      disabled={hasAutoAllocation} 
                                                       className="form-control form-control-sm px-1" 
                                                       value={data.inputs[`${p}_${acct.id}_ret`]} 
                                                       onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_ret`, val)} 
@@ -218,7 +218,7 @@ export default function PortfolioAssetsCard() {
                                               {showAssetMixUI && (
                                                   <div style={{flex: '0 0 75px'}}>
                                                       <PercentInput 
-                                                          disabled={hasAutoAllocation && acct.id !== 'cash'} 
+                                                          disabled={hasAutoAllocation} 
                                                           className="form-control form-control-sm px-1 border-primary text-primary" 
                                                           value={data.inputs[`${p}_${acct.id}_retire_ret`] ?? data.inputs[`${p}_${acct.id}_ret`]} 
                                                           onChange={(val: any) => handleManualReturnChange(`${p}_${acct.id}_retire_ret`, val)} 
