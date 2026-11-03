@@ -644,7 +644,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                 </span>
                                 {historicalStats.hasGhostBar && (
                                     <span className="d-flex align-items-center gap-1.5 text-muted">
-                                        <span className="d-inline-block rounded-1 border border-success" style={{ width: '10px', height: '10px', backgroundColor: 'rgba(25, 135, 84, 0.35)', borderStyle: 'dashed' }}></span> {currentCalendarYear} Live Input (Ghosted)
+                                        <span className="d-inline-block rounded-1 border border-success" style={{ width: '10px', height: '10px', backgroundColor: 'rgba(25, 135, 84, 0.35)', borderStyle: 'dashed' }}></span> {currentCalendarYear} Live Input
                                     </span>
                                 )}
                                 <span className="d-flex align-items-center gap-1.5 text-muted">
@@ -679,6 +679,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                 axisLine={{ stroke: '#444' }}
                                             />
                                             <RechartsTooltip 
+                                                cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                                                 content={({ active, payload }: any) => {
                                                     if (!active || !payload || !payload.length) return null;
                                                     const d = payload[0].payload;
@@ -692,9 +693,28 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                                                             <div className="d-flex justify-content-between align-items-center mb-1.5 pb-1 border-bottom border-secondary border-opacity-50">
                                                                 <span className="fw-bold text-main">{d.year}</span>
                                                                 {isGhost ? (
-                                                                    <span className="badge bg-info bg-opacity-20 text-info px-1.5 py-0.5" style={{ fontSize: '10px' }}>Live Input</span>
+                                                                    <span 
+                                                                        className="badge rounded-pill px-2 py-0.5 fw-bold" 
+                                                                        style={{ 
+                                                                            backgroundColor: '#0dcaf0', 
+                                                                            color: '#082f49', 
+                                                                            fontSize: '10px',
+                                                                            letterSpacing: '0.02em'
+                                                                        }}
+                                                                    >
+                                                                        Live Input
+                                                                    </span>
                                                                 ) : (
-                                                                    <span className="badge bg-secondary bg-opacity-25 text-muted px-1.5 py-0.5" style={{ fontSize: '10px' }}>Archived Actual</span>
+                                                                    <span 
+                                                                        className="badge rounded-pill px-2 py-0.5 text-muted fw-normal" 
+                                                                        style={{ 
+                                                                            backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+                                                                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                                                                            fontSize: '10px' 
+                                                                        }}
+                                                                    >
+                                                                        Archived Actual
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                             <div className="d-flex justify-content-between my-1">
