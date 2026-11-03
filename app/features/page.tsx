@@ -389,7 +389,7 @@ export default function FeaturesPage() {
 
           <div className="flex items-center gap-3">
             <Link 
-              href={`/planner?tab=optimizers&tool=${opt.id}`} 
+              href="/planner" 
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
             >
               <span>Launch Planner</span>
@@ -696,7 +696,7 @@ export default function FeaturesPage() {
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <Link 
-                href={`/planner?tab=optimizers&tool=${opt.id}`} 
+                href="/planner" 
                 className="bg-white text-blue-900 px-9 py-3.5 rounded-full font-bold text-sm hover:bg-slate-100 transition-all shadow-xl text-decoration-none"
               >
                 Launch Planner (Free)
