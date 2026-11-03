@@ -5,7 +5,7 @@ import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { InfoBtn } from './SharedUI';
 
-function ScoreCard({ title, score, max, tooltip }: { title: string, score: number, max: number, tooltip?: string }) {
+function ScoreCard({ title, score, max, tooltip, align = 'left' }: { title: string, score: number, max: number, tooltip?: string, align?: 'center'|'right'|'left' }) {
   const pct = Math.min(100, Math.max(0, (score / max) * 100));
   
   let colorClass = 'text-danger';
@@ -18,7 +18,7 @@ function ScoreCard({ title, score, max, tooltip }: { title: string, score: numbe
       <div className="d-flex justify-content-between align-items-start mb-2">
         <div className="text-muted fw-bold text-uppercase d-flex align-items-center" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
           <span>{title}</span>
-          {tooltip && <InfoBtn align="left" title={title} text={tooltip} />}
+          {tooltip && <InfoBtn align={align} title={title} text={tooltip} />}
         </div>
       </div>
       
@@ -344,7 +344,7 @@ export default function DashboardTab() {
 
   results.timeline.forEach((y: any) => {
       const wdsRaw = y.flows && y.flows.withdrawals ? Object.values(y.flows.withdrawals).reduce((a: any, b: any) => a + b, 0) as number : 0;
-      const yrInflowRaw = (y.incomeP1||0) + (y.incomeP2||0) + (y.cppP1||0) + (y.cppP2||0) + (y.oasP1||0) + (y.oasP2||0) + (y.dbP1||0) + (y.dbP2||0) + (y.windfall||0) + (y.invIncP1||0) + (y.invIncP2||0) + (y.rrspRefundP1||0) + (y.rrspRefundP2||0);
+      const yrInflowRaw = (y.incomeP1||0) + (y.incomeP2||0) + (y.cppP1||0) + (y.cppP2||0) + (y.oasP1||0) + (y.oasP2||0) + (y.dbP1||0) + (y.dbP2||0) + (y.taxFreeSideHustle||0) + (y.windfall||0) + (y.invIncP1||0) + (y.invIncP2||0) + (y.rrspRefundP1||0) + (y.rrspRefundP2||0);
       
       let contsRaw = 0;
       if (y.flows && y.flows.contributions) {
@@ -633,16 +633,37 @@ export default function DashboardTab() {
               {/* 4 Health Breakdown Cards */}
               <div className="row g-3 pt-4 mt-1 border-top border-secondary border-opacity-50">
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Retirement Funding" score={planScore.retirementReadiness} max={50} tooltip="Measures your projected trajectory towards FI and funding a safe retirement without cash shortfalls." />
+                      <ScoreCard 
+                          title="Retirement Funding" 
+                          score={planScore.retirementReadiness} 
+                          max={50} 
+                          tooltip="<p class='mb-2'>Measures your projected ability to sustain your lifestyle through your target life expectancy without running out of liquid capital.</p><b class='text-main d-block mb-1'>Scoring Factors:</b><ul class='ps-3 mb-2' style='line-height:1.5;'><li><b>Plan Solvency (30 pts base):</b> If your liquid portfolio ever drops to $0 during retirement, this score immediately becomes <b>0 / 50</b>. If liquid funds never deplete through your target life expectancy, you earn 30 baseline points.</li><li><b>FI Trajectory (Up to 20 pts):</b> Measures your current progress toward your retirement Financial Independence (FI) target (25&times; your first year of inflation-adjusted retirement spending, based on the 4% rule).</li></ul><b class='text-main d-block mb-1'>Key Inputs:</b><span class='text-muted'>Retirement age, annual living expenses, debt payments, liquid assets (TFSA, RRSP, Non-Reg, Cash), and inflation rate.</span>" 
+                      />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Debt Health" score={planScore.debtHealth} max={20} tooltip="Evaluates your Debt-to-Income (DTI) ratio to ensure sustainable cash flow." />
+                      <ScoreCard 
+                          title="Debt Health" 
+                          score={planScore.debtHealth} 
+                          max={20} 
+                          tooltip="<p class='mb-2'>Evaluates your monthly debt service burden against gross income using standard Canadian lending thresholds.</p><b class='text-main d-block mb-1'>Scoring Thresholds (DTI Ratio):</b><ul class='ps-3 mb-2' style='line-height:1.5;'><li><b>DTI &le; 20% (20 / 20 pts):</b> Optimal. Low debt overhead leaves maximum cash flow for investing and lifestyle.</li><li><b>DTI 20% to 36% (10–20 pts):</b> Healthy range matching standard Canadian GDS/TDS lender guidelines.</li><li><b>DTI 36% to 50% (1–10 pts):</b> Stretched. High debt payments limit new savings capacity.</li><li><b>DTI &gt; 50% (0 pts):</b> Critical debt strain.</li></ul><b class='text-main d-block mb-1'>Key Inputs:</b><span class='text-muted'>Annual mortgage payments, non-mortgage debt repayments, and gross household cash inflows.</span>" 
+                      />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Savings Rate" score={planScore.savingsRate} max={20} tooltip="Measures what percentage of your gross household income is being automatically saved and invested." />
+                      <ScoreCard 
+                          title="Savings Rate" 
+                          score={planScore.savingsRate} 
+                          max={20} 
+                          tooltip="<p class='mb-2'>Measures what percentage of your gross household income is being automatically saved and invested toward long-term wealth.</p><b class='text-main d-block mb-1'>Scoring Target:</b><ul class='ps-3 mb-2' style='line-height:1.5;'><li><b>20%+ Savings Rate (20 / 20 pts):</b> Full marks for saving 20% or more of gross cash inflow.</li><li><b>Under 20%:</b> Prorated proportionally (e.g., a 10% savings rate scores 10 / 20 pts).</li><li><b>Retiree Protection:</b> If you are already at or past your retirement age in Year 1, you automatically receive full <b>20 / 20 pts</b>, recognizing that asset drawdown is expected.</li></ul><b class='text-main d-block mb-1'>Key Inputs:</b><span class='text-muted'>TFSA, RRSP, FHSA, and non-registered contributions, employer matching, and total gross household income.</span>" 
+                      />
                   </div>
                   <div className="col-6 col-md-3">
-                      <ScoreCard title="Emergency Fund" score={planScore.emergencyFund} max={10} tooltip="Checks if your current liquid cash reserves cover at least 6 months of baseline living expenses." />
+                      <ScoreCard 
+                          title="Emergency Fund" 
+                          score={planScore.emergencyFund} 
+                          max={10} 
+                          align="right"
+                          tooltip="<p class='mb-2'>Checks whether your liquid, accessible reserves can absorb unforeseen shocks without liquidating locked investments or taking high-interest debt.</p><b class='text-main d-block mb-1'>Scoring Target:</b><ul class='ps-3 mb-2' style='line-height:1.5;'><li><b>6+ Months of Expenses (10 / 10 pts):</b> Full marks if liquid cash and accessible TFSA savings cover at least 6 months of baseline living and debt obligations.</li><li><b>Under 6 Months:</b> Prorated linearly (e.g., 3 months of coverage scores 5 / 10 pts).</li></ul><b class='text-main d-block mb-1'>Key Inputs:</b><span class='text-muted'>Cash & high-interest savings, accessible TFSA balances for both partners, monthly living expenses, mortgage, and debt payments.</span>" 
+                      />
                   </div>
               </div>
             </div>
