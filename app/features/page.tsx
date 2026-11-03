@@ -362,7 +362,7 @@ export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-blue-500/30">
       
-      {/* --- NAVIGATION BAR (Arrow Brand Badge) --- */}
+      {/* --- NAVIGATION BAR (Identical to Landing Page for seamless transitions) --- */}
       <nav className="fixed top-0 w-full z-50 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800">
         <div className="container mx-auto px-6 py-3.5 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2.5 text-decoration-none">
@@ -371,20 +371,25 @@ export default function FeaturesPage() {
             </div>
             <div className="flex flex-col text-start">
               <span className="text-xl font-black tracking-tight text-white leading-none">Planfolio</span>
-              <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-widest mt-0.5">Features Directory</span>
+              <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-widest mt-0.5">Canada</span>
             </div>
           </Link>
           
-          <div className="hidden md:flex items-center gap-8 text-sm font-semibold">
-            <Link href="/" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Home</Link>
-            <a href="#core-engines" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Core Engines</a>
-            <a href="#all-calculators" className="text-white border-b-2 border-blue-500 pb-1 text-decoration-none font-bold">All 28 Optimizers</a>
+          <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
+            <Link href="/#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</Link>
+            <Link href="/features" className="text-white border-b-2 border-blue-500 pb-1 text-decoration-none font-bold">Features</Link>
+            <Link href="/#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
+              <span>Data Bank</span>
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">New</span>
+            </Link>
+            <Link href="/#how-it-works" className="text-slate-400 hover:text-white transition-colors text-decoration-none">How It Works</Link>
+            <Link href="/#privacy" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Local-First Privacy</Link>
             <Link href="/#pricing" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Pricing</Link>
           </div>
 
           <div className="flex items-center gap-3">
             <Link 
-              href="/planner" 
+              href={`/planner?tab=optimizers&tool=${opt.id}`} 
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
             >
               <span>Launch Planner</span>
@@ -519,21 +524,21 @@ export default function FeaturesPage() {
               </p>
             </div>
 
-            {/* Search Input Bar */}
-            <div className="w-full md:w-auto relative" style={{ minWidth: '300px', maxWidth: '380px' }}>
-              <i className="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-500" style={{ pointerEvents: 'none' }}></i>
+            {/* Search Input Bar with embedded magnifying glass icon */}
+            <div className="relative w-full sm:w-80 flex items-center">
+              <i className="bi bi-search absolute left-3.5 text-slate-400 pointer-events-none text-xs"></i>
               <input 
                 type="text"
                 placeholder="Search tools (e.g. LIF, Smith, TFSA, CPP)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-full py-2.5 pl-10 pr-10 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-full py-2.5 pl-9 pr-9 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
               />
               {searchQuery && (
                 <button 
                   type="button" 
                   onClick={() => setSearchQuery('')}
-                  className="position-absolute top-50 end-0 translate-middle-y me-3 text-slate-500 hover:text-white text-xs border-0 bg-transparent"
+                  className="absolute right-3 text-slate-500 hover:text-white text-xs border-0 bg-transparent p-0"
                 >
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
@@ -585,7 +590,7 @@ export default function FeaturesPage() {
                     <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center text-[11px]">
                       <span className="text-slate-500 font-semibold">{opt.groupTitle}</span>
                       <Link 
-                        href="/planner" 
+                        href={`/planner?tab=optimizers&tool=${opt.id}`} 
                         className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
                       >
                         <span>Open in Planner</span>
@@ -660,7 +665,7 @@ export default function FeaturesPage() {
                         <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center text-[11px]">
                           <span className="text-slate-500 font-semibold">{opt.badge}</span>
                           <Link 
-                            href="/planner" 
+                            href={`/planner?tab=optimizers&tool=${opt.id}`} 
                             className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
                           >
                             <span>Open in Planner</span>
@@ -681,17 +686,17 @@ export default function FeaturesPage() {
 
       {/* --- BOTTOM CTA --- */}
       <section className="py-20 border-t border-slate-800 bg-[#0b1220] text-center">
-        <div className="container mx-auto px-6 max-w-4xl">
-          <div className="p-10 md:p-14 rounded-[3rem] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 shadow-2xl shadow-blue-500/20 relative overflow-hidden">
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight">
-              Ready to explore all {totalToolCount} optimizers?
+        <div className="container mx-auto px-6 max-w-5xl">
+          <div className="p-10 md:p-14 rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 shadow-2xl shadow-blue-500/20 relative overflow-hidden">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 tracking-tight whitespace-nowrap">
+              Ready to explore all {totalToolCount} smart optimizers?
             </h2>
-            <p className="text-blue-100 text-sm md:text-base mb-8 max-w-xl mx-auto opacity-90 font-normal">
+            <p className="text-blue-100 text-xs sm:text-sm md:text-base mb-8 opacity-95 font-normal whitespace-nowrap">
               No account required. All calculations run locally in your browser. Launch Planfolio now.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <Link 
-                href="/planner" 
+                href={`/planner?tab=optimizers&tool=${opt.id}`} 
                 className="bg-white text-blue-900 px-9 py-3.5 rounded-full font-bold text-sm hover:bg-slate-100 transition-all shadow-xl text-decoration-none"
               >
                 Launch Planner (Free)
