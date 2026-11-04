@@ -116,7 +116,16 @@ export default function PensionBuyback() {
                     </div>
                 </div>
                 {calculations.immediateNetGain > 0 && (
-                    <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold small">
+                    <span 
+                        className="badge rounded-pill px-2.5 py-1 fw-bold shadow-sm d-flex align-items-center"
+                        style={{ 
+                            backgroundColor: '#22c55e', 
+                            color: '#052e16', 
+                            fontSize: '0.72rem',
+                            letterSpacing: '0.02em',
+                            border: '1px solid #16a34a'
+                        }}
+                    >
                         <i className="bi bi-lightning-charge-fill me-1"></i> Instant Payback
                     </span>
                 )}
@@ -128,7 +137,7 @@ export default function PensionBuyback() {
 
             {/* FUNDING METHOD TOGGLE */}
             <div className="mb-3">
-                <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
+                <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center">
                     <span>Payment Funding Source</span>
                     <InfoBtn title="Funding Method" text="<b>Cash/Non-Reg:</b> Contributions are CRA tax-deductible against employment income (Line 20700).<br><br><b>RRSP Transfer:</b> Direct rollover via CRA Form T2151. Uses pre-tax RRSP balance with $0 cash out-of-pocket, but no additional tax refund." />
                 </label>
@@ -150,78 +159,92 @@ export default function PensionBuyback() {
                 </div>
             </div>
 
-            {/* CORE INPUTS GRID */}
+            {/* CORE INPUTS GRID (Cleanly aligned with consistent label heights and seamless inputs) */}
             <div className="row g-2.5 mb-3">
+                {/* ROW 1: Buyback Cost & Tax Bracket / RRSP */}
                 <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Buyback Cost ($)</label>
+                    <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center" style={{ minHeight: '20px' }}>
+                        <span>Buyback Cost ($)</span>
+                    </label>
                     <CurrencyInput className="form-control form-control-sm bg-input" value={bbCost} onChange={setBbCost} />
                 </div>
 
-                {fundingSource === 'cash' ? (
-                    <div className="col-6">
-                        <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
-                            <span>Tax Bracket</span>
-                            <span className="text-info" style={{ fontSize: '0.68rem' }}>Save {formatCurrency(calculations.taxRefund)}</span>
-                        </label>
-                        <PercentInput className="form-control form-control-sm border-info text-info bg-input" value={marginalTaxRate} onChange={setMarginalTaxRate} />
-                    </div>
-                ) : (
-                    <div className="col-6">
-                        <label className="form-label small fw-bold text-muted mb-1">RRSP Deduction</label>
-                        <input type="text" readOnly disabled className="form-control form-control-sm bg-input text-muted text-center" value="Pre-Tax Rollover" />
-                    </div>
-                )}
-
                 <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
+                    {fundingSource === 'cash' ? (
+                        <>
+                            <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center justify-content-between" style={{ minHeight: '20px' }}>
+                                <span>Tax Bracket</span>
+                                <span className="text-info fw-normal" style={{ fontSize: '0.68rem' }}>Save {formatCurrency(calculations.taxRefund)}</span>
+                            </label>
+                            <PercentInput className="form-control form-control-sm border-info text-info bg-input" value={marginalTaxRate} onChange={setMarginalTaxRate} />
+                        </>
+                    ) : (
+                        <>
+                            <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center" style={{ minHeight: '20px' }}>
+                                <span>Tax Deduction</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                readOnly 
+                                disabled 
+                                className="form-control form-control-sm bg-input text-muted text-center border-secondary shadow-sm" 
+                                style={{ height: '31px' }}
+                                value="Pre-Tax Rollover" 
+                            />
+                        </>
+                    )}
+                </div>
+
+                {/* ROW 2: Retire Earlier & Monthly Pension */}
+                <div className="col-6">
+                    <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center" style={{ minHeight: '20px' }}>
                         <span>Retire Earlier</span>
                         <InfoBtn title="Earlier Retirement" text="Number of months this buyback advances your 85/90 factor or unreduced pension eligibility date." />
                     </label>
-                    <div className="input-group input-group-sm">
+                    <div className="position-relative w-100 d-flex align-items-center" style={{ minWidth: 0 }}>
                         <input 
                             type="number" 
                             min="0" 
                             max="60" 
-                            className="form-control form-control-sm bg-input text-main border-secondary text-center fw-bold" 
+                            className="form-control form-control-sm bg-input text-main border-secondary shadow-sm text-start fw-bold w-100" 
+                            style={{ minWidth: 0, paddingLeft: '8px', paddingRight: '42px', fontWeight: '600', height: '31px', outline: 'none' }} 
                             value={monthsEarly} 
                             onChange={e => setMonthsEarly(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10)))} 
                         />
-                        <span className="input-group-text bg-input text-muted small" style={{ fontSize: '0.72rem' }}>mos</span>
+                        <span className="position-absolute text-muted small fw-bold" style={{ right: '10px', pointerEvents: 'none', zIndex: 5, fontSize: '0.75rem' }}>
+                            mos
+                        </span>
                     </div>
                 </div>
 
                 <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Monthly Pension</label>
-                    <CurrencyInput className="form-control form-control-sm bg-input" value={monthlyPension} onChange={setMonthlyPension} />
+                    <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center" style={{ minHeight: '20px' }}>
+                        <span>Monthly Pension</span>
+                    </label>
+                    <CurrencyInput className="form-control form-control-sm bg-input" suffix="/mo" value={monthlyPension} onChange={setMonthlyPension} />
                 </div>
 
+                {/* ROW 3: Added Pension & COLA Protection */}
                 <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
+                    <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center" style={{ minHeight: '20px' }}>
                         <span>Added Pension</span>
                         <InfoBtn title="Added Pension" text="Additional monthly pension payout generated by the extra credited service." />
                     </label>
-                    <div className="input-group input-group-sm">
-                        <span className="input-group-text bg-input text-success fw-bold" style={{ fontSize: '0.75rem' }}>+</span>
-                        <input 
-                            type="number" 
-                            className="form-control form-control-sm bg-input text-success border-success text-center fw-bold" 
-                            value={addedMonthlyPension} 
-                            onChange={e => setAddedMonthlyPension(e.target.value === '' ? '' : parseFloat(e.target.value))} 
-                        />
-                        <span className="input-group-text bg-input text-muted small" style={{ fontSize: '0.72rem' }}>/mo</span>
-                    </div>
+                    <CurrencyInput className="form-control form-control-sm border-success text-success bg-input" suffix="/mo" value={addedMonthlyPension} onChange={setAddedMonthlyPension} />
                 </div>
 
                 <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">COLA Indexing</label>
+                    <label className="form-label small fw-bold text-muted mb-1.5 d-flex align-items-center" style={{ minHeight: '20px' }}>
+                        <span>COLA Protection</span>
+                    </label>
                     <button 
                         type="button" 
-                        className={`btn btn-sm w-100 py-1 text-center fw-bold rounded-2 ${hasCola ? 'btn-outline-success border-success text-success bg-input' : 'btn-outline-secondary text-muted bg-input'}`} 
+                        className={`btn btn-sm w-100 fw-bold rounded-2 shadow-sm d-flex align-items-center justify-content-center transition-all ${hasCola ? 'btn-outline-success border-success text-success bg-input' : 'btn-outline-secondary text-muted bg-input'}`} 
                         onClick={() => setHasCola(!hasCola)}
-                        style={{ fontSize: '0.75rem' }}
+                        style={{ height: '31px', fontSize: '0.75rem' }}
                     >
-                        <i className={`bi ${hasCola ? 'bi-check-circle-fill' : 'bi-x-circle'} me-1`}></i>
-                        {hasCola ? `Indexed (${colaRate}%)` : 'Fixed (0%)'}
+                        <i className={`bi ${hasCola ? 'bi-check-circle-fill' : 'bi-dash-circle'} me-1.5`}></i>
+                        {hasCola ? `COLA Indexed (${colaRate}%)` : 'Fixed (No COLA)'}
                     </button>
                 </div>
             </div>
@@ -287,13 +310,13 @@ export default function PensionBuyback() {
 
                 {/* 2. IMMEDIATE ARBITRAGE OR PAYBACK */}
                 {calculations.immediateNetGain > 0 ? (
-                    <div className="p-2 my-2 rounded-3 bg-success bg-opacity-15 border border-success border-opacity-50 text-start">
+                    <div className="p-2.5 my-2 rounded-3 border border-success border-opacity-50 text-start" style={{ backgroundColor: 'rgba(34, 197, 94, 0.12)' }}>
                         <div className="d-flex align-items-center gap-1.5 text-success fw-bold small mb-1">
                             <i className="bi bi-check-circle-fill"></i>
                             <span>Immediate Net Upfront Profit: +{formatCurrency(calculations.immediateNetGain)}</span>
                         </div>
                         <p className="text-main mb-0" style={{ fontSize: '0.71rem', lineHeight: '1.4' }}>
-                            Collecting your pension {calculations.earlyMonths} months early delivers <b>+{formatCurrency(calculations.earlyPensionCollected)}</b> right out of the gate. That repays your <b>{formatCurrency(calculations.netCost)}</b> net cost upfront with <b>+{formatCurrency(calculations.immediateNetGain)}</b> extra cash in hand—plus an ongoing <b>+{formatCurrency(calculations.addedMonthly)}/mo</b> for life.
+                            Collecting your pension {calculations.earlyMonths} mos early delivers <b className="text-success">+{formatCurrency(calculations.earlyPensionCollected)}</b> right out of the gate. That completely covers your <b>{formatCurrency(calculations.netCost)}</b> net cost upfront with <b className="text-success">+{formatCurrency(calculations.immediateNetGain)}</b> extra cash in hand—plus an ongoing <b className="text-success">+{formatCurrency(calculations.addedMonthly)}/mo</b> for life.
                         </p>
                     </div>
                 ) : (
@@ -311,7 +334,10 @@ export default function PensionBuyback() {
 
                 {/* 3. LIFETIME METRICS */}
                 <div className="d-flex justify-content-between align-items-center pt-1.5" style={{ fontSize: '0.75rem' }}>
-                    <span className="text-muted fw-bold">Required Yield to Match <InfoBtn direction="up" title="Required Yield" text="The annual withdrawal yield required from your net investment cost to match the added annual pension for life. Guaranteed yield > 4.0% typically outperforms safe market drawdown rules." /></span>
+                    <span className="text-muted fw-bold d-inline-flex align-items-center">
+                        Required Yield to Match 
+                        <InfoBtn direction="up" title="Required Yield" text="The annual withdrawal yield required from your net investment cost to match the added annual pension for life. Guaranteed yield > 4.0% typically outperforms safe market drawdown rules." />
+                    </span>
                     <span className={`fw-bolder fs-6 ${calculations.matchYield >= 4.0 ? 'text-success' : 'text-warning'}`}>
                         {calculations.matchYield.toFixed(2)}%
                     </span>
