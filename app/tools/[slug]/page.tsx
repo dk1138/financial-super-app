@@ -2,15 +2,16 @@
  * =========================================================================
  * TARGET PATH IN YOUR PROJECT: app/tools/[slug]/page.tsx
  * PURPOSE: Individual Standalone Calculator Dynamic Page
- * INSTRUCTION: Rename this file to 'page.tsx' and place it in 'app/tools/[slug]/'
+ * INSTRUCTION: Place this file in 'app/tools/[slug]/page.tsx'
+ * NOTE: Directly imports and uses the universal MarketingHeader component.
  * =========================================================================
  */
 
-import MarketingHeader from '@/components/MarketingHeader';
 import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import MarketingHeader from '@/components/MarketingHeader';
 import { TOOLS_BY_SLUG, ALL_TOOL_SLUGS, TOOLS_DATA } from '@/lib/toolsData';
 import ToolRenderer from '@/components/tools/ToolRenderer';
 
@@ -160,12 +161,12 @@ export default async function ToolPage({ params }: PageProps) {
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
 
-            {/* TOP NAVIGATION BAR - Identical to Main Page, Features & Tools Directory */}
+            {/* UNIVERSAL NAVIGATION HEADER */}
             <MarketingHeader />
 
-            {/* MAIN CONTENT CONTAINER */}
+            {/* MAIN CONTENT CONTAINER - Identical Spacing to Main Page */}
             <main className="container mx-auto px-6 pt-44 pb-20 max-w-4xl">
-                {/* TOOL HERO HEADER */}
+                {/* TOOL HERO HEADER - Clean Centered Layout (No Badges) */}
                 <div className="text-center max-w-3xl mx-auto mb-12">
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3">
                         {tool.title}
@@ -175,7 +176,7 @@ export default async function ToolPage({ params }: PageProps) {
                     </p>
                 </div>
 
-                {/* INTERACTIVE CALCULATOR CARD (Properly sized per tool type to prevent clipping) */}
+                {/* INTERACTIVE CALCULATOR CARD */}
                 <div className={`mb-12 mx-auto w-full ${isWideTool ? 'max-w-4xl' : 'max-w-xl'}`} style={{ minHeight: '480px' }}>
                     <ToolRenderer toolKey={tool.toolKey} />
                 </div>
@@ -187,7 +188,6 @@ export default async function ToolPage({ params }: PageProps) {
                             <i className="bi bi-info-circle text-blue-400"></i>
                             <span>How This Canadian Calculation Works</span>
                         </h2>
-                        
                     </div>
                     <p className="text-slate-300 text-sm leading-relaxed mb-4">
                         {tool.overview}
