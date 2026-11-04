@@ -6,6 +6,7 @@
  * =========================================================================
  */
 'use client';
+import MarketingHeader from '@/components/MarketingHeader';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 
@@ -370,45 +371,7 @@ export default function FeaturesPage() {
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-blue-500/30">
       
       {/* --- NAVIGATION BAR (Identical to Landing Page for seamless transitions) --- */}
-      <nav className="fixed top-0 w-full z-50 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800">
-        <div className="container mx-auto px-6 py-3.5 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2.5 text-decoration-none">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-              <i className="bi bi-graph-up-arrow text-white text-base"></i>
-            </div>
-            <div className="flex flex-col text-start">
-              <span className="text-xl font-black tracking-tight text-white leading-none">Planfolio</span>
-              <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-widest mt-0.5">Canada</span>
-            </div>
-          </Link>
-          
-          <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
-            <Link href="/#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</Link>
-            <Link href="/features" className="text-white border-b-2 border-blue-500 pb-1 text-decoration-none font-bold">Features</Link>
-            <Link href="/tools" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
-              <span>Tools</span>
-              <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Free</span>
-            </Link>
-            <Link href="/#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
-              <span>Data Bank</span>
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">New</span>
-            </Link>
-            <Link href="/#how-it-works" className="text-slate-400 hover:text-white transition-colors text-decoration-none">How It Works</Link>
-            <Link href="/#privacy" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Local-First Privacy</Link>
-            <Link href="/#pricing" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Pricing</Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link 
-              href="/planner" 
-              className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
-            >
-              <span>Launch Planner</span>
-              <i className="bi bi-arrow-right"></i>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <MarketingHeader />
 
       {/* --- HERO HEADER --- */}
       <header className="pt-40 pb-16 border-b border-slate-800/80 bg-gradient-to-b from-[#0b1220] to-[#0f172a] text-center">
