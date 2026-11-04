@@ -174,3 +174,10 @@ export const TOOLS_DATA: ToolMeta[] = [
 export function getToolBySlug(slug: string): ToolMeta | undefined {
     return TOOLS_DATA.find((t) => t.slug === slug);
 }
+
+export const TOOLS_BY_SLUG: Record<string, ToolMeta> = TOOLS_DATA.reduce((acc, tool) => {
+    acc[tool.slug] = tool;
+    return acc;
+}, {} as Record<string, ToolMeta>);
+
+export const ALL_TOOL_SLUGS: string[] = TOOLS_DATA.map((t) => t.slug);
