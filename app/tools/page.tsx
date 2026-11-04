@@ -1,20 +1,18 @@
-// app/tools/page.tsx
-
 import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TOOLS_DATA } from '@/lib/toolsData';
 
 export const metadata: Metadata = {
-    title: '28 Free Canadian Financial Calculators & Optimizers | Planfolio',
+    title: '21 Free Canadian Financial Calculators | Planfolio',
     description:
-        'Explore 28 free Canadian personal finance, tax, real estate, and retirement calculators. Built specifically for CRA rules, provincial tax brackets, and local-first privacy.',
+        'Explore 21 free, standalone Canadian personal finance, tax, mortgage, and pension calculators. Built specifically for CRA rules, provincial tax brackets, and local-first privacy.',
     alternates: {
         canonical: 'https://www.planfolio.ca/tools',
     },
     openGraph: {
-        title: '28 Free Canadian Financial Calculators & Optimizers | Planfolio',
-        description: 'Free collection of 28 Canadian financial calculators. No sign-up, 100% privacy-first.',
+        title: '21 Free Canadian Financial Calculators | Planfolio',
+        description: 'Free collection of 21 standalone Canadian financial calculators. No sign-up, 100% privacy-first.',
         url: 'https://www.planfolio.ca/tools',
         type: 'website',
     },
@@ -22,15 +20,26 @@ export const metadata: Metadata = {
 
 export default function ToolsDirectoryPage() {
     const categories = [
-        'Master Simulations',
-        'Tax & Registered',
-        'Debt, Real Estate & Cash',
-        'Business & Income',
-        'Data Importers',
+        'Pensions & Retirement Income',
+        'Taxes & Registered Accounts',
+        'Real Estate, Mortgages & Cash',
     ];
 
     return (
         <div data-bs-theme="dark" className="min-h-screen bg-[#0b0f17] text-slate-100 selection:bg-blue-500/30 font-sans">
+            {/* Scoped CSS to enforce high-contrast light text across Bootstrap controls */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                .rp-card, [data-bs-theme="dark"] {
+                    --bs-body-color: #f1f5f9 !important;
+                    --bs-secondary-color: #94a3b8 !important;
+                    --bs-body-bg: #0b0f17 !important;
+                    --bs-card-bg: #141c2b !important;
+                    --bs-border-color: #2c3b52 !important;
+                }
+                .text-muted { color: #94a3b8 !important; }
+                .text-main { color: #f8fafc !important; }
+            `}} />
+
             {/* TOP NAVIGATION BAR */}
             <header className="sticky top-0 z-40 bg-[#0b0f17]/95 backdrop-blur-md border-b border-slate-800/80">
                 <div className="container mx-auto px-4 py-3 flex justify-between items-center max-w-6xl">
@@ -63,63 +72,87 @@ export default function ToolsDirectoryPage() {
             </header>
 
             {/* DIRECTORY HERO HEADER */}
-            <main className="container mx-auto px-4 py-12 max-w-6xl">
+            <main className="container mx-auto px-4 py-10 max-w-6xl text-start">
                 <div className="text-center mb-12">
                     <span className="badge bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-pill small fw-bold text-uppercase ls-1">
-                        Free Canadian Toolkit
+                        Free Standalone Toolkit
                     </span>
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mt-3 mb-3">
-                        28 Specialized Canadian Financial Optimizers
+                        21 Free Canadian Financial Calculators
                     </h1>
                     <p className="text-slate-400 text-base max-w-2xl mx-auto leading-relaxed">
-                        Every calculator is built specifically for CRA statutory rules, provincial tax formulas, and local-first privacy. Free to use with zero accounts or bank credentials.
+                        Every calculator works completely on its own with zero prior planning or data entry required. Modeled specifically for CRA rules, provincial tax formulas, and local privacy.
                     </p>
                 </div>
 
-                {/* CATEGORIES & TOOLS GRID */}
+                {/* CATEGORIES & TOOLS GRID (Using pure responsive CSS Grid - impossible to distort or squish) */}
                 <div className="space-y-12">
                     {categories.map((cat) => {
                         const catTools = TOOLS_DATA.filter((t) => t.category === cat);
                         if (catTools.length === 0) return null;
 
                         return (
-                            <section key={cat} className="text-start">
+                            <section key={cat}>
                                 <div className="d-flex align-items-center gap-2 mb-4 pb-2 border-bottom border-slate-800">
                                     <h2 className="text-xl font-bold text-white mb-0">{cat}</h2>
                                     <span className="badge bg-slate-800 text-slate-400 rounded-pill small">
-                                        {catTools.length} {catTools.length === 1 ? 'tool' : 'tools'}
+                                        {catTools.length} {catTools.length === 1 ? 'calculator' : 'calculators'}
                                     </span>
                                 </div>
 
-                                <div className="row g-3">
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
                                     {catTools.map((tool) => (
-                                        <div key={tool.slug} className="col-12 col-md-6 col-lg-4">
-                                            <Link
-                                                href={`/tools/${tool.slug}`}
-                                                className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800/80 hover:border-blue-500/60 hover:bg-slate-900 transition-all text-decoration-none d-flex flex-column h-100 shadow-sm group"
-                                            >
-                                                <div className="d-flex justify-content-between align-items-start mb-3">
-                                                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 d-flex align-items-center justify-content-center flex-shrink-0">
-                                                        <i className={`bi ${tool.icon} fs-5`}></i>
-                                                    </div>
-                                                    <span className="badge bg-slate-800 text-slate-400 border border-slate-700/60 px-2 py-1 rounded-pill" style={{ fontSize: '10px' }}>
-                                                        {tool.badge}
-                                                    </span>
+                                        <Link
+                                            key={tool.slug}
+                                            href={`/tools/${tool.slug}`}
+                                            className="p-5 rounded-2xl transition-all duration-200 text-decoration-none d-flex flex-column shadow-sm group"
+                                            style={{
+                                                backgroundColor: '#141c2b',
+                                                border: '1px solid #2c3b52',
+                                                minHeight: '210px',
+                                            }}
+                                        >
+                                            <div className="d-flex justify-content-between align-items-start mb-3">
+                                                <div 
+                                                    className="d-flex align-items-center justify-content-center flex-shrink-0"
+                                                    style={{ 
+                                                        width: '42px', 
+                                                        height: '42px', 
+                                                        minWidth: '42px', 
+                                                        minHeight: '42px',
+                                                        backgroundColor: 'rgba(2, 132, 199, 0.15)',
+                                                        border: '1px solid rgba(2, 132, 199, 0.3)',
+                                                        borderRadius: '12px',
+                                                        color: '#38bdf8'
+                                                    }}
+                                                >
+                                                    <i className={`bi ${tool.icon} fs-5`}></i>
                                                 </div>
+                                                <span 
+                                                    className="badge px-2 py-1 rounded-pill"
+                                                    style={{ 
+                                                        backgroundColor: 'rgba(15, 23, 42, 0.6)', 
+                                                        color: '#94a3b8', 
+                                                        border: '1px solid #334155',
+                                                        fontSize: '10px' 
+                                                    }}
+                                                >
+                                                    {tool.badge}
+                                                </span>
+                                            </div>
 
-                                                <h3 className="text-base font-bold text-white group-hover:text-blue-400 transition-colors mb-2">
-                                                    {tool.title}
-                                                </h3>
-                                                <p className="text-slate-400 text-xs leading-relaxed mb-4 flex-grow-1">
-                                                    {tool.subtitle}
-                                                </p>
+                                            <h3 className="text-base font-bold text-white mb-2 leading-snug">
+                                                {tool.title}
+                                            </h3>
+                                            <p className="text-xs leading-relaxed mb-4 flex-grow-1" style={{ color: '#94a3b8' }}>
+                                                {tool.subtitle}
+                                            </p>
 
-                                                <div className="d-flex align-items-center gap-1.5 text-xs font-bold text-blue-400 mt-auto pt-2 border-top border-slate-800/60">
-                                                    <span>Open Calculator</span>
-                                                    <i className="bi bi-arrow-right"></i>
-                                                </div>
-                                            </Link>
-                                        </div>
+                                            <div className="d-flex align-items-center gap-1.5 text-xs font-bold text-info mt-auto pt-2.5 border-top border-secondary border-opacity-25">
+                                                <span>Open Calculator</span>
+                                                <i className="bi bi-arrow-right"></i>
+                                            </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </section>
@@ -130,10 +163,10 @@ export default function ToolsDirectoryPage() {
                 {/* BOTTOM CTA BANNER */}
                 <section className="mt-16 p-8 sm:p-12 rounded-[2.5rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-center shadow-2xl">
                     <h2 className="text-2xl sm:text-4xl font-black text-white mb-3 tracking-tight">
-                        Connect all 28 tools into one lifelong simulator
+                        Need the full 40-year picture?
                     </h2>
                     <p className="text-blue-100 text-sm sm:text-base max-w-2xl mx-auto mb-6 opacity-90">
-                        Launch Planfolio to simulate your complete retirement vector, combining real estate, CPP/OAS pensions, CRA tax brackets, and after-tax estate legacy.
+                        Launch Planfolio to simulate your complete retirement vector, combining real estate, CPP/OAS pensions, CRA tax brackets, and after-tax estate legacy in one unified engine.
                     </p>
                     <Link
                         href="/planner"
@@ -146,7 +179,7 @@ export default function ToolsDirectoryPage() {
             </main>
 
             {/* FOOTER */}
-            <footer className="py-12 border-t border-slate-800 bg-[#080d19] text-center text-xs text-slate-500">
+            <footer className="py-12 border-t border-slate-800/80 bg-[#080d19] text-center text-xs text-slate-500">
                 <div className="container mx-auto px-4 max-w-6xl">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                         <span className="font-bold text-slate-400 text-sm">Planfolio Canada</span>

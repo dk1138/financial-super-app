@@ -378,6 +378,10 @@ export default function FeaturesPage() {
           <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
             <Link href="/#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</Link>
             <Link href="/features" className="text-white border-b-2 border-blue-500 pb-1 text-decoration-none font-bold">Features</Link>
+            <Link href="/tools" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
+              <span>Calculators</span>
+              <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Free</span>
+            </Link>
             <Link href="/#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
               <span>Data Bank</span>
               <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">New</span>
@@ -388,6 +392,13 @@ export default function FeaturesPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link 
+              href="/tools" 
+              className="text-slate-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-full border border-slate-700 hover:border-slate-500 transition-all text-decoration-none d-none d-sm-inline-flex items-center gap-1.5"
+            >
+              <i className="bi bi-grid-3x3-gap text-blue-400"></i>
+              <span>21 Calculators</span>
+            </Link>
             <Link 
               href="/planner" 
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
