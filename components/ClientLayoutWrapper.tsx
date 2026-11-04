@@ -1,3 +1,5 @@
+// components/ClientLayoutWrapper.tsx
+
 "use client";
 
 import React from 'react';
@@ -11,7 +13,9 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isMarketingPage = pathname === "/" || pathname === "/features";
+  
+  // Hides GlobalHeader on homepage, features, and all /tools pages
+  const isMarketingPage = pathname === "/" || pathname === "/features" || pathname?.startsWith("/tools");
 
   return (
     <SessionWrapper>

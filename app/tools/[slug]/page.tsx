@@ -174,7 +174,7 @@ export default async function ToolPage({ params }: PageProps) {
                 </div>
 
                 {/* INTERACTIVE CALCULATOR CARD */}
-                <div className="mb-8">
+                <div className="mb-10 max-w-xl mx-auto w-full">
                     <ToolRenderer toolKey={tool.toolKey} />
                 </div>
 
