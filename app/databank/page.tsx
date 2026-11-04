@@ -118,12 +118,7 @@ export default function DataBankPage() {
             {/* HERO SECTION */}
             <header className="relative pt-44 pb-20 overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-[#0b1220] to-[#0f172a]">
                 <div className="container mx-auto px-6 text-center relative z-10 max-w-4xl">
-                    <div className="inline-flex items-center gap-2 mb-6 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
-                            Annual Track Record Calibration
-                        </span>
-                    </div>
+
 
                     <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight leading-tight">
                         The Living Financial Archive.<br/>
