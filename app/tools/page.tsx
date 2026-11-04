@@ -4,26 +4,23 @@ import Link from 'next/link';
 import { TOOLS_DATA } from '@/lib/toolsData';
 
 export const metadata: Metadata = {
-    title: '21 Free Canadian Financial Calculators | Planfolio',
+    title: 'Free Canadian Financial Tools & Calculators | Planfolio',
     description:
-        'Explore 21 free, standalone Canadian personal finance, tax, mortgage, and pension calculators. Built specifically for CRA rules, provincial tax brackets, and local-first privacy.',
+        'Explore free, standalone Canadian personal finance, tax, mortgage, and pension calculators. Built specifically for CRA statutory rules and local-first privacy.',
     alternates: {
         canonical: 'https://www.planfolio.ca/tools',
     },
     openGraph: {
-        title: '21 Free Canadian Financial Calculators | Planfolio',
-        description: 'Free collection of 21 standalone Canadian financial calculators. No sign-up, 100% privacy-first.',
+        title: 'Free Canadian Financial Tools & Calculators | Planfolio',
+        description: 'Free collection of standalone Canadian financial calculators. No sign-up, 100% privacy-first.',
         url: 'https://www.planfolio.ca/tools',
         type: 'website',
     },
 };
 
 export default function ToolsDirectoryPage() {
-    const categories = [
-        'Pensions & Retirement Income',
-        'Taxes & Registered Accounts',
-        'Real Estate, Mortgages & Cash',
-    ];
+    // Dynamically derive categories from TOOLS_DATA so it works regardless of dataset version
+    const categories = Array.from(new Set((TOOLS_DATA || []).map((t) => t.category).filter(Boolean)));
 
     return (
         <div data-bs-theme="dark" className="min-h-screen bg-[#0b0f17] text-slate-100 selection:bg-blue-500/30 font-sans">
@@ -75,89 +72,145 @@ export default function ToolsDirectoryPage() {
             <main className="container mx-auto px-4 py-10 max-w-6xl text-start">
                 <div className="text-center mb-12">
                     <span className="badge bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-pill small fw-bold text-uppercase ls-1">
-                        Free Standalone Toolkit
+                        Free Canadian Toolkit
                     </span>
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mt-3 mb-3">
-                        21 Free Canadian Financial Calculators
+                        Canadian Financial Tools
                     </h1>
                     <p className="text-slate-400 text-base max-w-2xl mx-auto leading-relaxed">
-                        Every calculator works completely on its own with zero prior planning or data entry required. Modeled specifically for CRA rules, provincial tax formulas, and local privacy.
+                        Every tool works completely on its own with zero prior planning or data entry required. Modeled specifically for CRA rules, provincial tax formulas, and local privacy.
                     </p>
                 </div>
 
-                {/* CATEGORIES & TOOLS GRID (Using pure responsive CSS Grid - impossible to distort or squish) */}
+                {/* CATEGORIES & TOOLS GRID (Dynamic rendering guarantees cards always display) */}
                 <div className="space-y-12">
-                    {categories.map((cat) => {
-                        const catTools = TOOLS_DATA.filter((t) => t.category === cat);
-                        if (catTools.length === 0) return null;
+                    {categories.length > 0 ? (
+                        categories.map((cat) => {
+                            const catTools = (TOOLS_DATA || []).filter((t) => t.category === cat);
+                            if (catTools.length === 0) return null;
 
-                        return (
-                            <section key={cat}>
-                                <div className="d-flex align-items-center gap-2 mb-4 pb-2 border-bottom border-slate-800">
-                                    <h2 className="text-xl font-bold text-white mb-0">{cat}</h2>
-                                    <span className="badge bg-slate-800 text-slate-400 rounded-pill small">
-                                        {catTools.length} {catTools.length === 1 ? 'calculator' : 'calculators'}
-                                    </span>
-                                </div>
+                            return (
+                                <section key={cat}>
+                                    <div className="d-flex align-items-center gap-2 mb-4 pb-2 border-bottom border-slate-800">
+                                        <h2 className="text-xl font-bold text-white mb-0">{cat}</h2>
+                                    </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
-                                    {catTools.map((tool) => (
-                                        <Link
-                                            key={tool.slug}
-                                            href={`/tools/${tool.slug}`}
-                                            className="p-5 rounded-2xl transition-all duration-200 text-decoration-none d-flex flex-column shadow-sm group"
-                                            style={{
-                                                backgroundColor: '#141c2b',
-                                                border: '1px solid #2c3b52',
-                                                minHeight: '210px',
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
+                                        {catTools.map((tool) => (
+                                            <Link
+                                                key={tool.slug}
+                                                href={`/tools/${tool.slug}`}
+                                                className="p-5 rounded-2xl transition-all duration-200 text-decoration-none d-flex flex-column shadow-sm group"
+                                                style={{
+                                                    backgroundColor: '#141c2b',
+                                                    border: '1px solid #2c3b52',
+                                                    minHeight: '210px',
+                                                }}
+                                            >
+                                                <div className="d-flex justify-content-between align-items-start mb-3">
+                                                    <div 
+                                                        className="d-flex align-items-center justify-content-center flex-shrink-0"
+                                                        style={{ 
+                                                            width: '42px', 
+                                                            height: '42px', 
+                                                            minWidth: '42px', 
+                                                            minHeight: '42px',
+                                                            backgroundColor: 'rgba(2, 132, 199, 0.15)',
+                                                            border: '1px solid rgba(2, 132, 199, 0.3)',
+                                                            borderRadius: '12px',
+                                                            color: '#38bdf8'
+                                                        }}
+                                                    >
+                                                        <i className={`bi ${tool.icon} fs-5`}></i>
+                                                    </div>
+                                                    <span 
+                                                        className="badge px-2 py-1 rounded-pill"
+                                                        style={{ 
+                                                            backgroundColor: 'rgba(15, 23, 42, 0.6)', 
+                                                            color: '#94a3b8', 
+                                                            border: '1px solid #334155',
+                                                            fontSize: '10px' 
+                                                        }}
+                                                    >
+                                                        {tool.badge}
+                                                    </span>
+                                                </div>
+
+                                                <h3 className="text-base font-bold text-white mb-2 leading-snug">
+                                                    {tool.title}
+                                                </h3>
+                                                <p className="text-xs leading-relaxed mb-4 flex-grow-1" style={{ color: '#94a3b8' }}>
+                                                    {tool.subtitle}
+                                                </p>
+
+                                                <div className="d-flex align-items-center gap-1.5 text-xs font-bold text-info mt-auto pt-2.5 border-top border-secondary border-opacity-25">
+                                                    <span>Open Tool</span>
+                                                    <i className="bi bi-arrow-right"></i>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </section>
+                            );
+                        })
+                    ) : (
+                        /* Direct fallback if categories cannot be parsed */
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
+                            {(TOOLS_DATA || []).map((tool) => (
+                                <Link
+                                    key={tool.slug}
+                                    href={`/tools/${tool.slug}`}
+                                    className="p-5 rounded-2xl transition-all duration-200 text-decoration-none d-flex flex-column shadow-sm group"
+                                    style={{
+                                        backgroundColor: '#141c2b',
+                                        border: '1px solid #2c3b52',
+                                        minHeight: '210px',
+                                    }}
+                                >
+                                    <div className="d-flex justify-content-between align-items-start mb-3">
+                                        <div 
+                                            className="d-flex align-items-center justify-content-center flex-shrink-0"
+                                            style={{ 
+                                                width: '42px', 
+                                                height: '42px', 
+                                                minWidth: '42px', 
+                                                minHeight: '42px',
+                                                backgroundColor: 'rgba(2, 132, 199, 0.15)',
+                                                border: '1px solid rgba(2, 132, 199, 0.3)',
+                                                borderRadius: '12px',
+                                                color: '#38bdf8'
                                             }}
                                         >
-                                            <div className="d-flex justify-content-between align-items-start mb-3">
-                                                <div 
-                                                    className="d-flex align-items-center justify-content-center flex-shrink-0"
-                                                    style={{ 
-                                                        width: '42px', 
-                                                        height: '42px', 
-                                                        minWidth: '42px', 
-                                                        minHeight: '42px',
-                                                        backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                                                        border: '1px solid rgba(2, 132, 199, 0.3)',
-                                                        borderRadius: '12px',
-                                                        color: '#38bdf8'
-                                                    }}
-                                                >
-                                                    <i className={`bi ${tool.icon} fs-5`}></i>
-                                                </div>
-                                                <span 
-                                                    className="badge px-2 py-1 rounded-pill"
-                                                    style={{ 
-                                                        backgroundColor: 'rgba(15, 23, 42, 0.6)', 
-                                                        color: '#94a3b8', 
-                                                        border: '1px solid #334155',
-                                                        fontSize: '10px' 
-                                                    }}
-                                                >
-                                                    {tool.badge}
-                                                </span>
-                                            </div>
+                                            <i className={`bi ${tool.icon} fs-5`}></i>
+                                        </div>
+                                        <span 
+                                            className="badge px-2 py-1 rounded-pill"
+                                            style={{ 
+                                                backgroundColor: 'rgba(15, 23, 42, 0.6)', 
+                                                color: '#94a3b8', 
+                                                border: '1px solid #334155',
+                                                fontSize: '10px' 
+                                            }}
+                                        >
+                                            {tool.badge}
+                                        </span>
+                                    </div>
 
-                                            <h3 className="text-base font-bold text-white mb-2 leading-snug">
-                                                {tool.title}
-                                            </h3>
-                                            <p className="text-xs leading-relaxed mb-4 flex-grow-1" style={{ color: '#94a3b8' }}>
-                                                {tool.subtitle}
-                                            </p>
+                                    <h3 className="text-base font-bold text-white mb-2 leading-snug">
+                                        {tool.title}
+                                    </h3>
+                                    <p className="text-xs leading-relaxed mb-4 flex-grow-1" style={{ color: '#94a3b8' }}>
+                                        {tool.subtitle}
+                                    </p>
 
-                                            <div className="d-flex align-items-center gap-1.5 text-xs font-bold text-info mt-auto pt-2.5 border-top border-secondary border-opacity-25">
-                                                <span>Open Calculator</span>
-                                                <i className="bi bi-arrow-right"></i>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </section>
-                        );
-                    })}
+                                    <div className="d-flex align-items-center gap-1.5 text-xs font-bold text-info mt-auto pt-2.5 border-top border-secondary border-opacity-25">
+                                        <span>Open Tool</span>
+                                        <i className="bi bi-arrow-right"></i>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* BOTTOM CTA BANNER */}
