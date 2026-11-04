@@ -61,7 +61,7 @@ export default function ToolsDirectoryPage() {
                     <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
                         <Link href="/#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</Link>
                         <Link href="/features" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Features</Link>
-                        <Link href="/tools" className="text-white border-b-2 border-blue-500 pb-1 text-decoration-none font-bold flex items-center gap-1.5">
+                        <Link href="/tools" className="text-white font-bold transition-colors text-decoration-none flex items-center gap-1.5">
                             <span>Tools</span>
                             <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Free</span>
                         </Link>
@@ -87,7 +87,7 @@ export default function ToolsDirectoryPage() {
             </nav>
 
             {/* MAIN CONTENT AREA */}
-            <main className="container mx-auto px-6 pt-32 pb-20 max-w-6xl text-start">
+            <main className="container mx-auto px-6 pt-44 pb-20 max-w-6xl text-start">
                 {/* DIRECTORY HERO HEADER */}
                 <div className="text-center mb-16">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-4">

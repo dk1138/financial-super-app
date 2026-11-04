@@ -78,7 +78,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       {/* HERO SECTION                                              */}
       {/* ========================================================= */}
-      <header className="relative pt-44 pb-20 overflow-hidden">
+      <header id="about" className="relative pt-44 pb-20 overflow-hidden scroll-mt-28">
         <div className="container mx-auto px-6 text-center relative z-10 max-w-5xl">
           
           {/* Trust Pills */}
@@ -96,9 +96,9 @@ export default function LandingPage() {
             </span>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white mb-6 leading-[1.08] tracking-tight">
-            The Financial Command Center<br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-[1.08] tracking-tight">
+            <span className="sm:whitespace-nowrap inline-block">The Financial Command Center</span><br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400 sm:whitespace-nowrap inline-block">
               Built for Modern Canadians.
             </span>
           </h1>
@@ -159,7 +159,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       {/* THE 6 CORE PILLARS (BENTO FEATURE GRID)                   */}
       {/* ========================================================= */}
-      <section id="features" className="py-24 border-t border-slate-800 relative bg-[#0b1220]">
+      <section id="features" className="py-24 border-t border-slate-800 relative bg-[#0b1220] scroll-mt-28">
         <div className="container mx-auto px-6">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -177,7 +177,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             
             {/* PILLAR 1: DATA BANK & CALIBRATION (HIGHLIGHTED) */}
-            <div id="databank" className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-900/90 border border-emerald-500/30 hover:border-emerald-500/60 rounded-3xl p-8 transition-all group shadow-xl relative overflow-hidden text-start">
+            <div id="databank" className="lg:col-span-2 scroll-mt-28 bg-gradient-to-br from-slate-900 to-slate-900/90 border border-emerald-500/30 hover:border-emerald-500/60 rounded-3xl p-8 transition-all group shadow-xl relative overflow-hidden text-start">
               <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 blur-3xl -z-0"></div>
               
               <div className="relative z-10">
@@ -427,7 +427,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       {/* HOW IT WORKS (THE 3-STEP LIFECYCLE)                       */}
       {/* ========================================================= */}
-      <section id="how-it-works" className="py-24 border-t border-slate-800 bg-[#0b1220]">
+      <section id="how-it-works" className="py-24 border-t border-slate-800 bg-[#0b1220] scroll-mt-28">
         <div className="container mx-auto px-6 text-center max-w-5xl">
           
           <span className="text-blue-400 text-xs font-bold uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
@@ -489,7 +489,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       {/* LOCAL-FIRST PRIVACY PROMISE                               */}
       {/* ========================================================= */}
-      <section id="privacy" className="py-20 border-t border-slate-800 bg-[#0f172a]">
+      <section id="privacy" className="py-20 border-t border-slate-800 bg-[#0f172a] scroll-mt-28">
         <div className="container mx-auto px-6 max-w-5xl">
           <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-700/80 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden text-start">
             
@@ -550,7 +550,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       {/* PRICING SECTION                                           */}
       {/* ========================================================= */}
-      <section id="pricing" className="py-24 bg-slate-900/40 border-t border-slate-800">
+      <section id="pricing" className="py-24 bg-slate-900/40 border-t border-slate-800 scroll-mt-28">
         <div className="container mx-auto px-6 text-center">
           <span className="text-blue-400 text-xs font-bold uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
             Transparent Access
@@ -636,7 +636,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       {/* FREQUENTLY ASKED QUESTIONS (SEO & FAQ SCHEMA)             */}
       {/* ========================================================= */}
-      <section id="faq" className="py-20 border-t border-slate-800 bg-[#0d1527]">
+      <section id="faq" className="py-20 border-t border-slate-800 bg-[#0d1527] scroll-mt-28">
         <div className="container mx-auto px-6 max-w-4xl text-start">
           <div className="text-center mb-12">
             <span className="text-blue-400 font-bold text-xs uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
