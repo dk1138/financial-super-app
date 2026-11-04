@@ -117,7 +117,7 @@ export default async function ToolPage({ params }: PageProps) {
     };
 
     return (
-        <div data-bs-theme="dark" className="min-h-screen bg-[#0b0f17] text-slate-100 selection:bg-blue-500/30 font-sans">
+        <div data-bs-theme="dark" className="min-h-screen bg-[#0f172a] text-slate-100 selection:bg-blue-500/30 font-sans">
             {/* Scoped CSS to enforce high-contrast light text across Bootstrap controls */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .rp-card, [data-bs-theme="dark"] {
