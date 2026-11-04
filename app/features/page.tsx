@@ -386,7 +386,7 @@ export default function FeaturesPage() {
             <Link href="/#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</Link>
             <Link href="/features" className="text-white border-b-2 border-blue-500 pb-1 text-decoration-none font-bold">Features</Link>
             <Link href="/tools" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
-              <span>Calculators</span>
+              <span>Tools</span>
               <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Free</span>
             </Link>
             <Link href="/#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
