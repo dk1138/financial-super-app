@@ -43,6 +43,10 @@ export default function LandingPage() {
           <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
             <a href="#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</a>
             <Link href="/features" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Features</Link>
+            <Link href="/tools" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
+              <span>28 Calculators</span>
+              <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Free</span>
+            </Link>
             <a href="#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
               <span>Data Bank</span>
               <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">New</span>
@@ -53,6 +57,13 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link 
+              href="/tools" 
+              className="text-slate-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-full border border-slate-700 hover:border-slate-500 transition-all text-decoration-none d-none d-sm-inline-flex items-center gap-1.5"
+            >
+              <i className="bi bi-grid-3x3-gap text-blue-400"></i>
+              <span>All 28 Tools</span>
+            </Link>
             <Link 
               href="/planner" 
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
@@ -106,10 +117,16 @@ export default function LandingPage() {
             </Link>
             
             <Link 
-              href="/features" 
-              className="w-full sm:w-auto bg-slate-800/80 text-white px-9 py-4 rounded-full font-bold border border-slate-700 hover:bg-slate-800 hover:border-slate-600 transition-all text-base text-decoration-none text-center flex items-center justify-center gap-2"
+              href="/tools" 
+              className="w-full sm:w-auto bg-slate-800/80 text-white px-8 py-4 rounded-full font-bold border border-slate-700 hover:bg-slate-800 hover:border-slate-600 transition-all text-base text-decoration-none text-center flex items-center justify-center gap-2"
             >
-              <i className="bi bi-grid text-blue-400"></i>
+              <i className="bi bi-grid-3x3-gap text-blue-400"></i>
+              <span>All 28 Calculators</span>
+            </Link>
+            <Link 
+              href="/features" 
+              className="w-full sm:w-auto bg-slate-800/50 text-slate-300 hover:text-white px-8 py-4 rounded-full font-semibold border border-slate-700/60 hover:bg-slate-800/80 transition-all text-base text-decoration-none text-center flex items-center justify-center gap-2"
+            >
               <span>Explore Features</span>
             </Link>
           </div>
@@ -618,6 +635,69 @@ export default function LandingPage() {
       </section>
 
       {/* ========================================================= */}
+      {/* FREQUENTLY ASKED QUESTIONS (SEO & FAQ SCHEMA)             */}
+      {/* ========================================================= */}
+      <section id="faq" className="py-20 border-t border-slate-800 bg-[#0d1527]">
+        <div className="container mx-auto px-6 max-w-4xl text-start">
+          <div className="text-center mb-12">
+            <span className="text-blue-400 font-bold text-xs uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
+              Clear Answers
+            </span>
+            <h2 className="text-3xl md:text-4xl font-black text-white mt-3 tracking-tight">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-slate-400 text-sm mt-2 max-w-xl mx-auto">
+              Everything you need to know about Canada's most accurate DIY retirement planner.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-2">What is Planfolio and who is it for?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mb-0">
+                Planfolio is a free, local-first Canadian retirement and financial independence planner. It is built for Canadians looking for an uncompromising, structurally sound tool to simulate multi-decade cash flows, evaluate early retirement, and optimize government pensions.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-2">Is Planfolio really 100% free?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mb-0">
+                Yes. All core engines, tax brackets, decumulation optimizers, and Monte Carlo simulations are completely free to use with zero subscriptions, paywalls, or hidden tiers.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-2">Does Planfolio connect to my bank account?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mb-0">
+                No. Planfolio operates on a strict client-side privacy architecture. We never request bank credentials or store your balances on remote cloud servers. All plan figures are saved safely within your browser's local memory.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-2">How does Planfolio handle Canadian taxes and all 13 provinces?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mb-0">
+                Planfolio incorporates full statutory marginal tax formulas for all 10 provinces and 3 territories (including Ontario Health Premium, provincial surtaxes, and indexation), Federal and Provincial Basic Personal Amounts (BPA), age credits, and dividend tax credits.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-2">How accurate are the CPP and OAS calculations?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mb-0">
+                Planfolio applies exact CRA early/late actuarial adjustments (-0.6%/mo early penalty from age 60–65, +0.7%/mo late bonus for CPP, +0.6%/mo for OAS), the permanent 10% OAS boost at age 75, and dynamic 15% OAS recovery tax (clawback) thresholds.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-2">Can Planfolio handle couples and spousal pension splitting?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mb-0">
+                Yes. Planfolio fully supports single profiles and couples, simulating joint cash flows, spousal survivorship milestones, and algorithmically splitting up to 50% of eligible pension income to minimize joint taxes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
       {/* FINAL CALL TO ACTION BANNER                               */}
       {/* ========================================================= */}
       <section className="py-20 border-t border-slate-800 bg-gradient-to-b from-[#0f172a] to-[#0a0f1c] text-center">
@@ -671,6 +751,8 @@ export default function LandingPage() {
             <div className="flex flex-wrap gap-6 text-xs text-slate-400 font-semibold">
               <Link href="/planner" className="hover:text-white transition-colors text-decoration-none">Launch Planner</Link>
               <Link href="/features" className="hover:text-white transition-colors text-decoration-none">Feature Directory</Link>
+              <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">28 Free Calculators</Link>
+              <a href="#faq" className="hover:text-white transition-colors text-decoration-none">FAQ</a>
               <a href="#about" className="hover:text-white transition-colors text-decoration-none">Back to Top</a>
             </div>
           </div>
@@ -700,6 +782,94 @@ export default function LandingPage() {
         </div>
       </footer>
 
+      {/* Structured Data (Schema.org) for Google Search Engine Optimization */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebApplication",
+                "@id": "https://www.planfolio.ca/#webapp",
+                "name": "Planfolio",
+                "url": "https://www.planfolio.ca",
+                "applicationCategory": "FinanceApplication",
+                "operatingSystem": "All",
+                "description": "Free, local-first Canadian retirement and cash flow planner. Model CPP, OAS, all 13 provincial tax brackets, TFSA vs RRSP, LIF unlocking, and 28 financial optimizers.",
+                "offers": {
+                  "@type": "Offer",
+                  "price": "0",
+                  "priceCurrency": "CAD"
+                },
+                "featureList": [
+                  "13 Canadian Provincial and Territorial Tax Schedules",
+                  "CPP & OAS Actuarial Early/Late Multipliers and OAS Recovery Tax",
+                  "LIF to RRIF 50% Unlocking and Maximum Ceilings",
+                  "TFSA, RRSP, FHSA, RESP, and Non-Reg ACB Tracking",
+                  "28 Canadian Financial & Debt Optimizers",
+                  "Monte Carlo and Sequence of Returns Risk Simulation",
+                  "Local-First Zero Sign-Up Architecture"
+                ]
+              },
+              {
+                "@type": "FAQPage",
+                "@id": "https://www.planfolio.ca/#faq",
+                "mainEntity": [
+                  {
+                    "@type": "Question",
+                    "name": "What is Planfolio and who is it for?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Planfolio is a free, local-first Canadian retirement and financial independence planner. It is built for Canadians looking for an uncompromising, structurally sound tool to simulate multi-decade cash flows, evaluate early retirement, and optimize government pensions."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "Is Planfolio really 100% free?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Yes. All core engines, tax brackets, decumulation optimizers, and Monte Carlo simulations are completely free to use with zero subscriptions, paywalls, or hidden tiers."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "Does Planfolio connect to my bank account?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "No. Planfolio operates on a strict client-side privacy architecture. We never request bank credentials or store your balances on remote cloud servers. All plan figures are saved safely within your browser's local memory."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "How does Planfolio handle Canadian taxes across all 13 provinces and territories?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Planfolio incorporates full statutory marginal tax formulas for all 10 provinces and 3 territories, including Ontario Health Premium, provincial surtaxes, Basic Personal Amounts (BPA), age credits, and dividend tax credits."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "How accurate are the CPP and OAS calculations?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Planfolio applies exact CRA early/late actuarial adjustments (-0.6%/mo early penalty from age 60 to 65, +0.7%/mo late bonus for CPP, +0.6%/mo for OAS), the permanent 10% OAS boost at age 75, and dynamic 15% OAS recovery tax (clawback) thresholds."
+                    }
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "Can Planfolio handle couples and spousal pension splitting?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Yes. Planfolio fully supports single profiles and couples, simulating joint cash flows, spousal survivorship milestones, and algorithmically splitting up to 50% of eligible pension income to minimize joint taxes."
+                    }
+                  }
+                ]
+              }
+            ]
+          })
+        }}
+      />
     </div>
   );
 }
