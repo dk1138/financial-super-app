@@ -46,6 +46,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://www.planfolio.ca",
   },
+  verification: {
+    google: "aYdqmsP28hZvvdyGiCuGXxqb7w2lab1qHTHD01Gemtc",
+  },
   openGraph: {
     type: "website",
     locale: "en_CA",
