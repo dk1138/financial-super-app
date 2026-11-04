@@ -192,14 +192,16 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
         // --- EXPANDED DASHBOARD VIEW (Animated entry) ---
         <div className="rp-card border-primary rounded-4 p-4 p-md-5 shadow-lg position-relative d-flex flex-column anim-slide-up bg-surface" style={{ zIndex: 10 }}>
           
-          <button 
-            className="btn btn-dark border-secondary rounded-circle shadow-sm position-absolute d-flex align-items-center justify-content-center transition-all hover-scale" 
-            style={{top: '15px', right: '15px', width: '40px', height: '40px', zIndex: 20}} 
-            onClick={handleToggle}
-            title="Minimize Simulator"
-          >
-            <i className="bi bi-dash-lg text-muted"></i>
-          </button>
+          {onToggle && (
+            <button 
+              className="btn btn-dark border-secondary rounded-circle shadow-sm position-absolute d-flex align-items-center justify-content-center transition-all hover-scale" 
+              style={{top: '15px', right: '15px', width: '40px', height: '40px', zIndex: 20}} 
+              onClick={handleToggle}
+              title="Minimize Simulator"
+            >
+              <i className="bi bi-dash-lg text-muted"></i>
+            </button>
+          )}
 
           {/* SYMMETRICAL HEADER (3-Columns to perfectly center the winner badge) */}
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 mb-4 pb-4 border-bottom border-secondary border-opacity-50">
@@ -233,7 +235,7 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
 
           <div className="row g-4">
             {/* LEFT COLUMN: INPUT TABS & CONTROL PANEL */}
-            <div className="col-12 col-xl-4 d-flex flex-column gap-3">
+            <div className="col-12 col-lg-5 col-xl-4 d-flex flex-column gap-3">
                 
               <div className="d-flex p-1 bg-black bg-opacity-50 rounded-pill shadow-inner border border-secondary border-opacity-50">
                   <button 
@@ -256,25 +258,25 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                   {activeTab === 'core' && (
                     <div className="anim-fade-in d-flex flex-column h-100">
                         <div className="mb-3">
-                            <div className="d-flex justify-content-between align-items-center mb-1">
+                            <div className="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
                                 <div className="d-flex align-items-center gap-2">
                                     <label className="small fw-bold text-main mb-0">Home Price</label>
                                     <InfoBtn align="left" title="Home Price" text="The total estimated purchase price of the property." />
                                 </div>
                                 <span className="small text-primary fw-bold fs-6">{formatCurrency(homePrice)}</span>
                             </div>
-                            <input type="range" className="form-range" min="300000" max="3000000" step="25000" value={homePrice} onChange={(e) => setHomePrice(Number(e.target.value))} />
+                            <input type="range" className="form-range" min="300000" max="3000000" step="25000" value={homePrice} onChange={(e) => setHomePrice(Number(e.target.value))} style={{ background: "transparent", border: "none", boxShadow: "none" }} />
                         </div>
 
                         <div className="row g-3 mb-3">
-                            <div className="col-6">
+                            <div className="col-12 col-sm-6">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <label className="small fw-bold text-muted mb-0">Down Payment %</label>
+                                    <label className="small fw-bold text-muted mb-0">Down Payment</label>
                                     <InfoBtn align="right" title="Down Payment" text="The percentage of the home's price paid upfront." />
                                 </div>
                                 <PercentInput className="form-control border-secondary bg-input shadow-sm" value={downPaymentPct} onChange={setDownPaymentPct} />
                             </div>
-                            <div className="col-6">
+                            <div className="col-12 col-sm-6">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <label className="small fw-bold text-muted mb-0">Mortgage Rate</label>
                                     <InfoBtn align="right" title="Mortgage Rate" text="The annual interest rate applied to your mortgage balance." />
@@ -284,14 +286,14 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                         </div>
 
                         <div className="pt-3 pb-3 border-top border-secondary border-opacity-50">
-                            <div className="d-flex justify-content-between align-items-center mb-1">
+                            <div className="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
                                 <div className="d-flex align-items-center gap-2">
                                     <label className="small fw-bold text-main mb-0">Alt. Monthly Rent</label>
                                     <InfoBtn align="left" title="Alternative Rent" text="How much you would expect to pay to rent an equivalent home in the same area." />
                                 </div>
                                 <span className="small text-success fw-bold fs-6">{formatCurrency(monthlyRent)}/mo</span>
                             </div>
-                            <input type="range" className="form-range" min="1000" max="8000" step="100" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} />
+                            <input type="range" className="form-range" min="1000" max="8000" step="100" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} style={{ background: "transparent", border: "none", boxShadow: "none" }} />
                         </div>
 
                         <div className="mt-auto pt-3 border-top border-secondary border-opacity-50">
@@ -396,7 +398,7 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
             </div>
 
             {/* RIGHT COLUMN: VISUALIZATION */}
-            <div className="col-12 col-xl-8">
+            <div className="col-12 col-lg-7 col-xl-8">
               <div className="rp-card border border-secondary rounded-4 shadow-sm p-4 p-md-5 h-100 bg-secondary bg-opacity-10 d-flex flex-column">
                 <h5 className="fw-bold text-uppercase ls-1 mb-4 d-flex align-items-center">
                   <i className="bi bi-bar-chart-fill text-info me-3 fs-4"></i> Net Worth Trajectory

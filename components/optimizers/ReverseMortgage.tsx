@@ -66,6 +66,7 @@ export default function ReverseMortgage() {
             step="1" 
             value={years} 
             onChange={e => setYears(Number(e.target.value))} 
+            style={{ background: 'transparent', backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
           />
         </div>
       </div>

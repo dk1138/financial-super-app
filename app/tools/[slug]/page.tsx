@@ -77,6 +77,9 @@ export default async function ToolPage({ params }: PageProps) {
         notFound();
     }
 
+    // Wide tools that need a broader canvas (e.g. 2-column dashboards with charts)
+    const isWideTool = tool.toolKey === 'buyvsrent' || tool.toolKey === 'mvi' || tool.toolKey === 'tax-curve';
+
     // Get 3 related standalone tools from other categories
     const relatedTools = TOOLS_DATA
         .filter((t) => t.slug !== tool.slug)
@@ -135,10 +138,18 @@ export default async function ToolPage({ params }: PageProps) {
                 p {
                     color: #cbd5e1 !important;
                 }
-                .form-control, .form-select, input {
+                .form-control, .form-select, input:not([type="range"]) {
                     color: #f8fafc !important;
                     background-color: #080c14 !important;
                     border-color: #2c3b52 !important;
+                }
+                /* Eliminate black rectangle box behind range sliders */
+                input[type="range"], .form-range {
+                    background: transparent !important;
+                    background-color: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    padding: 0 !important;
                 }
             `}} />
 
@@ -209,8 +220,8 @@ export default async function ToolPage({ params }: PageProps) {
                     </p>
                 </div>
 
-                {/* INTERACTIVE CALCULATOR CARD (Pre-allocated minHeight eliminates layout jump & flicker) */}
-                <div className="mb-12 max-w-xl mx-auto w-full" style={{ minHeight: '480px' }}>
+                {/* INTERACTIVE CALCULATOR CARD (Properly sized per tool type to prevent clipping) */}
+                <div className={`mb-12 mx-auto w-full ${isWideTool ? 'max-w-4xl' : 'max-w-xl'}`} style={{ minHeight: '480px' }}>
                     <ToolRenderer toolKey={tool.toolKey} />
                 </div>
 
