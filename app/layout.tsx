@@ -40,7 +40,10 @@ export const metadata: Metadata = {
   applicationName: "Planfolio",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
     apple: "/icon.svg",
   },
   alternates: {

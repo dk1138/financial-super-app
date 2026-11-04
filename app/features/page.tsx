@@ -413,20 +413,16 @@ export default function FeaturesPage() {
       {/* --- HERO HEADER --- */}
       <header className="pt-40 pb-16 border-b border-slate-800/80 bg-gradient-to-b from-[#0b1220] to-[#0f172a] text-center">
         <div className="container mx-auto px-6 max-w-4xl">
-          <div className="inline-flex items-center gap-2 mb-6 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full">
-            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
-              Complete Platform Inventory
-            </span>
-          </div>
+
           
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-6 tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black text-white mb-6 tracking-tight leading-tight">
             6 Core Engines. <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400 sm:whitespace-nowrap">
               {totalToolCount} Specialized Smart Optimizers.
             </span>
           </h1>
           
-          <p className="text-slate-300 text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-8 font-normal">
+          <p className="text-slate-300 text-base md:text-lg leading-relaxed max-w-3xl mx-auto mb-8 font-normal">
             Every high-stakes Canadian financial decision modeled down to statutory tax rules — from the Smith Maneuver to LIF unlocking, GIS maximization, and real-world data bank calibration.
           </p>
 
@@ -434,9 +430,7 @@ export default function FeaturesPage() {
             <span className="bg-slate-800/80 border border-slate-700 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
               <i className="bi bi-check-circle text-emerald-400"></i> 6 Master Planning Engines
             </span>
-            <span className="bg-slate-800/80 border border-slate-700 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
-              <i className="bi bi-check-circle text-blue-400"></i> {totalToolCount} Specialized Calculators
-            </span>
+
             <span className="bg-slate-800/80 border border-slate-700 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
               <i className="bi bi-check-circle text-purple-400"></i> 2026 CRA Tax Engine
             </span>
@@ -445,15 +439,7 @@ export default function FeaturesPage() {
             </span>
           </div>
 
-          {/* Quick Jump Buttons */}
-          <div className="flex justify-center gap-3">
-            <a href="#core-engines" className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2 rounded-full border border-slate-700 transition-all text-decoration-none">
-              View 6 Core Engines &darr;
-            </a>
-            <a href="#all-calculators" className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg shadow-blue-500/20 transition-all text-decoration-none">
-              Browse All {totalToolCount} Optimizers &darr;
-            </a>
-          </div>
+
         </div>
       </header>
 
