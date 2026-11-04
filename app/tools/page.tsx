@@ -1,3 +1,11 @@
+/**
+ * =========================================================================
+ * TARGET PATH IN YOUR PROJECT: app/tools/page.tsx
+ * PURPOSE: Standalone Canadian Calculators & Tools Directory Page
+ * INSTRUCTION: Rename this file to 'page.tsx' and place it in 'app/tools/'
+ * =========================================================================
+ */
+
 import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -19,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export default function ToolsDirectoryPage() {
-    // Dynamically derive categories from TOOLS_DATA so it works regardless of dataset version
+    // Dynamically derive categories from TOOLS_DATA so cards always render regardless of data revision
     const categories = Array.from(new Set((TOOLS_DATA || []).map((t) => t.category).filter(Boolean)));
 
     return (
@@ -30,16 +38,16 @@ export default function ToolsDirectoryPage() {
                     --bs-body-color: #f1f5f9 !important;
                     --bs-secondary-color: #94a3b8 !important;
                     --bs-body-bg: #0b0f17 !important;
-                    --bs-card-bg: #141c2b !important;
-                    --bs-border-color: #2c3b52 !important;
+                    --bs-card-bg: #0f172a !important;
+                    --bs-border-color: #1e293b !important;
                 }
                 .text-muted { color: #94a3b8 !important; }
                 .text-main { color: #f8fafc !important; }
             `}} />
 
-            {/* TOP NAVIGATION BAR */}
-            <header className="sticky top-0 z-40 bg-[#0b0f17]/95 backdrop-blur-md border-b border-slate-800/80">
-                <div className="container mx-auto px-4 py-3 flex justify-between items-center max-w-6xl">
+            {/* NAVIGATION BAR - Identical to Main Page */}
+            <nav className="fixed top-0 w-full z-50 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800">
+                <div className="container mx-auto px-6 py-3.5 flex justify-between items-center">
                     <Link href="/" className="flex items-center gap-2.5 text-decoration-none">
                         <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-xl shadow-lg shadow-blue-500/20">
                             <i className="bi bi-graph-up-arrow text-white text-base"></i>
@@ -49,41 +57,52 @@ export default function ToolsDirectoryPage() {
                             <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-widest mt-0.5">Canada</span>
                         </div>
                     </Link>
+                    
+                    <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
+                        <Link href="/#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</Link>
+                        <Link href="/features" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Features</Link>
+                        <Link href="/tools" className="text-white border-b-2 border-blue-500 pb-1 text-decoration-none font-bold flex items-center gap-1.5">
+                            <span>Tools</span>
+                            <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Free</span>
+                        </Link>
+                        <Link href="/#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
+                            <span>Data Bank</span>
+                            <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">New</span>
+                        </Link>
+                        <Link href="/#how-it-works" className="text-slate-400 hover:text-white transition-colors text-decoration-none">How It Works</Link>
+                        <Link href="/#privacy" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Local-First Privacy</Link>
+                        <Link href="/#pricing" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Pricing</Link>
+                    </div>
 
                     <div className="flex items-center gap-3">
-                        <Link
-                            href="/features"
-                            className="text-slate-400 hover:text-white text-xs font-semibold text-decoration-none d-none d-sm-inline-flex"
+                        <Link 
+                            href="/planner" 
+                            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
                         >
-                            Feature Matrix
-                        </Link>
-                        <Link
-                            href="/planner"
-                            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
-                        >
-                            <span>Launch Full Planner</span>
+                            <span>Launch Planner</span>
                             <i className="bi bi-arrow-right"></i>
                         </Link>
                     </div>
                 </div>
-            </header>
+            </nav>
 
-            {/* DIRECTORY HERO HEADER */}
-            <main className="container mx-auto px-4 py-10 max-w-6xl text-start">
-                <div className="text-center mb-12">
-                    <span className="badge bg-blue-500/15 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-pill small fw-bold text-uppercase ls-1">
+            {/* MAIN CONTENT AREA */}
+            <main className="container mx-auto px-6 pt-32 pb-20 max-w-6xl text-start">
+                {/* DIRECTORY HERO HEADER */}
+                <div className="text-center mb-16">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-4">
                         Free Canadian Toolkit
                     </span>
-                    <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mt-3 mb-3">
+                    <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
                         Canadian Financial Tools
                     </h1>
-                    <p className="text-slate-400 text-base max-w-2xl mx-auto leading-relaxed">
-                        Every tool works completely on its own with zero prior planning or data entry required. Modeled specifically for CRA rules, provincial tax formulas, and local privacy.
+                    <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+                        Every tool runs completely standalone in your browser with zero data entry or account setup required. Modeled specifically for CRA formulas, provincial tax brackets, and local-first privacy.
                     </p>
                 </div>
 
-                {/* CATEGORIES & TOOLS GRID (Dynamic rendering guarantees cards always display) */}
-                <div className="space-y-12">
+                {/* CATEGORIES & TOOLS GRID */}
+                <div className="space-y-14">
                     {categories.length > 0 ? (
                         categories.map((cat) => {
                             const catTools = (TOOLS_DATA || []).filter((t) => t.category === cat);
@@ -91,61 +110,31 @@ export default function ToolsDirectoryPage() {
 
                             return (
                                 <section key={cat}>
-                                    <div className="d-flex align-items-center gap-2 mb-4 pb-2 border-bottom border-slate-800">
-                                        <h2 className="text-xl font-bold text-white mb-0">{cat}</h2>
+                                    <div className="flex items-center gap-2 mb-6 pb-2 border-b border-slate-800">
+                                        <h2 className="text-2xl font-bold text-white tracking-tight">{cat}</h2>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
+                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                         {catTools.map((tool) => (
                                             <Link
                                                 key={tool.slug}
                                                 href={`/tools/${tool.slug}`}
-                                                className="p-5 rounded-2xl transition-all duration-200 text-decoration-none d-flex flex-column shadow-sm group"
-                                                style={{
-                                                    backgroundColor: '#141c2b',
-                                                    border: '1px solid #2c3b52',
-                                                    minHeight: '210px',
-                                                }}
+                                                className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 p-6 rounded-2xl transition-all flex flex-col justify-between group hover:shadow-xl hover:shadow-black/30 text-decoration-none"
                                             >
-                                                <div className="d-flex justify-content-between align-items-start mb-3">
-                                                    <div 
-                                                        className="d-flex align-items-center justify-content-center flex-shrink-0"
-                                                        style={{ 
-                                                            width: '42px', 
-                                                            height: '42px', 
-                                                            minWidth: '42px', 
-                                                            minHeight: '42px',
-                                                            backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                                                            border: '1px solid rgba(2, 132, 199, 0.3)',
-                                                            borderRadius: '12px',
-                                                            color: '#38bdf8'
-                                                        }}
-                                                    >
-                                                        <i className={`bi ${tool.icon} fs-5`}></i>
-                                                    </div>
-                                                    <span 
-                                                        className="badge px-2 py-1 rounded-pill"
-                                                        style={{ 
-                                                            backgroundColor: 'rgba(15, 23, 42, 0.6)', 
-                                                            color: '#94a3b8', 
-                                                            border: '1px solid #334155',
-                                                            fontSize: '10px' 
-                                                        }}
-                                                    >
-                                                        {tool.badge}
-                                                    </span>
+                                                <div>
+                                                    <h3 className="text-base font-bold text-white mb-2 leading-snug group-hover:text-blue-300 transition-colors">
+                                                        {tool.title}
+                                                    </h3>
+                                                    <p className="text-slate-400 text-xs leading-relaxed mb-4">
+                                                        {tool.subtitle}
+                                                    </p>
                                                 </div>
 
-                                                <h3 className="text-base font-bold text-white mb-2 leading-snug">
-                                                    {tool.title}
-                                                </h3>
-                                                <p className="text-xs leading-relaxed mb-4 flex-grow-1" style={{ color: '#94a3b8' }}>
-                                                    {tool.subtitle}
-                                                </p>
-
-                                                <div className="d-flex align-items-center gap-1.5 text-xs font-bold text-info mt-auto pt-2.5 border-top border-secondary border-opacity-25">
-                                                    <span>Open Tool</span>
-                                                    <i className="bi bi-arrow-right"></i>
+                                                <div className="pt-3 border-t border-slate-800/80 flex justify-end items-center text-[11px] mt-auto">
+                                                    <span className="text-blue-400 group-hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform">
+                                                        <span>Open Tool</span>
+                                                        <i className="bi bi-chevron-right text-[10px]"></i>
+                                                    </span>
                                                 </div>
                                             </Link>
                                         ))}
@@ -155,57 +144,27 @@ export default function ToolsDirectoryPage() {
                         })
                     ) : (
                         /* Direct fallback if categories cannot be parsed */
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                             {(TOOLS_DATA || []).map((tool) => (
                                 <Link
                                     key={tool.slug}
                                     href={`/tools/${tool.slug}`}
-                                    className="p-5 rounded-2xl transition-all duration-200 text-decoration-none d-flex flex-column shadow-sm group"
-                                    style={{
-                                        backgroundColor: '#141c2b',
-                                        border: '1px solid #2c3b52',
-                                        minHeight: '210px',
-                                    }}
+                                    className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 p-6 rounded-2xl transition-all flex flex-col justify-between group hover:shadow-xl hover:shadow-black/30 text-decoration-none"
                                 >
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div 
-                                            className="d-flex align-items-center justify-content-center flex-shrink-0"
-                                            style={{ 
-                                                width: '42px', 
-                                                height: '42px', 
-                                                minWidth: '42px', 
-                                                minHeight: '42px',
-                                                backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                                                border: '1px solid rgba(2, 132, 199, 0.3)',
-                                                borderRadius: '12px',
-                                                color: '#38bdf8'
-                                            }}
-                                        >
-                                            <i className={`bi ${tool.icon} fs-5`}></i>
-                                        </div>
-                                        <span 
-                                            className="badge px-2 py-1 rounded-pill"
-                                            style={{ 
-                                                backgroundColor: 'rgba(15, 23, 42, 0.6)', 
-                                                color: '#94a3b8', 
-                                                border: '1px solid #334155',
-                                                fontSize: '10px' 
-                                            }}
-                                        >
-                                            {tool.badge}
-                                        </span>
+                                    <div>
+                                        <h3 className="text-base font-bold text-white mb-2 leading-snug group-hover:text-blue-300 transition-colors">
+                                            {tool.title}
+                                        </h3>
+                                        <p className="text-slate-400 text-xs leading-relaxed mb-4">
+                                            {tool.subtitle}
+                                        </p>
                                     </div>
 
-                                    <h3 className="text-base font-bold text-white mb-2 leading-snug">
-                                        {tool.title}
-                                    </h3>
-                                    <p className="text-xs leading-relaxed mb-4 flex-grow-1" style={{ color: '#94a3b8' }}>
-                                        {tool.subtitle}
-                                    </p>
-
-                                    <div className="d-flex align-items-center gap-1.5 text-xs font-bold text-info mt-auto pt-2.5 border-top border-secondary border-opacity-25">
-                                        <span>Open Tool</span>
-                                        <i className="bi bi-arrow-right"></i>
+                                    <div className="pt-3 border-t border-slate-800/80 flex justify-end items-center text-[11px] mt-auto">
+                                        <span className="text-blue-400 group-hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform">
+                                            <span>Open Tool</span>
+                                            <i className="bi bi-chevron-right text-[10px]"></i>
+                                        </span>
                                     </div>
                                 </Link>
                             ))}
@@ -214,7 +173,7 @@ export default function ToolsDirectoryPage() {
                 </div>
 
                 {/* BOTTOM CTA BANNER */}
-                <section className="mt-16 p-8 sm:p-12 rounded-[2.5rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-center shadow-2xl">
+                <section className="mt-20 p-8 sm:p-12 rounded-[2.5rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-center shadow-2xl">
                     <h2 className="text-2xl sm:text-4xl font-black text-white mb-3 tracking-tight">
                         Need the full 40-year picture?
                     </h2>
@@ -233,13 +192,13 @@ export default function ToolsDirectoryPage() {
 
             {/* FOOTER */}
             <footer className="py-12 border-t border-slate-800/80 bg-[#080d19] text-center text-xs text-slate-500">
-                <div className="container mx-auto px-4 max-w-6xl">
+                <div className="container mx-auto px-6 max-w-6xl">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                         <span className="font-bold text-slate-400 text-sm">Planfolio Canada</span>
                         <div className="flex gap-4">
                             <Link href="/" className="text-slate-400 hover:text-white text-decoration-none">Home</Link>
                             <Link href="/features" className="text-slate-400 hover:text-white text-decoration-none">Features</Link>
-                            <Link href="/planner" className="text-slate-400 hover:text-white text-decoration-none">Planner</Link>
+                            <Link href="/planner" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Planner</Link>
                         </div>
                     </div>
                     <p className="mb-0 text-slate-600">

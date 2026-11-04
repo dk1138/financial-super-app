@@ -1,3 +1,10 @@
+/**
+ * =========================================================================
+ * TARGET PATH IN YOUR PROJECT: app/features/page.tsx
+ * PURPOSE: Feature Matrix & Smart Optimizers Directory Page
+ * INSTRUCTION: Rename this file to 'page.tsx' and place it in 'app/features/'
+ * =========================================================================
+ */
 'use client';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -105,7 +112,7 @@ export default function FeaturesPage() {
     }
   ];
 
-  // 2. THE COMPLETE DIRECTORY OF 28 SPECIALIZED OPTIMIZERS (GROUPED)
+  // 2. THE COMPLETE DIRECTORY OF SPECIALIZED OPTIMIZERS (GROUPED)
   const optimizerGroups = [
     {
       groupTitle: "Master Simulations & Spending Models",
@@ -393,13 +400,6 @@ export default function FeaturesPage() {
 
           <div className="flex items-center gap-3">
             <Link 
-              href="/tools" 
-              className="text-slate-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-full border border-slate-700 hover:border-slate-500 transition-all text-decoration-none d-none d-sm-inline-flex items-center gap-1.5"
-            >
-              <i className="bi bi-grid-3x3-gap text-blue-400"></i>
-              <span>21 Calculators</span>
-            </Link>
-            <Link 
               href="/planner" 
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
             >
@@ -518,7 +518,7 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* --- SECTION 2: THE 28 SPECIALIZED SMART OPTIMIZERS (FULL DIRECTORY) --- */}
+      {/* --- SECTION 2: SPECIALIZED SMART OPTIMIZERS (FULL DIRECTORY) --- */}
       <section className="py-24 bg-[#0f172a]" id="all-calculators">
         <div className="container mx-auto px-6 max-w-6xl">
           
@@ -580,14 +580,7 @@ export default function FeaturesPage() {
                     className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 p-6 rounded-2xl transition-all flex flex-col justify-between group hover:shadow-xl hover:shadow-black/30"
                   >
                     <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-lg group-hover:scale-105 transition-transform">
-                          <i className={`bi ${opt.icon}`}></i>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 border border-slate-700/80 text-slate-400">
-                          {opt.badge}
-                        </span>
-                      </div>
+                      
 
                       <h4 className="text-base font-bold text-white mb-2 leading-snug group-hover:text-blue-300 transition-colors">
                         {opt.name}
@@ -598,8 +591,7 @@ export default function FeaturesPage() {
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center text-[11px]">
-                      <span className="text-slate-500 font-semibold">{opt.groupTitle}</span>
+                    <div className="pt-3 border-t border-slate-800/80 flex justify-end items-center text-[11px]">
                       <Link 
                         href={`/planner?tab=optimizers&tool=${opt.id}`} 
                         className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
@@ -655,14 +647,7 @@ export default function FeaturesPage() {
                         className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 p-6 rounded-2xl transition-all flex flex-col justify-between group hover:shadow-xl hover:shadow-black/30"
                       >
                         <div>
-                          <div className="flex justify-between items-center mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-lg group-hover:scale-105 transition-transform">
-                              <i className={`bi ${opt.icon}`}></i>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 border border-slate-700/80 text-slate-400">
-                              {opt.badge}
-                            </span>
-                          </div>
+                          
 
                           <h4 className="text-base font-bold text-white mb-2 leading-snug group-hover:text-blue-300 transition-colors">
                             {opt.name}
@@ -673,16 +658,15 @@ export default function FeaturesPage() {
                           </p>
                         </div>
 
-                        <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center text-[11px]">
-                          <span className="text-slate-500 font-semibold">{opt.badge}</span>
-                          <Link 
+                        <div className="pt-3 border-t border-slate-800/80 flex justify-end items-center text-[11px]">
+                      <Link 
                             href={`/planner?tab=optimizers&tool=${opt.id}`} 
                             className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
                           >
                             <span>Open in Planner</span>
                             <i className="bi bi-chevron-right text-[10px]"></i>
                           </Link>
-                        </div>
+                    </div>
                       </div>
                     ))}
                   </div>

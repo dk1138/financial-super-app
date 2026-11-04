@@ -1,3 +1,10 @@
+/**
+ * =========================================================================
+ * TARGET PATH IN YOUR PROJECT: app/page.tsx
+ * PURPOSE: Main Home / Landing Page (Planfolio Canada)
+ * INSTRUCTION: Rename this file to 'page.tsx' and place it in 'app/'
+ * =========================================================================
+ */
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -44,7 +51,7 @@ export default function LandingPage() {
             <a href="#about" className="text-slate-400 hover:text-white transition-colors text-decoration-none">About</a>
             <Link href="/features" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Features</Link>
             <Link href="/tools" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
-              <span>28 Calculators</span>
+              <span>Tools</span>
               <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Free</span>
             </Link>
             <a href="#databank" className="text-slate-400 hover:text-white transition-colors text-decoration-none flex items-center gap-1.5">
@@ -57,13 +64,6 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link 
-              href="/tools" 
-              className="text-slate-300 hover:text-white text-xs font-bold px-3.5 py-2 rounded-full border border-slate-700 hover:border-slate-500 transition-all text-decoration-none d-none d-sm-inline-flex items-center gap-1.5"
-            >
-              <i className="bi bi-grid-3x3-gap text-blue-400"></i>
-              <span>All 28 Tools</span>
-            </Link>
             <Link 
               href="/planner" 
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
@@ -120,8 +120,7 @@ export default function LandingPage() {
               href="/tools" 
               className="w-full sm:w-auto bg-slate-800/80 text-white px-8 py-4 rounded-full font-bold border border-slate-700 hover:bg-slate-800 hover:border-slate-600 transition-all text-base text-decoration-none text-center flex items-center justify-center gap-2"
             >
-              <i className="bi bi-grid-3x3-gap text-blue-400"></i>
-              <span>All 28 Calculators</span>
+              <span>Tools</span>
             </Link>
             <Link 
               href="/features" 
@@ -318,7 +317,7 @@ export default function LandingPage() {
                     Compare Saved Plans
                   </Link>
                   <Link href="/features" className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-3 px-6 rounded-2xl text-center text-sm transition-all text-decoration-none border border-slate-700">
-                    Explore All 28+ Calculators
+                    Explore Tools
                   </Link>
                 </div>
               </div>
@@ -585,7 +584,7 @@ export default function LandingPage() {
                 </p>
 
                 <ul className="space-y-2.5 text-xs text-slate-300 mb-8">
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> All 9 Core Tabs & 28+ Smart Optimizers</li>
+                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> All 9 Core Tabs & Smart Optimizers</li>
                   <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Annual Roll-Forward Wizard & Data Bank</li>
                   <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Full CRA 2026 Tax Engine (Federal & All Provinces)</li>
                   <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Unlimited Scenario Comparisons & Restores</li>
@@ -751,7 +750,7 @@ export default function LandingPage() {
             <div className="flex flex-wrap gap-6 text-xs text-slate-400 font-semibold">
               <Link href="/planner" className="hover:text-white transition-colors text-decoration-none">Launch Planner</Link>
               <Link href="/features" className="hover:text-white transition-colors text-decoration-none">Feature Directory</Link>
-              <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">28 Free Calculators</Link>
+              <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">Tools</Link>
               <a href="#faq" className="hover:text-white transition-colors text-decoration-none">FAQ</a>
               <a href="#about" className="hover:text-white transition-colors text-decoration-none">Back to Top</a>
             </div>
@@ -796,7 +795,7 @@ export default function LandingPage() {
                 "url": "https://www.planfolio.ca",
                 "applicationCategory": "FinanceApplication",
                 "operatingSystem": "All",
-                "description": "Free, local-first Canadian retirement and cash flow planner. Model CPP, OAS, all 13 provincial tax brackets, TFSA vs RRSP, LIF unlocking, and 28 financial optimizers.",
+                "description": "Free, local-first Canadian retirement and cash flow planner. Model CPP, OAS, all 13 provincial tax brackets, TFSA vs RRSP, LIF unlocking, and financial tools & calculators.",
                 "offers": {
                   "@type": "Offer",
                   "price": "0",
@@ -807,7 +806,7 @@ export default function LandingPage() {
                   "CPP & OAS Actuarial Early/Late Multipliers and OAS Recovery Tax",
                   "LIF to RRIF 50% Unlocking and Maximum Ceilings",
                   "TFSA, RRSP, FHSA, RESP, and Non-Reg ACB Tracking",
-                  "28 Canadian Financial & Debt Optimizers",
+                  "Canadian Financial & Debt Tools",
                   "Monte Carlo and Sequence of Returns Risk Simulation",
                   "Local-First Zero Sign-Up Architecture"
                 ]
