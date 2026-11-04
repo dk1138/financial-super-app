@@ -126,9 +126,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-6">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-blue-400 text-xs font-bold uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
-              Complete Feature Architecture
-            </span>
+
             <h2 className="text-3xl md:text-5xl font-black text-white mt-4 mb-4 tracking-tight">
               Engineered for the Realities of Canadian Wealth
             </h2>
@@ -301,9 +299,7 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-12 gap-12 items-center max-w-6xl mx-auto">
             
             <div className="lg:col-span-5 text-start">
-              <span className="text-blue-400 text-xs font-bold uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
-                Interactive Walkthrough
-              </span>
+
               <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-4">
                 A Unified Dashboard for Every Life Milestone
               </h2>
@@ -393,9 +389,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="py-24 border-t border-slate-800 bg-[#0b1220] scroll-mt-28">
         <div className="container mx-auto px-6 text-center max-w-5xl">
           
-          <span className="text-blue-400 text-xs font-bold uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
-            Lifelong Roadmap
-          </span>
+
           <h2 className="text-3xl md:text-5xl font-black text-white mt-4 mb-4 tracking-tight">
             How Planfolio Works Across Your Life
           </h2>
@@ -458,9 +452,7 @@ export default function LandingPage() {
             
             <div className="grid lg:grid-cols-2 gap-10 items-center">
               <div>
-                <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                  Zero Cloud Architecture
-                </span>
+
                 <h2 className="text-3xl md:text-4xl font-black text-white mt-4 mb-4 tracking-tight">
                   Your Net Worth Belongs to You. Not Our Cloud.
                 </h2>
@@ -515,9 +507,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       <section id="pricing" className="py-24 bg-slate-900/40 border-t border-slate-800 scroll-mt-28">
         <div className="container mx-auto px-6 text-center">
-          <span className="text-blue-400 text-xs font-bold uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
-            Transparent Access
-          </span>
+
           <h2 className="text-4xl md:text-5xl font-black text-white mt-4 mb-4">Straightforward, Honest Pricing</h2>
           <p className="text-slate-400 mb-16 max-w-xl mx-auto text-base">
             Professional-grade Canadian financial planning, made accessible to all households without expensive advisor retainers.
@@ -602,9 +592,7 @@ export default function LandingPage() {
       <section id="faq" className="py-20 border-t border-slate-800 bg-[#0d1527] scroll-mt-28">
         <div className="container mx-auto px-6 max-w-4xl text-start">
           <div className="text-center mb-12">
-            <span className="text-blue-400 font-bold text-xs uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
-              Clear Answers
-            </span>
+
             <h2 className="text-3xl md:text-4xl font-black text-white mt-3 tracking-tight">
               Frequently Asked Questions
             </h2>

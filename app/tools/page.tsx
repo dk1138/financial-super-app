@@ -53,9 +53,7 @@ export default function ToolsDirectoryPage() {
             <main className="container mx-auto px-6 pt-44 pb-20 max-w-6xl text-start">
                 {/* DIRECTORY HERO HEADER */}
                 <div className="text-center mb-16">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-4">
-                        Free Canadian Toolkit
-                    </span>
+
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
                         Canadian Financial Tools
                     </h1>

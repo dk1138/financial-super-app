@@ -148,23 +148,23 @@ export default function DataBankPage() {
                         </a>
                     </div>
 
-                    {/* Metrics Bar */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-900/60 border border-slate-800 rounded-3xl backdrop-blur-sm max-w-3xl mx-auto text-start">
-                        <div className="border-r border-slate-800/80 pr-4">
+                    {/* Metrics Bar - 1-Line Typography Across All Viewports */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-900/60 border border-slate-800 rounded-3xl backdrop-blur-sm max-w-4xl mx-auto text-start">
+                        <div className="border-r border-slate-800/80 pr-3 sm:pr-4">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Archived Years</span>
-                            <span className="text-xl font-black text-white">Annual Snapshots</span>
+                            <span className="text-sm sm:text-base lg:text-lg font-black text-white whitespace-nowrap block">Annual Snapshots</span>
                         </div>
-                        <div className="border-r border-slate-800/80 pr-4">
+                        <div className="border-r border-slate-800/80 pr-3 sm:pr-4">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Return Engine</span>
-                            <span className="text-xl font-black text-emerald-400">True IRR Alpha</span>
+                            <span className="text-sm sm:text-base lg:text-lg font-black text-emerald-400 whitespace-nowrap block">True IRR Alpha</span>
                         </div>
-                        <div className="border-r border-slate-800/80 pr-4">
+                        <div className="border-r border-slate-800/80 pr-3 sm:pr-4">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Account Types</span>
-                            <span className="text-xl font-black text-blue-400">10 Canadian Assets</span>
+                            <span className="text-sm sm:text-base lg:text-lg font-black text-blue-400 whitespace-nowrap block">10 Canadian Assets</span>
                         </div>
                         <div>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Local Security</span>
-                            <span className="text-xl font-black text-cyan-400">100% Client-Side</span>
+                            <span className="text-sm sm:text-base lg:text-lg font-black text-cyan-400 whitespace-nowrap block">100% Client-Side</span>
                         </div>
                     </div>
                 </div>
@@ -173,9 +173,7 @@ export default function DataBankPage() {
             {/* CORE PILLARS SECTION */}
             <main className="container mx-auto px-6 py-20 max-w-6xl text-start" id="features">
                 <div className="text-center max-w-3xl mx-auto mb-16">
-                    <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                        Core Architecture
-                    </span>
+
                     <h2 className="text-3xl md:text-5xl font-black text-white mt-4 mb-4 tracking-tight">
                         Why Most Retirement Projections Fail
                     </h2>
@@ -322,9 +320,7 @@ export default function DataBankPage() {
                 {/* HOW THE ROLL-FORWARD WORKFLOW OPERATES */}
                 <section className="mb-20 p-8 sm:p-12 rounded-[2.5rem] bg-slate-900/60 border border-slate-800">
                     <div className="text-center max-w-2xl mx-auto mb-12">
-                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                            3-Step Annual Rhythm
-                        </span>
+
                         <h3 className="text-2xl sm:text-4xl font-black text-white mt-3 mb-2 tracking-tight">
                             How the Roll-Forward Works
                         </h3>

@@ -164,21 +164,13 @@ export default async function ToolPage({ params }: PageProps) {
             <MarketingHeader />
 
             {/* MAIN CONTENT CONTAINER */}
-            <main className="container mx-auto px-4 pt-28 sm:pt-32 pb-16 max-w-4xl">
+            <main className="container mx-auto px-6 pt-44 pb-20 max-w-4xl">
                 {/* TOOL HERO HEADER */}
-                <div className="mb-8 text-start">
-                    <div className="d-flex align-items-center gap-2 mb-2">
-                        <span className="badge bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-pill small fw-bold">
-                            {tool.category}
-                        </span>
-                        <span className="badge bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-pill small fw-bold">
-                            {tool.badge}
-                        </span>
-                    </div>
-                    <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-2">
+                <div className="text-center max-w-3xl mx-auto mb-12">
+                    <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3">
                         {tool.title}
                     </h1>
-                    <p className="text-slate-400 text-sm sm:text-base leading-relaxed mb-0">
+                    <p className="text-slate-400 text-sm sm:text-base leading-relaxed mx-auto max-w-2xl mb-0">
                         {tool.subtitle}
                     </p>
                 </div>
@@ -195,9 +187,7 @@ export default async function ToolPage({ params }: PageProps) {
                             <i className="bi bi-info-circle text-blue-400"></i>
                             <span>How This Canadian Calculation Works</span>
                         </h2>
-                        <span className="badge bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-pill small fw-semibold d-none d-sm-inline-block">
-                            CRA Statutory Guide
-                        </span>
+                        
                     </div>
                     <p className="text-slate-300 text-sm leading-relaxed mb-4">
                         {tool.overview}
