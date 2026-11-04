@@ -3,7 +3,8 @@
  * TARGET PATH IN YOUR PROJECT: app/tools/[slug]/page.tsx
  * PURPOSE: Individual Standalone Calculator Dynamic Page
  * INSTRUCTION: Place this file in 'app/tools/[slug]/page.tsx'
- * NOTE: Directly imports and uses the universal MarketingHeader component.
+ * NOTE: Directly imports and uses the universal MarketingHeader component,
+ *       with complete immunity to Bootstrap 5 CSS link color and container overrides.
  * =========================================================================
  */
 
@@ -119,7 +120,7 @@ export default async function ToolPage({ params }: PageProps) {
 
     return (
         <div data-bs-theme="dark" className="min-h-screen bg-[#0f172a] text-slate-100 selection:bg-blue-500/30 font-sans">
-            {/* Scoped CSS to enforce high-contrast light text across Bootstrap controls */}
+            {/* Scoped CSS to enforce high-contrast light text across Bootstrap controls & protect navigation bar */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .rp-card, [data-bs-theme="dark"] {
                     --bs-body-color: #f1f5f9 !important;
@@ -152,6 +153,30 @@ export default async function ToolPage({ params }: PageProps) {
                     border: none !important;
                     box-shadow: none !important;
                     padding: 0 !important;
+                }
+
+                /* Neutralize Bootstrap 5 interference on the universal navigation header */
+                nav.fixed, nav[class*="fixed"] {
+                    width: 100% !important;
+                }
+                nav.fixed .container, nav.fixed div[class*="container"], nav.fixed .marketing-nav-container {
+                    max-width: 100% !important;
+                    width: 100% !important;
+                }
+                nav.fixed a {
+                    text-decoration: none !important;
+                }
+                nav.fixed a:not([class*="text-white"]):not(.active-link) {
+                    color: #94a3b8 !important; /* slate-400 */
+                }
+                nav.fixed a:hover {
+                    color: #ffffff !important;
+                }
+                nav.fixed a[class*="text-white"], nav.fixed a.active-link {
+                    color: #ffffff !important;
+                }
+                nav.fixed .brand-name, nav.fixed span[class*="text-xl"] {
+                    color: #ffffff !important;
                 }
             `}} />
 
