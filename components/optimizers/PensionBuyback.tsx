@@ -1,57 +1,334 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput } from '../SharedUI';
 
 export default function PensionBuyback() {
-    const [bbCost, setBbCost] = useState(15000);
-    const [bbAddedPension, setBbAddedPension] = useState(1500);
-    const [bbYears, setBbYears] = useState(10);
-    const [bbReturn, setBbReturn] = useState(6.0);
+    const { data, results } = useFinance();
 
-    const bbFutureValue = bbCost * Math.pow(1 + (bbReturn / 100), bbYears);
-    const bbMatchRate = bbFutureValue > 0 ? (bbAddedPension / bbFutureValue) * 100 : 0;
+    // Context defaults from active plan
+    const defaultMarginal = results?.timeline?.[0]?.taxDetailsP1?.margRate 
+        ? Math.round(results.timeline[0].taxDetailsP1.margRate * 100) 
+        : 35;
+    const defaultDbMonthly = Number(data?.inputs?.p1_db) 
+        || (Number(data?.inputs?.p1_db_annual) ? Math.round(Number(data?.inputs?.p1_db_annual) / 12) : 4000);
+    const p1DobYear = data?.inputs?.p1_dob ? parseInt(String(data.inputs.p1_dob).slice(0, 4), 10) : 1970;
+    const p1Age = new Date().getFullYear() - p1DobYear;
+    const p1RetireAge = Number(data?.inputs?.p1_retire_age) || 60;
+    const defaultYearsToRetire = Math.max(1, p1RetireAge - p1Age);
 
-    const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
+    // Primary State Inputs
+    const [bbCost, setBbCost] = useState<number | ''>(10000);
+    const [fundingSource, setFundingSource] = useState<'cash' | 'rrsp'>('cash');
+    const [marginalTaxRate, setMarginalTaxRate] = useState<number | ''>(defaultMarginal);
+    const [monthsEarly, setMonthsEarly] = useState<number | ''>(2);
+    const [monthlyPension, setMonthlyPension] = useState<number | ''>(defaultDbMonthly || 4368);
+    const [addedMonthlyPension, setAddedMonthlyPension] = useState<number | ''>(30);
+    const [hasCola, setHasCola] = useState<boolean>(true);
+    const [colaRate, setColaRate] = useState<number>(2.0);
+    const [bbYears, setBbYears] = useState<number | ''>(defaultYearsToRetire <= 25 ? defaultYearsToRetire : 2);
+    const [bbReturn, setBbReturn] = useState<number>(6.0);
+    const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
+
+    // Calculations
+    const calculations = useMemo(() => {
+        const grossCost = Number(bbCost) || 0;
+        const taxRatePct = Number(marginalTaxRate) || 0;
+        const isCash = fundingSource === 'cash';
+
+        // 1. Tax deduction and net cash outlay (CRA Line 20700 RPP deduction for past service)
+        const taxRefund = isCash ? grossCost * (taxRatePct / 100) : 0;
+        const netCost = isCash ? Math.max(0, grossCost - taxRefund) : grossCost;
+
+        // 2. Early retirement acceleration benefits
+        const earlyMonths = Number(monthsEarly) || 0;
+        const baseMonthly = Number(monthlyPension) || 0;
+        const addedMonthly = Number(addedMonthlyPension) || 0;
+        const newMonthly = baseMonthly + addedMonthly;
+        const addedAnnual = addedMonthly * 12;
+
+        // Early pension dollars collected before the original unreduced date
+        const earlyPensionCollected = earlyMonths * newMonthly;
+
+        // Upfront net cash balance (immediate gain or remaining unrecovered cost)
+        const immediateNetGain = earlyPensionCollected - netCost;
+        const unrecoveredCost = Math.max(0, netCost - earlyPensionCollected);
+
+        // 3. Break-even payback period
+        let paybackYears = 0;
+        if (earlyPensionCollected >= netCost) {
+            paybackYears = 0; // Immediate upfront payback!
+        } else if (addedAnnual > 0) {
+            paybackYears = unrecoveredCost / addedAnnual;
+        } else {
+            paybackYears = 999;
+        }
+
+        // 4. Opportunity Cost (Future Value if invested in market instead)
+        const yrs = Number(bbYears) || 0;
+        const rMkt = (Number(bbReturn) || 0) / 100;
+        const futureValueOfCost = netCost * Math.pow(1 + rMkt, yrs);
+        const matchYield = futureValueOfCost > 0 ? (addedAnnual / futureValueOfCost) * 100 : 0;
+
+        // 5. Cumulative 25-Year Lifetime Net Gain
+        let cumulativePensions25 = earlyPensionCollected;
+        const rCola = hasCola ? (colaRate / 100) : 0;
+        let currentYearlyAdded = addedAnnual;
+        for (let y = 1; y <= 25; y++) {
+            cumulativePensions25 += currentYearlyAdded;
+            currentYearlyAdded *= (1 + rCola);
+        }
+        const lifetimeNetBenefit = cumulativePensions25 - netCost;
+
+        return {
+            grossCost,
+            taxRefund,
+            netCost,
+            earlyMonths,
+            earlyPensionCollected,
+            addedAnnual,
+            addedMonthly,
+            immediateNetGain,
+            unrecoveredCost,
+            paybackYears,
+            futureValueOfCost,
+            matchYield,
+            cumulativePensions25,
+            lifetimeNetBenefit
+        };
+    }, [bbCost, fundingSource, marginalTaxRate, monthsEarly, monthlyPension, addedMonthlyPension, hasCola, colaRate, bbYears, bbReturn]);
+
+    const formatCurrency = (val: number) => 
+        new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
     return (
-        <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
-            <div className="d-flex align-items-center mb-3">
-                <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                    <i className="bi bi-clock-history fs-4"></i>
+        <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm surface-card">
+            {/* CARD HEADER */}
+            <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div className="d-flex align-items-center">
+                    <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{ width: '45px', height: '45px', flexShrink: 0 }}>
+                        <i className="bi bi-clock-history fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Pension Buyback</h5>
+                        <span className="text-muted small" style={{ fontSize: '0.72rem' }}>DB Pension Past Service Cost-Benefit Optimizer</span>
+                    </div>
                 </div>
-                <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Pension Buyback</h5>
+                {calculations.immediateNetGain > 0 && (
+                    <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold small">
+                        <i className="bi bi-lightning-charge-fill me-1"></i> Instant Payback
+                    </span>
+                )}
             </div>
-            <p className="text-muted small mb-4">Calculate if paying a lump sum today to buy back past service is better than investing the cash yourself.</p>
-            
-            <div className="row g-3 mb-4">
-                <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Buyback Cost</label>
-                    <CurrencyInput className="form-control form-control-sm" value={bbCost} onChange={setBbCost} />
-                </div>
-                <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Added Pension /yr</label>
-                    <CurrencyInput className="form-control form-control-sm border-primary text-primary" value={bbAddedPension} onChange={setBbAddedPension} />
-                </div>
-                <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Yrs to Retire</label>
-                    <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={bbYears} onChange={e => setBbYears(parseInt(e.target.value)||0)} />
-                </div>
-                <div className="col-6">
-                    <label className="form-label small fw-bold text-muted mb-1">Est. Mkt Return</label>
-                    <PercentInput className="form-control form-control-sm border-warning" value={bbReturn} onChange={setBbReturn} />
+
+            <p className="text-muted small mb-3" style={{ fontSize: '0.78rem', lineHeight: '1.4' }}>
+                Determine if buying back past service is worth it by analyzing tax deductions, earlier unreduced retirement dates, and guaranteed lifetime payouts.
+            </p>
+
+            {/* FUNDING METHOD TOGGLE */}
+            <div className="mb-3">
+                <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
+                    <span>Payment Funding Source</span>
+                    <InfoBtn title="Funding Method" text="<b>Cash/Non-Reg:</b> Contributions are CRA tax-deductible against employment income (Line 20700).<br><br><b>RRSP Transfer:</b> Direct rollover via CRA Form T2151. Uses pre-tax RRSP balance with $0 cash out-of-pocket, but no additional tax refund." />
+                </label>
+                <div className="btn-group w-100 p-1 bg-input rounded-3 border border-secondary" role="group">
+                    <button 
+                        type="button" 
+                        className={`btn btn-sm rounded-2 fw-bold transition-all ${fundingSource === 'cash' ? 'btn-primary shadow-sm' : 'btn-link text-muted text-decoration-none'}`} 
+                        onClick={() => setFundingSource('cash')}
+                    >
+                        <i className="bi bi-cash-stack me-1"></i> Cash (Tax-Deductible)
+                    </button>
+                    <button 
+                        type="button" 
+                        className={`btn btn-sm rounded-2 fw-bold transition-all ${fundingSource === 'rrsp' ? 'btn-primary shadow-sm' : 'btn-link text-muted text-decoration-none'}`} 
+                        onClick={() => setFundingSource('rrsp')}
+                    >
+                        <i className="bi bi-arrow-repeat me-1"></i> RRSP Transfer (T2151)
+                    </button>
                 </div>
             </div>
 
+            {/* CORE INPUTS GRID */}
+            <div className="row g-2.5 mb-3">
+                <div className="col-6">
+                    <label className="form-label small fw-bold text-muted mb-1">Buyback Cost ($)</label>
+                    <CurrencyInput className="form-control form-control-sm bg-input" value={bbCost} onChange={setBbCost} />
+                </div>
+
+                {fundingSource === 'cash' ? (
+                    <div className="col-6">
+                        <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
+                            <span>Tax Bracket</span>
+                            <span className="text-info" style={{ fontSize: '0.68rem' }}>Save {formatCurrency(calculations.taxRefund)}</span>
+                        </label>
+                        <PercentInput className="form-control form-control-sm border-info text-info bg-input" value={marginalTaxRate} onChange={setMarginalTaxRate} />
+                    </div>
+                ) : (
+                    <div className="col-6">
+                        <label className="form-label small fw-bold text-muted mb-1">RRSP Deduction</label>
+                        <input type="text" readOnly disabled className="form-control form-control-sm bg-input text-muted text-center" value="Pre-Tax Rollover" />
+                    </div>
+                )}
+
+                <div className="col-6">
+                    <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
+                        <span>Retire Earlier</span>
+                        <InfoBtn title="Earlier Retirement" text="Number of months this buyback advances your 85/90 factor or unreduced pension eligibility date." />
+                    </label>
+                    <div className="input-group input-group-sm">
+                        <input 
+                            type="number" 
+                            min="0" 
+                            max="60" 
+                            className="form-control form-control-sm bg-input text-main border-secondary text-center fw-bold" 
+                            value={monthsEarly} 
+                            onChange={e => setMonthsEarly(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10)))} 
+                        />
+                        <span className="input-group-text bg-input text-muted small" style={{ fontSize: '0.72rem' }}>mos</span>
+                    </div>
+                </div>
+
+                <div className="col-6">
+                    <label className="form-label small fw-bold text-muted mb-1">Monthly Pension</label>
+                    <CurrencyInput className="form-control form-control-sm bg-input" value={monthlyPension} onChange={setMonthlyPension} />
+                </div>
+
+                <div className="col-6">
+                    <label className="form-label small fw-bold text-muted mb-1 d-flex justify-content-between">
+                        <span>Added Pension</span>
+                        <InfoBtn title="Added Pension" text="Additional monthly pension payout generated by the extra credited service." />
+                    </label>
+                    <div className="input-group input-group-sm">
+                        <span className="input-group-text bg-input text-success fw-bold" style={{ fontSize: '0.75rem' }}>+</span>
+                        <input 
+                            type="number" 
+                            className="form-control form-control-sm bg-input text-success border-success text-center fw-bold" 
+                            value={addedMonthlyPension} 
+                            onChange={e => setAddedMonthlyPension(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                        />
+                        <span className="input-group-text bg-input text-muted small" style={{ fontSize: '0.72rem' }}>/mo</span>
+                    </div>
+                </div>
+
+                <div className="col-6">
+                    <label className="form-label small fw-bold text-muted mb-1">COLA Indexing</label>
+                    <button 
+                        type="button" 
+                        className={`btn btn-sm w-100 py-1 text-center fw-bold rounded-2 ${hasCola ? 'btn-outline-success border-success text-success bg-input' : 'btn-outline-secondary text-muted bg-input'}`} 
+                        onClick={() => setHasCola(!hasCola)}
+                        style={{ fontSize: '0.75rem' }}
+                    >
+                        <i className={`bi ${hasCola ? 'bi-check-circle-fill' : 'bi-x-circle'} me-1`}></i>
+                        {hasCola ? `Indexed (${colaRate}%)` : 'Fixed (0%)'}
+                    </button>
+                </div>
+            </div>
+
+            {/* INVESTMENT OPPORTUNITY COST ACCORDION TOGGLE */}
+            <div className="mb-3">
+                <button 
+                    type="button" 
+                    className="btn btn-sm btn-link text-muted p-0 text-decoration-none small d-flex align-items-center gap-1"
+                    onClick={() => setShowBreakdown(!showBreakdown)}
+                    style={{ fontSize: '0.75rem' }}
+                >
+                    <i className={`bi bi-chevron-${showBreakdown ? 'up' : 'down'}`}></i>
+                    <span>{showBreakdown ? 'Hide Opportunity Cost Assumptions' : 'Adjust Market Return & Horizon'}</span>
+                </button>
+
+                {showBreakdown && (
+                    <div className="row g-2 mt-2 p-2.5 bg-input border border-secondary rounded-3">
+                        <div className="col-6">
+                            <label className="form-label small fw-bold text-muted mb-1">Yrs to Retire</label>
+                            <input 
+                                type="number" 
+                                className="form-control form-control-sm bg-body text-main border-secondary text-center fw-bold" 
+                                value={bbYears} 
+                                onChange={e => setBbYears(e.target.value === '' ? '' : parseInt(e.target.value, 10))} 
+                            />
+                        </div>
+                        <div className="col-6">
+                            <label className="form-label small fw-bold text-muted mb-1">Est. Mkt Return</label>
+                            <PercentInput className="form-control form-control-sm border-warning bg-body" value={bbReturn} onChange={setBbReturn} />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* RESULTS DASHBOARD */}
             <div className="bg-primary bg-opacity-10 border border-primary border-opacity-50 rounded-4 p-3 mt-auto shadow-inner">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="text-muted fw-bold small">Future Val. of Cost <InfoBtn direction="up" title="Future Value" text="If you invested the Buyback Cost yourself until retirement at the estimated market return, this is what your lump sum would grow to." /></span>
-                    <span className="fw-bold text-main fs-5">{formatCurrency(bbFutureValue)}</span>
+                {/* 1. UPFRONT NET GAIN / COST ROW */}
+                <div className="d-flex justify-content-between align-items-center mb-1.5 pb-1.5 border-bottom border-primary border-opacity-25">
+                    <div>
+                        <span className="text-muted fw-bold small d-block" style={{ fontSize: '0.72rem' }}>
+                            {fundingSource === 'cash' ? 'Net Out-of-Pocket Cost' : 'Pre-Tax Buyback Cost'}
+                        </span>
+                        <span className="fw-bold text-main fs-6">{formatCurrency(calculations.netCost)}</span>
+                        {fundingSource === 'cash' && calculations.taxRefund > 0 && (
+                            <span className="text-muted ms-1 small" style={{ fontSize: '0.68rem' }}>
+                                (after {formatCurrency(calculations.taxRefund)} refund)
+                            </span>
+                        )}
+                    </div>
+                    {calculations.earlyMonths > 0 && (
+                        <div className="text-end">
+                            <span className="text-muted fw-bold small d-block" style={{ fontSize: '0.72rem' }}>
+                                Early Pension Collected
+                            </span>
+                            <span className="fw-bold text-success fs-6">+{formatCurrency(calculations.earlyPensionCollected)}</span>
+                            <span className="text-muted ms-1 small d-block" style={{ fontSize: '0.68rem' }}>
+                                ({calculations.earlyMonths} mos early)
+                            </span>
+                        </div>
+                    )}
                 </div>
-                <div className="d-flex justify-content-between align-items-center mb-1 pb-1 border-top border-primary border-opacity-25 pt-2">
-                    <span className="text-muted fw-bold small text-uppercase ls-1">Required Yield</span>
-                    <span className={`fw-bolder fs-4 ${bbMatchRate >= 4.0 ? 'text-success' : 'text-danger'}`}>{bbMatchRate.toFixed(2)}%</span>
+
+                {/* 2. IMMEDIATE ARBITRAGE OR PAYBACK */}
+                {calculations.immediateNetGain > 0 ? (
+                    <div className="p-2 my-2 rounded-3 bg-success bg-opacity-15 border border-success border-opacity-50 text-start">
+                        <div className="d-flex align-items-center gap-1.5 text-success fw-bold small mb-1">
+                            <i className="bi bi-check-circle-fill"></i>
+                            <span>Immediate Net Upfront Profit: +{formatCurrency(calculations.immediateNetGain)}</span>
+                        </div>
+                        <p className="text-main mb-0" style={{ fontSize: '0.71rem', lineHeight: '1.4' }}>
+                            Collecting your pension {calculations.earlyMonths} months early delivers <b>+{formatCurrency(calculations.earlyPensionCollected)}</b> right out of the gate. That repays your <b>{formatCurrency(calculations.netCost)}</b> net cost upfront with <b>+{formatCurrency(calculations.immediateNetGain)}</b> extra cash in hand—plus an ongoing <b>+{formatCurrency(calculations.addedMonthly)}/mo</b> for life.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="d-flex justify-content-between align-items-center my-2 pb-1 border-bottom border-primary border-opacity-15">
+                        <span className="text-muted fw-bold small">Break-Even Payback</span>
+                        <span className="fw-bolder fs-6 text-main">
+                            {calculations.paybackYears === 0 
+                                ? 'Immediate' 
+                                : calculations.paybackYears < 50 
+                                    ? `${calculations.paybackYears.toFixed(1)} Years` 
+                                    : '50+ Years'}
+                        </span>
+                    </div>
+                )}
+
+                {/* 3. LIFETIME METRICS */}
+                <div className="d-flex justify-content-between align-items-center pt-1.5" style={{ fontSize: '0.75rem' }}>
+                    <span className="text-muted fw-bold">Required Yield to Match <InfoBtn direction="up" title="Required Yield" text="The annual withdrawal yield required from your net investment cost to match the added annual pension for life. Guaranteed yield > 4.0% typically outperforms safe market drawdown rules." /></span>
+                    <span className={`fw-bolder fs-6 ${calculations.matchYield >= 4.0 ? 'text-success' : 'text-warning'}`}>
+                        {calculations.matchYield.toFixed(2)}%
+                    </span>
                 </div>
-                <span className="small text-muted d-block text-center mt-2 fst-italic" style={{fontSize: '0.7rem'}}>
-                    {bbMatchRate >= 4.0 ? "Guaranteed yield beats the 4% rule. Buyback recommended." : "You may be better off investing the money yourself."}
+
+                <div className="d-flex justify-content-between align-items-center pt-1 text-muted" style={{ fontSize: '0.72rem' }}>
+                    <span>25-Yr Net Added Payout:</span>
+                    <span className="fw-bold text-success">+{formatCurrency(calculations.lifetimeNetBenefit)}</span>
+                </div>
+
+                {/* VERDICT BADGE */}
+                <span className="small text-muted d-block text-center mt-2.5 pt-1.5 border-top border-primary border-opacity-25 fst-italic" style={{ fontSize: '0.72rem' }}>
+                    {calculations.immediateNetGain > 0 
+                        ? "Unanimous Win: Accelerated retirement payments completely self-fund this buyback."
+                        : calculations.matchYield >= 4.0 
+                            ? "Recommended: Guaranteed inflation-protected payout easily beats market drawdown benchmarks." 
+                            : "Consider Investing: Break-even is long unless longevity and guaranteed income are top priorities."}
                 </span>
             </div>
         </div>
