@@ -198,13 +198,13 @@ export const TOOLS_DATA: ToolMeta[] = [
     },
     {
         slug: 'fhsa-vs-rrsp',
-        title: 'FHSA vs RRSP Home Buyers' Plan Calculator',
+        title: 'FHSA vs RRSP Home Buyers\' Plan Calculator',
         subtitle: 'Compare the tax-free growth and withdrawal benefits of the First Home Savings Account (FHSA) against the traditional $60k RRSP HBP.',
         category: 'Taxes, Registered Accounts & Benefits',
         toolKey: 'fhsa',
         badge: 'First-Time Buyer',
         icon: 'bi-house-check',
-        overview: 'The First Home Savings Account (FHSA) combines the best tax features of an RRSP and a TFSA: contributions are 100% tax-deductible upon deposit, and qualifying home purchase withdrawals are 100% tax-free with zero repayment obligations. By contrast, the RRSP Home Buyers' Plan (HBP) allows up to $60,000 of borrowing but mandates scheduled 15-year repayments back into your RRSP.',
+        overview: 'The First Home Savings Account (FHSA) combines the best tax features of an RRSP and a TFSA: contributions are 100% tax-deductible upon deposit, and qualifying home purchase withdrawals are 100% tax-free with zero repayment obligations. By contrast, the RRSP Home Buyers\' Plan (HBP) allows up to $60,000 of borrowing but mandates scheduled 15-year repayments back into your RRSP.',
         faqs: [
             {
                 q: 'Can I use both the FHSA and the RRSP HBP on the same home purchase?',
@@ -212,7 +212,7 @@ export const TOOLS_DATA: ToolMeta[] = [
             },
             {
                 q: 'Do I have to repay qualifying FHSA withdrawals?',
-                a: 'No. Unlike the RRSP Home Buyers' Plan, qualifying FHSA withdrawals for your first home are permanent and do not require any repayment.'
+                a: 'No. Unlike the RRSP Home Buyers\' Plan, qualifying FHSA withdrawals for your first home are permanent and do not require any repayment.'
             },
             {
                 q: 'What happens to my FHSA if I do not buy a home within 15 years?',
