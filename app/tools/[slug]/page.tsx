@@ -4,7 +4,7 @@
  * PURPOSE: Individual Standalone Calculator Dynamic Page
  * INSTRUCTION: Place this file in 'app/tools/[slug]/page.tsx'
  * NOTE: Directly imports and uses the universal MarketingHeader component,
- *       with complete immunity to Bootstrap 5 CSS link color and container overrides.
+ *       with complete immunity to Bootstrap 5 CSS overrides and rich SEO Schema.
  * =========================================================================
  */
 
@@ -105,6 +105,54 @@ export default async function ToolPage({ params }: PageProps) {
                 },
             },
             {
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                    {
+                        '@type': 'ListItem',
+                        position: 1,
+                        name: 'Home',
+                        item: 'https://www.planfolio.ca',
+                    },
+                    {
+                        '@type': 'ListItem',
+                        position: 2,
+                        name: 'Tools',
+                        item: 'https://www.planfolio.ca/tools',
+                    },
+                    {
+                        '@type': 'ListItem',
+                        position: 3,
+                        name: tool.title,
+                        item: `https://www.planfolio.ca/tools/${tool.slug}`,
+                    },
+                ],
+            },
+            {
+                '@type': 'HowTo',
+                name: `How to Calculate ${tool.title}`,
+                description: tool.overview,
+                step: [
+                    {
+                        '@type': 'HowToStep',
+                        position: 1,
+                        name: 'Enter Baseline Inputs',
+                        text: 'Enter your household numbers, account balances, or pension statement data into the calculator.',
+                    },
+                    {
+                        '@type': 'HowToStep',
+                        position: 2,
+                        name: 'Apply Canadian CRA Tax & Statutory Formulas',
+                        text: 'The calculator automatically applies Canadian federal and provincial formulas, clawback thresholds, and statutory contribution limits.',
+                    },
+                    {
+                        '@type': 'HowToStep',
+                        position: 3,
+                        name: 'Evaluate Strategy & Lifetime Cash Flow',
+                        text: 'Analyze the resulting net after-tax figures, compare scenarios, and simulate lifelong impact.',
+                    },
+                ],
+            },
+            {
                 '@type': 'FAQPage',
                 mainEntity: tool.faqs.map((faq) => ({
                     '@type': 'Question',
@@ -191,6 +239,19 @@ export default async function ToolPage({ params }: PageProps) {
 
             {/* MAIN CONTENT CONTAINER - Identical Spacing to Main Page */}
             <main className="container mx-auto px-6 pt-44 pb-20 max-w-4xl">
+                {/* BREADCRUMB NAVIGATION */}
+                <nav aria-label="Breadcrumb" className="mb-6 flex items-center justify-center gap-2 text-xs text-slate-400">
+                    <Link href="/" className="hover:text-white transition-colors text-decoration-none">
+                        Home
+                    </Link>
+                    <span className="text-slate-600">/</span>
+                    <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">
+                        Tools
+                    </Link>
+                    <span className="text-slate-600">/</span>
+                    <span className="text-slate-300 font-semibold">{tool.title}</span>
+                </nav>
+
                 {/* TOOL HERO HEADER - Clean Centered Layout (No Badges) */}
                 <div className="text-center max-w-3xl mx-auto mb-12">
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3">
