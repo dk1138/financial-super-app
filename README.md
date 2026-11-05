@@ -16,3 +16,50 @@ Please implement the following three features in Planfolio:
 3. Automatic Downsizing Cost Scaler (Housing Transitions)
 - In the Housing Transitions card, add an optional "Downsizing Housing Cost Reduction" slider (e.g., 0% to 50%, defaulting to -25%) whenever a property sale or downsize event is scheduled.
 - In financeEngine.ts, automatically scale down ongoing housing-related expenses (property taxes, utilities, and maintenance) by that percentage starting in the transition year, removing the need to manually build separate post-downsize expense phases.
+
+I want to expand Planfolio by implementing the top-requested features identified from Canadian DIY retirement planning communities (including r/adviice). Please implement these features across our planner engine, standalone calculators, and UI:
+
+### 1. Printable 2-Page Executive PDF Summary Report
+- Add a clean "Download PDF Report" action in the planner that generates a printable 2-page executive summary.
+- Page 1: Plan Summary & Executive KPIs (funded ratio, estimated retirement freedom age, net estate after terminal tax, annual spending target, and lifelong net worth chart).
+- Page 2: 10-Year Decumulation Snapshot Table (CPP/OAS starting ages, annual tax brackets, registered vs non-registered withdrawals, and spousal income splitting balance).
+- Format: Clean, high-contrast, print-friendly stylesheet (black/slate on white canvas) with Planfolio branding and zero reliance on external print servers.
+
+### 2. Multi-Year Capital Expense Pre-Funding ("Expense Smoothing")
+- Add an interactive optimizer for large lump-sum future goals (e.g., child home down payment gift, major renovation, vehicle upgrade, or bucket-list trip).
+- Logic: Instead of taking a single-year withdrawal that spikes marginal tax brackets to 53.5% and triggers OAS clawbacks, calculate the tax savings of pre-funding the expense over a 3–5 year ramp-up period (e.g., pulling $25k/yr from RRSP within lower brackets into a TFSA/cash buffer).
+- Output: Side-by-side comparison showing "Lump-Sum in Target Year" vs. "3-to-5 Year Tax-Smoothed Pre-Funding" with exact lifetime tax dollars saved and OAS clawback preserved.
+
+### 3. Native Canadian RDSP (Registered Disability Savings Plan) Calculator
+- Create a standalone calculator at `/tools/rdsp-maximizer` and integrate RDSP accounts into the full simulator.
+- Statutory Rules:
+  - Canada Disability Savings Grant (CDSG): 300% on first $500, 200% on next $1,000, up to $3,500/yr (with carry-forward tracking up to $10,500/yr).
+  - Canada Disability Savings Bond (CDSB): Up to $1,000/yr for lower-income households.
+  - 10-Year Proportional Repayment Rule (Assistance Holdback Amount).
+  - Lifetime Disability Assistance Payment (LDAP) statutory formula: Balance ÷ (83 - Beneficiary Age + 1).
+
+### 4. Quebec QPP Deferral Extension (Up to Age 72)
+- Update provincial pension settings to allow Quebec Pension Plan (QPP) recipients to model deferral up to age 72 under Quebec Bill 17 (+0.7%/month or +8.4%/year bonus beyond age 65, reaching +58.8% permanent boost at age 72).
+- Add automatic provincial toggle between federal CPP (caps at age 70) and Quebec QPP (caps at age 72).
+
+### 5. Early Lifetime Gifting vs. Estate Terminal Tax Optimizer
+- Build a standalone optimizer at `/tools/lifetime-gifting-vs-estate-tax`.
+- Compare the family wealth impact of:
+  - Keeping capital in registered accounts / taxable non-reg until death (subject to terminal RRSP liquidation up to 53.5% + 50% capital gains inclusion + provincial probate).
+  - Systematically gifting annual sums to adult children during retirement to maximize their own TFSAs, FHSAs, or mortgage prepayments while the parents are in lower tax brackets.
+
+### 6. Corporate HoldCo / OpCo Decumulation & Dividend Meltdown Tool
+- Add a specialized calculator at `/tools/corporate-dividend-meltdown` for incorporated Canadian business owners and professionals (physicians, tech consultants).
+- Model:
+  - Capital Dividend Account (CDA) tax-free distributions.
+  - Optimal balance between salary (to generate RRSP room/CPP) vs. eligible/non-eligible dividends.
+  - Refundable Dividend Tax on Hand (RDTOH) refund capture.
+  - Avoidance of the passive investment income grind on the $500,000 Small Business Deduction (SBD).
+
+### 7. Projection Table Usability Upgrades
+- Undo / Redo: Add simple history stack so users can test overrides without fearing data loss.
+- Cell Notes: Allow users to click or hover over any overridden cell in the projection table to leave a brief text note (e.g., "Downsized primary residence").
+- Auto-Hide Empty Accounts: Add a toggle to automatically collapse columns with $0 balances across all 40 years to eliminate unnecessary horizontal scrolling.
+- Dismissible Alerts: Allow users to click "Acknowledge" on diagnostic warnings so they stay hidden once reviewed.
+
+Please start by outlining the architecture changes, update `lib/toolsData.ts` and `app/sitemap.ts` to register new tools, and implement the features cleanly using our existing local-first design.

@@ -44,24 +44,9 @@ export default function LandingPage() {
       <header id="about" className="relative pt-44 pb-20 overflow-hidden scroll-mt-28">
         <div className="container mx-auto px-6 text-center relative z-10 max-w-5xl">
           
-          {/* Trust Pills */}
-          <div className="inline-flex flex-wrap items-center justify-center gap-2 mb-8 bg-slate-800/60 border border-slate-700/80 px-4 py-1.5 rounded-full shadow-inner">
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-              <span className="text-red-400">🇨🇦</span> 2026 CRA Tax Rules
-            </span>
-            <span className="text-slate-600">•</span>
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-              <i className="bi bi-shield-lock-fill"></i> 100% Local-First & Private
-            </span>
-            <span className="text-slate-600">•</span>
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-400">
-              <i className="bi bi-clock-history"></i> Annual Track Record Calibration
-            </span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-[1.08] tracking-tight">
-            <span className="sm:whitespace-nowrap inline-block">The Financial Command Center</span><br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400 sm:whitespace-nowrap inline-block">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-[1.08] tracking-tight text-center w-full">
+            <span className="block text-center w-full">The Financial Command Center</span>
+            <span className="block text-center w-full text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400">
               Built for Modern Canadians.
             </span>
           </h1>
@@ -502,6 +487,190 @@ export default function LandingPage() {
         </div>
       </section>
 
+
+      {/* ========================================================= */}
+      {/* HOW PLANFOLIO COMPARES (CANADIAN RETIREMENT TOOLS)         */}
+      {/* ========================================================= */}
+      <section id="compare" className="py-24 border-t border-slate-800 bg-[#0b1220] scroll-mt-28">
+        <div className="container mx-auto px-6 max-w-6xl text-center">
+          
+          <div className="max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-4">
+              How Planfolio Compares
+            </h2>
+            <p className="text-slate-400 text-base md:text-lg leading-relaxed font-normal">
+              Compare Planfolio directly against the most popular Canadian retirement platforms, advisor software, and DIY spreadsheets.
+            </p>
+          </div>
+
+          {/* COMPARISON MATRIX TABLE */}
+          <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-900/60 backdrop-blur-sm shadow-2xl mb-12">
+            <table className="w-full text-start text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-300">
+                  <th className="p-4 sm:p-5 font-bold text-left min-w-[170px]">Feature / Capability</th>
+                  <th className="p-4 sm:p-5 font-black text-center min-w-[170px] bg-blue-600/15 border-x border-blue-500/30 text-white relative">
+                    <span className="block text-xs uppercase tracking-widest text-blue-400 font-bold mb-0.5">Recommended</span>
+                    <span className="text-base font-extrabold text-blue-300">Planfolio Canada 🇨🇦</span>
+                  </th>
+                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">MayRetire</th>
+                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">Adviice</th>
+                  <th className="p-4 sm:p-5 font-bold text-center min-w-[140px] text-slate-300">ProjectionLab</th>
+                  <th className="p-4 sm:p-5 font-bold text-center min-w-[150px] text-slate-300">Snap Projections</th>
+                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">DIY Spreadsheets</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70 text-slate-300">
+                {/* Pricing */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">Pricing</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    100% Free <span className="block text-[11px] font-normal text-slate-400">(No credit card)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400 font-semibold">Free</td>
+                  <td className="p-4 sm:p-5 text-center">$99 – $150+/yr</td>
+                  <td className="p-4 sm:p-5 text-center">$108 – $500+/yr</td>
+                  <td className="p-4 sm:p-5 text-center">$1,200 – $2,400+/yr <span className="block text-[11px] text-slate-500">(Advisor tier only)</span></td>
+                  <td className="p-4 sm:p-5 text-center">Free <span className="block text-[11px] text-slate-500">(100+ hrs build time)</span></td>
+                </tr>
+
+                {/* Local-First Privacy */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">Data Privacy & Security</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    100% Local-First <span className="block text-[11px] font-normal text-slate-400">(0 bytes on cloud servers)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud / Account-based</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Database <span className="block text-[11px] text-slate-500">(Data wiped on cancel)</span></td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud / Partial Local</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Database</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Local File</td>
+                </tr>
+
+                {/* Account Requirement */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">Account Creation</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    Zero Sign-Up <span className="block text-[11px] font-normal text-slate-400">(Instant browser launch)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Account Required</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Mandatory Account</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Mandatory Account</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Advisor Access Only</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">None</td>
+                </tr>
+
+                {/* CRA Tax Engine */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">CRA 2026 Tax Precision</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    All 13 Provinces <span className="block text-[11px] font-normal text-slate-400">(Statutory brackets & surtaxes)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Canadian Provinces</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">All 13 Provinces</td>
+                  <td className="p-4 sm:p-5 text-center text-amber-400">Basic Presets <span className="block text-[11px] text-slate-500">(US-centric model)</span></td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">All 13 Provinces</td>
+                  <td className="p-4 sm:p-5 text-center text-rose-400">Manual Formulas <span className="block text-[11px] text-slate-500">(High error risk)</span></td>
+                </tr>
+
+                {/* CPP/OAS */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">CPP & OAS Optimization</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    Actuarial Curves <span className="block text-[11px] font-normal text-slate-400">(Ages 60–70 + Clawback recovery)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
+                  <td className="p-4 sm:p-5 text-center text-amber-400">Basic Estimates</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
+                  <td className="p-4 sm:p-5 text-center text-rose-400">Complex to Build</td>
+                </tr>
+
+                {/* 50% LIF Unlocking */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">50% LIF / LIRA Unlocking</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    Provincial Formulas <span className="block text-[11px] font-normal text-slate-400">(Age-based withdrawal caps)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">Limited / Manual</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">Manual Lookup</td>
+                </tr>
+
+                {/* Standalone Tools */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">20+ Free Standalone Tools</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    Instant Browser Access <span className="block text-[11px] font-normal text-slate-400">(Pension, Smith, CCB, etc.)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None <span className="block text-[11px] text-slate-500">(Single planner only)</span></td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">Walled Garden <span className="block text-[11px] text-slate-500">(No standalone tools)</span></td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                </tr>
+
+                {/* Annual Track Record Calibration */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">Annual Actuals Calibration</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    Data Bank Engine <span className="block text-[11px] font-normal text-slate-400">(1-Click roll-forward wizard)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Manual Snapshot Overwrite</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Manual Cash Flow Updates</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Manual Advisor Update</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">Manual Tab Duplication</td>
+                </tr>
+
+                {/* Data Backup & Portability */}
+                <tr className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-4 sm:p-5 font-semibold text-white">Plan Backup & Restore</td>
+                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                    1-Click JSON Backup <span className="block text-[11px] font-normal text-slate-400">(Zero vendor lock-in)</span>
+                  </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">CSV Export Only</td>
+                  <td className="p-4 sm:p-5 text-center text-rose-400">No Re-Import <span className="block text-[11px] text-slate-500">(Wiped upon cancellation)</span></td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">JSON Export</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Advisor Controlled</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">Local .xlsx</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* 3 HIGHLIGHT CARDS */}
+          <div className="grid md:grid-cols-3 gap-6 text-start">
+            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
+              <div className="text-blue-400 font-bold text-xs uppercase tracking-wider mb-2">vs. Subscription Software (Adviice)</div>
+              <h3 className="text-base font-bold text-white mb-2">No Subscription Paywall or Data Traps</h3>
+              <p className="text-slate-400 text-xs leading-relaxed mb-0">
+                Platforms like Adviice charge 9–50+/year and delete your data if you pause your subscription. Planfolio gives you full institutional-grade modeling for free with 1-click encrypted JSON export/restore.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
+              <div className="text-purple-400 font-bold text-xs uppercase tracking-wider mb-2">vs. Global / US Tools (ProjectionLab)</div>
+              <h3 className="text-base font-bold text-white mb-2">Built for 2026 CRA Statutory Tax Law</h3>
+              <p className="text-slate-400 text-xs leading-relaxed mb-0">
+                US-centric tools use generic estimates that miscalculate Canadian provincial brackets, OAS clawback recovery tax, and 50% LIF unlocking limits. Planfolio models all 13 Canadian provinces and territories down to the dollar.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
+              <div className="text-emerald-400 font-bold text-xs uppercase tracking-wider mb-2">vs. DIY Excel Spreadsheets</div>
+              <h3 className="text-base font-bold text-white mb-2">Decades of Modeling in Seconds</h3>
+              <p className="text-slate-400 text-xs leading-relaxed mb-0">
+                Stop maintaining broken 40-year spreadsheet macros. Planfolio automates spousal pension income splitting, Monte Carlo stress testing, and real-world statement calibration with zero formula maintenance.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* ========================================================= */}
       {/* PRICING SECTION                                           */}
       {/* ========================================================= */}
@@ -702,6 +871,7 @@ export default function LandingPage() {
               <Link href="/planner" className="hover:text-white transition-colors text-decoration-none">Launch Planner</Link>
               <Link href="/features" className="hover:text-white transition-colors text-decoration-none">Feature Directory</Link>
               <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">Tools</Link>
+              <a href="#compare" className="hover:text-white transition-colors text-decoration-none">Compare</a>
               <a href="#faq" className="hover:text-white transition-colors text-decoration-none">FAQ</a>
               <a href="#about" className="hover:text-white transition-colors text-decoration-none">Back to Top</a>
             </div>
@@ -766,6 +936,14 @@ export default function LandingPage() {
                 "@type": "FAQPage",
                 "@id": "https://www.planfolio.ca/#faq",
                 "mainEntity": [
+                  {
+                    "@type": "Question",
+                    "name": "How does Planfolio compare to Adviice, MayRetire, Snap Projections, and ProjectionLab?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Planfolio is 100% free with zero sign-up required and operates on a strict local-first privacy model where zero bytes of your financial data are stored on remote cloud servers. Unlike Adviice (9–50+/year) or Snap Projections (,200+/year advisor software), Planfolio provides institutional-grade 2026 CRA tax modeling across all 13 provinces, 20+ standalone financial calculators, and full decumulation planning without subscriptions or account lock-in. Unlike MayRetire, Planfolio includes 20+ free standalone calculators, multi-scenario comparisons, and the signature Annual Data Bank calibration engine. Unlike US-centric tools like ProjectionLab, Planfolio is engineered specifically for Canadian statutory rules, including 50% LIF unlocking, OAS clawback recovery tax, and spousal pension splitting."
+                    }
+                  },
                   {
                     "@type": "Question",
                     "name": "What is Planfolio and who is it for?",
