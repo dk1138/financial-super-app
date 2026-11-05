@@ -46,11 +46,7 @@ export default function MarketingHeader() {
     return (
         <nav className="fixed top-0 w-full z-50 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800 marketing-nav">
             <style dangerouslySetInnerHTML={{ __html: `
-                .marketing-nav {
-                    width: 100% !important;
-                }
-                .marketing-nav-container {
-                    width: 100% !important;
+                .marketing-nav .container {
                     max-width: 100% !important;
                 }
                 .marketing-nav a {
@@ -60,6 +56,7 @@ export default function MarketingHeader() {
                     color: #94a3b8 !important;
                     font-size: 0.875rem !important;
                     font-weight: 600 !important;
+                    line-height: 1.25rem !important;
                     transition: color 0.15s ease-in-out !important;
                 }
                 .marketing-nav a.marketing-nav-link:hover {
@@ -74,7 +71,7 @@ export default function MarketingHeader() {
                 }
             `}} />
 
-            <div className="marketing-nav-container w-full px-6 py-3.5 flex justify-between items-center" style={{ maxWidth: '100%' }}>
+            <div className="container mx-auto px-6 py-3.5 flex justify-between items-center" style={{ maxWidth: '100%' }}>
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2.5 text-decoration-none">
                     <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-xl shadow-lg shadow-blue-500/20">
@@ -86,19 +83,15 @@ export default function MarketingHeader() {
                     </div>
                 </Link>
                 
-                {/* Navigation Links with Automatic Active-State Detection */}
-                <div className="hidden lg:flex items-center gap-8 text-sm font-semibold">
+                {/* Navigation Links */}
+                <div className="hidden lg:flex items-center gap-8 text-sm font-semibold" style={{ gap: '2rem' }}>
                     {navLinks.map((item) => {
                         const active = isLinkActive(item);
                         return (
                             <Link 
                                 key={item.label}
                                 href={item.href} 
-                                className={`marketing-nav-link ${
-                                    active 
-                                        ? 'active-link !text-white !font-bold' 
-                                        : '!text-slate-400 hover:!text-white transition-colors'
-                                } text-decoration-none flex items-center gap-1.5`}
+                                className={`marketing-nav-link ${active ? 'active-link !text-white !font-bold' : '!text-slate-400 hover:!text-white'} flex items-center gap-1.5`}
                             >
                                 <span>{item.label}</span>
                                 {item.badge && (
@@ -115,7 +108,8 @@ export default function MarketingHeader() {
                 <div className="flex items-center gap-3">
                     <Link 
                         href="/planner" 
-                        className="bg-blue-600 hover:bg-blue-500 !text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
+                        className="bg-blue-600 hover:bg-blue-500 !text-white text-xs font-bold rounded-full shadow-lg shadow-blue-500/25 transition-all text-decoration-none flex items-center gap-1.5"
+                        style={{ padding: '0.625rem 1.25rem' }}
                     >
                         <span>Launch Planner</span>
                         <i className="bi bi-arrow-right"></i>
