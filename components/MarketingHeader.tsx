@@ -46,8 +46,14 @@ export default function MarketingHeader() {
     return (
         <nav className="fixed top-0 w-full z-50 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800 marketing-nav">
             <style dangerouslySetInnerHTML={{ __html: `
+                .marketing-nav .marketing-nav-inner,
+                .marketing-nav div[class*="container"],
                 .marketing-nav .container {
                     max-width: 100% !important;
+                    width: 100% !important;
+                    padding-left: 1.5rem !important; /* 24px - prevents Bootstrap from shrinking to 12px */
+                    padding-right: 1.5rem !important; /* 24px - prevents Bootstrap from shrinking to 12px */
+                    --bs-gutter-x: 3rem !important;
                 }
                 .marketing-nav a {
                     text-decoration: none !important;
@@ -71,7 +77,10 @@ export default function MarketingHeader() {
                 }
             `}} />
 
-            <div className="container mx-auto px-6 py-3.5 flex justify-between items-center" style={{ maxWidth: '100%' }}>
+            <div 
+                className="marketing-nav-inner w-full mx-auto px-6 py-3.5 flex justify-between items-center" 
+                style={{ maxWidth: '100%', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}
+            >
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2.5 text-decoration-none">
                     <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-xl shadow-lg shadow-blue-500/20">
