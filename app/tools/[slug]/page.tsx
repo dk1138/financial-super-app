@@ -3,8 +3,7 @@
  * TARGET PATH IN YOUR PROJECT: app/tools/[slug]/page.tsx
  * PURPOSE: Individual Standalone Calculator Dynamic Page
  * INSTRUCTION: Place this file in 'app/tools/[slug]/page.tsx'
- * NOTE: Directly imports and uses the universal MarketingHeader component,
- *       with complete immunity to Bootstrap 5 CSS overrides and rich SEO Schema.
+ * NOTE: Directly imports and uses the universal MarketingHeader component.
  * =========================================================================
  */
 
@@ -83,10 +82,14 @@ export default async function ToolPage({ params }: PageProps) {
     // Wide tools that need a broader canvas (e.g. 2-column dashboards with charts)
     const isWideTool = tool.toolKey === 'buyvsrent' || tool.toolKey === 'mvi' || tool.toolKey === 'tax-curve';
 
-    // Get 3 related standalone tools from other categories
-    const relatedTools = TOOLS_DATA
-        .filter((t) => t.slug !== tool.slug)
-        .slice(0, 3);
+    // Smart topical internal linking: prioritize tools within the same category
+    const sameCategoryTools = TOOLS_DATA.filter(
+        (t) => t.slug !== tool.slug && t.category === tool.category
+    );
+    const otherCategoryTools = TOOLS_DATA.filter(
+        (t) => t.slug !== tool.slug && t.category !== tool.category
+    );
+    const relatedTools = [...sameCategoryTools, ...otherCategoryTools].slice(0, 3);
 
     const jsonLd = {
         '@context': 'https://schema.org',
@@ -97,6 +100,7 @@ export default async function ToolPage({ params }: PageProps) {
                 url: `https://www.planfolio.ca/tools/${tool.slug}`,
                 applicationCategory: 'FinanceApplication',
                 operatingSystem: 'All',
+                inLanguage: 'en-CA',
                 description: tool.subtitle,
                 offers: {
                     '@type': 'Offer',
@@ -168,7 +172,7 @@ export default async function ToolPage({ params }: PageProps) {
 
     return (
         <div data-bs-theme="dark" className="min-h-screen bg-[#0f172a] text-slate-100 selection:bg-blue-500/30 font-sans">
-            {/* Scoped CSS to enforce high-contrast light text across Bootstrap controls & protect navigation bar */}
+            {/* Scoped CSS for calculator inputs and range sliders */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .rp-card, [data-bs-theme="dark"] {
                     --bs-body-color: #f1f5f9 !important;
@@ -202,30 +206,6 @@ export default async function ToolPage({ params }: PageProps) {
                     box-shadow: none !important;
                     padding: 0 !important;
                 }
-
-                /* Neutralize Bootstrap 5 interference on the universal navigation header */
-                nav.fixed, nav[class*="fixed"] {
-                    width: 100% !important;
-                }
-                nav.fixed .container, nav.fixed div[class*="container"], nav.fixed .marketing-nav-container {
-                    max-width: 100% !important;
-                    width: 100% !important;
-                }
-                nav.fixed a {
-                    text-decoration: none !important;
-                }
-                nav.fixed a:not([class*="text-white"]):not(.active-link) {
-                    color: #94a3b8 !important; /* slate-400 */
-                }
-                nav.fixed a:hover {
-                    color: #ffffff !important;
-                }
-                nav.fixed a[class*="text-white"], nav.fixed a.active-link {
-                    color: #ffffff !important;
-                }
-                nav.fixed .brand-name, nav.fixed span[class*="text-xl"] {
-                    color: #ffffff !important;
-                }
             `}} />
 
             {/* JSON-LD Schema for Google Rich Snippets */}
@@ -237,24 +217,11 @@ export default async function ToolPage({ params }: PageProps) {
             {/* UNIVERSAL NAVIGATION HEADER */}
             <MarketingHeader />
 
-            {/* MAIN CONTENT CONTAINER - Identical Spacing to Main Page */}
+            {/* MAIN CONTENT CONTAINER */}
             <main className="container mx-auto px-6 pt-44 pb-20 max-w-4xl">
-                {/* BREADCRUMB NAVIGATION */}
-                <nav aria-label="Breadcrumb" className="mb-6 flex items-center justify-center gap-2 text-xs text-slate-400">
-                    <Link href="/" className="hover:text-white transition-colors text-decoration-none">
-                        Home
-                    </Link>
-                    <span className="text-slate-600">/</span>
-                    <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">
-                        Tools
-                    </Link>
-                    <span className="text-slate-600">/</span>
-                    <span className="text-slate-300 font-semibold">{tool.title}</span>
-                </nav>
-
-                {/* TOOL HERO HEADER - Clean Centered Layout (No Badges) */}
-                <div className="text-center max-w-3xl mx-auto mb-12">
-                    <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3">
+                {/* TOOL HERO HEADER - Clean Centered Layout (No Orphan Words on 2nd Line) */}
+                <div className="text-center max-w-5xl mx-auto mb-12">
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-3 text-balance max-w-4xl mx-auto">
                         {tool.title}
                     </h1>
                     <p className="text-slate-400 text-sm sm:text-base leading-relaxed mx-auto max-w-2xl mb-0">
@@ -369,6 +336,17 @@ export default async function ToolPage({ params }: PageProps) {
                     <p className="mb-0 text-slate-600">
                         © {new Date().getFullYear()} Planfolio Canada. 100% Client-Side Local Privacy.
                     </p>
+                    {/* SEO Quick-Link Anchor Text Hub */}
+                    <div className="mt-6 pt-6 border-t border-slate-800/60 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[11px] text-slate-500">
+                        <Link href="/tools/pension-buyback" className="hover:text-slate-300 transition-colors text-decoration-none">Pension Buyback</Link>
+                        <Link href="/tools/pension-commuted-value-vs-annuity" className="hover:text-slate-300 transition-colors text-decoration-none">Commuted Value vs Annuity</Link>
+                        <Link href="/tools/lif-to-rrif-unlocking" className="hover:text-slate-300 transition-colors text-decoration-none">50% LIF Unlocking</Link>
+                        <Link href="/tools/smith-maneuver" className="hover:text-slate-300 transition-colors text-decoration-none">Smith Maneuver</Link>
+                        <Link href="/tools/tfsa-contribution-room" className="hover:text-slate-300 transition-colors text-decoration-none">TFSA Contribution Room</Link>
+                        <Link href="/tools/fhsa-vs-rrsp" className="hover:text-slate-300 transition-colors text-decoration-none">FHSA vs RRSP</Link>
+                        <Link href="/tools/ccb-maximizer" className="hover:text-slate-300 transition-colors text-decoration-none">CCB Maximizer</Link>
+                        <Link href="/tools/buy-vs-rent" className="hover:text-slate-300 transition-colors text-decoration-none">Buy vs Rent</Link>
+                    </div>
                 </div>
             </footer>
         </div>
