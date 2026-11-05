@@ -647,7 +647,7 @@ export default function LandingPage() {
               <div className="text-blue-400 font-bold text-xs uppercase tracking-wider mb-2">vs. Subscription Software (Adviice)</div>
               <h3 className="text-base font-bold text-white mb-2">No Subscription Paywall or Data Traps</h3>
               <p className="text-slate-400 text-xs leading-relaxed mb-0">
-                Platforms like Adviice charge 9–50+/year and delete your data if you pause your subscription. Planfolio gives you full institutional-grade modeling for free with 1-click encrypted JSON export/restore.
+                Platforms like Adviice charge $99–$150+/year and delete your data if you pause your subscription. Planfolio gives you full institutional-grade modeling for free with 1-click encrypted JSON export/restore.
               </p>
             </div>
 
@@ -677,40 +677,43 @@ export default function LandingPage() {
       <section id="pricing" className="py-24 bg-slate-900/40 border-t border-slate-800 scroll-mt-28">
         <div className="container mx-auto px-6 text-center">
 
-          <h2 className="text-4xl md:text-5xl font-black text-white mt-4 mb-4">Straightforward, Honest Pricing</h2>
-          <p className="text-slate-400 mb-16 max-w-xl mx-auto text-base">
-            Professional-grade Canadian financial planning, made accessible to all households without expensive advisor retainers.
+          <h2 className="text-4xl md:text-5xl font-black text-white mt-4 mb-4">Straightforward, 100% Free Access</h2>
+          <p className="text-slate-400 mb-14 max-w-xl mx-auto text-base">
+            Professional-grade Canadian financial planning, made accessible to all households without expensive subscriptions or advisor retainers.
           </p>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="max-w-xl mx-auto">
             
-            {/* ACTIVE FREE TIER */}
-            <div className="bg-[#0f172a] border-2 border-blue-600 rounded-[2.5rem] p-10 shadow-2xl shadow-blue-500/10 text-start flex flex-col justify-between relative overflow-hidden">
+            {/* 100% FREE CARD */}
+            <div className="bg-[#0f172a] border-2 border-blue-600 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl shadow-blue-500/10 text-start relative overflow-hidden">
               <div className="absolute -top-12 -right-12 w-36 h-36 bg-blue-500/10 blur-2xl rounded-full"></div>
               
               <div>
                 <div className="flex justify-between items-center">
                   <span className="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-                    Current Public Preview
+                    Free & Local-First
                   </span>
-                  <span className="text-xs text-slate-400 font-semibold">No Credit Card Needed</span>
+                  <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <i className="bi bi-shield-check"></i> No Credit Card Needed
+                  </span>
                 </div>
 
-                <h3 className="text-2xl font-bold text-white mt-4">Full Access Early Preview</h3>
+                <h3 className="text-2xl font-bold text-white mt-4">Full Access Canadian Simulator</h3>
                 <div className="text-5xl font-black text-white my-6">
-                  $0 <span className="text-lg font-medium text-slate-500">/ forever free in preview</span>
+                  $0 <span className="text-base font-normal text-slate-400">/ forever free to use</span>
                 </div>
                 
                 <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-                  Complete uninhibited access to all 9 core simulation modules, the Annual Data Bank, and CRA tax optimizations.
+                  Complete access to all core simulation modules, the Annual Data Bank, and CRA multi-province tax optimizations with zero cloud storage.
                 </p>
 
-                <ul className="space-y-2.5 text-xs text-slate-300 mb-8">
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> All 9 Core Tabs & Smart Optimizers</li>
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Annual Roll-Forward Wizard & Data Bank</li>
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Full CRA 2026 Tax Engine (Federal & All Provinces)</li>
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> Unlimited Scenario Comparisons & Restores</li>
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-blue-400 font-bold"></i> 100% Local-First Storage (Zero Cloud Tracking)</li>
+                <ul className="space-y-3 text-xs sm:text-sm text-slate-300 mb-8">
+                  <li className="flex items-center gap-2.5"><i className="bi bi-check-circle-fill text-emerald-400 font-bold"></i> All 9 Core Planning Tabs & Smart Optimizers</li>
+                  <li className="flex items-center gap-2.5"><i className="bi bi-check-circle-fill text-emerald-400 font-bold"></i> Annual Roll-Forward Wizard & Actuals Data Bank</li>
+                  <li className="flex items-center gap-2.5"><i className="bi bi-check-circle-fill text-emerald-400 font-bold"></i> 2026 CRA Tax Engine (Federal & All 13 Provinces)</li>
+                  <li className="flex items-center gap-2.5"><i className="bi bi-check-circle-fill text-emerald-400 font-bold"></i> 20+ Free Standalone Financial Calculators</li>
+                  <li className="flex items-center gap-2.5"><i className="bi bi-check-circle-fill text-emerald-400 font-bold"></i> 100% Local-First Storage (Zero Cloud Tracking)</li>
+                  <li className="flex items-center gap-2.5"><i className="bi bi-check-circle-fill text-emerald-400 font-bold"></i> 1-Click Encrypted JSON Backup & Restore</li>
                 </ul>
               </div>
 
@@ -718,37 +721,8 @@ export default function LandingPage() {
                 href="/planner" 
                 className="block w-full text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all text-decoration-none shadow-lg shadow-blue-600/30 text-base"
               >
-                Launch Planner Now
+                Launch Free Planner Now
               </Link>
-            </div>
-
-            {/* FUTURE TIER */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-10 opacity-60 text-start flex flex-col justify-between">
-              <div>
-                <span className="bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border border-slate-700">
-                  Future Roadmap
-                </span>
-                
-                <h3 className="text-2xl font-bold text-slate-300 mt-4">Cloud Sync & Advisor Export</h3>
-                <div className="text-5xl font-black text-slate-400 my-6">
-                  $5 <span className="text-lg font-medium text-slate-600">/ per month</span>
-                </div>
-                
-                <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-                  Optional encrypted multi-device cloud synchronization and professional PDF report generation for fee-only financial advisors.
-                </p>
-
-                <ul className="space-y-2.5 text-xs text-slate-500 mb-8">
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-slate-600"></i> Everything in the Free Local Tier</li>
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-slate-600"></i> End-to-End Encrypted Cross-Device Sync</li>
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-slate-600"></i> Printable Formal Client Deliverable Reports</li>
-                  <li className="flex items-center gap-2"><i className="bi bi-check2 text-slate-600"></i> Priority Feature Voting & Roadmap Input</li>
-                </ul>
-              </div>
-
-              <div className="w-full text-center bg-slate-800/80 text-slate-500 font-bold py-4 rounded-2xl cursor-not-allowed">
-                Coming in Future Release
-              </div>
             </div>
 
           </div>
