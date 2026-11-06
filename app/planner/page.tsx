@@ -13,7 +13,7 @@ import DataBankTab from '../../components/DataBankTab';
 import { useTranslation } from '../../lib/LanguageContext';
 import { useFinance } from '../../lib/FinanceContext';
 import { StepperInput, PercentInput } from '../../components/SharedUI'; 
-
+import FeedbackModal from '../../components/FeedbackModal';
 import SplashScreen from '../../components/SplashScreen';
 import { sampleProfile } from '../../lib/sampleData';
 
