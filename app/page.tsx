@@ -492,7 +492,7 @@ export default function LandingPage() {
       {/* HOW PLANFOLIO COMPARES (CANADIAN RETIREMENT TOOLS)         */}
       {/* ========================================================= */}
       <section id="compare" className="py-24 border-t border-slate-800 bg-[#0b1220] scroll-mt-28">
-        <div className="container mx-auto px-6 max-w-6xl text-center">
+        <div className="container mx-auto px-4 sm:px-6 max-w-[1340px] text-center">
           
           <div className="max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-4">
@@ -530,197 +530,197 @@ export default function LandingPage() {
           <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-900/60 backdrop-blur-sm shadow-2xl mb-12 custom-table-scrollbar">
             <table className="w-full text-start text-xs sm:text-sm" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-300">
-                  <th className="sticky left-0 z-30 bg-[#0f172a] p-4 sm:p-5 font-bold text-left min-w-[170px] border-r border-b border-slate-800 text-white shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-300 text-xs sm:text-sm">
+                  <th className="sticky left-0 z-30 bg-[#0f172a] px-3.5 py-4 sm:px-4 font-bold text-left min-w-[145px] sm:min-w-[155px] border-r border-b border-slate-800 text-white shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     Feature
                   </th>
-                  <th className="p-4 sm:p-5 font-black text-center min-w-[150px] bg-blue-600/15 border-x border-b border-blue-500/30 text-white relative">
-                    <span className="block text-xs uppercase tracking-widest text-blue-400 font-bold mb-0.5">Recommended</span>
-                    <span className="text-base font-extrabold text-blue-300">Planfolio</span>
+                  <th className="px-3 py-4 sm:px-3.5 font-black text-center min-w-[125px] sm:min-w-[135px] bg-blue-600/15 border-x border-b border-blue-500/30 text-white relative">
+                    <span className="block text-[10px] uppercase tracking-widest text-blue-400 font-bold mb-0.5">Recommended</span>
+                    <span className="text-sm sm:text-base font-extrabold text-blue-300">Planfolio</span>
                   </th>
-                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300 border-b border-slate-800">Gilded</th>
-                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300 border-b border-slate-800">MayRetire</th>
-                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300 border-b border-slate-800">Adviice</th>
-                  <th className="p-4 sm:p-5 font-bold text-center min-w-[140px] text-slate-300 border-b border-slate-800">ProjectionLab</th>
-                  <th className="p-4 sm:p-5 font-bold text-center min-w-[145px] text-slate-300 border-b border-slate-800">Snap Projections</th>
-                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300 border-b border-slate-800">Spreadsheets</th>
+                  <th className="px-2.5 py-4 sm:px-3 font-bold text-center min-w-[105px] sm:min-w-[115px] text-slate-300 border-b border-slate-800">Gilded</th>
+                  <th className="px-2.5 py-4 sm:px-3 font-bold text-center min-w-[105px] sm:min-w-[115px] text-slate-300 border-b border-slate-800">MayRetire</th>
+                  <th className="px-2.5 py-4 sm:px-3 font-bold text-center min-w-[105px] sm:min-w-[115px] text-slate-300 border-b border-slate-800">Adviice</th>
+                  <th className="px-2.5 py-4 sm:px-3 font-bold text-center min-w-[115px] sm:min-w-[120px] text-slate-300 border-b border-slate-800">ProjectionLab</th>
+                  <th className="px-2.5 py-4 sm:px-3 font-bold text-center min-w-[118px] sm:min-w-[125px] text-slate-300 border-b border-slate-800">Snap Projections</th>
+                  <th className="px-2.5 py-4 sm:px-3 font-bold text-center min-w-[105px] sm:min-w-[115px] text-slate-300 border-b border-slate-800">Spreadsheets</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/70 text-slate-300">
                 {/* 1. Pricing */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     Pricing
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     Free
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">Free (Limited)<br/>/ $247/yr</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 font-semibold">Free</td>
-                  <td className="p-4 sm:p-5 text-center leading-snug">$99 –<br/>$150+/yr</td>
-                  <td className="p-4 sm:p-5 text-center leading-snug">$108 –<br/>$500+/yr</td>
-                  <td className="p-4 sm:p-5 text-center leading-snug">$1,200 –<br/>$2,400+/yr</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Free</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">Free (Limited)<br/>/ $247/yr</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 font-semibold">Free</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center leading-snug">$99 –<br/>$150+/yr</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center leading-snug">$108 –<br/>$500+/yr</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center leading-snug">$1,200 –<br/>$2,400+/yr</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Free</td>
                 </tr>
 
                 {/* 2. Data Privacy & Sync */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     Data Privacy & Sync
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
                     100% Local<br/>(Manual File Transfer)
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Local File</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400">Cloud Sync</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400">Cloud Sync</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400">Cloud Sync</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400">Cloud Sync</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400">Cloud Sync</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Local File</td>
                 </tr>
 
                 {/* 3. Account Requirement */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     Account Required
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
                     No Account<br/>(Zero Sign-Up)
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">Account<br/>Required</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">Account<br/>Required</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">Account<br/>Required</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">Account<br/>Required</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">Account<br/>Required</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">No Account</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">Account<br/>Required</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">Account<br/>Required</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">Account<br/>Required</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">Account<br/>Required</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">Account<br/>Required</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">No Account</td>
                 </tr>
 
                 {/* 4. CRA Tax Engine */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     CRA 2026 Tax Rules
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
                     All 13<br/>Provinces
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
-                  <td className="p-4 sm:p-5 text-center text-amber-400 leading-snug">Basic Presets<br/>(US Focus)</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
-                  <td className="p-4 sm:p-5 text-center text-rose-400 leading-snug">Manual<br/>Formulas</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-amber-400 leading-snug">Basic Presets<br/>(US Focus)</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">All 13<br/>Provinces</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-rose-400 leading-snug">Manual<br/>Formulas</td>
                 </tr>
 
                 {/* 5. CPP/OAS */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     CPP & OAS Optimization
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     Supported
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-amber-400 leading-snug">Supported<br/>(Premium)</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-amber-400 leading-snug">Basic<br/>Estimates</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-rose-400 leading-snug">Manual<br/>Formulas</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-amber-400 leading-snug">Supported<br/>(Premium)</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-amber-400 leading-snug">Basic<br/>Estimates</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-rose-400 leading-snug">Manual<br/>Formulas</td>
                 </tr>
 
                 {/* 6. 50% LIF Unlocking */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     50% LIF / LIRA Unlocking
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     Supported
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">Not Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">Not Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">Not Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Supported</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">Not Supported</td>
                 </tr>
 
                 {/* 7. Corporate / HoldCo Planning */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     Corporate / HoldCo Planning
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-slate-400 leading-snug">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-slate-400 leading-snug">
                     Personal Accounts<br/>Only
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500 leading-snug">Personal Accounts<br/>Only</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500 leading-snug">Personal Accounts<br/>Only</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">Supported<br/>(Full CCPC)</td>
-                  <td className="p-4 sm:p-5 text-center text-amber-400">Basic</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">Supported<br/>(Full CCPC)</td>
-                  <td className="p-4 sm:p-5 text-center text-rose-400 leading-snug">Manual<br/>Formulas</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500 leading-snug">Personal Accounts<br/>Only</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500 leading-snug">Personal Accounts<br/>Only</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">Supported<br/>(Full CCPC)</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-amber-400">Basic</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">Supported<br/>(Full CCPC)</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-rose-400 leading-snug">Manual<br/>Formulas</td>
                 </tr>
 
                 {/* 8. CFP Advisor Network */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     CFP Advisor Network
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-slate-400 leading-snug">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-slate-400 leading-snug">
                     None<br/>(100% Self-Directed)
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">Available<br/>(Partner Directory)</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400 leading-snug">Built for CFPs<br/>(Advisor Platform)</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">Available<br/>(Partner Directory)</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400 leading-snug">Built for CFPs<br/>(Advisor Platform)</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
                 </tr>
 
                 {/* 9. 20+ Free Standalone Tools */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     20+ Free Standalone Tools
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     Included
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
                 </tr>
 
                 {/* 10. Annual Track Record Calibration */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     Annual Actuals Data Bank
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     Included
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-500">None</td>
                 </tr>
 
                 {/* 11. Data Backup & Portability */}
                 <tr className="hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-20 bg-[#0b1220] p-4 sm:p-5 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                  <td className="sticky left-0 z-20 bg-[#0b1220] px-3.5 py-3.5 sm:px-4 font-semibold text-white border-r border-slate-800 shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                     Plan Backup & Restore
                   </td>
-                  <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
+                  <td className="px-3 py-3.5 sm:px-3.5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400 leading-snug">
                     1-Click JSON<br/>Backup
                   </td>
-                  <td className="p-4 sm:p-5 text-center text-rose-400 leading-snug">Cloud Account<br/>Only</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">CSV Export<br/>Only</td>
-                  <td className="p-4 sm:p-5 text-center text-rose-400">No Re-Import</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">JSON Export</td>
-                  <td className="p-4 sm:p-5 text-center text-slate-400 leading-snug">Advisor<br/>Controlled</td>
-                  <td className="p-4 sm:p-5 text-center text-emerald-400">Local File</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-rose-400 leading-snug">Cloud Account<br/>Only</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">CSV Export<br/>Only</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-rose-400">No Re-Import</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">JSON Export</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-slate-400 leading-snug">Advisor<br/>Controlled</td>
+                  <td className="px-2.5 py-3.5 sm:px-3 text-center text-emerald-400">Local File</td>
                 </tr>
               </tbody>
             </table>
