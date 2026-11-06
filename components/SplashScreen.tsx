@@ -1,183 +1,198 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import React, { useState } from 'react';
 
 interface SplashScreenProps {
-  onLoadDummyData: () => void;
-  onStartBlankPlan: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onLoadSampleData?: () => void;
+  onStartBlankPlan?: () => void;
+  onOpenFeedback?: () => void;
 }
 
-export default function SplashScreen({ onLoadDummyData, onStartBlankPlan }: SplashScreenProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [neverShowAgain, setNeverShowAgain] = useState(false);
+export default function SplashScreen({
+  isOpen,
+  onClose,
+  onLoadSampleData,
+  onStartBlankPlan,
+  onOpenFeedback,
+}: SplashScreenProps) {
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  useEffect(() => {
-    // 1. Check if the user has permanently opted out of the splash screen
-    const skipPermanently = localStorage.getItem("neverShowSplash") === "true";
-    if (skipPermanently) {
-      setIsVisible(false);
-      return;
+  if (!isOpen) return null;
+
+  const handleDismiss = (actionCallback?: () => void) => {
+    if (dontShowAgain) {
+      try {
+        localStorage.setItem('has_seen_splash', 'true');
+      } catch (e) {
+        console.error('Failed to save splash preference', e);
+      }
     }
-
-    // 2. Otherwise, check standard session/version visit status
-    const hasSeenSplash = localStorage.getItem("hasSeenSplash");
-    if (!hasSeenSplash) {
-      setIsVisible(true);
+    if (actionCallback) {
+      actionCallback();
     }
-  }, []);
-
-  const savePreferences = () => {
-    if (neverShowAgain) {
-      localStorage.setItem("neverShowSplash", "true");
-    } else {
-      localStorage.setItem("hasSeenSplash", "true");
-    }
+    onClose();
   };
-
-  const handleDismiss = () => {
-    savePreferences();
-    setIsVisible(false);
-  };
-
-  const handleStartBlankClick = () => {
-    savePreferences();
-    setIsVisible(false);
-    onStartBlankPlan(); 
-  };
-
-  const handleDummyDataClick = () => {
-    savePreferences();
-    setIsVisible(false);
-    onLoadDummyData(); 
-  };
-
-  if (!isVisible) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "rgba(0, 0, 0, 0.75)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem"
-      }}
+    <div 
+      className="modal fade show d-block" 
+      tabIndex={-1} 
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(5px)', zIndex: 1060 }}
     >
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          color: "#212529",
-          maxWidth: "550px",
-          width: "100%",
-          padding: "2.5rem",
-          borderRadius: "16px",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-          textAlign: "center",
-          maxHeight: "90vh",
-          overflowY: "auto"
-        }}
-      >
-        
-        {/* BRAND HEADER: Icon + Planfolio */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="#0d6efd" 
-            strokeWidth="2.5" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            style={{ width: "48px", height: "48px" }}
-          >
-            {/* The Bottom/Back Layer */}
-            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-            {/* The Top/Front Layer */}
-            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-          </svg>
-          <h2 style={{ fontSize: "2.25rem", fontWeight: "bold", margin: 0, letterSpacing: "-0.02em" }}>
-            Planfolio
-          </h2>
-        </div>
-        
-        <div style={{ display: "inline-block", backgroundColor: "#e9ecef", color: "#495057", padding: "0.25rem 0.75rem", borderRadius: "50px", fontSize: "0.85rem", fontWeight: "600", marginBottom: "1.25rem" }}>
-          🔒 Local Data Only - Your data never leaves your browser
-        </div>
-
-        {/* WORK IN PROGRESS / BUG WARNING */}
-        <div style={{ display: "flex", alignItems: "flex-start", backgroundColor: "#f8d7da", color: "#842029", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #f5c2c7", marginBottom: "1rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
-          <i className="bi bi-tools text-danger fs-5 me-3" style={{ lineHeight: 1, marginTop: "0.1rem" }}></i>
-          <div>
-            <strong>Work in Progress:</strong> This tool is in active development. You may encounter bugs, calculation adjustments, or unexpected behavior as we continue to build it.
-          </div>
-        </div>
-
-        {/* DESKTOP OPTIMIZATION WARNING */}
-        <div style={{ display: "flex", alignItems: "flex-start", backgroundColor: "#fff3cd", color: "#664d03", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #ffecb5", marginBottom: "1rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
-          <i className="bi bi-display text-warning fs-5 me-3" style={{ lineHeight: 1, marginTop: "0.1rem" }}></i>
-          <div>
-            <strong>Desktop Recommended:</strong> This tool features complex data tables and interactive charts that are optimized for larger screens. <strong>Mobile viewing is not supported.</strong>
-          </div>
-        </div>
-        
-        {/* DISCLAIMER CARD */}
-        <div style={{ display: "flex", alignItems: "flex-start", backgroundColor: "#f8f9fa", color: "#495057", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #dee2e6", marginBottom: "1.5rem", fontSize: "0.85rem", textAlign: "left", lineHeight: "1.5" }}>
-          <i className="bi bi-info-circle-fill text-secondary fs-5 me-3" style={{ lineHeight: 1, marginTop: "0.1rem" }}></i>
-          <div>
-            <strong>Disclaimer:</strong> This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions. For support, feedback, or inquiries, contact <a href="mailto:retirementplannerpro@gmail.com" style={{ color: "#0d6efd", textDecoration: "none", fontWeight: "600" }}>retirementplannerpro@gmail.com</a>.
-          </div>
-        </div>
-
-        {/* NEVER SHOW AGAIN CHECKBOX */}
-        <div className="form-check d-flex justify-content-center align-items-center mb-3">
-          <input 
-            className="form-check-input me-2 mt-0" 
-            type="checkbox" 
-            id="neverShowAgain" 
-            checked={neverShowAgain}
-            onChange={(e) => setNeverShowAgain(e.target.checked)}
-            style={{ cursor: "pointer" }}
-          />
-          <label className="form-check-label text-secondary" htmlFor="neverShowAgain" style={{ cursor: "pointer", fontSize: "0.9rem", userSelect: "none" }}>
-            Never show this screen again
-          </label>
-        </div>
-
-        {/* SIDE-BY-SIDE BUTTONS (3-COL) */}
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+      <div className="modal-dialog modal-dialog-centered modal-lg">
+        <div className="modal-content surface-card border border-secondary shadow-2xl rounded-4 overflow-hidden">
           
-          <button
-            onClick={handleDismiss}
-            className="btn btn-success d-flex align-items-center justify-content-center px-2"
-            style={{ flex: 1, padding: "0.75rem 0", fontSize: "0.9rem", borderRadius: "8px", fontWeight: "600" }}
-            title="Continue with your currently saved browser data"
-          >
-            <i className="bi bi-arrow-right-circle me-1 fs-5"></i> Continue
-          </button>
+          {/* HEADER WITH MATCHING SITE BRAND LOGO */}
+          <div className="modal-header border-bottom border-secondary px-4 py-3 d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-2.5">
+              {/* Site-matching Logo Badge */}
+              <div 
+                className="d-flex align-items-center justify-content-center text-white shadow-sm" 
+                style={{ 
+                  width: '36px', 
+                  height: '36px', 
+                  borderRadius: '10px', 
+                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                }}
+              >
+                <i className="bi bi-graph-up-arrow" style={{ fontSize: '1.05rem' }}></i>
+              </div>
+              <span className="fw-bold text-main" style={{ fontSize: '1.35rem', letterSpacing: '-0.02em', fontWeight: 800 }}>
+                Planfolio
+              </span>
+            </div>
 
-          <button
-            onClick={handleStartBlankClick}
-            className="btn btn-primary d-flex align-items-center justify-content-center px-2"
-            style={{ flex: 1, padding: "0.75rem 0", fontSize: "0.9rem", borderRadius: "8px", fontWeight: "600" }}
-            title="Clear all data and start a new blank plan"
-          >
-            <i className="bi bi-file-earmark-plus me-1 fs-5"></i> Blank Plan
-          </button>
-          
-          <button
-            onClick={handleDummyDataClick}
-            className="btn btn-outline-secondary d-flex align-items-center justify-content-center px-2"
-            style={{ flex: 1, padding: "0.75rem 0", fontSize: "0.9rem", borderRadius: "8px", fontWeight: "600" }}
-            title="Load the app with fake demo data"
-          >
-            <i className="bi bi-people me-1 fs-5"></i> Sample Data
-          </button>
+            {/* Local-first Privacy Badge */}
+            <span 
+              className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold d-flex align-items-center"
+              style={{ fontSize: '0.78rem', letterSpacing: '0.2px' }}
+            >
+              <i className="bi bi-shield-lock-fill me-1.5"></i>
+              Local Data Only — Your data never leaves your browser
+            </span>
+          </div>
+
+          {/* BODY */}
+          <div className="modal-body p-4">
+            
+            {/* 1. WORK IN PROGRESS CALLOUT */}
+            <div 
+              className="p-3 rounded-3 mb-3 border border-danger border-opacity-25 d-flex align-items-start gap-3" 
+              style={{ backgroundColor: 'rgba(220, 53, 69, 0.08)' }}
+            >
+              <div 
+                className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                style={{ width: '32px', height: '32px', backgroundColor: 'rgba(220, 53, 69, 0.15)' }}
+              >
+                <i className="bi bi-scissors text-danger fs-5"></i>
+              </div>
+              <div>
+                <h6 className="fw-bold text-danger mb-1" style={{ fontSize: '0.92rem' }}>
+                  Work in Progress
+                </h6>
+                <p className="text-muted small mb-0" style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
+                  This tool is in active development. You may encounter bugs, calculation adjustments, or unexpected behavior as we continue to build it.
+                </p>
+              </div>
+            </div>
+
+            {/* 2. DESKTOP RECOMMENDED CALLOUT */}
+            <div 
+              className="p-3 rounded-3 mb-3 border border-warning border-opacity-25 d-flex align-items-start gap-3" 
+              style={{ backgroundColor: 'rgba(255, 193, 7, 0.08)' }}
+            >
+              <div 
+                className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                style={{ width: '32px', height: '32px', backgroundColor: 'rgba(255, 193, 7, 0.15)' }}
+              >
+                <i className="bi bi-display text-warning fs-5"></i>
+              </div>
+              <div>
+                <h6 className="fw-bold text-warning mb-1" style={{ fontSize: '0.92rem' }}>
+                  Desktop Recommended
+                </h6>
+                <p className="text-muted small mb-0" style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
+                  This tool features complex data tables and interactive charts that are optimized for larger screens. Mobile viewing is not supported.
+                </p>
+              </div>
+            </div>
+
+            {/* 3. DISCLAIMER CALLOUT (UPDATED TO USE FEEDBACK BUTTON) */}
+            <div 
+              className="p-3 rounded-3 mb-3 border border-secondary border-opacity-25 d-flex align-items-start gap-3" 
+              style={{ backgroundColor: 'rgba(108, 117, 125, 0.08)' }}
+            >
+              <div 
+                className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                style={{ width: '32px', height: '32px', backgroundColor: 'rgba(13, 202, 240, 0.15)' }}
+              >
+                <i className="bi bi-info-circle text-info fs-5"></i>
+              </div>
+              <div>
+                <h6 className="fw-bold text-main mb-1" style={{ fontSize: '0.92rem' }}>
+                  Disclaimer & Support
+                </h6>
+                <p className="text-muted small mb-0" style={{ fontSize: '0.85rem', lineHeight: 1.55 }}>
+                  This tool is for educational and informational purposes only and does not constitute professional financial, tax, or legal advice. Projections are based on estimated assumptions and historical data. Always consult with a Certified Financial Planner (CFP) or tax professional before making financial decisions. For support, questions, or bug reports, please use the{' '}
+                  <button 
+                    type="button" 
+                    className="btn btn-link p-0 text-primary fw-bold text-decoration-underline align-baseline"
+                    style={{ fontSize: 'inherit' }}
+                    onClick={() => {
+                      onClose();
+                      if (onOpenFeedback) onOpenFeedback();
+                    }}
+                  >
+                    Send Feedback
+                  </button>{' '}
+                  button in the bottom right corner of the screen.
+                </p>
+              </div>
+            </div>
+
+            {/* NEVER SHOW AGAIN CHECKBOX */}
+            <div className="form-check mt-3 mb-2 ps-4">
+              <input 
+                className="form-check-input cursor-pointer shadow-none" 
+                type="checkbox" 
+                id="dontShowSplashAgain" 
+                checked={dontShowAgain} 
+                onChange={(e) => setDontShowAgain(e.target.checked)} 
+              />
+              <label className="form-check-label small text-muted cursor-pointer user-select-none" htmlFor="dontShowSplashAgain">
+                Never show this screen again
+              </label>
+            </div>
+
+          </div>
+
+          {/* FOOTER ACTIONS */}
+          <div className="modal-footer border-top border-secondary px-4 py-3 bg-input d-flex justify-content-end gap-2">
+            <button 
+              type="button" 
+              className="btn btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center shadow-sm"
+              onClick={() => handleDismiss(onLoadSampleData)}
+            >
+              <i className="bi bi-people-fill me-2 text-info"></i> Sample Data
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center shadow-sm"
+              onClick={() => handleDismiss(onStartBlankPlan)}
+            >
+              <i className="bi bi-file-earmark-plus me-2"></i> Blank Plan
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-success rounded-pill px-4 py-1.5 fw-bold d-flex align-items-center shadow"
+              onClick={() => handleDismiss()}
+            >
+              Continue <i className="bi bi-arrow-right ms-2"></i>
+            </button>
+          </div>
 
         </div>
       </div>
