@@ -4,6 +4,7 @@ import { useFinance } from '../lib/FinanceContext';
 import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { InfoBtn } from './SharedUI';
+import ExecutiveReportModal from './ExecutiveReportModal';
 
 function ScoreCard({ title, score, max, tooltip, align = 'left' }: { title: string, score: number, max: number, tooltip?: string, align?: 'center'|'right'|'left' }) {
   const pct = Math.min(100, Math.max(0, (score / max) * 100));
@@ -45,6 +46,7 @@ export default function DashboardTab() {
   const [imgurModalOpen, setImgurModalOpen] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState('');
   const [lastUploadedHash, setLastUploadedHash] = useState('');
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   // Fingerprint the current plan data so we know if anything changed since the last Imgur upload
   const currentPlanHash = useMemo(() => {
@@ -525,6 +527,15 @@ export default function DashboardTab() {
           </h5>
           
           <div className="d-flex flex-wrap gap-2" data-html2canvas-ignore>
+              <button 
+                  className="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
+                  onClick={() => setReportModalOpen(true)}
+                  disabled={isExporting || isUploadingImgur}
+                  title="Generate multi-page executive PDF report"
+              >
+                  <i className="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>
+                  Download PDF Report
+              </button>
               <button 
                   className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center transition-all" 
                   onClick={handleCopyToClipboard}
@@ -1093,6 +1104,12 @@ export default function DashboardTab() {
         </div>,
         document.body
       )}
+
+      {/* EXECUTIVE PDF REPORT MODAL */}
+      <ExecutiveReportModal 
+        isOpen={reportModalOpen} 
+        onClose={() => setReportModalOpen(false)} 
+      />
 
     </div>
   );
