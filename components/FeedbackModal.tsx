@@ -1,20 +1,92 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type FeedbackCategory = 'bug' | 'idea' | 'calculation' | 'general';
+
+interface CategoryOption {
+  id: FeedbackCategory;
+  label: string;
+  icon: string;
+}
+
+const CATEGORIES: CategoryOption[] = [
+  { id: 'bug', label: 'Bug Report', icon: 'bi-bug-fill' },
+  { id: 'idea', label: 'Feature Idea', icon: 'bi-lightbulb-fill' },
+  { id: 'calculation', label: 'Calculation / Tax', icon: 'bi-calculator-fill' },
+  { id: 'general', label: 'General', icon: 'bi-chat-dots-fill' },
+];
+
 export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
+  const [category, setCategory] = useState<FeedbackCategory>('bug');
   const [feedback, setFeedback] = useState('');
   const [email, setEmail] = useState('');
+  const [screenshot, setScreenshot] = useState<{ name: string; base64: string; preview: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle Clipboard Paste (Ctrl+V / Cmd+V)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) {
+            processImageFile(file);
+            e.preventDefault();
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const processImageFile = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Image is too large. Please select an image under 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result) {
+        const base64Data = result.split(',')[1] || result;
+        setScreenshot({
+          name: file.name || 'clipboard-screenshot.png',
+          base64: base64Data,
+          preview: result,
+        });
+        setErrorMessage(null);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +98,28 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const metadata = {
+      category,
+      url: typeof window !== 'undefined' ? window.location.href : '',
+      viewport: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight} (${window.devicePixelRatio}x)` : 'unknown',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      language: typeof navigator !== 'undefined' ? navigator.language : 'en',
+      timestamp: new Date().toLocaleString('en-CA', { timeZoneName: 'short' }),
+    };
+
     try {
-      // Connects directly to your existing Resend route at /api/auth/feedback
       const res = await fetch('/api/auth/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          category,
           message: feedback.trim(),
           email: email.trim() ? email.trim() : undefined,
+          metadata,
+          screenshot: screenshot ? {
+            filename: screenshot.name,
+            content: screenshot.base64,
+          } : undefined,
         }),
       });
 
@@ -48,6 +134,8 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         setSubmitSuccess(false);
         setFeedback('');
         setEmail('');
+        setScreenshot(null);
+        setCategory('bug');
         onClose();
       }, 1800);
     } catch (err: any) {
@@ -84,7 +172,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         className="modal-dialog modal-dialog-centered modal-md"
         style={{
           width: '100%',
-          maxWidth: '540px',
+          maxWidth: '560px',
           margin: 'auto',
           position: 'relative',
           zIndex: 10001,
@@ -92,7 +180,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       >
         <div className="modal-content surface-card border border-secondary shadow-2xl rounded-4 overflow-hidden">
           
-          {/* MODAL HEADER */}
+          {/* HEADER */}
           <div className="modal-header border-bottom border-secondary px-4 py-3 d-flex align-items-center justify-content-between">
             <h6 className="modal-title fw-bold text-main d-flex align-items-center m-0" style={{ letterSpacing: '0.5px' }}>
               <i className="bi bi-chat-heart-fill text-primary me-2 fs-5"></i>
@@ -120,20 +208,66 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   </div>
                   <h5 className="fw-bold text-main mb-1">Thank You!</h5>
                   <p className="text-muted small mb-0">
-                    Your feedback has been sent directly to our team.
+                    Your feedback and diagnostic details were sent directly to Donald.
                   </p>
                 </div>
               ) : (
                 <>
-                  {/* FEEDBACK TEXTAREA */}
+                  {/* CATEGORY SELECTOR */}
                   <div className="mb-3">
-                    <label className="form-label small fw-bold text-main mb-1.5">
-                      Your Feedback or Bug Report <span className="text-danger">*</span>
+                    <label className="form-label small fw-bold text-main mb-1.5 d-block">
+                      What type of feedback is this?
                     </label>
+                    <div className="d-flex flex-wrap gap-1.5">
+                      {CATEGORIES.map((cat) => {
+                        const isSelected = category === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setCategory(cat.id)}
+                            className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 transition-all ${
+                              isSelected 
+                                ? 'btn-primary text-white shadow-sm' 
+                                : 'btn-outline-secondary border-secondary bg-input text-muted'
+                            }`}
+                            style={{ fontSize: '0.8rem' }}
+                          >
+                            <i className={`bi ${cat.icon} ${isSelected ? 'text-white' : 'opacity-75'}`}></i>
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* FEEDBACK TEXT */}
+                  <div className="mb-3">
+                    <div className="d-flex align-items-center justify-content-between mb-1.5">
+                      <label className="form-label small fw-bold text-main m-0">
+                        {category === 'bug' && 'What went wrong?'}
+                        {category === 'idea' && 'What feature would you love to see?'}
+                        {category === 'calculation' && 'What numbers or tax calculation look off?'}
+                        {category === 'general' && 'Your Thoughts or Feedback'}
+                        <span className="text-danger ms-1">*</span>
+                      </label>
+                      <span className="text-muted small" style={{ fontSize: '0.72rem' }}>
+                        Paste screenshot anywhere (Ctrl+V)
+                      </span>
+                    </div>
+
                     <textarea
                       className="form-control bg-input border-secondary text-main rounded-3 shadow-none"
                       rows={4}
-                      placeholder="Found a bug? Have a feature request? Let us know..."
+                      placeholder={
+                        category === 'bug'
+                          ? 'Describe what happened, or steps to reproduce...'
+                          : category === 'idea'
+                          ? 'Describe the feature, tool, or option you want added...'
+                          : category === 'calculation'
+                          ? 'Explain the expected vs actual result, province, or accounts...'
+                          : 'Found a bug? Have a feature request? Let us know...'
+                      }
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       required
@@ -142,7 +276,61 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     ></textarea>
                   </div>
 
-                  {/* OPTIONAL EMAIL FIELD */}
+                  {/* SCREENSHOT PREVIEW / ATTACH BUTTON */}
+                  <div className="mb-3">
+                    {screenshot ? (
+                      <div className="p-2 rounded-3 border border-secondary bg-input d-flex align-items-center justify-content-between gap-2 fade-in">
+                        <div className="d-flex align-items-center gap-2 overflow-hidden">
+                          <img 
+                            src={screenshot.preview} 
+                            alt="Screenshot Preview" 
+                            className="rounded border border-secondary"
+                            style={{ width: '48px', height: '36px', objectFit: 'cover' }}
+                          />
+                          <div className="text-truncate">
+                            <div className="small fw-semibold text-main text-truncate" style={{ fontSize: '0.8rem' }}>
+                              {screenshot.name}
+                            </div>
+                            <div className="text-success small" style={{ fontSize: '0.72rem' }}>
+                              <i className="bi bi-check2 me-1"></i>Attached via clipboard / file
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link text-danger p-1 text-decoration-none"
+                          onClick={() => setScreenshot(null)}
+                          title="Remove screenshot"
+                        >
+                          <i className="bi bi-trash3 fs-6"></i>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="d-flex align-items-center justify-content-between">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link text-primary p-0 text-decoration-none d-inline-flex align-items-center gap-1.5"
+                          style={{ fontSize: '0.78rem' }}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <i className="bi bi-paperclip fs-6"></i> Attach screenshot or image
+                        </button>
+                        <span className="text-muted small" style={{ fontSize: '0.72rem' }}>
+                          or press <kbd style={{ fontSize: '0.7rem' }}>Ctrl+V</kbd> to paste
+                        </span>
+                      </div>
+                    )}
+
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileChange} 
+                      accept="image/*" 
+                      className="d-none" 
+                    />
+                  </div>
+
+                  {/* OPTIONAL EMAIL */}
                   <div className="mb-2">
                     <div className="d-flex align-items-center justify-content-between mb-1.5">
                       <label className="form-label small fw-bold text-main m-0">
@@ -165,7 +353,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     <div className="form-text small text-muted mt-1.5 d-flex align-items-start gap-1.5" style={{ fontSize: '0.78rem' }}>
                       <i className="bi bi-info-circle text-info mt-0.5"></i>
                       <span>
-                        If you would like a reply, leave your email above. Otherwise, you can leave it blank to submit anonymously.
+                        If you would like a reply, leave your email above. Otherwise, feel free to submit anonymously.
                       </span>
                     </div>
                   </div>
