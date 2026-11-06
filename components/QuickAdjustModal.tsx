@@ -16,6 +16,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
   const cardRef = useRef<HTMLDivElement>(null);
   const isCouple = data.mode === 'Couple';
 
+  // Snapshot initial baseline values when modal opens so user can "Revert"
   const [baseline, setBaseline] = useState<Record<string, any>>({});
   const [hasTweaks, setHasTweaks] = useState(false);
 
@@ -32,6 +33,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
     }
   }, [isOpen]);
 
+  // Track if current inputs differ from baseline snapshot
   useEffect(() => {
     if (!isOpen || !baseline.p1_retireAge) return;
     const changed = 
@@ -79,6 +81,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
     const p1RetAge = Number(data.inputs?.p1_retireAge) || 65;
     const inflation = (data.inputs?.inflation_rate !== undefined && data.inputs?.inflation_rate !== '' ? Number(data.inputs.inflation_rate) : 2.1) / 100;
     
+    // Check if user toggled "Today's $" in GlobalHeader
     const useRealDollars = Boolean(
       data.useRealDollars === true || 
       data.inputs?.todays_dollars === true || 
@@ -104,6 +107,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
     }
 
     const liquidAtRet = retItem ? getReal(retItem.liquidNW || 0, retItem.year) : 0;
+    // Includes real estate equity just like PlanTab
     const finalEstate = finalItem ? getReal((finalItem.liquidNW || 0) + (finalItem.reIncludedEq || 0), finalItem.year) : 0;
 
     const formatShort = (val: number) => {
@@ -244,7 +248,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
       </div>
 
       <div className="p-3">
-        {/* 2. LIVE IMPACT SCORECARD */}
+        {/* 2. LIVE IMPACT SCORECARD (MATCHES THE BOTTOM READINESS ISLAND EXACTLY) */}
         {liveStats && (
           <div 
             className="p-2.5 rounded-3 mb-3 border border-secondary border-opacity-50"
@@ -255,6 +259,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
             }}
           >
             <div className="d-flex justify-content-between align-items-center">
+              {/* Funded Status */}
               <div>
                 <div className="text-muted text-uppercase fw-bold d-flex align-items-center gap-1" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>
                   <span>Health</span>
@@ -281,6 +286,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
                 </div>
               </div>
 
+              {/* Estate & Liquid at Ret */}
               <div className="text-end">
                 <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>
                   Estate
@@ -293,13 +299,14 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
           </div>
         )}
 
-        {/* 3. RETIREMENT TIMING */}
+        {/* 3. RETIREMENT TIMING SECTION */}
         <div className="mb-3">
           <div className="text-muted text-uppercase fw-bold mb-1.5" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>
             Retirement Timing
           </div>
 
           <div className="d-flex flex-column gap-2">
+            {/* P1 Retire Age */}
             <div className="d-flex justify-content-between align-items-center gap-2 bg-input p-2 rounded-3 border border-secondary border-opacity-40">
               <span className="fw-semibold text-main text-nowrap" style={{ fontSize: '0.78rem' }}>
                 {data.inputs.p1_name || 'Player 1'} Age
@@ -314,6 +321,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
               </div>
             </div>
 
+            {/* P2 Retire Age (If Couple) */}
             {isCouple && (
               <div className="d-flex justify-content-between align-items-center gap-2 bg-input p-2 rounded-3 border border-secondary border-opacity-40">
                 <span className="fw-semibold text-main text-nowrap" style={{ fontSize: '0.78rem' }}>
@@ -331,6 +339,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
               </div>
             )}
 
+            {/* Retire at Same Time Switch */}
             {isCouple && (
               <div className="form-check form-switch mb-0 d-flex align-items-center justify-content-between px-1 py-1">
                 <label 
@@ -360,7 +369,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
           </div>
 
           <div className="d-flex flex-column gap-2">
-            {/* Non-overlapping Inflation Stepper */}
+            {/* Inflation Rate (Non-overlapping Stepper Control) */}
             <div className="d-flex justify-content-between align-items-center gap-2 bg-input p-2 rounded-3 border border-secondary border-opacity-40">
               <span className="fw-semibold text-main text-nowrap" style={{ fontSize: '0.78rem' }}>
                 Inflation Rate
@@ -400,11 +409,12 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
                 <span className="fw-semibold text-main" style={{ fontSize: '0.75rem' }}>
                   Return Rate (TFSA/RRSP)
                 </span>
-                <span className="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 rounded-pill px-2" style={{ fontSize: '0.72rem' }}>
+                <span className="fw-bolder text-info px-2.5 py-0.5 rounded-pill border border-info border-opacity-25 shadow-sm" style={{ fontSize: '0.78rem', backgroundColor: 'rgba(13, 202, 240, 0.12)' }}>
                   {currentReturnRate.toFixed(1)}%
                 </span>
               </div>
 
+              {/* 3 Quick Presets */}
               <div className="d-flex gap-1">
                 {[
                   { label: 'Cons (4.5%)', val: 4.5 },
@@ -433,6 +443,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
           </div>
         </div>
 
+        {/* HELPER HINT */}
         <div className="text-center mt-2.5">
           <span className="text-muted small" style={{ fontSize: '0.68rem' }}>
             <i className="bi bi-info-circle me-1"></i> Changes update all charts and tables in real time.
