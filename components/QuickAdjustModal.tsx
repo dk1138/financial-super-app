@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useFinance } from '../lib/FinanceContext';
-import { StepperInput, PercentInput } from './SharedUI';
+import { StepperInput } from './SharedUI';
 
 interface QuickAdjustModalProps {
   isOpen: boolean;
@@ -16,7 +16,6 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
   const cardRef = useRef<HTMLDivElement>(null);
   const isCouple = data.mode === 'Couple';
 
-  // Snapshot initial baseline values when modal opens so user can "Revert"
   const [baseline, setBaseline] = useState<Record<string, any>>({});
   const [hasTweaks, setHasTweaks] = useState(false);
 
@@ -33,7 +32,6 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
     }
   }, [isOpen]);
 
-  // Track if current inputs differ from baseline snapshot
   useEffect(() => {
     if (!isOpen || !baseline.p1_retireAge) return;
     const changed = 
@@ -72,43 +70,60 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
     };
   }, [isOpen, onClose]);
 
-  // 1. Calculate Live "What-If" Status HUD from results
-  const liveHUD = useMemo(() => {
-    const timeline = results?.timeline || [];
-    if (!timeline || timeline.length === 0) {
-      return { isFullyFunded: true, fundedAge: 95, estateValue: '$0', rawEstate: 0 };
-    }
+  // EXACT MATH MATCHING PLANNER'S BOTTOM READINESS ISLAND (PlanTab.tsx)
+  const liveStats = useMemo(() => {
+    if (!results || !results.timeline || results.timeline.length === 0) return null;
 
-    const p1Ret = data.inputs.p1_retireAge ?? 60;
-    const shortfallYear = timeline.find(
-      (y: any) => y.p1Age >= p1Ret && (y.liquidNW <= 0 || (y.shortfall && y.shortfall > 0))
+    const timeline = results.timeline;
+    const baseYear = timeline[0]?.year || new Date().getFullYear();
+    const p1RetAge = Number(data.inputs?.p1_retireAge) || 65;
+    const inflation = (data.inputs?.inflation_rate !== undefined && data.inputs?.inflation_rate !== '' ? Number(data.inputs.inflation_rate) : 2.1) / 100;
+    
+    const useRealDollars = Boolean(
+      data.useRealDollars === true || 
+      data.inputs?.todays_dollars === true || 
+      data.inputs?.use_real_dollars === true ||
+      data.inputs?.useRealDollars === true
     );
 
-    const lastYear = timeline[timeline.length - 1];
-    const rawEstate = lastYear?.netWorth ?? lastYear?.liquidNW ?? 0;
-    const formattedEstate = new Intl.NumberFormat('en-CA', {
-      style: 'currency',
-      currency: 'CAD',
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(rawEstate);
+    const getReal = (val: number, year: number) => {
+      if (!useRealDollars) return val;
+      const yearsOut = Math.max(0, year - baseYear);
+      return val / Math.pow(1 + inflation, yearsOut);
+    };
 
-    if (shortfallYear) {
-      return {
-        isFullyFunded: false,
-        fundedAge: shortfallYear.p1Age,
-        estateValue: '$0',
-        rawEstate: 0,
-      };
+    const retItem = timeline.find((y: any) => y.p1Age >= p1RetAge) || timeline[0];
+    const finalItem = timeline[timeline.length - 1];
+
+    let failureAge = null;
+    for (const yr of timeline) {
+      if (yr.liquidNW <= 0 && yr.p1Age >= p1RetAge) {
+        failureAge = yr.p1Age;
+        break;
+      }
     }
 
-    return {
-      isFullyFunded: true,
-      fundedAge: lastYear?.p1Age || 95,
-      estateValue: formattedEstate,
-      rawEstate,
+    const liquidAtRet = retItem ? getReal(retItem.liquidNW || 0, retItem.year) : 0;
+    const finalEstate = finalItem ? getReal((finalItem.liquidNW || 0) + (finalItem.reIncludedEq || 0), finalItem.year) : 0;
+
+    const formatShort = (val: number) => {
+      if (Math.abs(val) >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
+      if (Math.abs(val) >= 1000) return `$${(val / 1000).toFixed(0)}k`;
+      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
     };
-  }, [results, data.inputs.p1_retireAge]);
+
+    return {
+      isFullyFunded: failureAge === null,
+      failureAge,
+      liquidAtRet: Math.round(liquidAtRet),
+      finalEstate: Math.round(finalEstate),
+      formattedLiqAtRet: formatShort(liquidAtRet),
+      formattedEstate: formatShort(finalEstate),
+      retAge: p1RetAge,
+      lifeExp: finalItem?.p1Age || 90,
+      useRealDollars
+    };
+  }, [results, data]);
 
   if (!isOpen) return null;
 
@@ -173,6 +188,7 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
   };
 
   const currentReturnRate = data.inputs.p1_tfsa_ret ?? 6.0;
+  const currentInflationRate = Number(data.inputs.inflation_rate) || 2.1;
 
   return (
     <div
@@ -228,58 +244,62 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
       </div>
 
       <div className="p-3">
-        {/* 2. LIVE IMPACT SCORECARD (THE HUD) */}
-        <div 
-          className="p-2.5 rounded-3 mb-3 border border-secondary border-opacity-50"
-          style={{
-            background: liveHUD.isFullyFunded 
-              ? 'linear-gradient(135deg, rgba(25, 135, 84, 0.12), rgba(13, 202, 240, 0.06))' 
-              : 'linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(255, 193, 7, 0.08))',
-          }}
-        >
-          <div className="d-flex justify-content-between align-items-center">
-            {/* Funded Status */}
-            <div>
-              <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>
-                Plan Longevity
-              </div>
-              <div className="d-flex align-items-center gap-1.5 mt-0.5">
-                <span 
-                  className={`rounded-circle ${liveHUD.isFullyFunded ? 'bg-success' : 'bg-danger'}`}
-                  style={{ width: '8px', height: '8px' }}
-                ></span>
-                <span className={`fw-bold ${liveHUD.isFullyFunded ? 'text-success' : 'text-danger'}`} style={{ fontSize: '0.85rem' }}>
-                  {isCalculating ? (
-                    'Recalculating...'
-                  ) : liveHUD.isFullyFunded ? (
-                    `Funded to Age ${liveHUD.fundedAge}+`
-                  ) : (
-                    `Shortfall at Age ${liveHUD.fundedAge}`
+        {/* 2. LIVE IMPACT SCORECARD */}
+        {liveStats && (
+          <div 
+            className="p-2.5 rounded-3 mb-3 border border-secondary border-opacity-50"
+            style={{
+              background: liveStats.isFullyFunded 
+                ? 'linear-gradient(135deg, rgba(25, 135, 84, 0.12), rgba(13, 202, 240, 0.06))' 
+                : 'linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(255, 193, 7, 0.08))',
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <div className="text-muted text-uppercase fw-bold d-flex align-items-center gap-1" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>
+                  <span>Health</span>
+                  {liveStats.useRealDollars && (
+                    <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style={{ fontSize: '0.55rem', padding: '1px 4px' }}>
+                      Today's $
+                    </span>
                   )}
-                </span>
+                </div>
+                <div className="d-flex align-items-center gap-1.5 mt-0.5">
+                  <span 
+                    className={`rounded-circle ${liveStats.isFullyFunded ? 'bg-success' : 'bg-warning'}`}
+                    style={{ width: '8px', height: '8px' }}
+                  ></span>
+                  <span className={`fw-bold ${liveStats.isFullyFunded ? 'text-success' : 'text-warning'}`} style={{ fontSize: '0.82rem' }}>
+                    {isCalculating ? (
+                      'Recalculating...'
+                    ) : liveStats.isFullyFunded ? (
+                      `Fully Funded (to Age ${liveStats.lifeExp})`
+                    ) : (
+                      `Depletes at Age ${liveStats.failureAge}`
+                    )}
+                  </span>
+                </div>
               </div>
-            </div>
 
-            {/* Estate Value */}
-            <div className="text-end">
-              <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>
-                Estate @ 90
-              </div>
-              <div className="fw-bold text-main mt-0.5" style={{ fontSize: '0.88rem' }}>
-                {isCalculating ? '...' : liveHUD.estateValue}
+              <div className="text-end">
+                <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>
+                  Estate
+                </div>
+                <div className="fw-bold text-success mt-0.5" style={{ fontSize: '0.88rem' }}>
+                  {isCalculating ? '...' : liveStats.formattedEstate}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* 3. RETIREMENT TIMING SECTION */}
+        {/* 3. RETIREMENT TIMING */}
         <div className="mb-3">
           <div className="text-muted text-uppercase fw-bold mb-1.5" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>
             Retirement Timing
           </div>
 
           <div className="d-flex flex-column gap-2">
-            {/* P1 Retire Age */}
             <div className="d-flex justify-content-between align-items-center gap-2 bg-input p-2 rounded-3 border border-secondary border-opacity-40">
               <span className="fw-semibold text-main text-nowrap" style={{ fontSize: '0.78rem' }}>
                 {data.inputs.p1_name || 'Player 1'} Age
@@ -294,7 +314,6 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
               </div>
             </div>
 
-            {/* P2 Retire Age (If Couple) */}
             {isCouple && (
               <div className="d-flex justify-content-between align-items-center gap-2 bg-input p-2 rounded-3 border border-secondary border-opacity-40">
                 <span className="fw-semibold text-main text-nowrap" style={{ fontSize: '0.78rem' }}>
@@ -312,7 +331,6 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
               </div>
             )}
 
-            {/* Retire at Same Time Switch */}
             {isCouple && (
               <div className="form-check form-switch mb-0 d-flex align-items-center justify-content-between px-1 py-1">
                 <label 
@@ -342,17 +360,37 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
           </div>
 
           <div className="d-flex flex-column gap-2">
-            {/* Inflation Rate */}
+            {/* Non-overlapping Inflation Stepper */}
             <div className="d-flex justify-content-between align-items-center gap-2 bg-input p-2 rounded-3 border border-secondary border-opacity-40">
               <span className="fw-semibold text-main text-nowrap" style={{ fontSize: '0.78rem' }}>
                 Inflation Rate
               </span>
-              <div style={{ width: '110px' }}>
-                <PercentInput
-                  className="form-control form-control-sm text-end bg-transparent border-0 fw-bold shadow-none text-main p-0"
-                  value={data.inputs.inflation_rate ?? 2.1}
-                  onChange={(val: any) => updateInput('inflation_rate', val)}
-                />
+              
+              <div 
+                className="d-inline-flex align-items-center bg-body border border-secondary rounded-pill p-1 shadow-sm justify-content-between" 
+                style={{ height: '34px', width: '110px' }}
+              >
+                <button 
+                  type="button" 
+                  className="btn btn-sm btn-link text-muted p-0 px-1 d-flex align-items-center text-decoration-none"
+                  onClick={() => updateInput('inflation_rate', Math.max(0, Number((currentInflationRate - 0.1).toFixed(1))))}
+                  title="Decrease inflation 0.1%"
+                >
+                  <i className="bi bi-dash-circle-fill fs-6"></i>
+                </button>
+                <div className="d-flex align-items-center justify-content-center flex-grow-1 text-center">
+                  <span className="fw-bold text-main" style={{ fontSize: '0.82rem' }}>
+                    {currentInflationRate.toFixed(1)}%
+                  </span>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn btn-sm btn-link text-primary p-0 px-1 d-flex align-items-center text-decoration-none"
+                  onClick={() => updateInput('inflation_rate', Math.min(15, Number((currentInflationRate + 0.1).toFixed(1))))}
+                  title="Increase inflation 0.1%"
+                >
+                  <i className="bi bi-plus-circle-fill fs-6"></i>
+                </button>
               </div>
             </div>
 
@@ -367,7 +405,6 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
                 </span>
               </div>
 
-              {/* 3 Quick Presets */}
               <div className="d-flex gap-1">
                 {[
                   { label: 'Cons (4.5%)', val: 4.5 },
@@ -396,7 +433,6 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
           </div>
         </div>
 
-        {/* HELPER HINT */}
         <div className="text-center mt-2.5">
           <span className="text-muted small" style={{ fontSize: '0.68rem' }}>
             <i className="bi bi-info-circle me-1"></i> Changes update all charts and tables in real time.
