@@ -268,22 +268,10 @@ export default function PlannerPage() {
       )}
 
       {/* --- FEEDBACK BUTTON (Right Side, Indigo Pop) --- */}
-      <button 
-          onClick={() => setShowFeedbackModal(true)}
-          className="btn shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all border-0" 
-          style={{ 
-              width: '48px', 
-              height: '48px', 
-              bottom: '30px', 
-              right: '90px', 
-              zIndex: 1050,
-              backgroundColor: '#6366f1', 
-              color: 'white'
-          }} 
-          title="Send Feedback" 
-      >
-          <i className="bi bi-chat-left-dots fs-5"></i>
-      </button>
+      <FeedbackModal 
+        isOpen={showFeedbackModal} 
+        onClose={() => setShowFeedbackModal(false)} 
+        />
 
       {/* --- QUICK ADJUST BUTTON (Bottom Right, Primary Blue) --- */}
       <button 
