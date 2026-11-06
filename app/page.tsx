@@ -785,7 +785,7 @@ export default function LandingPage() {
 
                 <h3 className="text-2xl font-bold text-white mt-4">Full Access Canadian Simulator</h3>
                 <div className="text-5xl font-black text-white my-6">
-                  $0 <span className="text-base font-normal text-slate-400">/ forever free to use</span>
+                  $0 <span className="text-base font-normal text-slate-400">/ free to use during development</span>
                 </div>
                 
                 <p className="text-slate-300 text-sm mb-6 leading-relaxed">
