@@ -51,7 +51,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       }, 1800);
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      // Fallback: If no backend API route is configured yet, still show helpful message
+      // Fallback: If no backend API route is configured yet, still show success
       setSubmitSuccess(true);
       setTimeout(() => {
         setSubmitSuccess(false);
@@ -68,9 +68,34 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     <div 
       className="modal fade show d-block" 
       tabIndex={-1} 
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(4px)', zIndex: 1070 }}
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.65)', 
+        backdropFilter: 'blur(4px)', 
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        overflowY: 'auto',
+      }}
     >
-      <div className="modal-dialog modal-dialog-centered modal-md">
+      <div 
+        className="modal-dialog modal-dialog-centered modal-md"
+        style={{
+          width: '100%',
+          maxWidth: '540px',
+          margin: 'auto',
+          position: 'relative',
+          zIndex: 10001,
+        }}
+      >
         <div className="modal-content surface-card border border-secondary shadow-2xl rounded-4 overflow-hidden">
           
           {/* MODAL HEADER */}
@@ -123,7 +148,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     ></textarea>
                   </div>
 
-                  {/* OPTIONAL EMAIL FIELD WITH CLEAR HELPER NOTE */}
+                  {/* OPTIONAL EMAIL FIELD */}
                   <div className="mb-2">
                     <div className="d-flex align-items-center justify-content-between mb-1.5">
                       <label className="form-label small fw-bold text-main m-0">
@@ -143,7 +168,6 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                       style={{ fontSize: '0.88rem' }}
                     />
                     
-                    {/* Helper text clarifying email is only needed for a reply */}
                     <div className="form-text small text-muted mt-1.5 d-flex align-items-start gap-1.5" style={{ fontSize: '0.78rem' }}>
                       <i className="bi bi-info-circle text-info mt-0.5"></i>
                       <span>
