@@ -352,28 +352,6 @@ export default function GlobalHeader() {
                                 <span className="d-none d-md-inline">Retirement Planner</span>
                                 <span className="d-inline d-md-none">Planner</span>
                             </Link>
-                            
-                            {/* EXPENSE TRACKER (BLOCKED PLACEHOLDER) */}
-                            <span 
-                                className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
-                                style={{ fontSize: '0.85rem', cursor: 'not-allowed', pointerEvents: 'none' }}
-                                title="Coming soon"
-                            >
-                                <i className="bi bi-receipt me-2 d-none d-sm-inline"></i>
-                                <span className="d-none d-md-inline">Expense Tracker</span>
-                                <span className="d-inline d-md-none">Expenses</span>
-                            </span>
-
-                            {/* PORTFOLIO TRACKER (BLOCKED PLACEHOLDER) */}
-                            <span 
-                                className="btn btn-sm rounded-pill border-0 fw-bold px-3 transition-all text-decoration-none text-muted opacity-50" 
-                                style={{ fontSize: '0.85rem', cursor: 'not-allowed', pointerEvents: 'none' }}
-                                title="Coming soon"
-                            >
-                                <i className="bi bi-pie-chart-fill me-2 d-none d-sm-inline"></i>
-                                <span className="d-none d-lg-inline">Portfolio Tracker</span>
-                                <span className="d-inline d-lg-none">Portfolio</span>
-                            </span>
                         </div>
                     </div>
                     
@@ -525,7 +503,7 @@ export default function GlobalHeader() {
                         </a>
 
                         {/* PROFILE */}
-                        {session ? (
+                        {session && (
                             <div className="position-relative cursor-pointer" onClick={() => signOut()} title="Sign Out">
                                 {session.user?.image ? (
                                     <img src={session.user.image} alt="User" className="rounded-circle shadow-sm border border-secondary" width="36" height="36" />
@@ -533,8 +511,6 @@ export default function GlobalHeader() {
                                     <button className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm p-0" style={{ width: '36px', height: '36px' }}><i className="bi bi-person-fill fs-6"></i></button>
                                 )}
                             </div>
-                        ) : (
-                            <button type="button" className="btn btn-outline-secondary rounded-circle bg-input d-flex align-items-center justify-content-center shadow-sm opacity-50 p-0" style={{ width: '36px', height: '36px', cursor: 'not-allowed' }} title="Google Sync coming soon" onClick={(e) => e.preventDefault()}><i className="bi bi-google fs-6"></i></button>
                         )}
                     </div>
                 </div>

@@ -163,8 +163,8 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Link href="/planner" className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 text-decoration-none">
-                    <span>Try Roll-Forward in Data Bank</span>
+                  <Link href="/databank" className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 text-decoration-none">
+                    <span>Explore Data Bank & Roll-Forward</span>
                     <i className="bi bi-arrow-right"></i>
                   </Link>
                 </div>
@@ -259,10 +259,10 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row md:flex-col gap-3 justify-center">
-                  <Link href="/planner" className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-2xl text-center text-sm transition-all text-decoration-none shadow-lg shadow-blue-500/20">
+                  <Link href="/planner?tab=compare" className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-2xl text-center text-sm transition-all text-decoration-none shadow-lg shadow-blue-500/20">
                     Compare Saved Plans
                   </Link>
-                  <Link href="/features" className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-3 px-6 rounded-2xl text-center text-sm transition-all text-decoration-none border border-slate-700">
+                  <Link href="/tools" className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-3 px-6 rounded-2xl text-center text-sm transition-all text-decoration-none border border-slate-700">
                     Explore Tools
                   </Link>
                 </div>

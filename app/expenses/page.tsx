@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { getAllTransactions, initDB, Transaction } from '../../lib/expenseDb';
 
 import ExpenseDashboardTab from '../../components/expenses/ExpenseDashboardTab';
@@ -17,7 +18,17 @@ const DEFAULT_CATEGORIES: Category[] = [
     { name: 'Exclude', color: '#6c757d' }, { name: 'Income', color: '#198754' }
 ];
 
+const DEV_SECRET_PASSCODE = 'plan2026';
+
 export default function ExpenseTrackerPage() {
+    // DEVELOPER ACCESS STATE
+    const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+    const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
+    const [showPasscodePrompt, setShowPasscodePrompt] = useState<boolean>(false);
+    const [passcodeInput, setPasscodeInput] = useState<string>('');
+    const [passcodeError, setPasscodeError] = useState<string | null>(null);
+
+    // EXPENSE TRACKER DATA STATE
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
     const [rules, setRules] = useState<Record<string, string>>({});
@@ -26,7 +37,34 @@ export default function ExpenseTrackerPage() {
     const [workspaces, setWorkspaces] = useState<string[]>(['Personal', 'Konbinii Shop']);
     const [activeWorkspace, setActiveWorkspace] = useState<string>('Personal');
 
+    // 1. Check Developer Authorization
     useEffect(() => {
+        try {
+            // Check localStorage
+            const savedAuth = localStorage.getItem('expenses_dev_access');
+            
+            // Check URL query param e.g. /expenses?dev=plan2026
+            const searchParams = new URLSearchParams(window.location.search);
+            const devQuery = searchParams.get('dev');
+
+            if (savedAuth === 'true' || devQuery === DEV_SECRET_PASSCODE) {
+                localStorage.setItem('expenses_dev_access', 'true');
+                setIsAuthorized(true);
+            } else {
+                setIsAuthorized(false);
+            }
+        } catch (e) {
+            console.error('Error verifying developer access:', e);
+            setIsAuthorized(false);
+        } finally {
+            setCheckingAuth(false);
+        }
+    }, []);
+
+    // 2. Initialize Data ONLY when Authorized
+    useEffect(() => {
+        if (!isAuthorized) return;
+
         initDB();
         loadData();
 
@@ -43,15 +81,41 @@ export default function ExpenseTrackerPage() {
         const handleUpdate = () => loadData();
         window.addEventListener('expensesUpdated', handleUpdate);
         return () => window.removeEventListener('expensesUpdated', handleUpdate);
-    }, []);
+    }, [isAuthorized]);
 
     const loadData = async () => {
         const data = await getAllTransactions();
         setTransactions(data);
     };
 
-    const handleUpdateCategories = (newCategories: Category[]) => { setCategories(newCategories); localStorage.setItem('expense_categories', JSON.stringify(newCategories)); };
-    const handleUpdateRules = (newRules: Record<string, string>) => { setRules(newRules); localStorage.setItem('expense_rules', JSON.stringify(newRules)); };
+    const handleUnlockSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (passcodeInput.trim() === DEV_SECRET_PASSCODE) {
+            localStorage.setItem('expenses_dev_access', 'true');
+            setIsAuthorized(true);
+            setPasscodeError(null);
+            setShowPasscodePrompt(false);
+        } else {
+            setPasscodeError('Incorrect passcode. Please try again.');
+        }
+    };
+
+    const handleLockAgain = () => {
+        localStorage.removeItem('expenses_dev_access');
+        setIsAuthorized(false);
+        setShowPasscodePrompt(false);
+        setPasscodeInput('');
+    };
+
+    const handleUpdateCategories = (newCategories: Category[]) => { 
+        setCategories(newCategories); 
+        localStorage.setItem('expense_categories', JSON.stringify(newCategories)); 
+    };
+    
+    const handleUpdateRules = (newRules: Record<string, string>) => { 
+        setRules(newRules); 
+        localStorage.setItem('expense_rules', JSON.stringify(newRules)); 
+    };
 
     const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(val);
 
@@ -104,6 +168,123 @@ export default function ExpenseTrackerPage() {
         { id: 'reports', label: 'Reports', icon: 'bi-bar-chart-fill' }
     ];
 
+    // While checking authorization state
+    if (checkingAuth) {
+        return (
+            <div className="d-flex align-items-center justify-content-center min-vh-50 py-5">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // PUBLIC VISITOR SCREEN: FEATURE UNDER ACTIVE DEVELOPMENT
+    if (!isAuthorized) {
+        return (
+            <div className="container py-5 my-md-4 fade-in">
+                <div className="row justify-content-center">
+                    <div className="col-12 col-md-8 col-lg-6">
+                        <div className="card surface-card border-secondary shadow-lg rounded-4 text-center p-4 p-md-5">
+                            {/* Icon & Status Pill */}
+                            <div className="mb-4 d-flex flex-column align-items-center">
+                                <div 
+                                    className="d-inline-flex align-items-center justify-content-center mb-3 shadow"
+                                    style={{ 
+                                        width: '68px', 
+                                        height: '68px', 
+                                        borderRadius: '20px', 
+                                        background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(13, 202, 240, 0.15))',
+                                        border: '1px solid rgba(37, 99, 235, 0.3)'
+                                    }}
+                                >
+                                    <i className="bi bi-cone-striped fs-2 text-warning"></i>
+                                </div>
+                                <span className="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-1.5 rounded-pill fw-bold" style={{ fontSize: '0.78rem', letterSpacing: '0.5px' }}>
+                                    UNDER ACTIVE DEVELOPMENT
+                                </span>
+                            </div>
+
+                            {/* Headline & Explanation */}
+                            <h2 className="fw-bold text-main mb-3" style={{ letterSpacing: '-0.02em' }}>
+                                Planfolio Expense Tracker
+                            </h2>
+                            <p className="text-muted mb-4 leading-relaxed" style={{ fontSize: '0.95rem' }}>
+                                We are currently engineering our local-first Canadian expense tracking and cash flow categorization engine. This module is undergoing private internal testing and is not yet open to the public.
+                            </p>
+
+                            {/* Main Navigation Actions */}
+                            <div className="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-4">
+                                <Link 
+                                    href="/planner" 
+                                    className="btn btn-primary rounded-pill fw-bold px-4 py-2 shadow-sm d-flex align-items-center justify-content-center"
+                                >
+                                    <i className="bi bi-graph-up-arrow me-2"></i> Launch Retirement Planner
+                                </Link>
+                                <Link 
+                                    href="/" 
+                                    className="btn btn-outline-secondary rounded-pill fw-semibold px-4 py-2"
+                                >
+                                    Back to Home
+                                </Link>
+                            </div>
+
+                            {/* Secret Developer Passcode Access */}
+                            <div className="border-top border-secondary pt-3 mt-2">
+                                {!showPasscodePrompt ? (
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-link btn-sm text-muted text-decoration-none opacity-50 hover-opacity-100"
+                                        onClick={() => setShowPasscodePrompt(true)}
+                                        style={{ fontSize: '0.75rem' }}
+                                    >
+                                        <i className="bi bi-lock me-1"></i> Developer Access
+                                    </button>
+                                ) : (
+                                    <form onSubmit={handleUnlockSubmit} className="fade-in mt-2">
+                                        <div className="d-flex flex-column align-items-center">
+                                            <div className="d-flex gap-2 w-100 justify-content-center" style={{ maxWidth: '300px' }}>
+                                                <input 
+                                                    type="password"
+                                                    className="form-control form-control-sm bg-input border-secondary text-main rounded-pill px-3 text-center"
+                                                    placeholder="Enter developer passcode..."
+                                                    value={passcodeInput}
+                                                    onChange={(e) => setPasscodeInput(e.target.value)}
+                                                    autoFocus
+                                                />
+                                                <button 
+                                                    type="submit" 
+                                                    className="btn btn-sm btn-primary rounded-pill px-3 fw-bold"
+                                                >
+                                                    Unlock
+                                                </button>
+                                            </div>
+                                            {passcodeError && (
+                                                <div className="text-danger small mt-2 fw-medium">
+                                                    {passcodeError}
+                                                </div>
+                                            )}
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-link btn-sm text-muted p-0 mt-2 text-decoration-none"
+                                                onClick={() => { setShowPasscodePrompt(false); setPasscodeError(null); }}
+                                                style={{ fontSize: '0.72rem' }}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // AUTHORIZED DEVELOPER VIEW
     return (
         <div className="fade-in d-flex flex-column flex-grow-1">
             
@@ -111,7 +292,19 @@ export default function ExpenseTrackerPage() {
                 <div className="d-flex align-items-center gap-2">
                     <i className="bi bi-briefcase-fill text-primary opacity-75"></i>
                     <h6 className="fw-bold mb-0 text-muted d-none d-md-block">Active Workspace:</h6>
+                    
+                    {/* Dev Mode Badge with quick lock ability */}
+                    <button 
+                        type="button" 
+                        onClick={handleLockAgain}
+                        className="btn btn-sm btn-outline-warning rounded-pill py-0 px-2 fw-bold ms-2"
+                        style={{ fontSize: '0.7rem' }}
+                        title="Click to lock page again"
+                    >
+                        <i className="bi bi-unlock-fill me-1"></i> Dev Mode Active (Lock)
+                    </button>
                 </div>
+                
                 <select
                     className="form-select form-select-sm border-secondary bg-input text-main fw-bold shadow-sm rounded-pill px-3"
                     style={{ width: 'auto', cursor: 'pointer' }}
