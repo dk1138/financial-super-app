@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /expenses
+
+Sitemap: https://www.planfolio.ca/sitemap.xml
