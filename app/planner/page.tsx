@@ -135,7 +135,7 @@ export default function PlannerPage() {
         className="container-fluid d-flex flex-column min-vh-100" 
         style={{ paddingLeft: 'clamp(1rem, 8vw, 15rem)', paddingRight: 'clamp(1rem, 8vw, 15rem)' }}
     >
-      <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} />
+      <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} onOpenFeedback={() => setShowFeedbackModal(true)} />
 
       {/* --- STICKY NAVIGATION TABS (KUMO CENTRALIZED) --- */}
       <div className="planner-tabs-bar shadow-sm">
@@ -268,10 +268,40 @@ export default function PlannerPage() {
       )}
 
       {/* --- FEEDBACK BUTTON (Right Side, Indigo Pop) --- */}
+      <button 
+          type="button"
+          className="btn border-0 shadow-lg position-fixed d-flex align-items-center justify-content-center text-white" 
+          style={{ 
+              width: '48px', 
+              height: '48px', 
+              borderRadius: '14px',
+              backgroundColor: '#6265e8',
+              bottom: '30px', 
+              right: '90px', 
+              zIndex: 1050,
+              cursor: 'pointer',
+              boxShadow: '0 6px 18px rgba(98, 101, 232, 0.35)',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          }} 
+          title="Send Feedback" 
+          onClick={() => setShowFeedbackModal(true)}
+          onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 22px rgba(98, 101, 232, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 6px 18px rgba(98, 101, 232, 0.35)';
+          }}
+      >
+          <i className="bi bi-chat-left-dots-fill fs-5"></i>
+      </button>
+
+      {/* --- FEEDBACK MODAL --- */}
       <FeedbackModal 
         isOpen={showFeedbackModal} 
         onClose={() => setShowFeedbackModal(false)} 
-        />
+      />
 
       {/* --- QUICK ADJUST BUTTON (Bottom Right, Primary Blue) --- */}
       <button 
