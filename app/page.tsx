@@ -511,13 +511,14 @@ export default function LandingPage() {
                   <th className="p-4 sm:p-5 font-bold text-left min-w-[170px]">Feature</th>
                   <th className="p-4 sm:p-5 font-black text-center min-w-[170px] bg-blue-600/15 border-x border-blue-500/30 text-white relative">
                     <span className="block text-xs uppercase tracking-widest text-blue-400 font-bold mb-0.5">Recommended</span>
-                    <span className="text-base font-extrabold text-blue-300">Planfolio Canada 🇨🇦</span>
+                    <span className="text-base font-extrabold text-blue-300">Planfolio</span>
                   </th>
+                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">Gilded</th>
                   <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">MayRetire</th>
                   <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">Adviice</th>
                   <th className="p-4 sm:p-5 font-bold text-center min-w-[140px] text-slate-300">ProjectionLab</th>
                   <th className="p-4 sm:p-5 font-bold text-center min-w-[150px] text-slate-300">Snap Projections</th>
-                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">DIY Spreadsheets</th>
+                  <th className="p-4 sm:p-5 font-bold text-center min-w-[130px] text-slate-300">Spreadsheets</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/70 text-slate-300">
@@ -527,6 +528,7 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     Free
                   </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Free (Limited) / $247/yr</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400 font-semibold">Free</td>
                   <td className="p-4 sm:p-5 text-center">$99 – $150+/yr</td>
                   <td className="p-4 sm:p-5 text-center">$108 – $500+/yr</td>
@@ -544,6 +546,7 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
                   <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
                   <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Cloud Sync</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Local File</td>
                 </tr>
 
@@ -553,6 +556,7 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     No Account (Zero Sign-Up)
                   </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-400">Account Required</td>
                   <td className="p-4 sm:p-5 text-center text-slate-400">Account Required</td>
                   <td className="p-4 sm:p-5 text-center text-slate-400">Account Required</td>
                   <td className="p-4 sm:p-5 text-center text-slate-400">Account Required</td>
@@ -568,6 +572,7 @@ export default function LandingPage() {
                   </td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">All 13 Provinces</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">All 13 Provinces</td>
+                  <td className="p-4 sm:p-5 text-center text-emerald-400">All 13 Provinces</td>
                   <td className="p-4 sm:p-5 text-center text-amber-400">Basic Presets (US Focus)</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">All 13 Provinces</td>
                   <td className="p-4 sm:p-5 text-center text-rose-400">Manual Formulas</td>
@@ -579,6 +584,7 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     Supported
                   </td>
+                  <td className="p-4 sm:p-5 text-center text-amber-400">Supported (Premium)</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
                   <td className="p-4 sm:p-5 text-center text-amber-400">Basic Estimates</td>
@@ -593,6 +599,7 @@ export default function LandingPage() {
                     Supported
                   </td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">Not Supported</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Supported</td>
@@ -606,6 +613,7 @@ export default function LandingPage() {
                     Personal Accounts Only
                   </td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">Personal Accounts Only</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">Personal Accounts Only</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Supported (Full CCPC)</td>
                   <td className="p-4 sm:p-5 text-center text-amber-400">Basic</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Supported (Full CCPC)</td>
@@ -618,6 +626,7 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-slate-400">
                     None (100% Self-Directed)
                   </td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">Available (Partner Directory)</td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
@@ -636,6 +645,7 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                 </tr>
 
                 {/* Annual Track Record Calibration */}
@@ -649,6 +659,8 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                   <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
+                  <td className="p-4 sm:p-5 text-center text-slate-500">None</td>
                 </tr>
 
                 {/* Data Backup & Portability */}
@@ -657,6 +669,7 @@ export default function LandingPage() {
                   <td className="p-4 sm:p-5 text-center font-bold bg-blue-600/10 border-x border-blue-500/30 text-emerald-400">
                     1-Click JSON Backup
                   </td>
+                  <td className="p-4 sm:p-5 text-center text-rose-400">Cloud Account Only</td>
                   <td className="p-4 sm:p-5 text-center text-slate-400">CSV Export Only</td>
                   <td className="p-4 sm:p-5 text-center text-rose-400">No Re-Import</td>
                   <td className="p-4 sm:p-5 text-center text-emerald-400">JSON Export</td>
@@ -686,7 +699,7 @@ export default function LandingPage() {
             </div>
 
             <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
-              <div className="text-emerald-400 font-bold text-xs uppercase tracking-wider mb-2">vs. DIY Excel Spreadsheets</div>
+              <div className="text-emerald-400 font-bold text-xs uppercase tracking-wider mb-2">vs. Spreadsheets</div>
               <h3 className="text-base font-bold text-white mb-2">Decades of Modeling in Seconds</h3>
               <p className="text-slate-400 text-xs leading-relaxed mb-0">
                 Stop maintaining broken 40-year spreadsheet macros. Planfolio automates spousal pension income splitting, Monte Carlo stress testing, and real-world statement calibration with zero formula maintenance.
@@ -938,10 +951,10 @@ export default function LandingPage() {
                 "mainEntity": [
                   {
                     "@type": "Question",
-                    "name": "How does Planfolio compare to Adviice, MayRetire, Snap Projections, and ProjectionLab?",
+                    "name": "How does Planfolio compare to Adviice, MayRetire, Gilded, Snap Projections, and ProjectionLab?",
                     "acceptedAnswer": {
                       "@type": "Answer",
-                      "text": "Planfolio is 100% free with zero sign-up required and operates on a strict local-first privacy model where zero bytes of your financial data are stored on remote cloud servers. Unlike Adviice ($99–$150+/year) or Snap Projections ($1,200+/year advisor software), Planfolio provides institutional-grade 2026 CRA tax modeling across all 13 provinces, 20+ standalone financial calculators, and full decumulation planning without subscriptions or account lock-in. Unlike MayRetire, Planfolio includes 20+ free standalone calculators, multi-scenario comparisons, and the signature Annual Data Bank calibration engine. Unlike US-centric tools like ProjectionLab, Planfolio is engineered specifically for Canadian statutory rules, including 50% LIF unlocking, OAS clawback recovery tax, and spousal pension splitting."
+                      "text": "Planfolio is 100% free with zero sign-up required and operates on a strict local-first privacy model where zero bytes of your financial data are stored on remote cloud servers. Unlike Adviice ($99–$150+/year), Gilded ($247/year for full multi-scenario and custom age modeling), or Snap Projections ($1,200+/year advisor software), Planfolio provides institutional-grade 2026 CRA tax modeling across all 13 provinces, 20+ standalone financial calculators, and full decumulation planning without subscriptions or account lock-in. Unlike MayRetire, Planfolio includes 20+ free standalone calculators, multi-scenario comparisons, and the signature Annual Data Bank calibration engine. Unlike US-centric tools like ProjectionLab, Planfolio is engineered specifically for Canadian statutory rules, including 50% LIF unlocking, OAS clawback recovery tax, and spousal pension splitting."
                     }
                   },
                   {
