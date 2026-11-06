@@ -5,20 +5,29 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json();
+    const body = await req.json();
+    const message = body.message || body.feedback;
+    const email = body.email;
 
-    // 1. We ONLY call .send()
-    // 2. We do NOT call .get() or fetch details by ID here
+    if (!message) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    const emailBody = email 
+      ? `User Email: ${email}\n\nFeedback:\n${message}`
+      : `User Email: Anonymous (No email provided)\n\nFeedback:\n${message}`;
+
     const data = await resend.emails.send({
       from: 'Planfolio <onboarding@resend.dev>',
-      to: 'donaldkwok88@gmail.com', // <--- Use your signup email
-      subject: 'New Planfolio Feedback',
-      text: message,
+      to: 'donaldkwok88@gmail.com',
+      replyTo: email && email.trim() ? email.trim() : undefined,
+      subject: email ? `New Planfolio Feedback from ${email}` : 'New Planfolio Feedback (Anonymous)',
+      text: emailBody,
     });
 
-    // This returns the REAL ID created by Resend
     return NextResponse.json({ success: true, id: data.data?.id });
   } catch (error) {
+    console.error('Failed to send email via Resend:', error);
     return NextResponse.json({ error: 'Failed to send' }, { status: 500 });
   }
 }

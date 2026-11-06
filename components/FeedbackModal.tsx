@@ -27,19 +27,20 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/feedback', {
+      // Connects directly to your existing Resend route at /api/auth/feedback
+      const res = await fetch('/api/auth/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          feedback: feedback.trim(),
+          message: feedback.trim(),
           email: email.trim() ? email.trim() : undefined,
-          source: 'Planfolio Retirement Planner',
-          timestamp: new Date().toISOString(),
         }),
       });
 
-      if (!res.ok) {
-        throw new Error('Failed to send feedback');
+      const resData = await res.json().catch(() => ({}));
+
+      if (!res.ok || resData.error) {
+        throw new Error(resData.error || 'Failed to send feedback. Please try again.');
       }
 
       setSubmitSuccess(true);
@@ -49,16 +50,9 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         setEmail('');
         onClose();
       }, 1800);
-    } catch (err) {
-      console.error('Error submitting feedback:', err);
-      // Fallback: If no backend API route is configured yet, still show success
-      setSubmitSuccess(true);
-      setTimeout(() => {
-        setSubmitSuccess(false);
-        setFeedback('');
-        setEmail('');
-        onClose();
-      }, 1800);
+    } catch (err: any) {
+      console.error('Error submitting feedback via Resend:', err);
+      setErrorMessage(err.message || 'Failed to send feedback. Please check your connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +120,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                   </div>
                   <h5 className="fw-bold text-main mb-1">Thank You!</h5>
                   <p className="text-muted small mb-0">
-                    Your feedback has been received and will help improve Planfolio.
+                    Your feedback has been sent directly to our team.
                   </p>
                 </div>
               ) : (
