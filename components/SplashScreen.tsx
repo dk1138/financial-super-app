@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SplashScreenProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  onLoadDummyData?: () => void;
   onLoadSampleData?: () => void;
   onStartBlankPlan?: () => void;
   onOpenFeedback?: () => void;
@@ -13,13 +14,28 @@ interface SplashScreenProps {
 export default function SplashScreen({
   isOpen,
   onClose,
+  onLoadDummyData,
   onLoadSampleData,
   onStartBlankPlan,
   onOpenFeedback,
 }: SplashScreenProps) {
+  const [internalVisible, setInternalVisible] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    try {
+      const hasSeen = localStorage.getItem('has_seen_splash');
+      if (!hasSeen && isOpen === undefined) {
+        setInternalVisible(true);
+      }
+    } catch (e) {
+      console.error('Error reading localStorage for splash screen:', e);
+    }
+  }, [isOpen]);
+
+  const showModal = isOpen !== undefined ? isOpen : internalVisible;
+
+  if (!showModal) return null;
 
   const handleDismiss = (actionCallback?: () => void) => {
     if (dontShowAgain) {
@@ -29,10 +45,28 @@ export default function SplashScreen({
         console.error('Failed to save splash preference', e);
       }
     }
-    if (actionCallback) {
-      actionCallback();
+    setInternalVisible(false);
+    if (onClose) onClose();
+    if (actionCallback) actionCallback();
+  };
+
+  const handleSampleDataClick = () => {
+    const callback = onLoadDummyData || onLoadSampleData;
+    handleDismiss(callback);
+  };
+
+  const handleBlankPlanClick = () => {
+    handleDismiss(onStartBlankPlan);
+  };
+
+  const handleOpenFeedback = () => {
+    setInternalVisible(false);
+    if (onClose) onClose();
+    if (onOpenFeedback) {
+      onOpenFeedback();
+    } else if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('openFeedbackModal'));
     }
-    onClose();
   };
 
   return (
@@ -47,7 +81,6 @@ export default function SplashScreen({
           {/* HEADER WITH MATCHING SITE BRAND LOGO */}
           <div className="modal-header border-bottom border-secondary px-4 py-3 d-flex align-items-center justify-content-between">
             <div className="d-flex align-items-center gap-2.5">
-              {/* Site-matching Logo Badge */}
               <div 
                 className="d-flex align-items-center justify-content-center text-white shadow-sm" 
                 style={{ 
@@ -65,7 +98,6 @@ export default function SplashScreen({
               </span>
             </div>
 
-            {/* Local-first Privacy Badge */}
             <span 
               className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold d-flex align-items-center"
               style={{ fontSize: '0.78rem', letterSpacing: '0.2px' }}
@@ -78,7 +110,7 @@ export default function SplashScreen({
           {/* BODY */}
           <div className="modal-body p-4">
             
-            {/* 1. WORK IN PROGRESS CALLOUT */}
+            {/* WORK IN PROGRESS */}
             <div 
               className="p-3 rounded-3 mb-3 border border-danger border-opacity-25 d-flex align-items-start gap-3" 
               style={{ backgroundColor: 'rgba(220, 53, 69, 0.08)' }}
@@ -99,7 +131,7 @@ export default function SplashScreen({
               </div>
             </div>
 
-            {/* 2. DESKTOP RECOMMENDED CALLOUT */}
+            {/* DESKTOP RECOMMENDED */}
             <div 
               className="p-3 rounded-3 mb-3 border border-warning border-opacity-25 d-flex align-items-start gap-3" 
               style={{ backgroundColor: 'rgba(255, 193, 7, 0.08)' }}
@@ -120,7 +152,7 @@ export default function SplashScreen({
               </div>
             </div>
 
-            {/* 3. DISCLAIMER CALLOUT (UPDATED TO USE FEEDBACK BUTTON) */}
+            {/* DISCLAIMER */}
             <div 
               className="p-3 rounded-3 mb-3 border border-secondary border-opacity-25 d-flex align-items-start gap-3" 
               style={{ backgroundColor: 'rgba(108, 117, 125, 0.08)' }}
@@ -141,10 +173,7 @@ export default function SplashScreen({
                     type="button" 
                     className="btn btn-link p-0 text-primary fw-bold text-decoration-underline align-baseline"
                     style={{ fontSize: 'inherit' }}
-                    onClick={() => {
-                      onClose();
-                      if (onOpenFeedback) onOpenFeedback();
-                    }}
+                    onClick={handleOpenFeedback}
                   >
                     Send Feedback
                   </button>{' '}
@@ -153,7 +182,7 @@ export default function SplashScreen({
               </div>
             </div>
 
-            {/* NEVER SHOW AGAIN CHECKBOX */}
+            {/* CHECKBOX */}
             <div className="form-check mt-3 mb-2 ps-4">
               <input 
                 className="form-check-input cursor-pointer shadow-none" 
@@ -174,14 +203,14 @@ export default function SplashScreen({
             <button 
               type="button" 
               className="btn btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center shadow-sm"
-              onClick={() => handleDismiss(onLoadSampleData)}
+              onClick={handleSampleDataClick}
             >
               <i className="bi bi-people-fill me-2 text-info"></i> Sample Data
             </button>
             <button 
               type="button" 
               className="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center shadow-sm"
-              onClick={() => handleDismiss(onStartBlankPlan)}
+              onClick={handleBlankPlanClick}
             >
               <i className="bi bi-file-earmark-plus me-2"></i> Blank Plan
             </button>
