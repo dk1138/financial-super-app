@@ -16,9 +16,9 @@ interface CategoryOption {
 }
 
 const CATEGORIES: CategoryOption[] = [
-  { id: 'bug', label: 'Bug Report', icon: 'bi-bug-fill' },
-  { id: 'idea', label: 'Feature Idea', icon: 'bi-lightbulb-fill' },
-  { id: 'calculation', label: 'Calculation / Tax', icon: 'bi-calculator-fill' },
+  { id: 'bug', label: 'Bug', icon: 'bi-bug-fill' },
+  { id: 'idea', label: 'Feature', icon: 'bi-lightbulb-fill' },
+  { id: 'calculation', label: 'Calculation', icon: 'bi-calculator-fill' },
   { id: 'general', label: 'General', icon: 'bi-chat-dots-fill' },
 ];
 
@@ -213,12 +213,12 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 </div>
               ) : (
                 <>
-                  {/* CATEGORY SELECTOR */}
+                  {/* 1. CATEGORY PILL SELECTOR (Strictly 1 Row) */}
                   <div className="mb-3">
                     <label className="form-label small fw-bold text-main mb-1.5 d-block">
-                      What type of feedback is this?
+                      Category
                     </label>
-                    <div className="d-flex flex-wrap gap-1.5">
+                    <div className="d-flex align-items-center gap-2 w-100" style={{ flexWrap: 'nowrap' }}>
                       {CATEGORIES.map((cat) => {
                         const isSelected = category === cat.id;
                         return (
@@ -226,12 +226,17 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                             key={cat.id}
                             type="button"
                             onClick={() => setCategory(cat.id)}
-                            className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 transition-all ${
+                            className={`btn btn-sm rounded-pill px-2 py-1.5 fw-semibold d-flex align-items-center justify-content-center gap-1.5 flex-fill transition-all text-nowrap ${
                               isSelected 
                                 ? 'btn-primary text-white shadow-sm' 
-                                : 'btn-outline-secondary border-secondary bg-input text-muted'
+                                : 'btn-outline-secondary border-secondary bg-input text-muted hover-opacity-100'
                             }`}
-                            style={{ fontSize: '0.8rem' }}
+                            style={{ 
+                              fontSize: '0.78rem',
+                              whiteSpace: 'nowrap',
+                              flex: '1 1 0',
+                              minWidth: 0,
+                            }}
                           >
                             <i className={`bi ${cat.icon} ${isSelected ? 'text-white' : 'opacity-75'}`}></i>
                             <span>{cat.label}</span>
@@ -241,7 +246,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     </div>
                   </div>
 
-                  {/* FEEDBACK TEXT */}
+                  {/* 2. FEEDBACK TEXTAREA */}
                   <div className="mb-3">
                     <div className="d-flex align-items-center justify-content-between mb-1.5">
                       <label className="form-label small fw-bold text-main m-0">
@@ -252,7 +257,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                         <span className="text-danger ms-1">*</span>
                       </label>
                       <span className="text-muted small" style={{ fontSize: '0.72rem' }}>
-                        Paste screenshot anywhere (Ctrl+V)
+                        Paste screenshot (Ctrl+V)
                       </span>
                     </div>
 
@@ -276,7 +281,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     ></textarea>
                   </div>
 
-                  {/* SCREENSHOT PREVIEW / ATTACH BUTTON */}
+                  {/* 3. CLIPBOARD SCREENSHOT PREVIEW / ATTACH BUTTON */}
                   <div className="mb-3">
                     {screenshot ? (
                       <div className="p-2 rounded-3 border border-secondary bg-input d-flex align-items-center justify-content-between gap-2 fade-in">
@@ -330,7 +335,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     />
                   </div>
 
-                  {/* OPTIONAL EMAIL */}
+                  {/* 4. OPTIONAL EMAIL FIELD */}
                   <div className="mb-2">
                     <div className="d-flex align-items-center justify-content-between mb-1.5">
                       <label className="form-label small fw-bold text-main m-0">
