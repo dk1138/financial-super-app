@@ -73,9 +73,34 @@ export default function SplashScreen({
     <div 
       className="modal fade show d-block" 
       tabIndex={-1} 
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(5px)', zIndex: 1060 }}
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.75)', 
+        backdropFilter: 'blur(5px)', 
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        overflowY: 'auto',
+      }}
     >
-      <div className="modal-dialog modal-dialog-centered modal-lg">
+      <div 
+        className="modal-dialog modal-dialog-centered modal-lg"
+        style={{
+          width: '100%',
+          maxWidth: '820px',
+          margin: 'auto',
+          position: 'relative',
+          zIndex: 10000,
+        }}
+      >
         <div className="modal-content surface-card border border-secondary shadow-2xl rounded-4 overflow-hidden">
           
           {/* HEADER WITH MATCHING SITE BRAND LOGO */}
