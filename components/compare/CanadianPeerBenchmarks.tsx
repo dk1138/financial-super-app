@@ -278,9 +278,6 @@ export default function CanadianPeerBenchmarks() {
         return `$${val}`;
     };
 
-    const deltaNetWorth = userNetWorth - activeCohortBenchmarks.provNwP50;
-    const deltaPercent = activeCohortBenchmarks.provNwP50 > 0 ? (deltaNetWorth / activeCohortBenchmarks.provNwP50) * 100 : 0;
-
     // Single-year age options from 20 to 80
     const everyYearOptions = useMemo(() => {
         const arr = [];
@@ -419,42 +416,28 @@ export default function CanadianPeerBenchmarks() {
                 </div>
             </div>
 
-            {/* Overall Composite Canadian Score Banner */}
+            {/* Overall Composite Canadian Score Banner (2 Clean Lines) */}
             <div className="rp-card border-secondary rounded-4 p-3 mb-4 shadow-sm" style={{ background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 50%, rgba(139, 92, 246, 0.08) 100%)', border: '1px solid var(--border-color)' }}>
-                <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                    <div className="d-flex align-items-center gap-3">
-                        <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner" style={{ width: '48px', height: '48px', flexShrink: 0 }}>
-                            <i className="bi bi-award-fill fs-4"></i>
-                        </div>
-                        <div>
-                            <div className="d-flex align-items-center gap-2">
-                                <span className="small text-muted fw-bold text-uppercase ls-1">Overall Canadian Benchmark Standing</span>
-                                <span className="badge bg-success text-white fw-bolder px-2 py-0.5 rounded-pill" style={{ fontSize: '0.68rem' }}>
-                                    Score: {activeCohortBenchmarks.overallScore}/100
-                                </span>
-                            </div>
-                            <h5 className="fw-bolder text-main mb-0 mt-0.5">
-                                Top {100 - activeCohortBenchmarks.overallScore}% Overall Nationally
-                                <span className="text-muted fw-normal ms-2 small">
-                                    (Top {100 - activeCohortBenchmarks.nationalNwPercentile}% Wealth · Top {100 - activeCohortBenchmarks.provIncPercentile}% Income in {activeProvince})
-                                </span>
-                            </h5>
-                        </div>
+                <div className="d-flex align-items-center gap-3">
+                    <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner" style={{ width: '46px', height: '46px', flexShrink: 0 }}>
+                        <i className="bi bi-award-fill fs-4"></i>
                     </div>
-                    <div className="d-flex align-items-center gap-2">
-                        <span className="badge bg-input border border-secondary text-main px-3 py-1.5 rounded-pill small shadow-sm">
-                            <i className="bi bi-geo-alt-fill text-primary me-1"></i>
-                            {activeProvince} Standing: <strong>Top {100 - activeCohortBenchmarks.provNwPercentile}%</strong>
-                        </span>
-                        <span className="badge bg-input border border-secondary text-main px-3 py-1.5 rounded-pill small shadow-sm">
-                            <i className="bi bi-shield-check text-success me-1"></i>
-                            Canada Standing: <strong>Top {100 - activeCohortBenchmarks.nationalNwPercentile}%</strong>
-                        </span>
+                    <div>
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                            <span className="small text-muted fw-bold text-uppercase ls-1">Overall Canadian Benchmark Standing</span>
+                            <span className="badge bg-success text-white fw-bolder px-2 py-0.5 rounded-pill" style={{ fontSize: '0.68rem' }}>
+                                Score: {activeCohortBenchmarks.overallScore}/100
+                            </span>
+                        </div>
+                        <div className="fw-bolder text-main fs-5" style={{ lineHeight: 1.35 }}>
+                            <div>🇨🇦 <strong>Nationally:</strong> Top {100 - activeCohortBenchmarks.nationalNwPercentile}% in Canada</div>
+                            <div className="text-primary mt-1">📍 <strong>Provincially ({activeProvince}):</strong> Top {100 - activeCohortBenchmarks.provNwPercentile}% in {activeProvince}</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Interactive Giant Scorecard Cards (Clickable Tabs with Blue Active Ring/Highlight) */}
+            {/* Interactive Giant Scorecard Cards (Clickable Tabs with Thick Blue Border Highlight) */}
             <div className="row g-3 mb-4">
                 {/* 1. Net Worth Percentile Card Button */}
                 <div className="col-12 col-sm-6 col-lg-3">
@@ -466,8 +449,8 @@ export default function CanadianPeerBenchmarks() {
                         className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
                         style={{
                             cursor: 'pointer',
-                            border: selectedMetric === 'networth' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
-                            boxShadow: selectedMetric === 'networth' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            border: selectedMetric === 'networth' ? '3px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'networth' ? '0 0 0 1px rgba(2, 132, 199, 0.4), 0 0 20px rgba(2, 132, 199, 0.35)' : undefined,
                             transform: selectedMetric === 'networth' ? 'translateY(-2px)' : undefined,
                             transition: 'all 0.2s ease-in-out'
                         }}
@@ -477,13 +460,9 @@ export default function CanadianPeerBenchmarks() {
                                 <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                                     Net Worth Percentile
                                 </span>
-                                {selectedMetric === 'networth' ? (
-                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
-                                        <i className="bi bi-check2 me-1"></i>Viewing
-                                    </span>
-                                ) : (
+                                <div onClick={(e) => e.stopPropagation()}>
                                     <InfoBtn title="Net Worth Percentile" text="Calculated using Statistics Canada Survey of Financial Security (SFS Table 11-10-0016-01), indexed for your exact age and province." />
-                                )}
+                                </div>
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className="fs-3 fw-bolder text-success">Top {100 - activeCohortBenchmarks.nationalNwPercentile}%</span>
@@ -522,8 +501,8 @@ export default function CanadianPeerBenchmarks() {
                         className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
                         style={{
                             cursor: 'pointer',
-                            border: selectedMetric === 'income' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
-                            boxShadow: selectedMetric === 'income' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            border: selectedMetric === 'income' ? '3px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'income' ? '0 0 0 1px rgba(2, 132, 199, 0.4), 0 0 20px rgba(2, 132, 199, 0.35)' : undefined,
                             transform: selectedMetric === 'income' ? 'translateY(-2px)' : undefined,
                             transition: 'all 0.2s ease-in-out'
                         }}
@@ -533,13 +512,9 @@ export default function CanadianPeerBenchmarks() {
                                 <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                                     Income Percentile
                                 </span>
-                                {selectedMetric === 'income' ? (
-                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
-                                        <i className="bi bi-check2 me-1"></i>Viewing
-                                    </span>
-                                ) : (
+                                <div onClick={(e) => e.stopPropagation()}>
                                     <InfoBtn title="Income Percentile" text="Statistics Canada T1 tax-filer wages and Canadian Income Survey (CIS Table 11-10-0190-01)." />
-                                )}
+                                </div>
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className="fs-3 fw-bolder text-primary">Top {100 - activeCohortBenchmarks.nationalIncPercentile}%</span>
@@ -578,8 +553,8 @@ export default function CanadianPeerBenchmarks() {
                         className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
                         style={{
                             cursor: 'pointer',
-                            border: selectedMetric === 'tfsa' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
-                            boxShadow: selectedMetric === 'tfsa' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            border: selectedMetric === 'tfsa' ? '3px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'tfsa' ? '0 0 0 1px rgba(2, 132, 199, 0.4), 0 0 20px rgba(2, 132, 199, 0.35)' : undefined,
                             transform: selectedMetric === 'tfsa' ? 'translateY(-2px)' : undefined,
                             transition: 'all 0.2s ease-in-out'
                         }}
@@ -589,13 +564,9 @@ export default function CanadianPeerBenchmarks() {
                                 <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                                     TFSA Cohort Standing
                                 </span>
-                                {selectedMetric === 'tfsa' ? (
-                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
-                                        <i className="bi bi-check2 me-1"></i>Viewing
-                                    </span>
-                                ) : (
+                                <div onClick={(e) => e.stopPropagation()}>
                                     <InfoBtn title="TFSA Statistics" text="Canada Revenue Agency (CRA) official Table 3A TFSA distribution by age bracket." />
-                                )}
+                                </div>
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className="fs-3 fw-bolder text-warning">
@@ -634,8 +605,8 @@ export default function CanadianPeerBenchmarks() {
                         className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
                         style={{
                             cursor: 'pointer',
-                            border: selectedMetric === 'housing' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
-                            boxShadow: selectedMetric === 'housing' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            border: selectedMetric === 'housing' ? '3px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'housing' ? '0 0 0 1px rgba(2, 132, 199, 0.4), 0 0 20px rgba(2, 132, 199, 0.35)' : undefined,
                             transform: selectedMetric === 'housing' ? 'translateY(-2px)' : undefined,
                             transition: 'all 0.2s ease-in-out'
                         }}
@@ -645,13 +616,9 @@ export default function CanadianPeerBenchmarks() {
                                 <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                                     Shelter Burden Ratio
                                 </span>
-                                {selectedMetric === 'housing' ? (
-                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
-                                        <i className="bi bi-check2 me-1"></i>Viewing
-                                    </span>
-                                ) : (
+                                <div onClick={(e) => e.stopPropagation()}>
                                     <InfoBtn title="CMHC Shelter Ratio" text="CMHC recommends total housing costs (mortgage/rent, taxes, condo fees, heating) remain below 32% of gross income." />
-                                )}
+                                </div>
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className={`fs-3 fw-bolder ${userShelterRatio <= 32 ? 'text-success' : userShelterRatio <= 40 ? 'text-warning' : 'text-danger'}`}>
@@ -676,26 +643,14 @@ export default function CanadianPeerBenchmarks() {
                 {/* 1. NET WORTH TRAJECTORY & DISTRIBUTION */}
                 {selectedMetric === 'networth' && (
                     <div>
-                        <div className="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-                            <div>
-                                <h5 className="fw-bold text-main mb-1">
-                                    <i className="bi bi-graph-up text-success me-2"></i>
-                                    Canadian Net Worth Lifecycle Curve (Ages 25 to 75)
-                                </h5>
-                                <p className="text-muted small mb-0">
-                                    Shaded bands represent Canadian wealth distribution percentiles (25th, 50th Median, 75th, and 90th) scaled for {activeProvince} ({scope === 'household' ? 'Household' : `${scope === 'p2' ? p2Name : p1Name} Individual`}).
-                                </p>
-                            </div>
-
-                            {/* High-Contrast Position Callout */}
-                            <div className="bg-input border border-success border-opacity-50 rounded-pill px-3 py-1.5 shadow-sm d-flex align-items-center gap-2">
-                                <span className="badge bg-success text-white fw-bolder px-2 py-0.5 rounded-pill" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
-                                    YOUR POSITION
-                                </span>
-                                <span className="text-main fw-bold small">
-                                    {deltaNetWorth >= 0 ? '+' : ''}{formatShort(deltaNetWorth)} ({deltaPercent >= 0 ? '+' : ''}{deltaPercent.toFixed(0)}%) vs. Age {activeAge} Median
-                                </span>
-                            </div>
+                        <div className="mb-3">
+                            <h5 className="fw-bold text-main mb-1">
+                                <i className="bi bi-graph-up text-success me-2"></i>
+                                Canadian Net Worth Lifecycle Curve (Ages 25 to 75)
+                            </h5>
+                            <p className="text-muted small mb-0">
+                                Shaded bands represent Canadian wealth distribution percentiles (25th, 50th Median, 75th, and 90th) scaled for {activeProvince} ({scope === 'household' ? 'Household' : `${scope === 'p2' ? p2Name : p1Name} Individual`}).
+                            </p>
                         </div>
 
                         <div style={{ height: '360px', width: '100%' }}>
