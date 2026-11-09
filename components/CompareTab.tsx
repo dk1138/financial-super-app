@@ -29,7 +29,6 @@ export default function CompareTab() {
     const [isCalculating, setIsCalculating] = useState<boolean>(false);
     
     const [chartMode, setChartMode] = useState<'NW' | 'TAX' | 'SPEND'>('NW');
-    const [viewMode, setViewMode] = useState<'both' | 'chart' | 'table'>('both');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [milestonesOnly, setMilestonesOnly] = useState(false);
 
@@ -203,18 +202,7 @@ export default function CompareTab() {
         });
     }, [results?.timeline, compareResults, data, compareData]);
 
-    const filteredRows = useMemo<any[]>(() => {
-        if (!milestonesOnly) return chartData;
-        const p1Ret = Number(data.inputs.p1_retireAge) || 65;
-        return chartData.filter((d: any, idx: number) => {
-            return idx === 0 || 
-                   idx === chartData.length - 1 || 
-                   d.age === p1Ret || 
-                   d.age === 65 || 
-                   d.age === 71 || 
-                   d.age % 5 === 0;
-        });
-    }, [chartData, milestonesOnly, data.inputs.p1_retireAge]);
+    const activeMetricLabel = chartMode === 'NW' ? 'Net Worth' : chartMode === 'TAX' ? 'Taxes Paid' : 'Annual Spending';
 
     const CustomChartTooltip = ({ active, payload }: any) => {
         if (!active || !payload || !payload.length) return null;
@@ -226,22 +214,22 @@ export default function CompareTab() {
         const diff = valComp !== null ? valComp - valLive : null;
 
         return (
-            <div className="p-3 rounded-3 shadow-lg border border-secondary" style={{ backgroundColor: 'var(--bs-gray-900)', color: '#fff', minWidth: '220px' }}>
-                <div className="d-flex justify-content-between align-items-center border-bottom border-secondary pb-1 mb-2">
+            <div className="p-3 rounded-3 shadow-lg border" style={{ backgroundColor: 'var(--bg-card, #1e293b)', color: 'var(--text-main, #fff)', borderColor: 'var(--border-color, #334155)', minWidth: '220px' }}>
+                <div className="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2" style={{ borderColor: 'var(--border-color, #334155)' }}>
                     <span className="fw-bold text-main">Year {d.year} (Age {d.age})</span>
                     <span className="badge bg-secondary bg-opacity-25 text-muted" style={{ fontSize: '0.7rem' }}>{d.phase}</span>
                 </div>
                 <div className="d-flex justify-content-between small mb-1">
                     <span className="text-primary fw-bold"><i className="bi bi-circle-fill me-1" style={{ fontSize: '0.6rem' }}></i> Live Inputs:</span>
-                    <span className="fw-bold">{formatCurrency(valLive)}</span>
+                    <span className="fw-bold text-main">{formatCurrency(valLive)}</span>
                 </div>
                 {valComp !== null && (
                     <>
                         <div className="d-flex justify-content-between small mb-1">
                             <span className="text-warning fw-bold"><i className="bi bi-circle-fill me-1" style={{ fontSize: '0.6rem' }}></i> {comparePlanName}:</span>
-                            <span className="fw-bold">{formatCurrency(valComp)}</span>
+                            <span className="fw-bold text-main">{formatCurrency(valComp)}</span>
                         </div>
-                        <div className="d-flex justify-content-between small pt-1 border-top border-secondary mt-1">
+                        <div className="d-flex justify-content-between small pt-1 border-top mt-1" style={{ borderColor: 'var(--border-color, #334155)' }}>
                             <span className="text-muted">Difference:</span>
                             <span className={`fw-bold ${diff! >= 0 ? (chartMode === 'TAX' ? 'text-danger' : 'text-success') : (chartMode === 'TAX' ? 'text-success' : 'text-danger')}`}>
                                 {diff! >= 0 ? '+' : ''}{formatCurrency(diff!)}
@@ -255,7 +243,7 @@ export default function CompareTab() {
 
     return (
         <div className="p-3 p-md-4">
-            {/* Global Comparison Header With Mode Switcher */}
+            {/* Global Comparison Engine Header with Clean Seamless Toggle */}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-3 border-bottom border-secondary">
                 <div>
                     <h4 className="fw-bolder mb-1 text-main d-flex align-items-center gap-2">
@@ -267,15 +255,24 @@ export default function CompareTab() {
                     </p>
                 </div>
 
-                <div className="bg-dark bg-opacity-50 p-1 rounded-pill border border-secondary shadow-sm">
-                    <SegmentedControl 
-                        options={[
-                            { label: '🇨🇦 Canadian Peer Benchmarks', value: 'benchmarks' },
-                            { label: '📊 Scenario vs. Scenario', value: 'scenarios' }
-                        ]}
-                        value={compareMode}
-                        onChange={(val: 'benchmarks' | 'scenarios') => setCompareMode(val)}
-                    />
+                {/* Clean Pill Toggle without Outer Border */}
+                <div className="d-inline-flex align-items-center p-1 rounded-pill bg-input shadow-none" style={{ border: 'none' }}>
+                    <button 
+                        type="button"
+                        className={`btn btn-sm rounded-pill fw-bold px-3 py-1.5 transition-all border-0 ${compareMode === 'benchmarks' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                        onClick={() => setCompareMode('benchmarks')}
+                        style={{ fontSize: '0.8rem' }}
+                    >
+                        Canadian Peer Benchmarks
+                    </button>
+                    <button 
+                        type="button"
+                        className={`btn btn-sm rounded-pill fw-bold px-3 py-1.5 transition-all border-0 ${compareMode === 'scenarios' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                        onClick={() => setCompareMode('scenarios')}
+                        style={{ fontSize: '0.8rem' }}
+                    >
+                        Scenario vs. Scenario
+                    </button>
                 </div>
             </div>
 
@@ -285,6 +282,7 @@ export default function CompareTab() {
             {/* View 2: Scenario vs Scenario */}
             {compareMode === 'scenarios' && (
                 <div>
+                    {/* Toolbar for Scenarios */}
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2">
                         <div>
                             <h5 className="fw-bold text-uppercase ls-1 text-primary mb-1 d-flex align-items-center">
@@ -414,7 +412,7 @@ export default function CompareTab() {
                     )}
 
                     {comparePlanName && inputDiffs.length > 0 && (
-                        <div className="rp-card border-secondary rounded-4 p-3 mb-4 bg-dark bg-opacity-30 shadow-sm">
+                        <div className="rp-card border-secondary rounded-4 p-3 mb-4 bg-input shadow-sm">
                             <span className="small text-muted fw-bold text-uppercase ls-1 d-block mb-2">
                                 <i className="bi bi-sliders me-2 text-warning"></i> Modified Assumptions in {comparePlanName} ({inputDiffs.length})
                             </span>
@@ -456,7 +454,7 @@ export default function CompareTab() {
                             <div style={{ height: '380px', width: '100%' }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#2c3b52" opacity={0.6} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #2c3b52)" opacity={0.5} />
                                         <XAxis dataKey="year" stroke="#64748b" tick={{ fontSize: 12 }} />
                                         <YAxis stroke="#64748b" tickFormatter={formatShortCurrency} tick={{ fontSize: 12 }} />
                                         <RechartsTooltip content={<CustomChartTooltip />} />

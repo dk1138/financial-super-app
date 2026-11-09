@@ -2,12 +2,19 @@
 
 import React, { useState, useMemo } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { InfoBtn, SegmentedControl } from '../SharedUI';
+import { InfoBtn } from '../SharedUI';
 import { 
     ResponsiveContainer, AreaChart, Area, BarChart, Bar, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, 
     Cell, ReferenceLine, ReferenceDot 
 } from 'recharts';
+
+const provinceFullNames: Record<string, string> = {
+    ON: 'Ontario', BC: 'British Columbia', AB: 'Alberta', QC: 'Quebec',
+    MB: 'Manitoba', SK: 'Saskatchewan', NS: 'Nova Scotia', NB: 'New Brunswick',
+    NL: 'Newfoundland & Labrador', PE: 'Prince Edward Island',
+    YT: 'Yukon', NT: 'Northwest Territories', NU: 'Nunavut'
+};
 
 export default function CanadianPeerBenchmarks() {
     const { data, results } = useFinance();
@@ -278,13 +285,6 @@ export default function CanadianPeerBenchmarks() {
         return `$${val}`;
     };
 
-    // Single-year age options from 20 to 80
-    const everyYearOptions = useMemo(() => {
-        const arr = [];
-        for (let y = 20; y <= 80; y++) arr.push(y);
-        return arr;
-    }, []);
-
     // Theme-Adaptive Tooltip for Recharts
     const CustomBenchmarkTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || !payload.length) return null;
@@ -330,36 +330,33 @@ export default function CanadianPeerBenchmarks() {
 
                     {/* Visually Matching Controls Toolbar */}
                     <div className="d-flex flex-wrap align-items-center gap-3">
-                        {/* 1. Cohort Age Control */}
+                        {/* 1. Cohort Age Control: Clean Stepper without Dropdown or redundant 'Age' text */}
                         <div>
                             <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                                 COHORT AGE
                             </label>
                             <div className="d-flex align-items-center bg-input border border-secondary rounded-3 shadow-sm" style={{ height: '38px' }}>
                                 <button 
-                                    className="btn btn-sm btn-link text-muted px-2.5 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
+                                    className="btn btn-sm btn-link text-muted px-3 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
                                     onClick={() => setActiveAge(a => Math.max(20, a - 1))}
-                                    title="Decrease age by 1"
+                                    title="Decrease by 1"
                                     type="button"
                                 >
                                     <i className="bi bi-dash-lg"></i>
                                 </button>
-                                <select 
-                                    className="form-select form-select-sm bg-transparent text-main border-0 fw-bold text-center px-1 py-0 shadow-none" 
-                                    style={{ height: '36px', minWidth: '85px', cursor: 'pointer' }}
+                                <input 
+                                    type="number"
+                                    min="20"
+                                    max="80"
                                     value={activeAge}
-                                    onChange={e => setActiveAge(parseInt(e.target.value) || 30)}
-                                >
-                                    {everyYearOptions.map(y => (
-                                        <option key={y} value={y} className="bg-input text-main">
-                                            Age {y}{y === (scope === 'p2' ? p2Age : p1Age) ? ' (Plan)' : ''}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={e => setActiveAge(Math.max(20, Math.min(80, parseInt(e.target.value) || 20)))}
+                                    className="form-control form-control-sm bg-transparent text-main border-0 fw-bolder text-center px-1 py-0 shadow-none"
+                                    style={{ width: '55px', height: '36px', fontSize: '1rem' }}
+                                />
                                 <button 
-                                    className="btn btn-sm btn-link text-muted px-2.5 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
+                                    className="btn btn-sm btn-link text-muted px-3 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
                                     onClick={() => setActiveAge(a => Math.min(80, a + 1))}
-                                    title="Increase age by 1"
+                                    title="Increase by 1"
                                     type="button"
                                 >
                                     <i className="bi bi-plus-lg"></i>
@@ -394,44 +391,64 @@ export default function CanadianPeerBenchmarks() {
                             </select>
                         </div>
 
-                        {/* 3. Household Scope */}
+                        {/* 3. Household Scope - Clean Borderless Toggle */}
                         <div>
                             <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
                                 COMPARISON SCOPE
                             </label>
-                            <SegmentedControl 
-                                options={isCouple ? [
-                                    { label: '👥 Household', value: 'household' },
-                                    { label: `👤 ${p1Name}`, value: 'p1' },
-                                    { label: `👤 ${p2Name}`, value: 'p2' }
-                                ] : [
-                                    { label: '👥 Household', value: 'household' },
-                                    { label: '👤 Individual', value: 'p1' }
-                                ]}
-                                value={scope}
-                                onChange={(val: any) => handleScopeChange(val)}
-                            />
+                            <div className="d-inline-flex align-items-center p-0.5 rounded-pill bg-input shadow-sm" style={{ height: '38px', border: '1px solid var(--border-color)' }}>
+                                <button 
+                                    type="button"
+                                    className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'household' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                                    onClick={() => handleScopeChange('household')}
+                                    style={{ fontSize: '0.78rem' }}
+                                >
+                                    Household
+                                </button>
+                                <button 
+                                    type="button"
+                                    className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'p1' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                                    onClick={() => handleScopeChange('p1')}
+                                    style={{ fontSize: '0.78rem' }}
+                                >
+                                    {p1Name}
+                                </button>
+                                {isCouple && (
+                                    <button 
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'p2' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                                        onClick={() => handleScopeChange('p2')}
+                                        style={{ fontSize: '0.78rem' }}
+                                    >
+                                        {p2Name}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Overall Composite Canadian Score Banner (2 Clean Lines) */}
+            {/* Overall Composite Canadian Score Banner (2 Clean Bold Lines with Info Button) */}
             <div className="rp-card border-secondary rounded-4 p-3 mb-4 shadow-sm" style={{ background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 50%, rgba(139, 92, 246, 0.08) 100%)', border: '1px solid var(--border-color)' }}>
                 <div className="d-flex align-items-center gap-3">
-                    <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner" style={{ width: '46px', height: '46px', flexShrink: 0 }}>
+                    <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner" style={{ width: '48px', height: '48px', flexShrink: 0 }}>
                         <i className="bi bi-award-fill fs-4"></i>
                     </div>
                     <div>
-                        <div className="d-flex align-items-center gap-2 mb-1">
+                        <div className="d-flex align-items-center gap-2 mb-1.5">
                             <span className="small text-muted fw-bold text-uppercase ls-1">Overall Canadian Benchmark Standing</span>
                             <span className="badge bg-success text-white fw-bolder px-2 py-0.5 rounded-pill" style={{ fontSize: '0.68rem' }}>
                                 Score: {activeCohortBenchmarks.overallScore}/100
                             </span>
+                            <InfoBtn 
+                                title="How Score is Obtained" 
+                                text="Your Overall Canadian Score (0–100) is a weighted composite benchmark evaluating 4 key financial pillars against official Statistics Canada and CRA distributions: Net Worth Percentile (40%), Employment Income Percentile (30%), TFSA Wealth Accumulation (15%), and CMHC Shelter Affordability Ratio (15%)." 
+                            />
                         </div>
-                        <div className="fw-bolder text-main fs-5" style={{ lineHeight: 1.35 }}>
-                            <div>🇨🇦 <strong>Nationally:</strong> Top {100 - activeCohortBenchmarks.nationalNwPercentile}% in Canada</div>
-                            <div className="text-primary mt-1">📍 <strong>Provincially ({activeProvince}):</strong> Top {100 - activeCohortBenchmarks.provNwPercentile}% in {activeProvince}</div>
+                        <div className="fs-5 text-main" style={{ lineHeight: 1.4 }}>
+                            <div><strong className="text-success fw-bolder fs-4">Top {100 - activeCohortBenchmarks.nationalNwPercentile}%</strong> in Canada</div>
+                            <div className="mt-1"><strong className="text-primary fw-bolder fs-4">Top {100 - activeCohortBenchmarks.provNwPercentile}%</strong> in {provinceFullNames[activeProvince] || activeProvince}</div>
                         </div>
                     </div>
                 </div>
@@ -673,7 +690,7 @@ export default function CanadianPeerBenchmarks() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #2c3b52)" opacity={0.5} />
                                     <XAxis dataKey="age" stroke="#64748b" tickFormatter={(v) => `Age ${v}`} />
                                     <YAxis stroke="#64748b" tickFormatter={formatShort} />
-                                    <RechartsTooltip content={<CustomBenchmarkTooltip />} />
+                                    <RechartsTooltip cursor={false} content={<CustomBenchmarkTooltip />} />
                                     <Legend />
                                     <Area type="monotone" dataKey="p90" stroke="#8b5cf6" fillOpacity={1} fill="url(#p90Grad)" name="Top 10% (90th Percentile)" />
                                     <Area type="monotone" dataKey="p75" stroke="#f59e0b" fillOpacity={1} fill="url(#p75Grad)" name="Top 25% (75th Percentile)" />
@@ -701,7 +718,7 @@ export default function CanadianPeerBenchmarks() {
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #2c3b52)" opacity={0.5} horizontal={false} />
                                             <XAxis type="number" stroke="#64748b" tickFormatter={formatShort} />
                                             <YAxis type="category" dataKey="name" stroke="#64748b" width={130} tick={{ fontSize: 12 }} />
-                                            <RechartsTooltip content={<CustomBenchmarkTooltip />} />
+                                            <RechartsTooltip cursor={false} content={<CustomBenchmarkTooltip />} />
                                             <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                                                 {netWorthBarData.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -778,7 +795,7 @@ export default function CanadianPeerBenchmarks() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #2c3b52)" opacity={0.5} vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 12 }} />
                                     <YAxis stroke="#64748b" tickFormatter={formatShort} />
-                                    <RechartsTooltip content={<CustomBenchmarkTooltip />} />
+                                    <RechartsTooltip cursor={false} content={<CustomBenchmarkTooltip />} />
                                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                                         {incomeBarData.map((entry, index) => (
                                             <Cell key={`inc-${index}`} fill={entry.fill} />
@@ -838,7 +855,7 @@ export default function CanadianPeerBenchmarks() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #2c3b52)" opacity={0.5} vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 12 }} />
                                     <YAxis stroke="#64748b" tickFormatter={formatShort} />
-                                    <RechartsTooltip content={<CustomBenchmarkTooltip />} />
+                                    <RechartsTooltip cursor={false} content={<CustomBenchmarkTooltip />} />
                                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                                         {tfsaBarData.map((entry, index) => (
                                             <Cell key={`tfsa-${index}`} fill={entry.fill} />
@@ -889,7 +906,7 @@ export default function CanadianPeerBenchmarks() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color, #2c3b52)" opacity={0.5} vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 12 }} />
                                     <YAxis stroke="#64748b" tickFormatter={(v) => `${v}%`} domain={[0, 45]} />
-                                    <RechartsTooltip content={<CustomBenchmarkTooltip />} />
+                                    <RechartsTooltip cursor={false} content={<CustomBenchmarkTooltip />} />
                                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                                         {shelterBarData.map((entry, index) => (
                                             <Cell key={`sh-${index}`} fill={entry.fill} />
