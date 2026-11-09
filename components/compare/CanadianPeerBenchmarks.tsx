@@ -454,15 +454,36 @@ export default function CanadianPeerBenchmarks() {
                 </div>
             </div>
 
-            {/* Executive Scorecard Tiles */}
+            {/* Interactive Giant Scorecard Cards (Clickable Tabs with Blue Active Ring/Highlight) */}
             <div className="row g-3 mb-4">
-                {/* 1. Net Worth Percentile */}
+                {/* 1. Net Worth Percentile Card Button */}
                 <div className="col-12 col-sm-6 col-lg-3">
-                    <div className="rp-card border-secondary rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between">
+                    <div 
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedMetric('networth')}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedMetric('networth'); }}
+                        className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
+                        style={{
+                            cursor: 'pointer',
+                            border: selectedMetric === 'networth' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'networth' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            transform: selectedMetric === 'networth' ? 'translateY(-2px)' : undefined,
+                            transition: 'all 0.2s ease-in-out'
+                        }}
+                    >
                         <div>
                             <div className="d-flex justify-content-between align-items-center mb-1">
-                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>Net Worth Percentile</span>
-                                <InfoBtn title="Net Worth Percentile" text="Calculated using Statistics Canada Survey of Financial Security (SFS Table 11-10-0016-01), indexed for your exact age and province." />
+                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    Net Worth Percentile
+                                </span>
+                                {selectedMetric === 'networth' ? (
+                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
+                                        <i className="bi bi-check2 me-1"></i>Viewing
+                                    </span>
+                                ) : (
+                                    <InfoBtn title="Net Worth Percentile" text="Calculated using Statistics Canada Survey of Financial Security (SFS Table 11-10-0016-01), indexed for your exact age and province." />
+                                )}
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className="fs-3 fw-bolder text-success">Top {100 - activeCohortBenchmarks.nationalNwPercentile}%</span>
@@ -491,13 +512,34 @@ export default function CanadianPeerBenchmarks() {
                     </div>
                 </div>
 
-                {/* 2. Income Percentile */}
+                {/* 2. Income Percentile Card Button */}
                 <div className="col-12 col-sm-6 col-lg-3">
-                    <div className="rp-card border-secondary rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between">
+                    <div 
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedMetric('income')}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedMetric('income'); }}
+                        className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
+                        style={{
+                            cursor: 'pointer',
+                            border: selectedMetric === 'income' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'income' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            transform: selectedMetric === 'income' ? 'translateY(-2px)' : undefined,
+                            transition: 'all 0.2s ease-in-out'
+                        }}
+                    >
                         <div>
                             <div className="d-flex justify-content-between align-items-center mb-1">
-                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>Income Percentile</span>
-                                <InfoBtn title="Income Percentile" text="Statistics Canada T1 tax-filer wages and Canadian Income Survey (CIS Table 11-10-0190-01)." />
+                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    Income Percentile
+                                </span>
+                                {selectedMetric === 'income' ? (
+                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
+                                        <i className="bi bi-check2 me-1"></i>Viewing
+                                    </span>
+                                ) : (
+                                    <InfoBtn title="Income Percentile" text="Statistics Canada T1 tax-filer wages and Canadian Income Survey (CIS Table 11-10-0190-01)." />
+                                )}
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className="fs-3 fw-bolder text-primary">Top {100 - activeCohortBenchmarks.nationalIncPercentile}%</span>
@@ -526,13 +568,34 @@ export default function CanadianPeerBenchmarks() {
                     </div>
                 </div>
 
-                {/* 3. TFSA Utilization */}
+                {/* 3. TFSA Utilization Card Button */}
                 <div className="col-12 col-sm-6 col-lg-3">
-                    <div className="rp-card border-secondary rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between">
+                    <div 
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedMetric('tfsa')}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedMetric('tfsa'); }}
+                        className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
+                        style={{
+                            cursor: 'pointer',
+                            border: selectedMetric === 'tfsa' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'tfsa' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            transform: selectedMetric === 'tfsa' ? 'translateY(-2px)' : undefined,
+                            transition: 'all 0.2s ease-in-out'
+                        }}
+                    >
                         <div>
                             <div className="d-flex justify-content-between align-items-center mb-1">
-                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>TFSA Cohort Standing</span>
-                                <InfoBtn title="TFSA Statistics" text="Canada Revenue Agency (CRA) official Table 3A TFSA distribution by age bracket." />
+                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    TFSA Cohort Standing
+                                </span>
+                                {selectedMetric === 'tfsa' ? (
+                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
+                                        <i className="bi bi-check2 me-1"></i>Viewing
+                                    </span>
+                                ) : (
+                                    <InfoBtn title="TFSA Statistics" text="Canada Revenue Agency (CRA) official Table 3A TFSA distribution by age bracket." />
+                                )}
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className="fs-3 fw-bolder text-warning">
@@ -561,13 +624,34 @@ export default function CanadianPeerBenchmarks() {
                     </div>
                 </div>
 
-                {/* 4. Housing Cost Burden */}
+                {/* 4. Housing Cost Burden Card Button */}
                 <div className="col-12 col-sm-6 col-lg-3">
-                    <div className="rp-card border-secondary rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between">
+                    <div 
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedMetric('housing')}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedMetric('housing'); }}
+                        className="rp-card rounded-4 p-3 h-100 bg-input shadow-sm d-flex flex-column justify-content-between transition-all"
+                        style={{
+                            cursor: 'pointer',
+                            border: selectedMetric === 'housing' ? '2px solid var(--primary, #0284c7)' : '1px solid var(--border-color)',
+                            boxShadow: selectedMetric === 'housing' ? '0 0 16px rgba(2, 132, 199, 0.28)' : undefined,
+                            transform: selectedMetric === 'housing' ? 'translateY(-2px)' : undefined,
+                            transition: 'all 0.2s ease-in-out'
+                        }}
+                    >
                         <div>
                             <div className="d-flex justify-content-between align-items-center mb-1">
-                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>Shelter Burden Ratio</span>
-                                <InfoBtn title="CMHC Shelter Ratio" text="CMHC recommends total housing costs (mortgage/rent, taxes, condo fees, heating) remain below 32% of gross income." />
+                                <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    Shelter Burden Ratio
+                                </span>
+                                {selectedMetric === 'housing' ? (
+                                    <span className="badge bg-primary text-white rounded-pill px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
+                                        <i className="bi bi-check2 me-1"></i>Viewing
+                                    </span>
+                                ) : (
+                                    <InfoBtn title="CMHC Shelter Ratio" text="CMHC recommends total housing costs (mortgage/rent, taxes, condo fees, heating) remain below 32% of gross income." />
+                                )}
                             </div>
                             <div className="d-flex align-items-baseline gap-2 mb-1">
                                 <span className={`fs-3 fw-bolder ${userShelterRatio <= 32 ? 'text-success' : userShelterRatio <= 40 ? 'text-warning' : 'text-danger'}`}>
@@ -587,24 +671,7 @@ export default function CanadianPeerBenchmarks() {
                 </div>
             </div>
 
-            {/* Benchmark Topic Selector */}
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <span className="text-muted fw-bold text-uppercase small ls-1">
-                    <i className="bi bi-bar-chart-fill me-2 text-primary"></i>Visual Distribution Benchmarks
-                </span>
-                <SegmentedControl 
-                    options={[
-                        { label: '📈 Net Worth Curve', value: 'networth' },
-                        { label: '💰 Income Distribution', value: 'income' },
-                        { label: '🛡️ TFSA Accumulation', value: 'tfsa' },
-                        { label: '🏡 Housing Burden', value: 'housing' }
-                    ]}
-                    value={selectedMetric}
-                    onChange={(val: any) => setSelectedMetric(val)}
-                />
-            </div>
-
-            {/* Main Graph Container */}
+            {/* Main Graph Container (Driven directly by the 4 selected cards above) */}
             <div className="rp-card border-secondary rounded-4 p-4 shadow-sm mb-4">
                 {/* 1. NET WORTH TRAJECTORY & DISTRIBUTION */}
                 {selectedMetric === 'networth' && (
