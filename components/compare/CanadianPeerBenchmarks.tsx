@@ -318,137 +318,142 @@ export default function CanadianPeerBenchmarks() {
 
     return (
         <div className="fade-in-tab pb-4">
-            {/* Top Control Bar with Seamless Matching Controls */}
-            <div className="rp-card border-secondary rounded-4 p-4 shadow-sm mb-4">
-                <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                    <div>
-                        <h4 className="fw-bolder mb-1 text-main">Canadian Demographic Peer Benchmarking</h4>
-                        <p className="text-muted small mb-0">
-                            Single-year spline interpolation across official Statistics Canada SFS wealth and CIS income distributions.
-                        </p>
-                    </div>
+            {/* Top Row: Demographic Benchmark Controls & Overall Composite Standing Side-by-Side */}
+            <div className="row g-3 mb-4 align-items-stretch">
+                {/* 1. Control & Scope Configuration Card */}
+                <div className="col-12 col-xl-7 col-lg-7">
+                    <div className="rp-card border-secondary rounded-4 p-3.5 shadow-sm h-100 d-flex flex-column justify-content-between" style={{ minHeight: '140px' }}>
+                        <div className="mb-2">
+                            <h5 className="fw-bolder mb-1 text-main">Canadian Demographic Peer Benchmarking</h5>
+                            <p className="text-muted small mb-0" style={{ fontSize: '0.82rem' }}>
+                                Single-year spline interpolation across official Statistics Canada SFS wealth and CIS income distributions.
+                            </p>
+                        </div>
 
-                    {/* Visually Matching Controls Toolbar */}
-                    <div className="d-flex flex-wrap align-items-center gap-3">
-                        {/* 1. Cohort Age Control: Clean Stepper without Dropdown or redundant 'Age' text */}
-                        <div>
-                            <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
-                                COHORT AGE
-                            </label>
-                            <div className="d-flex align-items-center bg-input border border-secondary rounded-3 shadow-sm" style={{ height: '38px' }}>
-                                <button 
-                                    className="btn btn-sm btn-link text-muted px-3 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
-                                    onClick={() => setActiveAge(a => Math.max(20, a - 1))}
-                                    title="Decrease by 1"
-                                    type="button"
-                                >
-                                    <i className="bi bi-dash-lg"></i>
-                                </button>
-                                <input 
-                                    type="number"
-                                    min="20"
-                                    max="80"
-                                    value={activeAge}
-                                    onChange={e => setActiveAge(Math.max(20, Math.min(80, parseInt(e.target.value) || 20)))}
-                                    className="form-control form-control-sm bg-transparent text-main border-0 fw-bolder text-center px-1 py-0 shadow-none"
-                                    style={{ width: '55px', height: '36px', fontSize: '1rem' }}
-                                />
-                                <button 
-                                    className="btn btn-sm btn-link text-muted px-3 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
-                                    onClick={() => setActiveAge(a => Math.min(80, a + 1))}
-                                    title="Increase by 1"
-                                    type="button"
-                                >
-                                    <i className="bi bi-plus-lg"></i>
-                                </button>
+                        {/* Visually Matching Controls Toolbar */}
+                        <div className="d-flex flex-wrap align-items-center gap-2.5 pt-1">
+                            {/* 1. Cohort Age Control: Clean Stepper without Dropdown or redundant 'Age' text */}
+                            <div>
+                                <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    COHORT AGE
+                                </label>
+                                <div className="d-flex align-items-center bg-input border border-secondary rounded-3 shadow-sm" style={{ height: '38px' }}>
+                                    <button 
+                                        className="btn btn-sm btn-link text-muted px-2.5 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
+                                        onClick={() => setActiveAge(a => Math.max(20, a - 1))}
+                                        title="Decrease by 1"
+                                        type="button"
+                                    >
+                                        <i className="bi bi-dash-lg"></i>
+                                    </button>
+                                    <input 
+                                        type="number"
+                                        min="20"
+                                        max="80"
+                                        value={activeAge}
+                                        onChange={e => setActiveAge(Math.max(20, Math.min(80, parseInt(e.target.value) || 20)))}
+                                        className="form-control form-control-sm bg-transparent text-main border-0 fw-bolder text-center px-1 py-0 shadow-none"
+                                        style={{ width: '52px', height: '36px', fontSize: '1rem' }}
+                                    />
+                                    <button 
+                                        className="btn btn-sm btn-link text-muted px-2.5 py-0 border-0 h-100 d-flex align-items-center hover-opacity-100 text-decoration-none" 
+                                        onClick={() => setActiveAge(a => Math.min(80, a + 1))}
+                                        title="Increase by 1"
+                                        type="button"
+                                    >
+                                        <i className="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* 2. Province Dropdown */}
-                        <div>
-                            <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
-                                PROVINCE BENCHMARK
-                            </label>
-                            <select 
-                                className="form-select form-select-sm bg-input text-main border-secondary rounded-3 fw-bold shadow-sm" 
-                                style={{ height: '38px', minWidth: '175px', cursor: 'pointer' }}
-                                value={activeProvince}
-                                onChange={e => setActiveProvince(e.target.value)}
-                            >
-                                <option value="ON" className="bg-input text-main">Ontario (ON)</option>
-                                <option value="BC" className="bg-input text-main">British Columbia (BC)</option>
-                                <option value="AB" className="bg-input text-main">Alberta (AB)</option>
-                                <option value="QC" className="bg-input text-main">Quebec (QC)</option>
-                                <option value="MB" className="bg-input text-main">Manitoba (MB)</option>
-                                <option value="SK" className="bg-input text-main">Saskatchewan (SK)</option>
-                                <option value="NS" className="bg-input text-main">Nova Scotia (NS)</option>
-                                <option value="NB" className="bg-input text-main">New Brunswick (NB)</option>
-                                <option value="NL" className="bg-input text-main">Newfoundland & Lab. (NL)</option>
-                                <option value="PE" className="bg-input text-main">Prince Edward Island (PE)</option>
-                                <option value="YT" className="bg-input text-main">Yukon (YT)</option>
-                                <option value="NT" className="bg-input text-main">Northwest Territories (NT)</option>
-                                <option value="NU" className="bg-input text-main">Nunavut (NU)</option>
-                            </select>
-                        </div>
+                            {/* 2. Province Dropdown */}
+                            <div>
+                                <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    PROVINCE BENCHMARK
+                                </label>
+                                <select 
+                                    className="form-select form-select-sm bg-input text-main border-secondary rounded-3 fw-bold shadow-sm" 
+                                    style={{ height: '38px', minWidth: '165px', cursor: 'pointer' }}
+                                    value={activeProvince}
+                                    onChange={e => setActiveProvince(e.target.value)}
+                                >
+                                    <option value="ON" className="bg-input text-main">Ontario (ON)</option>
+                                    <option value="BC" className="bg-input text-main">British Columbia (BC)</option>
+                                    <option value="AB" className="bg-input text-main">Alberta (AB)</option>
+                                    <option value="QC" className="bg-input text-main">Quebec (QC)</option>
+                                    <option value="MB" className="bg-input text-main">Manitoba (MB)</option>
+                                    <option value="SK" className="bg-input text-main">Saskatchewan (SK)</option>
+                                    <option value="NS" className="bg-input text-main">Nova Scotia (NS)</option>
+                                    <option value="NB" className="bg-input text-main">New Brunswick (NB)</option>
+                                    <option value="NL" className="bg-input text-main">Newfoundland & Lab. (NL)</option>
+                                    <option value="PE" className="bg-input text-main">Prince Edward Island (PE)</option>
+                                    <option value="YT" className="bg-input text-main">Yukon (YT)</option>
+                                    <option value="NT" className="bg-input text-main">Northwest Territories (NT)</option>
+                                    <option value="NU" className="bg-input text-main">Nunavut (NU)</option>
+                                </select>
+                            </div>
 
-                        {/* 3. Household Scope - Clean Borderless Toggle */}
-                        <div>
-                            <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
-                                COMPARISON SCOPE
-                            </label>
-                            <div className="d-inline-flex align-items-center p-0.5 rounded-pill bg-input shadow-sm" style={{ height: '38px', border: '1px solid var(--border-color)' }}>
-                                <button 
-                                    type="button"
-                                    className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'household' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
-                                    onClick={() => handleScopeChange('household')}
-                                    style={{ fontSize: '0.78rem' }}
-                                >
-                                    Household
-                                </button>
-                                <button 
-                                    type="button"
-                                    className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'p1' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
-                                    onClick={() => handleScopeChange('p1')}
-                                    style={{ fontSize: '0.78rem' }}
-                                >
-                                    {p1Name}
-                                </button>
-                                {isCouple && (
+                            {/* 3. Household Scope - Clean Borderless Toggle */}
+                            <div>
+                                <label className="text-muted fw-bold d-block mb-1" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    COMPARISON SCOPE
+                                </label>
+                                <div className="d-inline-flex align-items-center p-0.5 rounded-pill bg-input shadow-sm" style={{ height: '38px', border: '1px solid var(--border-color)' }}>
                                     <button 
                                         type="button"
-                                        className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'p2' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
-                                        onClick={() => handleScopeChange('p2')}
+                                        className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'household' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                                        onClick={() => handleScopeChange('household')}
                                         style={{ fontSize: '0.78rem' }}
                                     >
-                                        {p2Name}
+                                        Household
                                     </button>
-                                )}
+                                    <button 
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'p1' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                                        onClick={() => handleScopeChange('p1')}
+                                        style={{ fontSize: '0.78rem' }}
+                                    >
+                                        {p1Name}
+                                    </button>
+                                    {isCouple && (
+                                        <button 
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill fw-bold px-3 py-1 transition-all border-0 ${scope === 'p2' ? 'bg-primary text-white shadow-sm' : 'text-muted bg-transparent'}`}
+                                            onClick={() => handleScopeChange('p2')}
+                                            style={{ fontSize: '0.78rem' }}
+                                        >
+                                            {p2Name}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Overall Composite Canadian Score Banner (2 Clean Bold Lines with Info Button) */}
-            <div className="rp-card border-secondary rounded-4 p-3 mb-4 shadow-sm" style={{ background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 50%, rgba(139, 92, 246, 0.08) 100%)', border: '1px solid var(--border-color)' }}>
-                <div className="d-flex align-items-center gap-3">
-                    <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner" style={{ width: '48px', height: '48px', flexShrink: 0 }}>
-                        <i className="bi bi-award-fill fs-4"></i>
-                    </div>
-                    <div>
-                        <div className="d-flex align-items-center gap-2 mb-1.5">
-                            <span className="small text-muted fw-bold text-uppercase ls-1">Overall Canadian Benchmark Standing</span>
-                            <span className="badge bg-success text-white fw-bolder px-2 py-0.5 rounded-pill" style={{ fontSize: '0.68rem' }}>
-                                Score: {activeCohortBenchmarks.overallScore}/100
-                            </span>
-                            <InfoBtn 
-                                title="How Score is Obtained" 
-                                text="Your Overall Canadian Score (0–100) is a weighted composite benchmark evaluating 4 key financial pillars against official Statistics Canada and CRA distributions: Net Worth Percentile (40%), Employment Income Percentile (30%), TFSA Wealth Accumulation (15%), and CMHC Shelter Affordability Ratio (15%)." 
-                            />
-                        </div>
-                        <div className="fs-5 text-main" style={{ lineHeight: 1.4 }}>
-                            <div><strong className="text-success fw-bolder fs-4">Top {100 - activeCohortBenchmarks.nationalNwPercentile}%</strong> in Canada</div>
-                            <div className="mt-1"><strong className="text-primary fw-bolder fs-4">Top {100 - activeCohortBenchmarks.provNwPercentile}%</strong> in {provinceFullNames[activeProvince] || activeProvince}</div>
+                {/* 2. Overall Composite Canadian Score Card */}
+                <div className="col-12 col-xl-5 col-lg-5">
+                    <div className="rp-card border-secondary rounded-4 p-3.5 shadow-sm h-100 d-flex align-items-center" style={{ background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.08) 50%, rgba(139, 92, 246, 0.08) 100%)', border: '1px solid var(--border-color)', minHeight: '140px' }}>
+                        <div className="d-flex align-items-center gap-3 w-100">
+                            <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center shadow-inner" style={{ width: '52px', height: '52px', flexShrink: 0 }}>
+                                <i className="bi bi-award-fill fs-3"></i>
+                            </div>
+                            <div className="flex-grow-1">
+                                <div className="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
+                                    <span className="small text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.7rem' }}>Overall Canadian Benchmark Standing</span>
+                                    <span className="badge bg-success text-white fw-bolder px-2 py-0.5 rounded-pill" style={{ fontSize: '0.68rem' }}>
+                                        Score: {activeCohortBenchmarks.overallScore}/100
+                                    </span>
+                                    <InfoBtn 
+                                        title="How Score is Obtained" 
+                                        text="Your Overall Canadian Score (0–100) is a weighted composite benchmark evaluating 4 key financial pillars against official Statistics Canada and CRA distributions: Net Worth Percentile (40%), Employment Income Percentile (30%), TFSA Wealth Accumulation (15%), and CMHC Shelter Affordability Ratio (15%)." 
+                                    />
+                                </div>
+                                <div className="fs-5 text-main" style={{ lineHeight: 1.35 }}>
+                                    <div><strong className="text-success fw-bolder fs-4">Top {100 - activeCohortBenchmarks.nationalNwPercentile}%</strong> in Canada</div>
+                                    <div className="mt-0.5"><strong className="text-primary fw-bolder fs-4">Top {100 - activeCohortBenchmarks.provNwPercentile}%</strong> in {provinceFullNames[activeProvince] || activeProvince}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
