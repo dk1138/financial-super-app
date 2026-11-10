@@ -21,9 +21,11 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
   // Lock body scroll and prevent background shift when modal is open
   useEffect(() => {
     if (isOpen) {
+      document.body.classList.add('report-modal-open');
       const origOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
+        document.body.classList.remove('report-modal-open');
         document.body.style.overflow = origOverflow;
       };
     }
@@ -132,8 +134,35 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
   if (!mounted || !isOpen || !metrics) return null;
 
+  // Bulletproof print handler: hides all background page elements and triggers window.print()
   const handlePrint = () => {
+    // 1. Temporarily allow body overflow so printing doesn't cut off pages
+    const origOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'visible';
+
+    // 2. Mark all siblings of report-modal-backdrop with data-print-hidden
+    const siblings = Array.from(document.body.children).filter(
+      (el) => !el.classList.contains('report-modal-backdrop') && 
+              el.tagName !== 'SCRIPT' && 
+              el.tagName !== 'STYLE'
+    ) as HTMLElement[];
+
+    siblings.forEach((el) => el.setAttribute('data-print-hidden', 'true'));
+
+    // 3. Trigger native print dialog
     window.print();
+
+    // 4. Restore DOM state after print dialog is closed
+    const cleanup = () => {
+      siblings.forEach((el) => el.removeAttribute('data-print-hidden'));
+      if (isOpen) {
+        document.body.style.overflow = origOverflow || 'hidden';
+      }
+      window.removeEventListener('afterprint', cleanup);
+    };
+
+    window.addEventListener('afterprint', cleanup, { once: true });
+    setTimeout(cleanup, 2000); // Fallback if afterprint doesn't fire
   };
 
   const p1Name = data?.inputs?.p1_name || 'Player 1';
@@ -196,16 +225,24 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
         }
 
         @media print {
-          body {
+          html, body {
             background: #ffffff !important;
             color: #0f172a !important;
             margin: 0 !important;
             padding: 0 !important;
+            height: auto !important;
+            min-height: 100% !important;
+            overflow: visible !important;
           }
-          /* Hide main app shell, headers, footers and screen-only elements */
-          #__next, nav, header, footer, .no-print {
+
+          /* CRITICAL: Completely hide all background elements and dashboard siblings */
+          body > *:not(.report-modal-backdrop),
+          [data-print-hidden="true"],
+          nav, header, footer, .no-print {
             display: none !important;
           }
+
+          /* Force modal backdrop to be a clean static full-width printable page */
           .report-modal-backdrop {
             position: static !important;
             display: block !important;
@@ -214,11 +251,20 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             margin: 0 !important;
             width: 100% !important;
             height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
             overflow: visible !important;
+            box-shadow: none !important;
+            border: none !important;
           }
+
+          /* Paper container spans full printable page */
           .report-paper-container {
-            max-width: 100% !important;
+            position: static !important;
+            display: block !important;
             width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
             max-height: none !important;
             overflow: visible !important;
             box-shadow: none !important;
@@ -229,42 +275,60 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             margin: 0 !important;
             padding: 0 !important;
           }
+
           .report-printable-area {
+            position: static !important;
+            display: block !important;
             width: 100% !important;
+            height: auto !important;
             padding: 0 !important;
             margin: 0 !important;
             background: #ffffff !important;
             color: #0f172a !important;
+            overflow: visible !important;
           }
+
           .report-printable-area * {
             color: #0f172a !important;
           }
+
           .report-surface-panel {
             background: #f8fafc !important;
             border: 1px solid #e2e8f0 !important;
             color: #0f172a !important;
           }
+
           .report-table {
             color: #0f172a !important;
             border-color: #cbd5e1 !important;
           }
+
           .report-table th {
             background: #f1f5f9 !important;
             color: #0f172a !important;
             border-color: #cbd5e1 !important;
           }
+
           .report-table td {
             background: #ffffff !important;
             color: #0f172a !important;
             border-color: #cbd5e1 !important;
           }
+
           .report-table-striped tbody tr:nth-of-type(odd) td {
             background: #f8fafc !important;
           }
+
+          /* Page break cleanly between Page 1 and Page 2 */
           .report-page-break {
-            page-break-before: always;
-            break-before: page;
+            page-break-before: always !important;
+            break-before: page !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
           }
+
           @page {
             size: A4 portrait;
             margin: 10mm 12mm;
