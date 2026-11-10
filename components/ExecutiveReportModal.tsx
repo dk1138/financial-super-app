@@ -88,15 +88,34 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
     const finalEstate = finalItem ? getReal((finalItem.liquidNW || 0) + (finalItem.reIncludedEq || 0), finalItem.year) : 0;
     const effTaxRate = totalGrossInflows > 0 ? (totalTaxPaid / totalGrossInflows) * 100 : 0;
 
-    // Filter milestones for 5-year ledger table
-    const milestoneYears = timeline.filter((y: any, idx: number) => {
-      const isFirst = idx === 0;
-      const isLast = idx === timeline.length - 1;
-      const isRetire = y.p1Age === p1RetAge;
-      const isCPP = y.p1Age === (data?.inputs?.p1_cpp_start || 65);
-      const isFiveYear = y.year % 5 === 0;
-      return isFirst || isLast || isRetire || isCPP || isFiveYear;
-    });
+    // Strategic lifecycle milestones tailored to fit cleanly on 1 Letter size page (5 to 6 rows)
+    const milestoneIndices = new Set<number>();
+    milestoneIndices.add(0); // Start / Today
+    
+    // Retirement year
+    const retIdx = timeline.findIndex((y: any) => y.p1Age >= p1RetAge);
+    if (retIdx !== -1) milestoneIndices.add(retIdx);
+
+    // CPP / OAS start year (if different from retirement)
+    const cppAge = data?.inputs?.p1_cpp_start || 65;
+    const cppIdx = timeline.findIndex((y: any) => y.p1Age >= cppAge);
+    if (cppIdx !== -1) milestoneIndices.add(cppIdx);
+
+    // Peak Net Worth milestone
+    const peakIdx = timeline.findIndex((y: any) => y.p1Age === peakAge);
+    if (peakIdx !== -1) milestoneIndices.add(peakIdx);
+
+    // Mid-retirement milestone (e.g. Age 75 or 80)
+    const midIdx = timeline.findIndex((y: any) => y.p1Age >= 75);
+    if (midIdx !== -1) milestoneIndices.add(midIdx);
+
+    // Final plan life expectancy year
+    milestoneIndices.add(timeline.length - 1);
+
+    const milestoneYears = Array.from(milestoneIndices)
+      .sort((a, b) => a - b)
+      .map(idx => timeline[idx])
+      .filter(Boolean);
 
     const formatCurrency = (val: number) => {
       return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
@@ -162,7 +181,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
     };
 
     window.addEventListener('afterprint', cleanup, { once: true });
-    setTimeout(cleanup, 2000); // Fallback if afterprint doesn't fire
+    setTimeout(cleanup, 2000);
   };
 
   const p1Name = data?.inputs?.p1_name || 'Player 1';
@@ -171,7 +190,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
   const modalContent = (
     <>
-      {/* SCOPED REPORT CSS: Screen dark/light theme + clean white print */}
+      {/* SCOPED REPORT CSS: Screen dark/light theme + 1-Page Letter Size Print with Breathing Room */}
       <style>{`
         @media screen {
           .report-modal-backdrop {
@@ -185,7 +204,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             display: flex;
             align-items: flex-start;
             justify-content: center;
-            padding: 2.5rem 1rem;
+            padding: 2rem 1rem;
             overflow-y: auto;
             overflow-x: hidden;
           }
@@ -225,17 +244,22 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
         }
 
         @media print {
+          @page {
+            size: letter portrait;
+            margin: 8mm 10mm;
+          }
+
           html, body {
             background: #ffffff !important;
             color: #0f172a !important;
             margin: 0 !important;
             padding: 0 !important;
-            height: auto !important;
-            min-height: 100% !important;
-            overflow: visible !important;
+            width: 100% !important;
+            height: 100% !important;
+            overflow: hidden !important;
           }
 
-          /* CRITICAL: Completely hide all background elements and dashboard siblings */
+          /* Completely hide all background elements and dashboard siblings */
           body > *:not(.report-modal-backdrop),
           [data-print-hidden="true"],
           nav, header, footer, .no-print {
@@ -251,21 +275,19 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             margin: 0 !important;
             width: 100% !important;
             height: auto !important;
-            min-height: auto !important;
-            max-height: none !important;
             overflow: visible !important;
             box-shadow: none !important;
             border: none !important;
           }
 
-          /* Paper container spans full printable page */
+          /* Paper container spans full 1-page printable area */
           .report-paper-container {
             position: static !important;
             display: block !important;
             width: 100% !important;
             max-width: 100% !important;
             height: auto !important;
-            max-height: none !important;
+            max-height: 100% !important;
             overflow: visible !important;
             box-shadow: none !important;
             border: none !important;
@@ -274,18 +296,24 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             color: #0f172a !important;
             margin: 0 !important;
             padding: 0 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
+          /* Breathing room on printed page (even with minimum margin printer settings) */
           .report-printable-area {
             position: static !important;
             display: block !important;
             width: 100% !important;
             height: auto !important;
-            padding: 0 !important;
+            padding: 6mm 8mm !important;
             margin: 0 !important;
             background: #ffffff !important;
             color: #0f172a !important;
             overflow: visible !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
           .report-printable-area * {
@@ -318,21 +346,6 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
           .report-table-striped tbody tr:nth-of-type(odd) td {
             background: #f8fafc !important;
           }
-
-          /* Page break cleanly between Page 1 and Page 2 */
-          .report-page-break {
-            page-break-before: always !important;
-            break-before: page !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-          }
-
-          @page {
-            size: A4 portrait;
-            margin: 10mm 12mm;
-          }
         }
       `}</style>
 
@@ -344,10 +357,11 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
         <div className="report-paper-container d-flex flex-column">
           
           {/* TOP TOOLBAR (NO PRINT) */}
-          <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom report-surface-panel rounded-top-4 no-print">
+          <div className="d-flex justify-content-between align-items-center px-4 py-2.5 border-bottom report-surface-panel rounded-top-4 no-print">
             <div className="d-flex align-items-center gap-2">
               <i className="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
-              <span className="fw-bold" style={{ fontSize: '0.95rem' }}>Executive PDF Planning Report</span>
+              <span className="fw-bold" style={{ fontSize: '0.92rem' }}>Executive PDF Planning Report</span>
+              <span className="badge bg-secondary bg-opacity-25 text-muted px-2 py-0.5 rounded-pill" style={{ fontSize: '0.68rem' }}>1-Page Summary</span>
             </div>
 
             <div className="d-flex align-items-center gap-2">
@@ -367,107 +381,104 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             </div>
           </div>
 
-          {/* REPORT CONTENT (THEMED ON SCREEN, CRISP WHITE ON PRINT) */}
-          <div ref={printContentRef} className="report-printable-area p-4 p-sm-5">
+          {/* 1-PAGE REPORT CONTENT (COMFORTABLE MARGINS & BALANCED BREATHING ROOM) */}
+          <div ref={printContentRef} className="report-printable-area p-4 p-sm-4.5">
             
-            {/* ========================================================= */}
-            {/* PAGE 1: EXECUTIVE COVER & READINESS SCORECARD             */}
-            {/* ========================================================= */}
-            <div className="pb-4 mb-4 border-bottom" style={{ borderColor: 'var(--border-color, #2c3b52)' }}>
-              <div className="d-flex justify-content-between align-items-start mb-3">
-                <div className="d-flex align-items-center gap-2.5">
+            {/* HEADER: LOGO, CRA ENGINE & CLIENT SCENARIO */}
+            <div className="pb-2.5 mb-2.5 border-bottom" style={{ borderColor: 'var(--border-color, #2c3b52)' }}>
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div className="d-flex align-items-center gap-2">
                   <div 
                     className="d-flex align-items-center justify-content-center text-white shadow-sm"
-                    style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
                   >
-                    <i className="bi bi-graph-up-arrow fs-5"></i>
+                    <i className="bi bi-graph-up-arrow fs-6"></i>
                   </div>
                   <div>
-                    <h4 className="fw-bolder m-0" style={{ letterSpacing: '-0.02em' }}>Planfolio Canada</h4>
-                    <span className="text-muted small fw-semibold" style={{ fontSize: '0.72rem' }}>Comprehensive Retirement Plan</span>
+                    <h5 className="fw-bolder m-0" style={{ letterSpacing: '-0.02em', fontSize: '1.05rem' }}>Planfolio Canada</h5>
+                    <span className="text-muted small fw-semibold" style={{ fontSize: '0.68rem' }}>Comprehensive Retirement Plan</span>
                   </div>
                 </div>
 
                 <div className="text-end">
-                  {/* HIGH-CONTRAST CRA ENGINE BADGE */}
                   <div 
                     className="badge rounded-pill fw-bold d-inline-flex align-items-center"
                     style={{ 
                       background: 'rgba(239, 68, 68, 0.12)', 
                       color: '#dc2626', 
                       border: '1px solid rgba(239, 68, 68, 0.3)', 
-                      fontSize: '0.75rem',
-                      padding: '5px 12px'
+                      fontSize: '0.72rem',
+                      padding: '4px 10px'
                     }}
                   >
                     🍁 Official CRA 2026 Engine
                   </div>
-                  <div className="text-muted small mt-1" style={{ fontSize: '0.72rem' }}>Date: {currentDate}</div>
+                  <div className="text-muted small mt-0.5" style={{ fontSize: '0.68rem' }}>Date: {currentDate}</div>
                 </div>
               </div>
 
               {/* CLIENT & PLAN BANNER */}
-              <div className="p-3 rounded-3 report-surface-panel mt-3 d-flex justify-content-between align-items-center">
+              <div className="p-2.5 rounded-3 report-surface-panel d-flex justify-content-between align-items-center">
                 <div>
-                  <div className="text-uppercase text-muted fw-bold" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>Prepared For</div>
-                  <h5 className="fw-bold mb-0">{clientNames}</h5>
+                  <div className="text-uppercase text-muted fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>Prepared For</div>
+                  <h6 className="fw-bold mb-0" style={{ fontSize: '0.9rem' }}>{clientNames}</h6>
                 </div>
                 <div className="text-end">
-                  <div className="text-uppercase text-muted fw-bold" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>Plan Scenario</div>
-                  <div className="fw-bold text-primary">{planName}</div>
+                  <div className="text-uppercase text-muted fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>Plan Scenario</div>
+                  <div className="fw-bold text-primary" style={{ fontSize: '0.88rem' }}>{planName}</div>
                 </div>
               </div>
             </div>
 
             {/* 1. HEALTH STATUS & 4 CORE METRICS */}
-            <div className="mb-4">
-              <h6 className="fw-bold text-uppercase text-muted mb-3" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+            <div className="mb-2.5">
+              <h6 className="fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
                 1. Executive Readiness Overview
               </h6>
 
-              <div className="row g-3">
+              <div className="row g-2">
                 {/* Health Card */}
                 <div className="col-12 col-sm-6">
                   <div 
-                    className="p-3 rounded-3 h-100"
+                    className="p-2.5 rounded-3 h-100 d-flex flex-column justify-content-between"
                     style={{
                       background: metrics.isFullyFunded ? 'rgba(34, 197, 94, 0.10)' : 'rgba(239, 68, 68, 0.10)',
                       border: `1px solid ${metrics.isFullyFunded ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
                     }}
                   >
                     <div className="d-flex align-items-center justify-content-between">
-                      <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.65rem' }}>Plan Longevity</span>
+                      <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.62rem' }}>Plan Longevity</span>
                       {metrics.useRealDollars && (
                         <span 
                           className="badge rounded-pill fw-bold"
-                          style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.68rem', padding: '3px 9px' }}
+                          style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.65rem', padding: '2px 8px' }}
                         >
                           Today's $
                         </span>
                       )}
                     </div>
                     <div className="d-flex align-items-center gap-2 mt-1">
-                      <i className={`bi ${metrics.isFullyFunded ? 'bi-shield-check text-success' : 'bi-exclamation-triangle-fill text-danger'} fs-4`}></i>
-                      <h5 className={`fw-bold mb-0 ${metrics.isFullyFunded ? 'text-success' : 'text-danger'}`}>
+                      <i className={`bi ${metrics.isFullyFunded ? 'bi-shield-check text-success' : 'bi-exclamation-triangle-fill text-danger'} fs-5`}></i>
+                      <h6 className={`fw-bold mb-0 ${metrics.isFullyFunded ? 'text-success' : 'text-danger'}`} style={{ fontSize: '0.92rem' }}>
                         {metrics.isFullyFunded ? `Fully Funded (to Age ${metrics.lifeExp})` : `Depletes at Age ${metrics.failureAge}`}
-                      </h5>
+                      </h6>
                     </div>
-                    <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.78rem' }}>
+                    <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.72rem', lineHeight: '1.3' }}>
                       {metrics.isFullyFunded 
-                        ? 'Your projected portfolio and government pensions sustain 100% of your targeted retirement spending.' 
-                        : `Estimated asset shortfall begins at age ${metrics.failureAge}. Consider adjusting spending, return rates, or retirement age.`}
+                        ? 'Projected portfolio and government pensions sustain 100% of targeted retirement spending.' 
+                        : `Estimated asset shortfall begins at age ${metrics.failureAge}. Adjust spending, return rates, or retirement age.`}
                     </p>
                   </div>
                 </div>
 
                 {/* Score Card: All 4 Pillars Adding to 100 */}
                 <div className="col-12 col-sm-6">
-                  <div className="p-3 rounded-3 report-surface-panel h-100">
+                  <div className="p-2.5 rounded-3 report-surface-panel h-100 d-flex flex-column justify-content-between">
                     <div className="d-flex justify-content-between align-items-center">
-                      <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.65rem' }}>Plan Health Score</span>
-                      <span className="fw-bold text-primary fs-5">{planScore?.totalScore || 85} / 100</span>
+                      <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.62rem' }}>Plan Health Score</span>
+                      <span className="fw-bold text-primary fs-6">{planScore?.totalScore || 85} / 100</span>
                     </div>
-                    <div className="mt-2 small space-y-1" style={{ fontSize: '0.75rem' }}>
+                    <div className="mt-1 small space-y-0.5" style={{ fontSize: '0.7rem' }}>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Retirement Readiness:</span>
                         <span className="fw-semibold">{planScore?.retirementReadiness ?? 45} / 50</span>
@@ -492,101 +503,96 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               {/* 4 HIGHLIGHT PILLS */}
               <div className="row g-2 mt-1">
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
-                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Liquid at Retirement</div>
-                    <div className="fw-bolder fs-6 mt-0.5">{metrics.shortLiquidAtRet}</div>
+                  <div className="p-2 rounded-3 report-surface-panel text-center">
+                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.58rem' }}>Liquid at Retirement</div>
+                    <div className="fw-bolder mt-0.5" style={{ fontSize: '0.85rem' }}>{metrics.shortLiquidAtRet}</div>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
-                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Peak Net Worth</div>
-                    <div className="fw-bolder fs-6 mt-0.5">{metrics.peakNW} <span className="small fw-normal text-muted">(@{metrics.peakAge})</span></div>
+                  <div className="p-2 rounded-3 report-surface-panel text-center">
+                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.58rem' }}>Peak Net Worth</div>
+                    <div className="fw-bolder mt-0.5" style={{ fontSize: '0.85rem' }}>{metrics.peakNW} <span className="small fw-normal text-muted" style={{ fontSize: '0.68rem' }}>(@{metrics.peakAge})</span></div>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
-                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Final Estate Value</div>
-                    <div className="fw-bolder text-success fs-6 mt-0.5">{metrics.shortEstate}</div>
+                  <div className="p-2 rounded-3 report-surface-panel text-center">
+                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.58rem' }}>Final Estate Value</div>
+                    <div className="fw-bolder text-success mt-0.5" style={{ fontSize: '0.85rem' }}>{metrics.shortEstate}</div>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
-                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Avg Effective Tax</div>
-                    <div className="fw-bolder fs-6 mt-0.5">{metrics.effTaxRate}%</div>
+                  <div className="p-2 rounded-3 report-surface-panel text-center">
+                    <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.58rem' }}>Avg Effective Tax</div>
+                    <div className="fw-bolder mt-0.5" style={{ fontSize: '0.85rem' }}>{metrics.effTaxRate}%</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* 2. CORE ASSUMPTIONS & TIMELINE SCHEDULE */}
-            <div className="mb-4">
-              <h6 className="fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+            <div className="mb-2.5">
+              <h6 className="fw-bold text-uppercase text-muted mb-1.5" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
                 2. Key Planning Parameters & Statutory Assumptions
               </h6>
 
               <div className="table-responsive">
-                <table className="table table-sm table-bordered text-center mb-0 align-middle report-table" style={{ fontSize: '0.75rem' }}>
+                <table className="table table-sm table-bordered text-center mb-0 align-middle report-table" style={{ fontSize: '0.7rem' }}>
                   <thead>
                     <tr>
-                      <th className="text-start">Parameter</th>
-                      <th>Player 1 ({p1Name})</th>
-                      {isCouple && <th>Player 2 ({p2Name})</th>}
-                      <th>Household Global</th>
+                      <th className="text-start py-1">Parameter</th>
+                      <th className="py-1">Player 1 ({p1Name})</th>
+                      {isCouple && <th className="py-1">Player 2 ({p2Name})</th>}
+                      <th className="py-1">Household Global</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="text-start fw-semibold">Current Age / Retirement Age</td>
-                      <td>{data?.inputs?.p1_age || 38} / Age {metrics.retAge}</td>
-                      {isCouple && <td>{data?.inputs?.p2_age || 34} / Age {metrics.p2RetAge}</td>}
-                      <td className="text-muted">Life Expectancy: Age {metrics.lifeExp}</td>
+                      <td className="text-start fw-semibold py-1">Current Age / Retirement Age</td>
+                      <td className="py-1">{data?.inputs?.p1_age || 38} / Age {metrics.retAge}</td>
+                      {isCouple && <td className="py-1">{data?.inputs?.p2_age || 34} / Age {metrics.p2RetAge}</td>}
+                      <td className="text-muted py-1">Life Expectancy: Age {metrics.lifeExp}</td>
                     </tr>
                     <tr>
-                      <td className="text-start fw-semibold">CPP / OAS Start Age</td>
-                      <td>Age {data?.inputs?.p1_cpp_start || 65} / Age {data?.inputs?.p1_oas_start || 65}</td>
-                      {isCouple && <td>Age {data?.inputs?.p2_cpp_start || 65} / Age {data?.inputs?.p2_oas_start || 65}</td>}
-                      <td className="text-muted">CRA Tax Province: {data?.inputs?.tax_province || 'ON'}</td>
+                      <td className="text-start fw-semibold py-1">CPP / OAS Start Age</td>
+                      <td className="py-1">Age {data?.inputs?.p1_cpp_start || 65} / Age {data?.inputs?.p1_oas_start || 65}</td>
+                      {isCouple && <td className="py-1">Age {data?.inputs?.p2_cpp_start || 65} / Age {data?.inputs?.p2_oas_start || 65}</td>}
+                      <td className="text-muted py-1">CRA Tax Province: {data?.inputs?.tax_province || 'ON'}</td>
                     </tr>
                     <tr>
-                      <td className="text-start fw-semibold">Economic & Market Rates</td>
-                      <td>TFSA: {data?.inputs?.p1_tfsa_ret || 6}% | RRSP: {data?.inputs?.p1_rrsp_ret || 6}%</td>
-                      {isCouple && <td>TFSA: {data?.inputs?.p2_tfsa_ret || 6}% | RRSP: {data?.inputs?.p2_rrsp_ret || 6}%</td>}
-                      <td>Inflation Assumption: <strong>{data?.inputs?.inflation_rate || 2.1}%</strong></td>
+                      <td className="text-start fw-semibold py-1">Economic & Market Rates</td>
+                      <td className="py-1">TFSA: {data?.inputs?.p1_tfsa_ret || 6}% | RRSP: {data?.inputs?.p1_rrsp_ret || 6}%</td>
+                      {isCouple && <td className="py-1">TFSA: {data?.inputs?.p2_tfsa_ret || 6}% | RRSP: {data?.inputs?.p2_rrsp_ret || 6}%</td>}
+                      <td className="py-1">Inflation Assumption: <strong>{data?.inputs?.inflation_rate || 2.1}%</strong></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {/* PAGE BREAK FOR PRINT */}
-            <div className="report-page-break"></div>
-
-            {/* ========================================================= */}
-            {/* PAGE 2: 5-YEAR MULTI-DECADE MILESTONE LEDGER TABLE        */}
-            {/* ========================================================= */}
-            <div className="pt-2 mb-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h6 className="fw-bold text-uppercase text-muted m-0" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+            {/* 3. MULTI-DECADE MILESTONE LEDGER TABLE (STRATEGIC MILESTONES) */}
+            <div className="mb-2.5">
+              <div className="d-flex justify-content-between align-items-center mb-1.5">
+                <h6 className="fw-bold text-uppercase text-muted m-0" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
                   3. Multi-Decade Cash Flow & Net Worth Milestone Ledger
                 </h6>
-                <span className="text-muted small" style={{ fontSize: '0.7rem' }}>
+                <span className="text-muted small" style={{ fontSize: '0.65rem' }}>
                   Values in {metrics.useRealDollars ? "Today's Purchasing Power (Real $)" : "Future Nominal CAD"}
                 </span>
               </div>
 
               <div className="table-responsive">
-                <table className="table table-sm table-striped table-bordered text-center align-middle report-table report-table-striped" style={{ fontSize: '0.72rem' }}>
+                <table className="table table-sm table-striped table-bordered text-center align-middle report-table report-table-striped" style={{ fontSize: '0.68rem' }}>
                   <thead>
                     <tr>
-                      <th>Year</th>
-                      <th>P1 Age</th>
-                      {isCouple && <th>P2 Age</th>}
-                      <th>Status</th>
-                      <th>Total Inflow</th>
-                      <th>Living Spend</th>
-                      <th>Taxes Paid</th>
-                      <th>Liquid Portfolio</th>
-                      <th>Total Net Worth</th>
+                      <th className="py-1">Year</th>
+                      <th className="py-1">P1 Age</th>
+                      {isCouple && <th className="py-1">P2 Age</th>}
+                      <th className="py-1">Status</th>
+                      <th className="py-1">Total Inflow</th>
+                      <th className="py-1">Living Spend</th>
+                      <th className="py-1">Taxes Paid</th>
+                      <th className="py-1">Liquid Portfolio</th>
+                      <th className="py-1">Total Net Worth</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -597,21 +603,21 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
                       return (
                         <tr key={yr.year}>
-                          <td className="fw-bold">{yr.year}</td>
-                          <td>{yr.p1Age}</td>
-                          {isCouple && <td>{yr.p2Age}</td>}
-                          <td>
-                            <span className={`badge ${isRetired ? 'bg-primary' : 'bg-secondary'} rounded-pill`} style={{ fontSize: '0.62rem' }}>
+                          <td className="fw-bold py-1">{yr.year}</td>
+                          <td className="py-1">{yr.p1Age}</td>
+                          {isCouple && <td className="py-1">{yr.p2Age}</td>}
+                          <td className="py-1">
+                            <span className={`badge ${isRetired ? 'bg-primary' : 'bg-secondary'} rounded-pill`} style={{ fontSize: '0.58rem', padding: '2px 6px' }}>
                               {isRetired ? 'Retired' : 'Working'}
                             </span>
                           </td>
-                          <td className="text-end">{metrics.formatShort(yr.grossInflow || 0)}</td>
-                          <td className="text-end">{metrics.formatShort((yr.expenses || 0) + (yr.mortgagePay || 0))}</td>
-                          <td className="text-end text-danger">{metrics.formatShort((yr.taxP1 || 0) + (yr.taxP2 || 0))}</td>
-                          <td className={`text-end fw-semibold ${liquidNW <= 0 && isRetired ? 'text-danger' : ''}`}>
+                          <td className="text-end py-1">{metrics.formatShort(yr.grossInflow || 0)}</td>
+                          <td className="text-end py-1">{metrics.formatShort((yr.expenses || 0) + (yr.mortgagePay || 0))}</td>
+                          <td className="text-end text-danger py-1">{metrics.formatShort((yr.taxP1 || 0) + (yr.taxP2 || 0))}</td>
+                          <td className={`text-end fw-semibold py-1 ${liquidNW <= 0 && isRetired ? 'text-danger' : ''}`}>
                             {metrics.formatShort(liquidNW)}
                           </td>
-                          <td className="text-end fw-bold text-success">
+                          <td className="text-end fw-bold text-success py-1">
                             {metrics.formatShort(totalNW)}
                           </td>
                         </tr>
@@ -623,37 +629,37 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             </div>
 
             {/* 4. CANADIAN TAX & ACCOUNT STRATEGY SUMMARY */}
-            <div className="mb-4">
-              <h6 className="fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+            <div className="mb-2.5">
+              <h6 className="fw-bold text-uppercase text-muted mb-1.5" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
                 4. Canadian Tax & Account Optimization Strategy
               </h6>
 
-              <div className="p-3 rounded-3 report-surface-panel">
-                <div className="row g-3" style={{ fontSize: '0.75rem' }}>
+              <div className="p-2 rounded-3 report-surface-panel">
+                <div className="row g-2" style={{ fontSize: '0.68rem', lineHeight: '1.3' }}>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-1">
+                    <div className="fw-bold mb-0.5">
                       <i className="bi bi-diagram-3-fill text-primary me-1"></i> Decumulation Sequence
                     </div>
                     <div className="text-muted">
-                      Standard tax-bracket smoothing deploys non-registered capital first, preserving TFSA tax-free compounding until later years.
+                      Tax-bracket smoothing deploys non-registered funds first, preserving TFSA tax-free compounding.
                     </div>
                   </div>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-1">
+                    <div className="fw-bold mb-0.5">
                       <i className="bi bi-people-fill text-success me-1"></i> Pension Income Splitting
                     </div>
                     <div className="text-muted">
                       {isCouple 
-                        ? 'Simulates eligible pension transfer (up to 50% at age 65) to equalize marginal brackets and minimize combined household tax.' 
-                        : 'Single individual filing strategy. Focuses on RRSP/RRIF drawdown before age 72 to prevent OAS clawbacks.'}
+                        ? 'Simulates eligible pension transfer (up to 50% at 65) to equalize brackets and reduce household tax.' 
+                        : 'Single filing: RRSP/RRIF drawdown before 72 to prevent OAS clawbacks and estate terminal tax.'}
                     </div>
                   </div>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-1">
+                    <div className="fw-bold mb-0.5">
                       <i className="bi bi-unlock-fill text-info me-1"></i> 50% LIF / LIRA Unlocking
                     </div>
                     <div className="text-muted">
-                      Evaluates one-time 50% unlocking of locked-in retirement funds into RRSP/RRIF based on provincial statutory jurisdiction.
+                      Evaluates statutory 50% unlocking of locked-in retirement capital into RRSP/RRIF by province.
                     </div>
                   </div>
                 </div>
@@ -661,13 +667,13 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             </div>
 
             {/* 5. DISCLAIMER & FOOTER */}
-            <div className="pt-3 border-top text-muted" style={{ fontSize: '0.68rem', lineHeight: '1.45', borderColor: 'var(--border-color, #2c3b52)' }}>
-              <div className="d-flex justify-content-between align-items-center mb-1">
+            <div className="pt-2 border-top text-muted" style={{ fontSize: '0.62rem', lineHeight: '1.35', borderColor: 'var(--border-color, #2c3b52)' }}>
+              <div className="d-flex justify-content-between align-items-center mb-0.5">
                 <strong className="text-main">Planfolio Canada — local-first financial planning</strong>
                 <span>Generated locally on-device • Zero cloud tracking</span>
               </div>
-              <p className="mb-0 text-muted">
-                Disclaimer: This report is generated strictly for informational and educational simulation purposes and does not constitute formal financial, accounting, legal, or tax advice. Projections are based on estimated historical returns and current CRA tax statutory rates. Consult with a qualified Certified Financial Planner (CFP) or CPA before executing major financial decisions.
+              <p className="mb-0 text-muted" style={{ fontSize: '0.6rem' }}>
+                Disclaimer: Informational simulation only; not formal financial, tax, or legal advice. Projections based on estimated returns and current statutory CRA rates. Consult a certified financial planner (CFP) or CPA.
               </p>
             </div>
 
