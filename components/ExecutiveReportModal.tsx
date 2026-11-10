@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFinance } from '../lib/FinanceContext';
 
 interface ExecutiveReportModalProps {
@@ -11,8 +12,24 @@ interface ExecutiveReportModalProps {
 export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveReportModalProps) {
   const { data, results, planScore } = useFinance() as any;
   const printContentRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
-  const isCouple = data.mode === 'Couple';
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll and prevent background shift when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const origOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = origOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  const isCouple = data?.mode === 'Couple';
   const planName = typeof window !== 'undefined' ? (localStorage.getItem('active_plan_name') || 'Personal Financial Plan') : 'Personal Financial Plan';
   const currentDate = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -22,9 +39,9 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
     const timeline = results.timeline;
     const baseYear = timeline[0]?.year || new Date().getFullYear();
-    const p1RetAge = Number(data.inputs?.p1_retireAge) || 60;
-    const inflation = (Number(data.inputs?.inflation_rate) || 2.1) / 100;
-    const useRealDollars = data.useRealDollars ?? false;
+    const p1RetAge = Number(data?.inputs?.p1_retireAge) || 60;
+    const inflation = (Number(data?.inputs?.inflation_rate) || 2.1) / 100;
+    const useRealDollars = data?.useRealDollars ?? false;
 
     const getReal = (val: number, year: number) => {
       if (!useRealDollars) return val;
@@ -74,7 +91,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
       const isFirst = idx === 0;
       const isLast = idx === timeline.length - 1;
       const isRetire = y.p1Age === p1RetAge;
-      const isCPP = y.p1Age === (data.inputs?.p1_cpp_start || 65);
+      const isCPP = y.p1Age === (data?.inputs?.p1_cpp_start || 65);
       const isFiveYear = y.year % 5 === 0;
       return isFirst || isLast || isRetire || isCPP || isFiveYear;
     });
@@ -94,7 +111,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
       failureAge,
       lifeExp: finalItem?.p1Age || 90,
       retAge: p1RetAge,
-      p2RetAge: Number(data.inputs?.p2_retireAge) || 60,
+      p2RetAge: Number(data?.inputs?.p2_retireAge) || 60,
       liquidAtRet: formatCurrency(liquidAtRet),
       shortLiquidAtRet: formatShort(liquidAtRet),
       finalEstate: formatCurrency(finalEstate),
@@ -113,69 +130,136 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
     };
   }, [results, data]);
 
-  if (!isOpen || !metrics) return null;
+  if (!mounted || !isOpen || !metrics) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const p1Name = data.inputs?.p1_name || 'Player 1';
-  const p2Name = data.inputs?.p2_name || 'Player 2';
+  const p1Name = data?.inputs?.p1_name || 'Player 1';
+  const p2Name = data?.inputs?.p2_name || 'Player 2';
   const clientNames = isCouple ? `${p1Name} & ${p2Name}` : p1Name;
 
-  return (
+  const modalContent = (
     <>
-      {/* PRINT-ONLY CSS: Hides website UI, forces clean white A4 portrait report */}
+      {/* SCOPED REPORT CSS: Screen dark/light theme + clean white print */}
       <style>{`
         @media screen {
           .report-modal-backdrop {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(5px);
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(11, 15, 23, 0.65);
+            backdrop-filter: blur(4px);
             z-index: 9999;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            padding: 1rem;
+            padding: 2.5rem 1rem;
             overflow-y: auto;
+            overflow-x: hidden;
           }
           .report-paper-container {
             max-width: 860px;
             width: 100%;
-            max-height: 92vh;
-            overflow-y: auto;
-            background: #ffffff;
-            color: #0f172a;
+            margin: 0 auto;
+            background: var(--bg-card, #141c2b);
+            color: var(--text-main, #f9fafb);
+            border: 1px solid var(--border-color, #2c3b52);
             border-radius: 16px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+          }
+          .report-surface-panel {
+            background: var(--bg-surface, #1c273c);
+            border: 1px solid var(--border-color, #2c3b52);
+            color: var(--text-main, #f9fafb);
+          }
+          .report-table {
+            color: var(--text-main, #f9fafb);
+            border-color: var(--border-color, #2c3b52);
+          }
+          .report-table th {
+            background: var(--bg-surface, #1c273c);
+            color: var(--text-main, #f9fafb);
+            border-color: var(--border-color, #2c3b52);
+          }
+          .report-table td {
+            background: var(--bg-card, #141c2b);
+            color: var(--text-main, #f9fafb);
+            border-color: var(--border-color, #2c3b52);
+          }
+          .report-table-striped tbody tr:nth-of-type(odd) td {
+            background: var(--bg-surface, #1c273c);
           }
         }
 
         @media print {
-          body * {
-            visibility: hidden;
-          }
-          .report-printable-area, .report-printable-area * {
-            visibility: visible;
-          }
-          .report-printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+          body {
             background: #ffffff !important;
             color: #0f172a !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          /* Hide main app shell, headers, footers and screen-only elements */
+          #__next, nav, header, footer, .no-print {
+            display: none !important;
+          }
+          .report-modal-backdrop {
+            position: static !important;
+            display: block !important;
+            background: transparent !important;
             padding: 0 !important;
             margin: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
           }
-          .no-print {
-            display: none !important;
+          .report-paper-container {
+            max-width: 100% !important;
+            width: 100% !important;
+            max-height: none !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .report-printable-area {
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+          }
+          .report-printable-area * {
+            color: #0f172a !important;
+          }
+          .report-surface-panel {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #0f172a !important;
+          }
+          .report-table {
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+          }
+          .report-table th {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+          }
+          .report-table td {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+          }
+          .report-table-striped tbody tr:nth-of-type(odd) td {
+            background: #f8fafc !important;
           }
           .report-page-break {
             page-break-before: always;
@@ -183,23 +267,23 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
           }
           @page {
             size: A4 portrait;
-            margin: 14mm 16mm;
+            margin: 10mm 12mm;
           }
         }
       `}</style>
 
-      {/* SCREEN MODAL WRAPPER */}
-      <div className="report-modal-backdrop fade-in no-print" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      {/* SCREEN MODAL BACKDROP (PORTALED DIRECTLY TO BODY FOR TRUE CENTERING) */}
+      <div 
+        className="report-modal-backdrop fade-in" 
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
         <div className="report-paper-container d-flex flex-column">
           
           {/* TOP TOOLBAR (NO PRINT) */}
-          <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-slate-900 text-white rounded-top-4 no-print">
+          <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom report-surface-panel rounded-top-4 no-print">
             <div className="d-flex align-items-center gap-2">
               <i className="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
               <span className="fw-bold" style={{ fontSize: '0.95rem' }}>Executive PDF Planning Report</span>
-              <span className="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 px-2 py-0.5 rounded-pill small ms-2">
-                Print / Save as PDF
-              </span>
             </div>
 
             <div className="d-flex align-items-center gap-2">
@@ -219,29 +303,39 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             </div>
           </div>
 
-          {/* PRINTABLE WHITE PAPER REPORT */}
-          <div ref={printContentRef} className="report-printable-area p-4 p-sm-5 bg-white text-slate-900">
+          {/* REPORT CONTENT (THEMED ON SCREEN, CRISP WHITE ON PRINT) */}
+          <div ref={printContentRef} className="report-printable-area p-4 p-sm-5">
             
             {/* ========================================================= */}
             {/* PAGE 1: EXECUTIVE COVER & READINESS SCORECARD             */}
             {/* ========================================================= */}
-            <div className="pb-4 mb-4 border-bottom border-slate-200">
+            <div className="pb-4 mb-4 border-bottom" style={{ borderColor: 'var(--border-color, #2c3b52)' }}>
               <div className="d-flex justify-content-between align-items-start mb-3">
                 <div className="d-flex align-items-center gap-2.5">
                   <div 
                     className="d-flex align-items-center justify-content-center text-white shadow-sm"
-                    style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+                    style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
                   >
                     <i className="bi bi-graph-up-arrow fs-5"></i>
                   </div>
                   <div>
-                    <h4 className="fw-bolder m-0 text-slate-900" style={{ letterSpacing: '-0.02em' }}>Planfolio Canada</h4>
+                    <h4 className="fw-bolder m-0" style={{ letterSpacing: '-0.02em' }}>Planfolio Canada</h4>
                     <span className="text-muted small fw-semibold" style={{ fontSize: '0.72rem' }}>Comprehensive Retirement Plan</span>
                   </div>
                 </div>
 
                 <div className="text-end">
-                  <div className="badge bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-pill fw-bold" style={{ fontSize: '0.75rem' }}>
+                  {/* HIGH-CONTRAST CRA ENGINE BADGE */}
+                  <div 
+                    className="badge rounded-pill fw-bold d-inline-flex align-items-center"
+                    style={{ 
+                      background: 'rgba(239, 68, 68, 0.12)', 
+                      color: '#dc2626', 
+                      border: '1px solid rgba(239, 68, 68, 0.3)', 
+                      fontSize: '0.75rem',
+                      padding: '5px 12px'
+                    }}
+                  >
                     🍁 Official CRA 2026 Engine
                   </div>
                   <div className="text-muted small mt-1" style={{ fontSize: '0.72rem' }}>Date: {currentDate}</div>
@@ -249,10 +343,10 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               </div>
 
               {/* CLIENT & PLAN BANNER */}
-              <div className="p-3 rounded-3 bg-slate-50 border border-slate-200 mt-3 d-flex justify-content-between align-items-center">
+              <div className="p-3 rounded-3 report-surface-panel mt-3 d-flex justify-content-between align-items-center">
                 <div>
                   <div className="text-uppercase text-muted fw-bold" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>Prepared For</div>
-                  <h5 className="fw-bold text-slate-900 mb-0">{clientNames}</h5>
+                  <h5 className="fw-bold mb-0">{clientNames}</h5>
                 </div>
                 <div className="text-end">
                   <div className="text-uppercase text-muted fw-bold" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>Plan Scenario</div>
@@ -263,25 +357,38 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
             {/* 1. HEALTH STATUS & 4 CORE METRICS */}
             <div className="mb-4">
-              <h6 className="fw-bold text-uppercase text-slate-500 mb-3" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+              <h6 className="fw-bold text-uppercase text-muted mb-3" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
                 1. Executive Readiness Overview
               </h6>
 
               <div className="row g-3">
                 {/* Health Card */}
                 <div className="col-12 col-sm-6">
-                  <div className={`p-3 rounded-3 border h-100 ${metrics.isFullyFunded ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                  <div 
+                    className="p-3 rounded-3 h-100"
+                    style={{
+                      background: metrics.isFullyFunded ? 'rgba(34, 197, 94, 0.10)' : 'rgba(239, 68, 68, 0.10)',
+                      border: `1px solid ${metrics.isFullyFunded ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
+                    }}
+                  >
                     <div className="d-flex align-items-center justify-content-between">
-                      <span className="text-uppercase fw-bold text-slate-500" style={{ fontSize: '0.65rem' }}>Plan Longevity</span>
-                      {metrics.useRealDollars && <span className="badge bg-blue-100 text-blue-700 font-semibold text-[10px]">Today's $</span>}
+                      <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.65rem' }}>Plan Longevity</span>
+                      {metrics.useRealDollars && (
+                        <span 
+                          className="badge rounded-pill fw-bold"
+                          style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.68rem', padding: '3px 9px' }}
+                        >
+                          Today's $
+                        </span>
+                      )}
                     </div>
                     <div className="d-flex align-items-center gap-2 mt-1">
-                      <i className={`bi ${metrics.isFullyFunded ? 'bi-shield-check text-emerald-600' : 'bi-exclamation-triangle-fill text-rose-600'} fs-4`}></i>
-                      <h5 className={`fw-bold mb-0 ${metrics.isFullyFunded ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      <i className={`bi ${metrics.isFullyFunded ? 'bi-shield-check text-success' : 'bi-exclamation-triangle-fill text-danger'} fs-4`}></i>
+                      <h5 className={`fw-bold mb-0 ${metrics.isFullyFunded ? 'text-success' : 'text-danger'}`}>
                         {metrics.isFullyFunded ? `Fully Funded (to Age ${metrics.lifeExp})` : `Depletes at Age ${metrics.failureAge}`}
                       </h5>
                     </div>
-                    <p className="text-slate-600 small mb-0 mt-1" style={{ fontSize: '0.78rem' }}>
+                    <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.78rem' }}>
                       {metrics.isFullyFunded 
                         ? 'Your projected portfolio and government pensions sustain 100% of your targeted retirement spending.' 
                         : `Estimated asset shortfall begins at age ${metrics.failureAge}. Consider adjusting spending, return rates, or retirement age.`}
@@ -289,25 +396,29 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                   </div>
                 </div>
 
-                {/* Score Card */}
+                {/* Score Card: All 4 Pillars Adding to 100 */}
                 <div className="col-12 col-sm-6">
-                  <div className="p-3 rounded-3 border border-slate-200 bg-slate-50 h-100">
+                  <div className="p-3 rounded-3 report-surface-panel h-100">
                     <div className="d-flex justify-content-between align-items-center">
-                      <span className="text-uppercase fw-bold text-slate-500" style={{ fontSize: '0.65rem' }}>Plan Health Score</span>
+                      <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.65rem' }}>Plan Health Score</span>
                       <span className="fw-bold text-primary fs-5">{planScore?.totalScore || 85} / 100</span>
                     </div>
-                    <div className="mt-2 small text-slate-600 space-y-1" style={{ fontSize: '0.75rem' }}>
+                    <div className="mt-2 small space-y-1" style={{ fontSize: '0.75rem' }}>
                       <div className="d-flex justify-content-between">
-                        <span>Retirement Readiness:</span>
-                        <span className="fw-semibold">{planScore?.retirementReadiness || 45} / 50</span>
+                        <span className="text-muted">Retirement Readiness:</span>
+                        <span className="fw-semibold">{planScore?.retirementReadiness ?? 45} / 50</span>
                       </div>
                       <div className="d-flex justify-content-between">
-                        <span>Savings Rate Target:</span>
-                        <span className="fw-semibold">{planScore?.savingsRate || 20} / 20</span>
+                        <span className="text-muted">Savings Rate Target:</span>
+                        <span className="fw-semibold">{planScore?.savingsRate ?? 20} / 20</span>
                       </div>
                       <div className="d-flex justify-content-between">
-                        <span>Debt Health:</span>
-                        <span className="fw-semibold">{planScore?.debtHealth || 20} / 20</span>
+                        <span className="text-muted">Debt Health:</span>
+                        <span className="fw-semibold">{planScore?.debtHealth ?? 20} / 20</span>
+                      </div>
+                      <div className="d-flex justify-content-between">
+                        <span className="text-muted">Emergency Fund:</span>
+                        <span className="fw-semibold">{planScore?.emergencyFund ?? 10} / 10</span>
                       </div>
                     </div>
                   </div>
@@ -317,27 +428,27 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               {/* 4 HIGHLIGHT PILLS */}
               <div className="row g-2 mt-1">
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 border border-slate-200 bg-white text-center">
+                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
                     <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Liquid at Retirement</div>
-                    <div className="fw-bolder text-slate-900 fs-6 mt-0.5">{metrics.shortLiquidAtRet}</div>
+                    <div className="fw-bolder fs-6 mt-0.5">{metrics.shortLiquidAtRet}</div>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 border border-slate-200 bg-white text-center">
+                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
                     <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Peak Net Worth</div>
-                    <div className="fw-bolder text-slate-900 fs-6 mt-0.5">{metrics.peakNW} <span className="small fw-normal text-muted">(@{metrics.peakAge})</span></div>
+                    <div className="fw-bolder fs-6 mt-0.5">{metrics.peakNW} <span className="small fw-normal text-muted">(@{metrics.peakAge})</span></div>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 border border-slate-200 bg-white text-center">
+                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
                     <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Final Estate Value</div>
-                    <div className="fw-bolder text-emerald-600 fs-6 mt-0.5">{metrics.shortEstate}</div>
+                    <div className="fw-bolder text-success fs-6 mt-0.5">{metrics.shortEstate}</div>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
-                  <div className="p-2.5 rounded-3 border border-slate-200 bg-white text-center">
+                  <div className="p-2.5 rounded-3 report-surface-panel text-center">
                     <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.62rem' }}>Avg Effective Tax</div>
-                    <div className="fw-bolder text-slate-900 fs-6 mt-0.5">{metrics.effTaxRate}%</div>
+                    <div className="fw-bolder fs-6 mt-0.5">{metrics.effTaxRate}%</div>
                   </div>
                 </div>
               </div>
@@ -345,13 +456,13 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
             {/* 2. CORE ASSUMPTIONS & TIMELINE SCHEDULE */}
             <div className="mb-4">
-              <h6 className="fw-bold text-uppercase text-slate-500 mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+              <h6 className="fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
                 2. Key Planning Parameters & Statutory Assumptions
               </h6>
 
               <div className="table-responsive">
-                <table className="table table-sm table-bordered text-center mb-0 align-middle" style={{ fontSize: '0.75rem' }}>
-                  <thead className="table-light">
+                <table className="table table-sm table-bordered text-center mb-0 align-middle report-table" style={{ fontSize: '0.75rem' }}>
+                  <thead>
                     <tr>
                       <th className="text-start">Parameter</th>
                       <th>Player 1 ({p1Name})</th>
@@ -362,21 +473,21 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                   <tbody>
                     <tr>
                       <td className="text-start fw-semibold">Current Age / Retirement Age</td>
-                      <td>{data.inputs?.p1_age || 38} / Age {metrics.retAge}</td>
-                      {isCouple && <td>{data.inputs?.p2_age || 34} / Age {metrics.p2RetAge}</td>}
+                      <td>{data?.inputs?.p1_age || 38} / Age {metrics.retAge}</td>
+                      {isCouple && <td>{data?.inputs?.p2_age || 34} / Age {metrics.p2RetAge}</td>}
                       <td className="text-muted">Life Expectancy: Age {metrics.lifeExp}</td>
                     </tr>
                     <tr>
                       <td className="text-start fw-semibold">CPP / OAS Start Age</td>
-                      <td>Age {data.inputs?.p1_cpp_start || 65} / Age {data.inputs?.p1_oas_start || 65}</td>
-                      {isCouple && <td>Age {data.inputs?.p2_cpp_start || 65} / Age {data.inputs?.p2_oas_start || 65}</td>}
-                      <td className="text-muted">CRA Tax Province: {data.inputs?.tax_province || 'ON'}</td>
+                      <td>Age {data?.inputs?.p1_cpp_start || 65} / Age {data?.inputs?.p1_oas_start || 65}</td>
+                      {isCouple && <td>Age {data?.inputs?.p2_cpp_start || 65} / Age {data?.inputs?.p2_oas_start || 65}</td>}
+                      <td className="text-muted">CRA Tax Province: {data?.inputs?.tax_province || 'ON'}</td>
                     </tr>
                     <tr>
                       <td className="text-start fw-semibold">Economic & Market Rates</td>
-                      <td>TFSA: {data.inputs?.p1_tfsa_ret || 6}% | RRSP: {data.inputs?.p1_rrsp_ret || 6}%</td>
-                      {isCouple && <td>TFSA: {data.inputs?.p2_tfsa_ret || 6}% | RRSP: {data.inputs?.p2_rrsp_ret || 6}%</td>}
-                      <td>Inflation Assumption: <strong>{data.inputs?.inflation_rate || 2.1}%</strong></td>
+                      <td>TFSA: {data?.inputs?.p1_tfsa_ret || 6}% | RRSP: {data?.inputs?.p1_rrsp_ret || 6}%</td>
+                      {isCouple && <td>TFSA: {data?.inputs?.p2_tfsa_ret || 6}% | RRSP: {data?.inputs?.p2_rrsp_ret || 6}%</td>}
+                      <td>Inflation Assumption: <strong>{data?.inputs?.inflation_rate || 2.1}%</strong></td>
                     </tr>
                   </tbody>
                 </table>
@@ -391,7 +502,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             {/* ========================================================= */}
             <div className="pt-2 mb-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h6 className="fw-bold text-uppercase text-slate-500 m-0" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                <h6 className="fw-bold text-uppercase text-muted m-0" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
                   3. Multi-Decade Cash Flow & Net Worth Milestone Ledger
                 </h6>
                 <span className="text-muted small" style={{ fontSize: '0.7rem' }}>
@@ -400,8 +511,8 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               </div>
 
               <div className="table-responsive">
-                <table className="table table-sm table-striped table-bordered text-center align-middle" style={{ fontSize: '0.72rem' }}>
-                  <thead className="table-dark">
+                <table className="table table-sm table-striped table-bordered text-center align-middle report-table report-table-striped" style={{ fontSize: '0.72rem' }}>
+                  <thead>
                     <tr>
                       <th>Year</th>
                       <th>P1 Age</th>
@@ -433,10 +544,10 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                           <td className="text-end">{metrics.formatShort(yr.grossInflow || 0)}</td>
                           <td className="text-end">{metrics.formatShort((yr.expenses || 0) + (yr.mortgagePay || 0))}</td>
                           <td className="text-end text-danger">{metrics.formatShort((yr.taxP1 || 0) + (yr.taxP2 || 0))}</td>
-                          <td className={`text-end fw-semibold ${liquidNW <= 0 && isRetired ? 'text-danger' : 'text-slate-900'}`}>
+                          <td className={`text-end fw-semibold ${liquidNW <= 0 && isRetired ? 'text-danger' : ''}`}>
                             {metrics.formatShort(liquidNW)}
                           </td>
-                          <td className="text-end fw-bold text-emerald-700">
+                          <td className="text-end fw-bold text-success">
                             {metrics.formatShort(totalNW)}
                           </td>
                         </tr>
@@ -449,35 +560,35 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
             {/* 4. CANADIAN TAX & ACCOUNT STRATEGY SUMMARY */}
             <div className="mb-4">
-              <h6 className="fw-bold text-uppercase text-slate-500 mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+              <h6 className="fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
                 4. Canadian Tax & Account Optimization Strategy
               </h6>
 
-              <div className="p-3 rounded-3 bg-slate-50 border border-slate-200">
+              <div className="p-3 rounded-3 report-surface-panel">
                 <div className="row g-3" style={{ fontSize: '0.75rem' }}>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold text-slate-900 mb-1">
+                    <div className="fw-bold mb-1">
                       <i className="bi bi-diagram-3-fill text-primary me-1"></i> Decumulation Sequence
                     </div>
-                    <div className="text-slate-600">
+                    <div className="text-muted">
                       Standard tax-bracket smoothing deploys non-registered capital first, preserving TFSA tax-free compounding until later years.
                     </div>
                   </div>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold text-slate-900 mb-1">
+                    <div className="fw-bold mb-1">
                       <i className="bi bi-people-fill text-success me-1"></i> Pension Income Splitting
                     </div>
-                    <div className="text-slate-600">
+                    <div className="text-muted">
                       {isCouple 
                         ? 'Simulates eligible pension transfer (up to 50% at age 65) to equalize marginal brackets and minimize combined household tax.' 
                         : 'Single individual filing strategy. Focuses on RRSP/RRIF drawdown before age 72 to prevent OAS clawbacks.'}
                     </div>
                   </div>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold text-slate-900 mb-1">
+                    <div className="fw-bold mb-1">
                       <i className="bi bi-unlock-fill text-info me-1"></i> 50% LIF / LIRA Unlocking
                     </div>
-                    <div className="text-slate-600">
+                    <div className="text-muted">
                       Evaluates one-time 50% unlocking of locked-in retirement funds into RRSP/RRIF based on provincial statutory jurisdiction.
                     </div>
                   </div>
@@ -486,9 +597,9 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             </div>
 
             {/* 5. DISCLAIMER & FOOTER */}
-            <div className="pt-3 border-top border-slate-200 text-slate-500" style={{ fontSize: '0.68rem', lineHeight: '1.45' }}>
+            <div className="pt-3 border-top text-muted" style={{ fontSize: '0.68rem', lineHeight: '1.45', borderColor: 'var(--border-color, #2c3b52)' }}>
               <div className="d-flex justify-content-between align-items-center mb-1">
-                <strong>Planfolio Canada — local-first financial planning</strong>
+                <strong className="text-main">Planfolio Canada — local-first financial planning</strong>
                 <span>Generated locally on-device • Zero cloud tracking</span>
               </div>
               <p className="mb-0 text-muted">
@@ -502,4 +613,6 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
       </div>
     </>
   );
+
+  return createPortal(modalContent, document.body);
 }
