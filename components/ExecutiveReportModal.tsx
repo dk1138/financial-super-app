@@ -190,7 +190,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
   const modalContent = (
     <>
-      {/* SCOPED REPORT CSS: Screen dark/light theme + 1-Page Letter Size Print with Breathing Room */}
+      {/* SCOPED REPORT CSS: Screen dark/light theme + Full-Color 1-Page Letter Size Print */}
       <style>{`
         @media screen {
           .report-modal-backdrop {
@@ -244,6 +244,13 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
         }
 
         @media print {
+          /* Enforce exact color graphics reproduction across all browsers */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
           @page {
             size: letter portrait;
             margin: 8mm 10mm;
@@ -316,35 +323,89 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             break-inside: avoid !important;
           }
 
-          .report-printable-area * {
-            color: #0f172a !important;
+          /* FULL COLOR PALETTE IN PRINT (MATCHING SCREEN EXACTLY) */
+          .text-primary,
+          .report-printable-area .text-primary {
+            color: #0284c7 !important;
+          }
+          .text-success,
+          .report-printable-area .text-success {
+            color: #16a34a !important;
+          }
+          .text-danger,
+          .report-printable-area .text-danger {
+            color: #dc2626 !important;
+          }
+          .text-info,
+          .report-printable-area .text-info {
+            color: #0284c7 !important;
+          }
+          .text-muted,
+          .report-printable-area .text-muted {
+            color: #64748b !important;
           }
 
+          /* Brand logo icon gradient */
+          .print-brand-icon {
+            background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+            color: #ffffff !important;
+          }
+
+          /* CRA Engine badge in vibrant Canadian red */
+          .print-cra-badge {
+            background-color: #fee2e2 !important;
+            color: #dc2626 !important;
+            border: 1px solid #fca5a5 !important;
+          }
+
+          /* Plan longevity cards with rich tints & borders */
+          .print-funded-card {
+            background-color: #f0fdf4 !important;
+            border: 1.5px solid #86efac !important;
+          }
+          .print-depleted-card {
+            background-color: #fef2f2 !important;
+            border: 1.5px solid #fca5a5 !important;
+          }
+
+          /* Today's $ badge in crisp blue */
+          .print-real-badge {
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+          }
+
+          /* Status Badges */
+          .badge.bg-primary {
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+          }
+          .badge.bg-secondary {
+            background-color: #64748b !important;
+            color: #ffffff !important;
+          }
+
+          /* Elevated panels (Client banner, Health score, Stats, Strategy) */
           .report-surface-panel {
-            background: #f8fafc !important;
+            background-color: #f8fafc !important;
             border: 1px solid #e2e8f0 !important;
-            color: #0f172a !important;
           }
 
+          /* Table Styling: Professional Slate-800 Dark Header with High-Contrast White Text */
           .report-table {
-            color: #0f172a !important;
             border-color: #cbd5e1 !important;
           }
-
           .report-table th {
-            background: #f1f5f9 !important;
-            color: #0f172a !important;
-            border-color: #cbd5e1 !important;
+            background-color: #1e293b !important;
+            color: #ffffff !important;
+            border-color: #334155 !important;
           }
-
           .report-table td {
-            background: #ffffff !important;
+            background-color: #ffffff !important;
             color: #0f172a !important;
-            border-color: #cbd5e1 !important;
+            border-color: #e2e8f0 !important;
           }
-
           .report-table-striped tbody tr:nth-of-type(odd) td {
-            background: #f8fafc !important;
+            background-color: #f8fafc !important;
           }
         }
       `}</style>
@@ -381,7 +442,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
             </div>
           </div>
 
-          {/* 1-PAGE REPORT CONTENT (COMFORTABLE MARGINS & BALANCED BREATHING ROOM) */}
+          {/* 1-PAGE REPORT CONTENT (FULL COLOR PALETTE WITH COMFORTABLE MARGINS) */}
           <div ref={printContentRef} className="report-printable-area p-4 p-sm-4.5">
             
             {/* HEADER: LOGO, CRA ENGINE & CLIENT SCENARIO */}
@@ -389,7 +450,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <div 
-                    className="d-flex align-items-center justify-content-center text-white shadow-sm"
+                    className="print-brand-icon d-flex align-items-center justify-content-center text-white shadow-sm"
                     style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
                   >
                     <i className="bi bi-graph-up-arrow fs-6"></i>
@@ -402,7 +463,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
                 <div className="text-end">
                   <div 
-                    className="badge rounded-pill fw-bold d-inline-flex align-items-center"
+                    className="print-cra-badge badge rounded-pill fw-bold d-inline-flex align-items-center shadow-xs"
                     style={{ 
                       background: 'rgba(239, 68, 68, 0.12)', 
                       color: '#dc2626', 
@@ -418,7 +479,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               </div>
 
               {/* CLIENT & PLAN BANNER */}
-              <div className="p-2.5 rounded-3 report-surface-panel d-flex justify-content-between align-items-center">
+              <div className="p-2.5 rounded-3 report-surface-panel d-flex justify-content-between align-items-center shadow-xs">
                 <div>
                   <div className="text-uppercase text-muted fw-bold" style={{ fontSize: '0.62rem', letterSpacing: '0.5px' }}>Prepared For</div>
                   <h6 className="fw-bold mb-0" style={{ fontSize: '0.9rem' }}>{clientNames}</h6>
@@ -440,7 +501,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                 {/* Health Card */}
                 <div className="col-12 col-sm-6">
                   <div 
-                    className="p-2.5 rounded-3 h-100 d-flex flex-column justify-content-between"
+                    className={`p-2.5 rounded-3 h-100 d-flex flex-column justify-content-between ${metrics.isFullyFunded ? 'print-funded-card' : 'print-depleted-card'}`}
                     style={{
                       background: metrics.isFullyFunded ? 'rgba(34, 197, 94, 0.10)' : 'rgba(239, 68, 68, 0.10)',
                       border: `1px solid ${metrics.isFullyFunded ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
@@ -450,7 +511,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                       <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.62rem' }}>Plan Longevity</span>
                       {metrics.useRealDollars && (
                         <span 
-                          className="badge rounded-pill fw-bold"
+                          className="print-real-badge badge rounded-pill fw-bold"
                           style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.65rem', padding: '2px 8px' }}
                         >
                           Today's $
@@ -481,19 +542,19 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                     <div className="mt-1 small space-y-0.5" style={{ fontSize: '0.7rem' }}>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Retirement Readiness:</span>
-                        <span className="fw-semibold">{planScore?.retirementReadiness ?? 45} / 50</span>
+                        <span className="fw-bold">{planScore?.retirementReadiness ?? 45} / 50</span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Savings Rate Target:</span>
-                        <span className="fw-semibold">{planScore?.savingsRate ?? 20} / 20</span>
+                        <span className="fw-bold">{planScore?.savingsRate ?? 20} / 20</span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Debt Health:</span>
-                        <span className="fw-semibold">{planScore?.debtHealth ?? 20} / 20</span>
+                        <span className="fw-bold">{planScore?.debtHealth ?? 20} / 20</span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="text-muted">Emergency Fund:</span>
-                        <span className="fw-semibold">{planScore?.emergencyFund ?? 10} / 10</span>
+                        <span className="fw-bold">{planScore?.emergencyFund ?? 10} / 10</span>
                       </div>
                     </div>
                   </div>
@@ -523,7 +584,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                 <div className="col-6 col-md-3">
                   <div className="p-2 rounded-3 report-surface-panel text-center">
                     <div className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.58rem' }}>Avg Effective Tax</div>
-                    <div className="fw-bolder mt-0.5" style={{ fontSize: '0.85rem' }}>{metrics.effTaxRate}%</div>
+                    <div className="fw-bolder text-primary mt-0.5" style={{ fontSize: '0.85rem' }}>{metrics.effTaxRate}%</div>
                   </div>
                 </div>
               </div>
@@ -556,7 +617,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                       <td className="text-start fw-semibold py-1">CPP / OAS Start Age</td>
                       <td className="py-1">Age {data?.inputs?.p1_cpp_start || 65} / Age {data?.inputs?.p1_oas_start || 65}</td>
                       {isCouple && <td className="py-1">Age {data?.inputs?.p2_cpp_start || 65} / Age {data?.inputs?.p2_oas_start || 65}</td>}
-                      <td className="text-muted py-1">CRA Tax Province: {data?.inputs?.tax_province || 'ON'}</td>
+                      <td className="text-muted py-1">CRA Tax Province: <strong className="text-primary">{data?.inputs?.tax_province || 'ON'}</strong></td>
                     </tr>
                     <tr>
                       <td className="text-start fw-semibold py-1">Economic & Market Rates</td>
@@ -613,7 +674,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                           </td>
                           <td className="text-end py-1">{metrics.formatShort(yr.grossInflow || 0)}</td>
                           <td className="text-end py-1">{metrics.formatShort((yr.expenses || 0) + (yr.mortgagePay || 0))}</td>
-                          <td className="text-end text-danger py-1">{metrics.formatShort((yr.taxP1 || 0) + (yr.taxP2 || 0))}</td>
+                          <td className="text-end text-danger fw-semibold py-1">{metrics.formatShort((yr.taxP1 || 0) + (yr.taxP2 || 0))}</td>
                           <td className={`text-end fw-semibold py-1 ${liquidNW <= 0 && isRetired ? 'text-danger' : ''}`}>
                             {metrics.formatShort(liquidNW)}
                           </td>
@@ -637,7 +698,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               <div className="p-2 rounded-3 report-surface-panel">
                 <div className="row g-2" style={{ fontSize: '0.68rem', lineHeight: '1.3' }}>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-0.5">
+                    <div className="fw-bold mb-0.5 text-main">
                       <i className="bi bi-diagram-3-fill text-primary me-1"></i> Decumulation Sequence
                     </div>
                     <div className="text-muted">
@@ -645,7 +706,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                     </div>
                   </div>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-0.5">
+                    <div className="fw-bold mb-0.5 text-main">
                       <i className="bi bi-people-fill text-success me-1"></i> Pension Income Splitting
                     </div>
                     <div className="text-muted">
@@ -655,7 +716,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                     </div>
                   </div>
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-0.5">
+                    <div className="fw-bold mb-0.5 text-main">
                       <i className="bi bi-unlock-fill text-info me-1"></i> 50% LIF / LIRA Unlocking
                     </div>
                     <div className="text-muted">
