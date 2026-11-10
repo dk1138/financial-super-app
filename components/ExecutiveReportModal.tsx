@@ -9,6 +9,19 @@ interface ExecutiveReportModalProps {
   onClose: () => void;
 }
 
+const ACCOUNT_LABELS: Record<string, string> = {
+  nonreg: 'Non-Reg',
+  cash: 'Cash / HYSA',
+  tfsa: 'TFSA',
+  fhsa: 'FHSA',
+  rrsp: 'RRSP',
+  rrif_acct: 'RRIF',
+  lif: 'LIF',
+  lirf: 'LIRA',
+  crypto: 'Crypto',
+  resp: 'RESP'
+};
+
 export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveReportModalProps) {
   const { data, results, planScore } = useFinance() as any;
   const printContentRef = useRef<HTMLDivElement>(null);
@@ -35,7 +48,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
   const planName = typeof window !== 'undefined' ? (localStorage.getItem('active_plan_name') || 'Personal Financial Plan') : 'Personal Financial Plan';
   const currentDate = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Calculate high-level summary metrics
+  // Calculate high-level summary metrics & retirement safety benchmarks
   const metrics = useMemo(() => {
     if (!results || !results.timeline || results.timeline.length === 0) return null;
 
@@ -82,18 +95,38 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
     });
 
     const retItem = timeline.find((y: any) => y.p1Age >= p1RetAge) || timeline[0];
+    const prevRetItem = timeline[Math.max(0, timeline.indexOf(retItem) - 1)] || retItem;
     const finalItem = timeline[timeline.length - 1];
 
     const liquidAtRet = retItem ? getReal(retItem.liquidNW || 0, retItem.year) : 0;
     const finalEstate = finalItem ? getReal((finalItem.liquidNW || 0) + (finalItem.reIncludedEq || 0), finalItem.year) : 0;
     const effTaxRate = totalGrossInflows > 0 ? (totalTaxPaid / totalGrossInflows) * 100 : 0;
 
-    // Strategic lifecycle milestones tailored to fit cleanly on 1 Letter size page (5 to 6 rows)
+    // Initial withdrawal rate calculation at retirement
+    const retSpend = (retItem?.expenses || 0) + (retItem?.mortgagePay || 0);
+    const retPortfolio = prevRetItem?.liquidNW || retItem?.liquidNW || 1;
+    const initialWithdrawalRateVal = retPortfolio > 0 ? (retSpend / retPortfolio) * 100 : 0;
+    const initialWithdrawalRate = initialWithdrawalRateVal.toFixed(1);
+
+    // Guaranteed Government Benefits (CPP + OAS) at retirement
+    const cppOasAnnual = (retItem?.cppP1 || 0) + (retItem?.cppP2 || 0) + (retItem?.oasP1 || 0) + (retItem?.oasP2 || 0);
+    const guaranteedFloor = retSpend > 0 ? Math.min(100, Math.round((cppOasAnnual / retSpend) * 100)) : 0;
+
+    // Debt-free milestone
+    const debtFreeItem = timeline.find((y: any) => (y.mortgage || 0) <= 0 && (y.debtRemaining || 0) <= 0);
+    const debtFreeAge = debtFreeItem ? debtFreeItem.p1Age : p1RetAge;
+
+    // Strategic lifecycle milestones tailored to fit 6 clean rows on 1 Letter page
     const milestoneIndices = new Set<number>();
-    milestoneIndices.add(0); // Start / Today
+    milestoneIndices.add(0); // Today / Plan Start
+    
+    const retIdx = timeline.findIndex((y: any) => y.p1Age >= p1RetAge);
+    // Mid-career milestone if retirement is more than 6 years away
+    if (retIdx > 4) {
+      milestoneIndices.add(Math.round(retIdx / 2));
+    }
     
     // Retirement year
-    const retIdx = timeline.findIndex((y: any) => y.p1Age >= p1RetAge);
     if (retIdx !== -1) milestoneIndices.add(retIdx);
 
     // CPP / OAS start year (if different from retirement)
@@ -101,13 +134,11 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
     const cppIdx = timeline.findIndex((y: any) => y.p1Age >= cppAge);
     if (cppIdx !== -1) milestoneIndices.add(cppIdx);
 
-    // Peak Net Worth milestone
-    const peakIdx = timeline.findIndex((y: any) => y.p1Age === peakAge);
-    if (peakIdx !== -1) milestoneIndices.add(peakIdx);
-
-    // Mid-retirement milestone (e.g. Age 75 or 80)
-    const midIdx = timeline.findIndex((y: any) => y.p1Age >= 75);
-    if (midIdx !== -1) milestoneIndices.add(midIdx);
+    // Mid-retirement milestone (Age 75 or 80)
+    const midRetIdx = timeline.findIndex((y: any) => y.p1Age >= (p1RetAge >= 70 ? 80 : 75));
+    if (midRetIdx !== -1 && midRetIdx > retIdx) {
+      milestoneIndices.add(midRetIdx);
+    }
 
     // Final plan life expectancy year
     milestoneIndices.add(timeline.length - 1);
@@ -116,6 +147,13 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
       .sort((a, b) => a - b)
       .map(idx => timeline[idx])
       .filter(Boolean);
+
+    // Dynamic decumulation sequence from user's live strategies
+    const rawDecum = data?.strategies?.decum || ['nonreg', 'cash', 'tfsa', 'rrsp', 'rrif_acct'];
+    const decumSequence = rawDecum
+      .filter((k: string) => ['nonreg', 'cash', 'tfsa', 'fhsa', 'rrsp', 'rrif_acct', 'lif', 'crypto'].includes(k))
+      .slice(0, 5)
+      .map((k: string) => ACCOUNT_LABELS[k] || k.toUpperCase());
 
     const formatCurrency = (val: number) => {
       return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
@@ -144,7 +182,14 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
       totalLivingSpent: formatCurrency(totalLivingSpent),
       totalBenefitsReceived: formatCurrency(totalBenefitsReceived),
       effTaxRate: effTaxRate.toFixed(1),
+      initialWithdrawalRate,
+      initialWithdrawalRateVal,
+      cppOasAnnual: formatCurrency(cppOasAnnual),
+      shortCppOasAnnual: formatShort(cppOasAnnual),
+      guaranteedFloor,
+      debtFreeAge,
       milestoneYears,
+      decumSequence,
       useRealDollars,
       formatCurrency,
       formatShort,
@@ -433,12 +478,24 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               >
                 <i className="bi bi-printer-fill me-1.5"></i> Print / Save as PDF
               </button>
+              
+              {/* ADAPTIVE HIGH-CONTRAST CLOSE BUTTON (VISIBLE IN BOTH LIGHT & DARK MODES) */}
               <button 
                 type="button" 
-                className="btn-close btn-close-white shadow-none ms-2"
+                className="btn btn-sm p-1 ms-2 border-0 shadow-none d-flex align-items-center justify-content-center transition-all"
                 onClick={onClose}
                 aria-label="Close"
-              ></button>
+                title="Close report modal"
+                style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%', 
+                  background: 'var(--bg-input, rgba(0, 0, 0, 0.08))', 
+                  color: 'var(--text-main, #0f172a)' 
+                }}
+              >
+                <i className="bi bi-x-lg fw-bolder" style={{ fontSize: '0.85rem' }}></i>
+              </button>
             </div>
           </div>
 
@@ -532,29 +589,37 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                   </div>
                 </div>
 
-                {/* Score Card: All 4 Pillars Adding to 100 */}
+                {/* Score Card: All 4 Pillars Matching Exact Font & Tabular Width */}
                 <div className="col-12 col-sm-6">
                   <div className="p-2.5 rounded-3 report-surface-panel h-100 d-flex flex-column justify-content-between">
                     <div className="d-flex justify-content-between align-items-center">
                       <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.62rem' }}>Plan Health Score</span>
                       <span className="fw-bold text-primary fs-6">{planScore?.totalScore || 85} / 100</span>
                     </div>
-                    <div className="mt-1 small space-y-0.5" style={{ fontSize: '0.7rem' }}>
-                      <div className="d-flex justify-content-between">
+                    <div className="mt-1 small space-y-0.5" style={{ fontSize: '0.72rem' }}>
+                      <div className="d-flex justify-content-between align-items-center">
                         <span className="text-muted">Retirement Readiness:</span>
-                        <span className="fw-bold">{planScore?.retirementReadiness ?? 45} / 50</span>
+                        <span className="fw-bold text-main" style={{ fontVariantNumeric: 'tabular-nums', minWidth: '48px', textAlign: 'right' }}>
+                          {planScore?.retirementReadiness ?? 45} / 50
+                        </span>
                       </div>
-                      <div className="d-flex justify-content-between">
+                      <div className="d-flex justify-content-between align-items-center">
                         <span className="text-muted">Savings Rate Target:</span>
-                        <span className="fw-bold">{planScore?.savingsRate ?? 20} / 20</span>
+                        <span className="fw-bold text-main" style={{ fontVariantNumeric: 'tabular-nums', minWidth: '48px', textAlign: 'right' }}>
+                          {planScore?.savingsRate ?? 20} / 20
+                        </span>
                       </div>
-                      <div className="d-flex justify-content-between">
+                      <div className="d-flex justify-content-between align-items-center">
                         <span className="text-muted">Debt Health:</span>
-                        <span className="fw-bold">{planScore?.debtHealth ?? 20} / 20</span>
+                        <span className="fw-bold text-main" style={{ fontVariantNumeric: 'tabular-nums', minWidth: '48px', textAlign: 'right' }}>
+                          {planScore?.debtHealth ?? 20} / 20
+                        </span>
                       </div>
-                      <div className="d-flex justify-content-between">
+                      <div className="d-flex justify-content-between align-items-center">
                         <span className="text-muted">Emergency Fund:</span>
-                        <span className="fw-bold">{planScore?.emergencyFund ?? 10} / 10</span>
+                        <span className="fw-bold text-main" style={{ fontVariantNumeric: 'tabular-nums', minWidth: '48px', textAlign: 'right' }}>
+                          {planScore?.emergencyFund ?? 10} / 10
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -590,14 +655,14 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               </div>
             </div>
 
-            {/* 2. CORE ASSUMPTIONS & TIMELINE SCHEDULE */}
+            {/* 2. CORE ASSUMPTIONS & RETIREMENT SAFETY BENCHMARKS */}
             <div className="mb-2.5">
               <h6 className="fw-bold text-uppercase text-muted mb-1.5" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
                 2. Key Planning Parameters & Statutory Assumptions
               </h6>
 
               <div className="table-responsive">
-                <table className="table table-sm table-bordered text-center mb-0 align-middle report-table" style={{ fontSize: '0.7rem' }}>
+                <table className="table table-sm table-bordered text-center mb-1.5 align-middle report-table" style={{ fontSize: '0.7rem' }}>
                   <thead>
                     <tr>
                       <th className="text-start py-1">Parameter</th>
@@ -628,9 +693,29 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
                   </tbody>
                 </table>
               </div>
+
+              {/* RETIREMENT SAFETY & CASH FLOW BENCHMARKS STRIP */}
+              <div className="p-2 rounded-3 report-surface-panel d-flex flex-wrap justify-content-between align-items-center gap-2" style={{ fontSize: '0.68rem' }}>
+                <div className="d-flex align-items-center gap-1.5">
+                  <span className="text-muted fw-bold">Initial Withdrawal Rate:</span>
+                  <strong className="text-main">{metrics.initialWithdrawalRate}%</strong>
+                  <span className={`badge ${metrics.initialWithdrawalRateVal <= 4.0 ? 'bg-success' : metrics.initialWithdrawalRateVal <= 5.0 ? 'bg-warning text-dark' : 'bg-danger'} rounded-pill`} style={{ fontSize: '0.58rem', padding: '2px 6px' }}>
+                    {metrics.initialWithdrawalRateVal <= 4.0 ? '✓ < 4.0% Ideal' : metrics.initialWithdrawalRateVal <= 5.0 ? 'Moderate' : 'Elevated'}
+                  </span>
+                </div>
+                <div className="d-flex align-items-center gap-1.5">
+                  <span className="text-muted fw-bold">Guaranteed Income Floor:</span>
+                  <strong className="text-primary">{metrics.guaranteedFloor}%</strong>
+                  <span className="text-muted small">({metrics.shortCppOasAnnual}/yr CPP+OAS)</span>
+                </div>
+                <div className="d-flex align-items-center gap-1.5">
+                  <span className="text-muted fw-bold">Debt-Free Milestone:</span>
+                  <strong className="text-success">Age {metrics.debtFreeAge}</strong>
+                </div>
+              </div>
             </div>
 
-            {/* 3. MULTI-DECADE MILESTONE LEDGER TABLE (STRATEGIC MILESTONES) */}
+            {/* 3. MULTI-DECADE MILESTONE LEDGER TABLE (STRATEGIC 6 MILESTONES) */}
             <div className="mb-2.5">
               <div className="d-flex justify-content-between align-items-center mb-1.5">
                 <h6 className="fw-bold text-uppercase text-muted m-0" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
@@ -689,7 +774,7 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               </div>
             </div>
 
-            {/* 4. CANADIAN TAX & ACCOUNT STRATEGY SUMMARY */}
+            {/* 4. CANADIAN TAX & ACCOUNT STRATEGY (WITH LIVE DECUMULATION SEQUENCE) */}
             <div className="mb-2.5">
               <h6 className="fw-bold text-uppercase text-muted mb-1.5" style={{ fontSize: '0.68rem', letterSpacing: '0.5px' }}>
                 4. Canadian Tax & Account Optimization Strategy
@@ -697,30 +782,50 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
 
               <div className="p-2 rounded-3 report-surface-panel">
                 <div className="row g-2" style={{ fontSize: '0.68rem', lineHeight: '1.3' }}>
+                  {/* Decumulation Sequence Column with Live Account Badges */}
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-0.5 text-main">
+                    <div className="fw-bold mb-1 text-main d-flex align-items-center">
                       <i className="bi bi-diagram-3-fill text-primary me-1"></i> Decumulation Sequence
                     </div>
-                    <div className="text-muted">
-                      Tax-bracket smoothing deploys non-registered funds first, preserving TFSA tax-free compounding.
+                    <div className="d-flex flex-wrap align-items-center gap-1 mb-1">
+                      {metrics.decumSequence.map((name: string, i: number) => (
+                        <React.Fragment key={name}>
+                          <span 
+                            className="badge bg-primary text-white px-1.5 py-0.5 rounded shadow-2xs" 
+                            style={{ fontSize: '0.60rem', fontWeight: 700 }}
+                          >
+                            {name}
+                          </span>
+                          {i < metrics.decumSequence.length - 1 && (
+                            <i className="bi bi-arrow-right text-muted" style={{ fontSize: '0.58rem' }}></i>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: '0.62rem' }}>
+                      Priority sequence draws taxable capital first, preserving TFSA tax-free compounding into late life.
                     </div>
                   </div>
+
+                  {/* Pension Splitting Column */}
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-0.5 text-main">
+                    <div className="fw-bold mb-1 text-main">
                       <i className="bi bi-people-fill text-success me-1"></i> Pension Income Splitting
                     </div>
-                    <div className="text-muted">
+                    <div className="text-muted" style={{ fontSize: '0.64rem' }}>
                       {isCouple 
-                        ? 'Simulates eligible pension transfer (up to 50% at 65) to equalize brackets and reduce household tax.' 
-                        : 'Single filing: RRSP/RRIF drawdown before 72 to prevent OAS clawbacks and estate terminal tax.'}
+                        ? 'Simulates eligible pension transfer (up to 50% at 65) to equalize brackets and reduce combined household tax.' 
+                        : 'Single filing: Systematic RRSP/RRIF drawdown before 72 to prevent OAS clawbacks and estate terminal tax.'}
                     </div>
                   </div>
+
+                  {/* 50% LIF / LIRA Unlocking Column */}
                   <div className="col-12 col-md-4">
-                    <div className="fw-bold mb-0.5 text-main">
+                    <div className="fw-bold mb-1 text-main">
                       <i className="bi bi-unlock-fill text-info me-1"></i> 50% LIF / LIRA Unlocking
                     </div>
-                    <div className="text-muted">
-                      Evaluates statutory 50% unlocking of locked-in retirement capital into RRSP/RRIF by province.
+                    <div className="text-muted" style={{ fontSize: '0.64rem' }}>
+                      Evaluates statutory 50% unlocking of locked-in retirement capital into RRSP/RRIF by provincial jurisdiction.
                     </div>
                   </div>
                 </div>
