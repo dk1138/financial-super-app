@@ -1,120 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { FinanceEngine } from '../../lib/financeEngine';
-import { FINANCIAL_CONSTANTS } from '../../lib/config';
 import { SegmentedControl, InfoBtn } from '../SharedUI';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-/**
- * High-precision Inverse Normal Cumulative Distribution Function (Probit function)
- * Peter J. Acklam's algorithm (error < 1.15e-9).
- */
-function invNorm(p: number): number {
-    if (p <= 0.00001) return -4.5;
-    if (p >= 0.99999) return 4.5;
-
-    const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
-    const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
-    const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
-    const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
-    const pLow = 0.02425;
-    const pHigh = 1 - pLow;
-
-    if (p < pLow) {
-        const q = Math.sqrt(-2 * Math.log(p));
-        return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-               ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-    }
-    if (p <= pHigh) {
-        const q = p - 0.5;
-        const r = q * q;
-        return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
-               (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
-    }
-    const q = Math.sqrt(-2 * Math.log(1 - p));
-    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-}
-
-/**
- * Latin Hypercube Sampling (LHS) Generator.
- */
-function generateLHSShocks(runs: number, years: number, volatility: number): number[][] {
-    const matrix: number[][] = Array.from({ length: runs }, () => new Array(years).fill(0));
-
-    for (let y = 0; y < years; y++) {
-        const yearSamples: number[] = [];
-        for (let i = 0; i < runs; i++) {
-            const u = (i + Math.random()) / runs;
-            yearSamples.push(invNorm(u) * volatility);
-        }
-
-        // Independent Fisher-Yates permutation
-        for (let i = runs - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            const temp = yearSamples[i];
-            yearSamples[i] = yearSamples[j];
-            yearSamples[j] = temp;
-        }
-
-        for (let i = 0; i < runs; i++) {
-            matrix[i][y] = yearSamples[i];
-        }
-    }
-
-    return matrix;
-}
-
-// Low-discrepancy prime bases for Halton sequence
-const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
-function getPrime(idx: number): number {
-    if (idx < PRIMES.length) return PRIMES[idx];
-    let candidate = PRIMES[PRIMES.length - 1] + 2;
-    while (true) {
-        let isPrime = true;
-        for (let i = 2; i * i <= candidate; i++) {
-            if (candidate % i === 0) { isPrime = false; break; }
-        }
-        if (isPrime) {
-            PRIMES.push(candidate);
-            if (PRIMES.length > idx) return candidate;
-        }
-        candidate += 2;
-    }
-}
-
-function halton(index: number, base: number): number {
-    let result = 0;
-    let f = 1 / base;
-    let i = index;
-    while (i > 0) {
-        result += f * (i % base);
-        i = Math.floor(i / base);
-        f /= base;
-    }
-    return result;
-}
-
-/**
- * Quasi-Monte Carlo (QHS) Generator using Low-Discrepancy Halton Sequences.
- */
-function generateQHSShocks(runs: number, years: number, volatility: number): number[][] {
-    const matrix: number[][] = Array.from({ length: runs }, () => new Array(years).fill(0));
-    const offset = Math.floor(Math.random() * 1000) + 1;
-
-    for (let y = 0; y < years; y++) {
-        const base = getPrime(y);
-        for (let i = 0; i < runs; i++) {
-            let u = halton(offset + i, base);
-            u = Math.max(0.0001, Math.min(0.9999, u));
-            matrix[i][y] = invNorm(u) * volatility;
-        }
-    }
-
-    return matrix;
-}
 
 export default function MonteCarloCard() {
     const { data, mcResults, setMcResults } = useFinance();
@@ -124,115 +13,68 @@ export default function MonteCarloCard() {
     const [volatility, setVolatility] = useState<number>(mcResults?.volatility || 0.12);
     const [isCalculating, setIsCalculating] = useState<boolean>(false);
     const [progress, setProgress] = useState<number>(0);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const workerRef = useRef<Worker | null>(null);
+
+    useEffect(() => {
+        return () => {
+            workerRef.current?.terminate();
+            workerRef.current = null;
+        };
+    }, []);
 
     const runMonteCarlo = () => {
         setIsCalculating(true);
         setProgress(0);
+        setErrorMsg(null);
 
-        setTimeout(() => {
-          try {
-            const trajectories: number[][] = [];
-            const p1Age = data.inputs.p1_age || 38;
-            const inflationRate = (data.inputs.inflation_rate || 2.1) / 100;
-            let successCount = 0;
-            
-            // Pre-generate structured shocks if selected
-            let structuredShocks: number[][] | null = null;
-            if (method === 'lhs') {
-                structuredShocks = generateLHSShocks(simCount, 100, volatility);
-            } else if (method === 'qhs') {
-                structuredShocks = generateQHSShocks(simCount, 100, volatility);
-            }
+        workerRef.current?.terminate();
 
-            // Non-blocking asynchronous batching to prevent UI thread freezing
-            const BATCH_SIZE = 25;
-            let currentIdx = 0;
+        try {
+            const worker = new Worker(new URL('../../lib/financeWorker.ts', import.meta.url));
+            workerRef.current = worker;
 
-            const runBatch = () => {
-                const endIdx = Math.min(currentIdx + BATCH_SIZE, simCount);
-
-                for (let i = currentIdx; i < endIdx; i++) {
-                    const engine = new FinanceEngine(JSON.parse(JSON.stringify(data)));
-                    let simContext: any = { method };
-                    
-                    if (method === 'historical') {
-                       const sp500 = FINANCIAL_CONSTANTS.SP500_HISTORICAL;
-                       const startIdx = Math.floor(Math.random() * sp500.length);
-                       simContext.shockSequence = []; 
-                       
-                       for (let y = 0; y < 100; y++) { 
-                           const historicalReturn = sp500[(startIdx + y) % sp500.length];
-                           const shock = historicalReturn - 0.09; 
-                           simContext.shockSequence.push(shock); 
-                       }
-                    } else if ((method === 'lhs' || method === 'qhs') && structuredShocks) {
-                       simContext.shockSequence = structuredShocks[i];
-                    } else {
-                       simContext.volatility = volatility;
-                    }
-                    
-                    const detailedResult = engine.runSimulation(true, simContext);
-                    const liquidTrajectory = detailedResult.map((y: any) => y.liquidNW);
-                    trajectories.push(liquidTrajectory);
-
-                    if (liquidTrajectory[liquidTrajectory.length - 1] > 0) {
-                        successCount++;
-                    }
-                }
-
-                currentIdx = endIdx;
-                const currentPct = Math.round((currentIdx / simCount) * 100);
-                setProgress(currentPct);
-
-                if (currentIdx < simCount) {
-                    // Yield to browser thread to keep UI interactive and animate progress
-                    setTimeout(runBatch, 0);
-                } else {
-                    // All batches finished -> compute percentiles
-                    const runs = trajectories.length;
-                    const finalSuccessRate = Number(((successCount / runs) * 100).toFixed(1));
-                    const discount = (val: number, idx: number) => Math.max(0, Math.round(val / Math.pow(1 + inflationRate, idx)));
-                    
-                    const yearsCount = trajectories[0].length;
-                    const formattedData = [];
-
-                    for (let y = 0; y < yearsCount; y++) {
-                        const yearValues = trajectories.map(t => t[y]).sort((a, b) => a - b);
-                        
-                        const pesVal = yearValues[Math.floor(runs * 0.10)];
-                        const medVal = yearValues[Math.floor(runs * 0.50)];
-                        const optVal = yearValues[Math.floor(runs * 0.90)];
-                        
-                        formattedData.push({
-                            age: p1Age + y,
-                            optimistic: discount(optVal, y),
-                            median: discount(medVal, y),
-                            pessimistic: discount(pesVal, y)
-                        });
-                    }
-                    
-                    setMcResults({
-                        chartData: formattedData,
-                        successRate: finalSuccessRate,
-                        simCount,
-                        method,
-                        volatility
-                    });
-
+            worker.onmessage = (e: MessageEvent) => {
+                if (e.data.status === 'progress') {
+                    setProgress(e.data.progress);
+                } else if (e.data.status === 'success') {
+                    setMcResults(e.data.results);
                     setIsCalculating(false);
                     setProgress(0);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                } else {
+                    console.error('Monte Carlo Worker Error:', e.data.error);
+                    setErrorMsg('Simulation failed. Please review your plan inputs and try again.');
+                    setIsCalculating(false);
+                    setProgress(0);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
                 }
             };
 
-            runBatch();
+            worker.onerror = (err) => {
+                console.error('Monte Carlo Worker Error:', err);
+                setErrorMsg('Simulation failed unexpectedly in background worker.');
+                setIsCalculating(false);
+                setProgress(0);
+                worker.terminate();
+                if (workerRef.current === worker) workerRef.current = null;
+            };
 
-          } catch(err) { 
-              console.error(err); 
-              alert("Simulation failed."); 
-              setIsCalculating(false);
-              setProgress(0);
-          }
-        }, 20);
+            worker.postMessage({
+                type: 'monteCarlo',
+                data: JSON.parse(JSON.stringify(data)),
+                simCount,
+                method,
+                volatility,
+            });
+        } catch (err) {
+            console.error(err);
+            setErrorMsg('Unable to start background simulation worker.');
+            setIsCalculating(false);
+            setProgress(0);
+        }
     };
 
     const formatCurrencyAxis = (val: number) => {
@@ -390,6 +232,12 @@ export default function MonteCarloCard() {
                             </span>
                         </button>
                     </div>
+                    {errorMsg && (
+                        <div className="alert alert-danger py-2 px-3 small fw-bold mt-3 mb-0 rounded-3 d-flex align-items-center justify-content-between" role="alert">
+                            <span><i className="bi bi-exclamation-triangle-fill me-2"></i>{errorMsg}</span>
+                            <button type="button" className="btn-close btn-close-white ms-2" style={{ fontSize: '0.65rem' }} aria-label="Dismiss" onClick={() => setErrorMsg(null)} />
+                        </div>
+                    )}
                 </div>
 
                 <div className="rp-card p-4 text-center surface-card border-secondary rounded-4 shadow-sm align-items-center">

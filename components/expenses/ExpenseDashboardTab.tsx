@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Category } from '../../app/expenses/page';
 import { Transaction } from '../../lib/expenseDb';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -17,6 +17,7 @@ interface Props {
 }
 
 export default function ExpenseDashboardTab({ totalSpend, transactionCount, transactions, monthlyData, categoryData, categories, setActiveTab, formatCurrency }: Props) {
+    const [syncNotice, setSyncNotice] = useState<string | null>(null);
     
     // --- 1. PERSONAL AVERAGE & SYNC TO RETIREMENT PLANNER ---
     const personalAverageSpend = useMemo(() => {
@@ -70,7 +71,8 @@ export default function ExpenseDashboardTab({ totalSpend, transactionCount, tran
         localStorage.setItem('superapp_shared_annual_spend', annualSpend.toString());
         localStorage.setItem('superapp_shared_category_spend', JSON.stringify(personalCategoryAverages));
         
-        alert(`Success! $${annualSpend.toLocaleString()} per year and category breakdowns have been cached. You can now use the Auto-Fill button in your Retirement Planner.`);
+        setSyncNotice(`Synced $${annualSpend.toLocaleString()}/yr and category breakdowns. Use Auto-Fill in your Retirement Planner.`);
+        setTimeout(() => setSyncNotice(null), 5000);
     };
 
     // --- 2. ACTIVE BUDGET CALCULATIONS ---
@@ -162,6 +164,12 @@ export default function ExpenseDashboardTab({ totalSpend, transactionCount, tran
 
     return (
         <div className="fade-in d-flex flex-column gap-4 pb-4">
+            {syncNotice && (
+                <div className="alert alert-success py-2 px-3 small fw-bold mb-0 rounded-3 d-flex align-items-center justify-content-between shadow-sm" role="status">
+                    <span><i className="bi bi-check-circle-fill me-2"></i>{syncNotice}</span>
+                    <button type="button" className="btn-close ms-2" style={{ fontSize: '0.65rem' }} aria-label="Dismiss" onClick={() => setSyncNotice(null)} />
+                </div>
+            )}
             
             {/* KPI ROW */}
             <div className="row g-3">

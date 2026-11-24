@@ -17,5 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Conflicting & duplicate files**: Removed typoed `public/robots,txt` (superseded by `app/robots.ts`), static `public/sitemap.xml` (conflicted with dynamic `app/sitemap.ts`), duplicate `components/tools/[slug]/page.tsx`, and unused legacy scripts (`lib/worker.js`, `lib/optimizers.js`, `lib/cppEngine.js`).
 - **Unused dependencies (`package.json`)**: Removed unused `chart.js`, `react-chartjs-2`, and `react-countup`.
 
+### Changed
+- **Offloaded Monte Carlo simulations to Web Worker (`lib/engine/monteCarlo.ts`, `lib/financeWorker.ts`, `components/risk/MonteCarloCard.tsx`)**: Extracted LHS/QHS shock generators and percentile aggregation into `lib/engine/monteCarlo.ts` and moved execution off the main UI thread into `financeWorker.ts` with streaming progress updates and clean worker termination.
+- **Replaced native `alert()` dialogs with non-blocking UI feedback**: Replaced browser `alert()` popups with toast notifications and inline alerts in `MonteCarloCard.tsx`, `DataBankTab.tsx`, `ExpenseHeaderActions.tsx`, `ExpenseDashboardTab.tsx`, `ExpenseTransactionsTab.tsx`, and `ExpenseCategoriesTab.tsx`.
+
 ### Added
-- **Tax engine unit tests (`lib/engine/tax.test.mjs`, `package.json`)**: Added zero-dependency unit tests via Node's built-in `node:test` runner (`npm test`) covering progressive brackets, inflation indexing, Ontario surtax thresholds, ON428 Dividend Tax Credit ordering, OAS clawback, Quebec abatement, CPP/EI tiers, and Ontario Seniors Public Transit refundable credit.
+- **Engine unit tests (`lib/engine/tax.test.mjs`, `lib/engine/benefits.test.mjs`, `package.json`)**: Added zero-dependency unit tests via Node's built-in `node:test` runner (`npm test`) covering progressive brackets, inflation indexing, Ontario surtax thresholds, ON428 Dividend Tax Credit ordering, OAS clawback, Quebec abatement, CPP/EI tiers, Ontario Seniors Public Transit refundable credit, RRIF/LIF factors, CPP/OAS actuarial adjustments, and CCB calculations.

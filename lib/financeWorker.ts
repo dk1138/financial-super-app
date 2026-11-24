@@ -1,9 +1,22 @@
 import { FinanceEngine } from './financeEngine';
+import { runMonteCarloSimulation } from './engine/monteCarlo';
 
 self.onmessage = (e: MessageEvent) => {
-    const { data, detailed, simContext } = e.data;
+    const { type, data, detailed, simContext, simCount, method, volatility } = e.data;
 
     try {
+        if (type === 'monteCarlo') {
+            const results = runMonteCarloSimulation(
+                data,
+                { simCount, method, volatility },
+                (progress) => {
+                    self.postMessage({ status: 'progress', progress });
+                }
+            );
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
         // Instantiate the engine with the raw JSON data sent from the main thread
         const engine = new FinanceEngine(data);
         

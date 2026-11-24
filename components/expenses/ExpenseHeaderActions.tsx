@@ -28,7 +28,7 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
             skipEmptyLines: true,
             complete: async (results) => {
                 const parsedData = results.data as any[];
-                if (parsedData.length === 0) { alert("The CSV file appears to be empty."); setIsParsing(false); return; }
+                if (parsedData.length === 0) { showToast("The CSV file appears to be empty."); setIsParsing(false); return; }
 
                 const headers = Object.keys(parsedData[0] || {}).map(h => h.toLowerCase());
                 const dateKey = headers.find(h => h.includes('date')) || headers[0];
@@ -73,7 +73,7 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                 showToast("CSV Uploaded!");
                 if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
             },
-            error: (err) => { console.error("Parse Error:", err); alert("Failed to parse the CSV file."); setIsParsing(false); }
+            error: (err) => { console.error("Parse Error:", err); showToast("Failed to parse the CSV file."); setIsParsing(false); }
         });
     };
 
@@ -104,7 +104,7 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showToast("Backup file downloaded!");
-        } catch (error) { console.error("Backup failed", error); alert("Failed to create backup."); }
+        } catch (error) { console.error("Backup failed", error); showToast("Failed to create backup."); }
     };
 
     const handleRestoreData = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,7 +127,7 @@ export default function ExpenseHeaderActions({ showToast }: Props) {
                 
                 window.dispatchEvent(new CustomEvent('expensesUpdated'));
                 showToast("Data perfectly restored!");
-            } catch (err) { console.error("Restore failed", err); alert("Failed to restore data."); } 
+            } catch (err) { console.error("Restore failed", err); showToast("Failed to restore data."); } 
             finally { if (restoreFileInputRef.current) restoreFileInputRef.current.value = ''; }
         };
         reader.readAsText(file);

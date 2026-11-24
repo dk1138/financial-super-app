@@ -249,7 +249,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
             });
             showToast(`Rebaselined active plan ${name} Non-Reg ACB to $${pAcb.toLocaleString()}!`);
         } else {
-            alert(`No prescribed Non-Reg ACB recorded for ${name}.`);
+            showToast(`No prescribed Non-Reg ACB recorded for ${name}.`);
         }
     };
 
@@ -393,7 +393,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         e.preventDefault();
         const year = Number(pastYearNum);
         if (!year || year < 1950 || year > new Date().getFullYear()) {
-            alert('Please enter a valid calendar year in the past.');
+            showToast('Please enter a valid calendar year in the past.');
             return;
         }
 

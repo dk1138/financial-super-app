@@ -24,6 +24,7 @@ export default function ExpenseTransactionsTab({ transactions, categories, works
 
     const [txToSplit, setTxToSplit] = useState<Transaction | null>(null);
     const [splitItems, setSplitItems] = useState<{ amount: string; category: string; merchant: string }[]>([]);
+    const [splitError, setSplitError] = useState<string | null>(null);
 
     const [activeTagInputId, setActiveTagInputId] = useState<string | null>(null);
     const [bulkTagInputOpen, setBulkTagInputOpen] = useState(false);
@@ -196,6 +197,7 @@ export default function ExpenseTransactionsTab({ transactions, categories, works
 
     const openSplitModal = (tx: Transaction) => {
         setTxToSplit(tx);
+        setSplitError(null);
         setSplitItems([{ amount: Math.abs(tx.amount).toString(), category: 'Uncategorized', merchant: tx.merchant }, { amount: '0', category: 'Uncategorized', merchant: tx.merchant }]);
     };
 
@@ -204,7 +206,11 @@ export default function ExpenseTransactionsTab({ transactions, categories, works
     const handleExecuteSplit = async () => {
         if (!txToSplit) return;
         const totalSplit = splitItems.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
-        if (Math.abs(totalSplit - Math.abs(txToSplit.amount)) > 0.01) { alert(`The splits must exactly equal the original amount of ${formatCurrency(Math.abs(txToSplit.amount))}.`); return; }
+        if (Math.abs(totalSplit - Math.abs(txToSplit.amount)) > 0.01) {
+            setSplitError(`The splits must exactly equal the original amount of ${formatCurrency(Math.abs(txToSplit.amount))}.`);
+            return;
+        }
+        setSplitError(null);
         const validSplits = splitItems.map(item => ({ amount: parseFloat(item.amount) || 0, category: item.category, merchant: item.merchant })).filter(s => s.amount > 0);
         await splitTransaction(txToSplit.id, validSplits);
         setTxToSplit(null);
@@ -468,6 +474,11 @@ export default function ExpenseTransactionsTab({ transactions, categories, works
                                     ))}
                                 </div>
                                 <button className="btn btn-sm btn-outline-secondary rounded-pill fw-bold border-dashed w-100 py-2 text-muted" onClick={handleAddSplitRow}><i className="bi bi-plus-circle-fill me-2"></i> Add Another Split</button>
+                                {splitError && (
+                                    <div className="alert alert-danger py-2 px-3 small fw-bold mt-3 mb-0 rounded-3" role="alert">
+                                        <i className="bi bi-exclamation-triangle-fill me-2"></i>{splitError}
+                                    </div>
+                                )}
                             </div>
                             
                             <div className="modal-footer border-top border-secondary p-3 bg-input d-flex justify-content-between align-items-center">

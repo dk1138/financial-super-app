@@ -24,6 +24,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
 
     const [newCatName, setNewCatName] = useState('');
     const [newCatColor, setNewCatColor] = useState('#0d6efd');
+    const [catError, setCatError] = useState<string | null>(null);
 
     const merchantGroups = useMemo(() => {
         const groups: Record<string, { count: number; totalAmount: number; rawNames: Set<string>; suggestedCategory?: string }> = {};
@@ -154,7 +155,11 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
         e.preventDefault();
         const cleanName = newCatName.trim();
         if (!cleanName) return;
-        if (categories.some(c => c.name.toLowerCase() === cleanName.toLowerCase())) { alert("A category with this name already exists."); return; }
+        if (categories.some(c => c.name.toLowerCase() === cleanName.toLowerCase())) {
+            setCatError("A category with this name already exists.");
+            return;
+        }
+        setCatError(null);
         updateCategories([...categories, { name: cleanName, color: newCatColor }]);
         setNewCatName('');
     };
@@ -320,9 +325,14 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                             <div className="p-3 border-top border-secondary bg-input">
                                 <form onSubmit={handleAddCategory} className="d-flex gap-2">
                                     <input type="color" className="form-control form-control-color p-0 border-secondary rounded-3 shadow-sm" style={{ width: '38px', height: '38px' }} value={newCatColor} onChange={(e) => setNewCatColor(e.target.value)} title="Choose Color" />
-                                    <input type="text" className="form-control bg-body border-secondary text-main shadow-sm" placeholder="New Category Name..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
+                                    <input type="text" className="form-control bg-body border-secondary text-main shadow-sm" placeholder="New Category Name..." value={newCatName} onChange={(e) => { setNewCatName(e.target.value); if (catError) setCatError(null); }} />
                                     <button type="submit" className="btn btn-primary fw-bold shadow-sm px-4">Add</button>
                                 </form>
+                                {catError && (
+                                    <div className="text-danger small fw-bold mt-2" role="alert">
+                                        <i className="bi bi-exclamation-circle-fill me-1"></i>{catError}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
