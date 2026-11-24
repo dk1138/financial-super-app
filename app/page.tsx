@@ -917,8 +917,8 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 text-start max-w-6xl">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12">
             <div className="flex items-center gap-2.5">
-              <div className="bg-blue-600 p-2 rounded-xl">
-                <i className="bi bi-graph-up-arrow text-white"></i>
+              <div className="w-9 h-9 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/20 shrink-0">
+                <img src="/icon-192.png" alt="Planfolio" width={36} height={36} className="w-full h-full object-cover block" />
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-white text-xl leading-none">Planfolio</span>

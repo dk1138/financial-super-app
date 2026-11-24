@@ -83,8 +83,8 @@ export default function MarketingHeader() {
             >
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2.5 text-decoration-none">
-                    <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-                        <i className="bi bi-graph-up-arrow text-white text-base"></i>
+                    <div className="w-9 h-9 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/20 shrink-0">
+                        <img src="/icon-192.png" alt="Planfolio" width={36} height={36} className="w-full h-full object-cover block" />
                     </div>
                     <div className="flex flex-col text-start">
                         <span className="brand-name text-xl font-black tracking-tight text-white leading-none">Planfolio</span>

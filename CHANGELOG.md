@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Unused dependencies (`package.json`)**: Removed unused `chart.js`, `react-chartjs-2`, and `react-countup`.
 
 ### Changed
+- **Updated site favicon & brand icons (`app/favicon.ico`, `app/icon.png`, `app/apple-icon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/manifest.json`, `app/layout.tsx`)**: Replaced the old blue SVG icon with the new Planfolio maple-leaf/growth-arrow icon across favicons, Apple touch icon, PWA manifest, and all in-app brand headers (`GlobalHeader`, `MarketingHeader`, `SplashScreen`, landing footer, and `ExecutiveReportModal`).
 - **Offloaded Monte Carlo simulations to Web Worker (`lib/engine/monteCarlo.ts`, `lib/financeWorker.ts`, `components/risk/MonteCarloCard.tsx`)**: Extracted LHS/QHS shock generators and percentile aggregation into `lib/engine/monteCarlo.ts` and moved execution off the main UI thread into `financeWorker.ts` with streaming progress updates and clean worker termination.
 - **Replaced native `alert()` dialogs with non-blocking UI feedback**: Replaced browser `alert()` popups with toast notifications and inline alerts in `MonteCarloCard.tsx`, `DataBankTab.tsx`, `ExpenseHeaderActions.tsx`, `ExpenseDashboardTab.tsx`, `ExpenseTransactionsTab.tsx`, and `ExpenseCategoriesTab.tsx`.
 

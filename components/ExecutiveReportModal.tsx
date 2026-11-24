@@ -507,10 +507,10 @@ export default function ExecutiveReportModal({ isOpen, onClose }: ExecutiveRepor
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <div 
-                    className="print-brand-icon d-flex align-items-center justify-content-center text-white shadow-sm"
-                    style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
+                    className="print-brand-icon d-flex align-items-center justify-content-center shadow-sm"
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', overflow: 'hidden' }}
                   >
-                    <i className="bi bi-graph-up-arrow fs-6"></i>
+                    <img src="/icon-192.png" alt="Planfolio" width={34} height={34} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   </div>
                   <div>
                     <h5 className="fw-bolder m-0" style={{ letterSpacing: '-0.02em', fontSize: '1.05rem' }}>Planfolio Canada</h5>

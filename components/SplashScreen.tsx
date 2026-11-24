@@ -112,11 +112,11 @@ export default function SplashScreen({
                   width: '36px', 
                   height: '36px', 
                   borderRadius: '10px', 
-                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
                 }}
               >
-                <i className="bi bi-graph-up-arrow" style={{ fontSize: '1.05rem' }}></i>
+                <img src="/icon-192.png" alt="Planfolio" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               </div>
               <span className="fw-bold text-main" style={{ fontSize: '1.35rem', letterSpacing: '-0.02em', fontWeight: 800 }}>
                 Planfolio
