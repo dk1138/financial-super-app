@@ -165,7 +165,7 @@ export default function OnboardingWizardModal({
                         <div className="d-flex align-items-center justify-content-between mb-2">
                           <div className="d-flex align-items-center gap-2">
                             <div
-                              className={`bg-${persona.badgeColor} bg-opacity-15 text-${persona.badgeColor} rounded-circle d-flex align-items-center justify-content-center`}
+                              className={`bg-${persona.badgeColor} bg-opacity-10 text-${persona.badgeColor} rounded-circle d-flex align-items-center justify-content-center`}
                               style={{ width: '34px', height: '34px' }}
                             >
                               <i className={`bi ${persona.icon}`}></i>
@@ -175,7 +175,7 @@ export default function OnboardingWizardModal({
                               <div className="text-muted" style={{ fontSize: '0.7rem' }}>{persona.subtitle}</div>
                             </div>
                           </div>
-                          <span className={`badge bg-${persona.badgeColor} bg-opacity-15 text-${persona.badgeColor} border border-${persona.badgeColor} border-opacity-25 rounded-pill`} style={{ fontSize: '0.65rem' }}>
+                          <span className={`badge bg-${persona.badgeColor} bg-opacity-10 text-${persona.badgeColor} border border-${persona.badgeColor} border-opacity-25 rounded-pill`} style={{ fontSize: '0.65rem' }}>
                             {persona.badge}
                           </span>
                         </div>
@@ -214,7 +214,7 @@ export default function OnboardingWizardModal({
                       type="button"
                       onClick={() => setStep(s.num)}
                       className={`btn btn-sm border-0 d-flex align-items-center gap-1.5 px-2 py-1 rounded-pill ${
-                        step === s.num ? 'bg-primary bg-opacity-15 text-primary fw-bold' : step > s.num ? 'text-success fw-semibold' : 'text-muted'
+                        step === s.num ? 'bg-primary bg-opacity-10 text-primary fw-bold' : step > s.num ? 'text-success fw-semibold' : 'text-muted'
                       }`}
                       style={{ fontSize: '0.75rem' }}
                     >

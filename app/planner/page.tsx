@@ -193,7 +193,7 @@ export default function PlannerPage() {
                     <div className="rp-card border border-secondary rounded-4 shadow-sm mb-0 p-3 surface-card d-flex flex-wrap align-items-center justify-content-between gap-3">
                       <div className="d-flex align-items-center gap-3">
                         <div
-                          className="bg-primary bg-opacity-15 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                          className="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                           style={{ width: '36px', height: '36px' }}
                         >
                           <i className="bi bi-magic fs-5"></i>

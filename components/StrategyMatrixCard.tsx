@@ -189,7 +189,7 @@ export default function StrategyMatrixCard() {
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-3">
             <div className="d-flex align-items-start gap-3">
               <div
-                className="bg-primary bg-opacity-15 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                className="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                 style={{ width: '40px', height: '40px' }}
               >
                 <i className="bi bi-cpu fs-5"></i>
@@ -302,11 +302,11 @@ export default function StrategyMatrixCard() {
                         </td>
                         <td className="py-2.5 text-center">
                           {row.survived ? (
-                            <span className="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 rounded-pill">
+                            <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">
                               Funded
                             </span>
                           ) : (
-                            <span className="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 rounded-pill">
+                            <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill">
                               Shortfall
                             </span>
                           )}
