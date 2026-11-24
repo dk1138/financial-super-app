@@ -1,9 +1,10 @@
 import { FinanceEngine } from './financeEngine';
 import { runMonteCarloSimulation } from './engine/monteCarlo';
 import { runStrategyMatrix } from './engine/strategyMatrix';
+import { runSurvivorStressTest } from './engine/survivorStress';
 
 self.onmessage = (e: MessageEvent) => {
-    const { type, data, detailed, simContext, simCount, method, volatility } = e.data;
+    const { type, data, detailed, simContext, simCount, method, volatility, deceased, deathAge, expenseReductionPct } = e.data;
 
     try {
         if (type === 'monteCarlo') {
@@ -21,6 +22,16 @@ self.onmessage = (e: MessageEvent) => {
         if (type === 'strategyMatrix') {
             const results = runStrategyMatrix(data, (progress) => {
                 self.postMessage({ status: 'progress', progress });
+            });
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'survivorStress') {
+            const results = runSurvivorStressTest(data, {
+                deceased,
+                deathAge,
+                expenseReductionPct,
             });
             self.postMessage({ status: 'success', results });
             return;

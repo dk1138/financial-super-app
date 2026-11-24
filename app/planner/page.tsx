@@ -12,12 +12,13 @@ import CompareTab from '../../components/CompareTab';
 import DataBankTab from '../../components/DataBankTab';
 import { useTranslation } from '../../lib/LanguageContext';
 import { useFinance } from '../../lib/FinanceContext';
-import { StepperInput, PercentInput } from '../../components/SharedUI'; 
+import { StepperInput, PercentInput, ConfirmModal } from '../../components/SharedUI'; 
 import FeedbackModal from '../../components/FeedbackModal';
 import SplashScreen from '../../components/SplashScreen';
 import { sampleProfile } from '../../lib/sampleData';
 import QuickAdjustModal from '../../components/QuickAdjustModal';
 import OnboardingWizardModal from '../../components/OnboardingWizardModal';
+import { decodePlanFromHash } from '../../lib/sharePlan';
 
 export default function PlannerPage() {
   const financeContext = useFinance() as any; 
@@ -28,6 +29,7 @@ export default function PlannerPage() {
   const [activeTab, setActiveTab] = useState('plan');
   const [showQuickAdjust, setShowQuickAdjust] = useState(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
+  const [pendingSharedPlan, setPendingSharedPlan] = useState<any | null>(null);
   
   // --- FEEDBACK STATE ---
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -37,9 +39,16 @@ export default function PlannerPage() {
 
   const isCouple = data.mode === 'Couple';
 
-  // --- SET PAGE TITLE ---
+  // --- SET PAGE TITLE & DETECT SHARED PLAN HASH ---
   useEffect(() => {
       document.title = "Planfolio - Planner";
+      if (typeof window !== 'undefined' && window.location.hash.startsWith('#plan=')) {
+          decodePlanFromHash(window.location.hash).then((decoded) => {
+              if (decoded) {
+                  setPendingSharedPlan(decoded);
+              }
+          });
+      }
   }, []);
 
   // --- HANDLERS ---
@@ -158,6 +167,29 @@ export default function PlannerPage() {
         isOpen={showOnboardingWizard}
         onClose={() => setShowOnboardingWizard(false)}
         onApplyPlan={handleApplyWizardPlan}
+      />
+
+      <ConfirmModal
+        open={Boolean(pendingSharedPlan)}
+        title="Load Shared Plan?"
+        message="A Planfolio plan was shared in this link. Loading it will replace your current live inputs (any saved plans in your browser remain safe)."
+        confirmLabel="Load Shared Plan"
+        variant="primary"
+        onConfirm={() => {
+          if (pendingSharedPlan) {
+            handleApplyWizardPlan(pendingSharedPlan, 'Shared Plan');
+          }
+          setPendingSharedPlan(null);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }}
+        onCancel={() => {
+          setPendingSharedPlan(null);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }}
       />
 
       {/* --- STICKY NAVIGATION TABS (KUMO CENTRALIZED) --- */}
