@@ -18,8 +18,6 @@ const DEFAULT_CATEGORIES: Category[] = [
     { name: 'Exclude', color: '#6c757d' }, { name: 'Income', color: '#198754' }
 ];
 
-const DEV_SECRET_PASSCODE = 'plan2026';
-
 export default function ExpenseTrackerPage() {
     // DEVELOPER ACCESS STATE
     const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -37,28 +35,23 @@ export default function ExpenseTrackerPage() {
     const [workspaces, setWorkspaces] = useState<string[]>(['Personal', 'Konbinii Shop']);
     const [activeWorkspace, setActiveWorkspace] = useState<string>('Personal');
 
-    // 1. Check Developer Authorization
+    // 1. Check Developer Authorization via server-side HttpOnly session cookie
     useEffect(() => {
-        try {
-            // Check localStorage
-            const savedAuth = localStorage.getItem('expenses_dev_access');
-            
-            // Check URL query param e.g. /expenses?dev=plan2026
-            const searchParams = new URLSearchParams(window.location.search);
-            const devQuery = searchParams.get('dev');
-
-            if (savedAuth === 'true' || devQuery === DEV_SECRET_PASSCODE) {
-                localStorage.setItem('expenses_dev_access', 'true');
-                setIsAuthorized(true);
-            } else {
-                setIsAuthorized(false);
+        let active = true;
+        const verifyAccess = async () => {
+            try {
+                const res = await fetch('/api/expenses-auth', { method: 'GET', cache: 'no-store' });
+                const payload = await res.json();
+                if (active) setIsAuthorized(Boolean(payload?.authorized));
+            } catch (e) {
+                console.error('Error verifying developer access:', e);
+                if (active) setIsAuthorized(false);
+            } finally {
+                if (active) setCheckingAuth(false);
             }
-        } catch (e) {
-            console.error('Error verifying developer access:', e);
-            setIsAuthorized(false);
-        } finally {
-            setCheckingAuth(false);
-        }
+        };
+        verifyAccess();
+        return () => { active = false; };
     }, []);
 
     // 2. Initialize Data ONLY when Authorized
@@ -88,20 +81,34 @@ export default function ExpenseTrackerPage() {
         setTransactions(data);
     };
 
-    const handleUnlockSubmit = (e?: React.FormEvent) => {
+    const handleUnlockSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (passcodeInput.trim() === DEV_SECRET_PASSCODE) {
-            localStorage.setItem('expenses_dev_access', 'true');
-            setIsAuthorized(true);
-            setPasscodeError(null);
-            setShowPasscodePrompt(false);
-        } else {
-            setPasscodeError('Incorrect passcode. Please try again.');
+        try {
+            const res = await fetch('/api/expenses-auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ passcode: passcodeInput.trim() }),
+            });
+            const payload = await res.json();
+            if (res.ok && payload?.authorized) {
+                setIsAuthorized(true);
+                setPasscodeError(null);
+                setShowPasscodePrompt(false);
+                setPasscodeInput('');
+            } else {
+                setPasscodeError(payload?.error || 'Incorrect passcode. Please try again.');
+            }
+        } catch {
+            setPasscodeError('Unable to verify passcode right now.');
         }
     };
 
-    const handleLockAgain = () => {
-        localStorage.removeItem('expenses_dev_access');
+    const handleLockAgain = async () => {
+        try {
+            await fetch('/api/expenses-auth', { method: 'DELETE' });
+        } catch (e) {
+            console.error('Error clearing developer session:', e);
+        }
         setIsAuthorized(false);
         setShowPasscodePrompt(false);
         setPasscodeInput('');

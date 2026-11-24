@@ -19,7 +19,8 @@ export async function POST(req: Request) {
     }
 
     const apiKey = process.env.RESEND_API_KEY?.trim();
-    if (!apiKey) {
+    const toEmail = process.env.FEEDBACK_TO_EMAIL?.trim();
+    if (!apiKey || !toEmail) {
       return NextResponse.json(
         { error: 'Feedback email service is not configured.' },
         { status: 503 }
@@ -95,7 +96,7 @@ TECHNICAL DIAGNOSTICS:
     const resend = new Resend(apiKey);
     const data = await resend.emails.send({
       from: 'Planfolio <onboarding@resend.dev>',
-      to: 'donaldkwok88@gmail.com',
+      to: toEmail,
       replyTo: rawEmail || undefined,
       subject: `${subjectCategory} Planfolio Feedback ${rawEmail ? `from ${rawEmail}` : '(Anonymous)'}`,
       text: formattedEmail.trim(),

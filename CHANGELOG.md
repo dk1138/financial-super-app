@@ -9,8 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-11-24]
 
 ### Security
-- **Untracked `.env.local` & added `.env.example` (`.gitignore`, `.env.example`)**: Removed `.env.local` from Git tracking so secrets are never committed, and added `.env.example` documenting required environment variables.
-- **Hardened Feedback & Image Upload API routes (`app/api/auth/feedback/route.ts`, `app/api/auth/upload-image/route.ts`, `lib/rateLimit.ts`)**: Added per-IP rate limiting, lazy `Resend` initialization, email/category sanitization, 5,000-char message cap, 5 MB attachment/image limits, strict image MIME-type validation (`image/png`, `image/jpeg`, `image/webp`), and removed the hardcoded fallback Imgur Client-ID and untrusted `x-imgur-client-id` header.
+- **Untracked `.env.local` & added `.env.example` (`.gitignore`, `.env.example`)**: Removed `.env.local` from Git tracking so secrets are never committed, and added `.env.example` documenting required environment variables (`RESEND_API_KEY`, `FEEDBACK_TO_EMAIL`, `IMGUR_CLIENT_ID`, `EXPENSES_DEV_PASSCODE`).
+- **HTTP security headers (`next.config.ts`)**: Added global `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-DNS-Prefetch-Control`, and `Strict-Transport-Security` headers.
+- **Server-side `/expenses` developer auth (`app/api/expenses-auth/route.ts`, `app/expenses/page.tsx`)**: Replaced hardcoded client-side passcode with a rate-limited server endpoint using `EXPENSES_DEV_PASSCODE`, `crypto.timingSafeEqual`, and an `HttpOnly` session cookie.
+- **Hardened Feedback & Image Upload API routes (`app/api/auth/feedback/route.ts`, `app/api/auth/upload-image/route.ts`, `lib/rateLimit.ts`)**: Added per-IP rate limiting, lazy `Resend` initialization, `FEEDBACK_TO_EMAIL` env var (removing hardcoded personal email), email/category sanitization, 5,000-char message cap, 5 MB attachment/image limits, strict image MIME-type validation (`image/png`, `image/jpeg`, `image/webp`), and removed the hardcoded fallback Imgur Client-ID and untrusted `x-imgur-client-id` header.
+- **Tooltip HTML sanitization (`lib/sanitizeHtml.ts`, `components/SharedUI.tsx`)**: Added an allowlist HTML sanitizer to `InfoBtn` to strip scripts, iframes, and event handlers before rendering tooltips.
 
 ### Fixed
 - **Ontario Surtax & Dividend Tax Credit order (`lib/engine/tax.ts`)**: Applied the Ontario Dividend Tax Credit to Basic Ontario Tax *before* calculating Ontario Surtax per CRA Form ON428, and read the configured `taxData.ON.surtaxes` thresholds ($5,818 / $7,446) instead of falling back to stale 2024 thresholds ($5,554 / $7,108).
