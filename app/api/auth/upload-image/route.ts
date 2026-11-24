@@ -1,9 +1,30 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp } from '../../../../lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+    const rate = checkRateLimit(`upload-image:${ip}`, 10, 10 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many image upload requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSec) } }
+      );
+    }
+
+    const imgurClientId = process.env.IMGUR_CLIENT_ID?.trim();
+    if (!imgurClientId) {
+      return NextResponse.json(
+        { success: false, error: 'Image upload service is not configured.' },
+        { status: 503 }
+      );
+    }
+
     const formData = await req.formData();
     const image = formData.get('image');
 
@@ -15,15 +36,22 @@ export async function POST(req: Request) {
     }
 
     const imageBlob = image as Blob;
+    if (!ALLOWED_MIME_TYPES.has(imageBlob.type)) {
+      return NextResponse.json(
+        { success: false, error: 'Unsupported image format. Please upload PNG, JPEG, or WebP.' },
+        { status: 415 }
+      );
+    }
+
+    if (imageBlob.size > MAX_IMAGE_BYTES) {
+      return NextResponse.json(
+        { success: false, error: 'Image exceeds the 5 MB upload limit.' },
+        { status: 413 }
+      );
+    }
+
     const arrayBuffer = await imageBlob.arrayBuffer();
     const base64Image = Buffer.from(arrayBuffer).toString('base64');
-
-    const imgurClientId = (
-      process.env.IMGUR_CLIENT_ID ||
-      process.env.NEXT_PUBLIC_IMGUR_CLIENT_ID ||
-      req.headers.get('x-imgur-client-id') ||
-      '546c25a59c58ad7'
-    ).trim();
 
     const imgurForm = new FormData();
     imgurForm.append('image', base64Image);
