@@ -21,8 +21,13 @@ export async function POST(req: Request) {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     const toEmail = process.env.FEEDBACK_TO_EMAIL?.trim();
     if (!apiKey || !toEmail) {
+      const missing = [
+        !apiKey ? 'RESEND_API_KEY' : null,
+        !toEmail ? 'FEEDBACK_TO_EMAIL' : null,
+      ].filter(Boolean).join(', ');
+      console.error(`Feedback email misconfigured — missing: ${missing}`);
       return NextResponse.json(
-        { error: 'Feedback email service is not configured.' },
+        { error: `Feedback email service is not configured (missing ${missing}).` },
         { status: 503 }
       );
     }
@@ -94,7 +99,7 @@ TECHNICAL DIAGNOSTICS:
       category === 'CALCULATION' ? '[CALCULATION / TAX]' : '[FEEDBACK]';
 
     const resend = new Resend(apiKey);
-    const data = await resend.emails.send({
+    const result = await resend.emails.send({
       from: 'Planfolio <onboarding@resend.dev>',
       to: toEmail,
       replyTo: rawEmail || undefined,
@@ -103,7 +108,15 @@ TECHNICAL DIAGNOSTICS:
       attachments,
     });
 
-    return NextResponse.json({ success: true, id: data.data?.id });
+    if (result.error) {
+      console.error('Resend API rejected feedback email:', result.error);
+      return NextResponse.json(
+        { error: result.error.message || 'Email provider rejected the request.' },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ success: true, id: result.data?.id });
   } catch (error: any) {
     console.error('Failed to send email via Resend:', error);
     return NextResponse.json({ error: error?.message || 'Failed to send' }, { status: 500 });
