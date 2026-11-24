@@ -27,6 +27,30 @@ export interface ToolMeta {
 export const TOOLS_DATA: ToolMeta[] = [
     // --- 1. Pensions & Retirement Income ---
     {
+        slug: 'retirement-sensitivity-heatmap',
+        title: 'Retirement Age vs. Spend Heatmap & Max Safe Spend Solver',
+        subtitle: 'Test 25 combinations of retirement age and monthly spending in a 5×5 Canadian tax-aware sensitivity matrix, and solve for your maximum sustainable retirement budget.',
+        category: 'Pensions & Retirement Income',
+        toolKey: 'sensitivity',
+        badge: '5×5 Sensitivity Matrix',
+        icon: 'bi-grid-3x3-gap-fill',
+        overview: 'Small shifts in retirement age or monthly spending can swing your lifetime Canadian estate by hundreds of thousands of dollars due to compounding, CPP/OAS deferral effects, and progressive tax brackets. This tool runs 25 full CRA-accurate retirement simulations across retire age (−4 to +4 years) and spending (−20% to +20%), alongside a binary-search Max Safe Spend Solver for a $0 (Die With Zero), $250k, or $500k target estate.',
+        faqs: [
+            {
+                q: 'How does the Max Safe Retirement Spend Solver work?',
+                a: 'It runs a 14-iteration binary search over your full Canadian retirement projection—including RRSP/RRIF withdrawals, TFSA draws, CPP/OAS, and provincial taxes—to find the highest monthly retirement budget that still ends with at least your chosen target estate.'
+            },
+            {
+                q: 'What does the 5×5 Retirement Sensitivity Heatmap show?',
+                a: 'Each cell runs an independent full-lifecycle simulation combining a retirement age offset (−4, −2, 0, +2, +4 years) with a retirement spending adjustment (−20%, −10%, 0%, +10%, +20%), showing your projected after-tax estate or exact shortfall age.'
+            },
+            {
+                q: 'Are the results adjusted for Canadian inflation?',
+                a: 'Yes. When Real Dollars mode is enabled in Planfolio, both the Max Safe Monthly Spend and the projected after-tax estate values in the heatmap are discounted back to today’s purchasing power.'
+            }
+        ]
+    },
+    {
         slug: 'pension-buyback',
         title: 'Defined Benefit Pension Buyback Calculator',
         subtitle: 'Evaluate if buying back past credited service is worth the upfront lump-sum cost, factoring in CRA tax deductions, early retirement dates, and guaranteed lifetime payouts.',

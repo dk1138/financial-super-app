@@ -44,7 +44,7 @@ export default function NextBestActionsCard() {
         icon: 'bi-exclamation-triangle-fill',
         title: `Liquid portfolio runs out at age ${firstDepleted.p1Age}`,
         description:
-          'Your projected liquid assets hit $0 before the end of your plan. Open Stress Testing & Risk to check the Max Safe Spend Solver and 5×5 Sensitivity Heatmap, or run 1-Click Auto-Optimize in Strategy.',
+          'Your projected liquid assets hit $0 before the end of your plan. Open Tools & Calculators to run the Max Safe Spend Solver and 5×5 Sensitivity Heatmap, or run 1-Click Auto-Optimize in Strategy.',
         impactLabel: 'High Priority',
       });
     }

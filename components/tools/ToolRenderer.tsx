@@ -57,9 +57,11 @@ const LIFtoRRIFOptimizer = dynamic(() => import('../optimizers/LIFtoRRIFOptimize
 const GISMaximizer = dynamic(() => import('../optimizers/GISMaximizer'), { ssr: false, loading: () => <ToolSkeleton /> });
 const EstateTaxCalculator = dynamic(() => import('../optimizers/EstateTaxCalculator'), { ssr: false, loading: () => <ToolSkeleton /> });
 const MarginalTaxCurve = dynamic(() => import('../optimizers/MarginalTaxCurve'), { ssr: false, loading: () => <ToolSkeleton /> });
+const SensitivityHeatmap = dynamic(() => import('../optimizers/SensitivityHeatmap'), { ssr: false, loading: () => <ToolSkeleton /> });
 
 export default function ToolRenderer({ toolKey }: { toolKey: string }) {
     switch (toolKey) {
+        case 'sensitivity': return <SensitivityHeatmap />;
         case 'pensionbb': return <PensionBuyback />;
         case 'lif-unlock': return <LIFtoRRIFOptimizer />;
         case 'tfsavsrrsp': return <TFSAvsRRSP />;

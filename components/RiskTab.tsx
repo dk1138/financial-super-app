@@ -1,6 +1,5 @@
 import React from 'react';
 import MonteCarloCard from './risk/MonteCarloCard';
-import SensitivityMatrixCard from './risk/SensitivityMatrixCard';
 import SorrCard from './risk/SorrCard';
 import SurvivorStressCard from './risk/SurvivorStressCard';
 import MacroShocksCard from './risk/MacroShocksCard';
@@ -15,7 +14,6 @@ export default function RiskTab() {
       </div>
 
       <MonteCarloCard />
-      <SensitivityMatrixCard />
       <SorrCard />
       <SurvivorStressCard />
       <MacroShocksCard />
