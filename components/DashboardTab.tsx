@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { InfoBtn } from './SharedUI';
 import ExecutiveReportModal from './ExecutiveReportModal';
+import NextBestActionsCard from './NextBestActionsCard';
 
 function ScoreCard({ title, score, max, tooltip, align = 'left' }: { title: string, score: number, max: number, tooltip?: string, align?: 'center'|'right'|'left' }) {
   const pct = Math.min(100, Math.max(0, (score / max) * 100));
@@ -1032,6 +1033,8 @@ export default function DashboardTab() {
           </div>
           
       </div>
+
+      <NextBestActionsCard />
 
       {/* --- IMGUR LINK FLOATING POPUP (ABOVE FLOATING ACTION BUTTONS) --- */}
       {imgurModalOpen && typeof document !== 'undefined' && createPortal(

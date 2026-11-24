@@ -2,9 +2,10 @@ import { FinanceEngine } from './financeEngine';
 import { runMonteCarloSimulation } from './engine/monteCarlo';
 import { runStrategyMatrix } from './engine/strategyMatrix';
 import { runSurvivorStressTest } from './engine/survivorStress';
+import { runSensitivityHeatmap, solveMaxRetirementSpend } from './engine/sensitivity';
 
 self.onmessage = (e: MessageEvent) => {
-    const { type, data, detailed, simContext, simCount, method, volatility, deceased, deathAge, expenseReductionPct } = e.data;
+    const { type, data, detailed, simContext, simCount, method, volatility, deceased, deathAge, expenseReductionPct, targetEstate } = e.data;
 
     try {
         if (type === 'monteCarlo') {
@@ -33,6 +34,20 @@ self.onmessage = (e: MessageEvent) => {
                 deathAge,
                 expenseReductionPct,
             });
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'sensitivityHeatmap') {
+            const results = runSensitivityHeatmap(data, (progress) => {
+                self.postMessage({ status: 'progress', progress });
+            });
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'maxSpend') {
+            const results = solveMaxRetirementSpend(data, { targetEstate: Number(targetEstate) || 0 });
             self.postMessage({ status: 'success', results });
             return;
         }
