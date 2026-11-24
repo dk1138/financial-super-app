@@ -17,6 +17,7 @@ import FeedbackModal from '../../components/FeedbackModal';
 import SplashScreen from '../../components/SplashScreen';
 import { sampleProfile } from '../../lib/sampleData';
 import QuickAdjustModal from '../../components/QuickAdjustModal';
+import OnboardingWizardModal from '../../components/OnboardingWizardModal';
 
 export default function PlannerPage() {
   const financeContext = useFinance() as any; 
@@ -26,6 +27,7 @@ export default function PlannerPage() {
   // --- UI STATE ---
   const [activeTab, setActiveTab] = useState('plan');
   const [showQuickAdjust, setShowQuickAdjust] = useState(false);
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   
   // --- FEEDBACK STATE ---
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -56,6 +58,15 @@ export default function PlannerPage() {
           window.dispatchEvent(new CustomEvent('updateActivePlan', { detail: sampleName }));
       }
       setActiveTab('dashboard'); 
+  };
+
+  const handleApplyWizardPlan = (planData: any, planName: string) => {
+      if (financeContext.loadData) {
+          financeContext.loadData(planData);
+          localStorage.setItem('active_plan_name', planName);
+          window.dispatchEvent(new CustomEvent('updateActivePlan', { detail: planName }));
+      }
+      setActiveTab('dashboard');
   };
 
   const handleRetireAgeChange = (player: 'p1'|'p2', newRetAge: number) => {
@@ -136,7 +147,18 @@ export default function PlannerPage() {
         className="container-fluid d-flex flex-column min-vh-100" 
         style={{ paddingLeft: 'clamp(1rem, 8vw, 15rem)', paddingRight: 'clamp(1rem, 8vw, 15rem)' }}
     >
-      <SplashScreen onLoadDummyData={handleLoadDummyData} onStartBlankPlan={handleStartBlankPlan} onOpenFeedback={() => setShowFeedbackModal(true)} />
+      <SplashScreen
+        onLoadDummyData={handleLoadDummyData}
+        onStartBlankPlan={handleStartBlankPlan}
+        onStartWizard={() => setShowOnboardingWizard(true)}
+        onOpenFeedback={() => setShowFeedbackModal(true)}
+      />
+
+      <OnboardingWizardModal
+        isOpen={showOnboardingWizard}
+        onClose={() => setShowOnboardingWizard(false)}
+        onApplyPlan={handleApplyWizardPlan}
+      />
 
       {/* --- STICKY NAVIGATION TABS (KUMO CENTRALIZED) --- */}
       <div className="planner-tabs-bar shadow-sm">
@@ -165,7 +187,36 @@ export default function PlannerPage() {
         <div className="col-12">
           <div className="card shadow-sm mb-2 h-100 rounded-4 border-0 bg-transparent">
             <div className="card-body p-0 fade-in-tab" key={activeTab}>
-              {activeTab === 'plan' && <PlanTab />}
+              {activeTab === 'plan' && (
+                <>
+                  <div className="px-3 px-md-4 pt-3 pb-0">
+                    <div className="rp-card border border-secondary rounded-4 shadow-sm mb-0 p-3 surface-card d-flex flex-wrap align-items-center justify-content-between gap-3">
+                      <div className="d-flex align-items-center gap-3">
+                        <div
+                          className="bg-primary bg-opacity-15 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                          style={{ width: '36px', height: '36px' }}
+                        >
+                          <i className="bi bi-magic fs-5"></i>
+                        </div>
+                        <div>
+                          <div className="fw-bold text-main small text-uppercase ls-1">New here? Build your plan in 60 seconds</div>
+                          <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                            Use the guided 4-step wizard or load a realistic Canadian persona preset.
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm rounded-pill fw-bold px-3 py-1.5 shadow-sm"
+                        onClick={() => setShowOnboardingWizard(true)}
+                      >
+                        <i className="bi bi-rocket-takeoff-fill me-2"></i>Quick Setup & Personas
+                      </button>
+                    </div>
+                  </div>
+                  <PlanTab />
+                </>
+              )}
               {activeTab === 'strategy' && <StrategyTab />}
               {activeTab === 'dashboard' && <DashboardTab />}
               {activeTab === 'projection' && <ProjectionTab />}

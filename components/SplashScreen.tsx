@@ -8,6 +8,7 @@ interface SplashScreenProps {
   onLoadDummyData?: () => void;
   onLoadSampleData?: () => void;
   onStartBlankPlan?: () => void;
+  onStartWizard?: () => void;
   onOpenFeedback?: () => void;
 }
 
@@ -17,6 +18,7 @@ export default function SplashScreen({
   onLoadDummyData,
   onLoadSampleData,
   onStartBlankPlan,
+  onStartWizard,
   onOpenFeedback,
 }: SplashScreenProps) {
   const [internalVisible, setInternalVisible] = useState(false);
@@ -224,7 +226,16 @@ export default function SplashScreen({
           </div>
 
           {/* FOOTER ACTIONS */}
-          <div className="modal-footer border-top border-secondary px-4 py-3 bg-input d-flex justify-content-end gap-2">
+          <div className="modal-footer border-top border-secondary px-4 py-3 bg-input d-flex flex-wrap justify-content-end gap-2">
+            {onStartWizard && (
+              <button 
+                type="button" 
+                className="btn btn-primary rounded-pill px-3 py-1.5 fw-bold d-flex align-items-center shadow-sm me-auto"
+                onClick={() => handleDismiss(onStartWizard)}
+              >
+                <i className="bi bi-magic me-2"></i> 60-Second Setup
+              </button>
+            )}
             <button 
               type="button" 
               className="btn btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center shadow-sm"
