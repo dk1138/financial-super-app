@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFinance, migrateLegacyData, emptyData } from '../lib/FinanceContext';
 import { FINANCIAL_CONSTANTS } from '../lib/config';
-import { InfoBtn, SegmentedControl } from './SharedUI';
+import { InfoBtn, SegmentedControl, ConfirmModal } from './SharedUI';
 import CanadianPeerBenchmarks from './compare/CanadianPeerBenchmarks';
 import { 
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, 
@@ -161,20 +161,42 @@ export default function CompareTab() {
         );
     };
 
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string;
+        message: string;
+        confirmLabel: string;
+        variant: 'danger' | 'warning' | 'primary';
+        onConfirm: () => void;
+    } | null>(null);
+
     const handleMakeActive = () => {
-        if (window.confirm("This will overwrite your current live inputs with the saved scenario. Are you sure?")) {
-            loadData(compareData);
-        }
+        setConfirmDialog({
+            title: 'Overwrite Active Plan?',
+            message: 'This will overwrite your current live inputs with the saved scenario. Are you sure?',
+            confirmLabel: 'Make Active',
+            variant: 'warning',
+            onConfirm: () => {
+                loadData(compareData);
+                setConfirmDialog(null);
+            },
+        });
     };
 
     const handleDelete = () => {
-        if (window.confirm(`Are you sure you want to delete '${comparePlanName}'?`)) {
-            const newList = savedPlans.filter((p: string) => p !== comparePlanName);
-            setSavedPlans(newList);
-            localStorage.setItem('rp_plan_list', JSON.stringify(newList));
-            localStorage.removeItem(`rp_saved_plan_${comparePlanName}`);
-            setComparePlanName('');
-        }
+        setConfirmDialog({
+            title: 'Delete Saved Plan?',
+            message: `Are you sure you want to delete '${comparePlanName}'? This cannot be undone.`,
+            confirmLabel: 'Delete',
+            variant: 'danger',
+            onConfirm: () => {
+                const newList = savedPlans.filter((p: string) => p !== comparePlanName);
+                setSavedPlans(newList);
+                localStorage.setItem('rp_plan_list', JSON.stringify(newList));
+                localStorage.removeItem(`rp_saved_plan_${comparePlanName}`);
+                setComparePlanName('');
+                setConfirmDialog(null);
+            },
+        });
     };
 
     const getChangedInputs = () => {
@@ -519,6 +541,15 @@ export default function CompareTab() {
                     )}
                 </div>
             )}
+            <ConfirmModal
+                open={Boolean(confirmDialog)}
+                title={confirmDialog?.title || ''}
+                message={confirmDialog?.message || ''}
+                confirmLabel={confirmDialog?.confirmLabel}
+                variant={confirmDialog?.variant}
+                onConfirm={() => confirmDialog?.onConfirm()}
+                onCancel={() => setConfirmDialog(null)}
+            />
         </div>
     );
 }

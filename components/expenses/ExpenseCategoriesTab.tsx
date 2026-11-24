@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, updateCategoryByNormalizedMerchant, normalizeMerchantName } from '../../lib/expenseDb';
 import { Category } from '../../app/expenses/page';
+import { ConfirmModal } from '../SharedUI';
 
 interface Props {
     uncategorizedTransactions: Transaction[];
@@ -25,6 +26,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
     const [newCatName, setNewCatName] = useState('');
     const [newCatColor, setNewCatColor] = useState('#0d6efd');
     const [catError, setCatError] = useState<string | null>(null);
+    const [pendingDeleteCat, setPendingDeleteCat] = useState<string | null>(null);
 
     const merchantGroups = useMemo(() => {
         const groups: Record<string, { count: number; totalAmount: number; rawNames: Set<string>; suggestedCategory?: string }> = {};
@@ -165,9 +167,7 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
     };
 
     const handleRemoveCategory = (nameToRemove: string) => {
-        if (confirm(`Are you sure you want to delete the "${nameToRemove}" category? Any transactions using this category will still display the text, but lose their color.`)) {
-            updateCategories(categories.filter(c => c.name !== nameToRemove));
-        }
+        setPendingDeleteCat(nameToRemove);
     };
 
     const handleRemoveRule = (merchant: string) => {
@@ -386,6 +386,20 @@ export default function ExpenseCategoriesTab({ uncategorizedTransactions, catego
                     <button className="btn btn-sm btn-link text-muted ms-1 p-0 text-decoration-none fw-bold hover-text-danger transition-all" onClick={() => setSelectedCleanNames(new Set())}>Cancel</button>
                 </div>
             )}
+            <ConfirmModal
+                open={Boolean(pendingDeleteCat)}
+                title="Delete Category?"
+                message={`Are you sure you want to delete the "${pendingDeleteCat}" category? Existing transactions will keep the label text without its color.`}
+                confirmLabel="Delete"
+                variant="danger"
+                onConfirm={() => {
+                    if (pendingDeleteCat) {
+                        updateCategories(categories.filter(c => c.name !== pendingDeleteCat));
+                    }
+                    setPendingDeleteCat(null);
+                }}
+                onCancel={() => setPendingDeleteCat(null)}
+            />
             <style>{`@keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }`}</style>
         </div>
     );

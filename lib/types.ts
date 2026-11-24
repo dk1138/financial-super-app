@@ -117,8 +117,27 @@ export interface SimulationDashboard {
     totalOutflows?: number;
 }
 
+export interface TimelineYear {
+    year: number;
+    p1Age: number;
+    p2Age?: number;
+    liquidNW: number;
+    reIncludedEq?: number;
+    afterTaxEstate?: number;
+    expenses: number;
+    mortgagePay?: number;
+    debtRepayment?: number;
+    grossInflow?: number;
+    taxP1: number;
+    taxP2?: number;
+    assetsP1?: Record<string, number>;
+    assetsP2?: Record<string, number>;
+    flows?: Record<string, any>;
+    [key: string]: any;
+}
+
 export interface SimulationResult {
-    timeline: any[];
+    timeline: TimelineYear[];
     dashboard: SimulationDashboard;
 }
 export interface HistoryRecord {

@@ -7,6 +7,7 @@ import {
 import { useFinance } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import RollForwardModal from './history/RollForwardModal';
+import { ConfirmModal } from './SharedUI';
 import { CurrencyInput } from './SharedUI';
 
 const EXTENDED_ACCOUNT_TYPES = [
@@ -382,11 +383,26 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
         setShowAddPastYear(true);
     };
 
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string;
+        message: string;
+        confirmLabel: string;
+        variant: 'danger' | 'warning';
+        onConfirm: () => void;
+    } | null>(null);
+
     const handleRestore = (h: any) => {
-        if (confirm(`Restore your active plan to the exact state of ${h.calendarYear}? Your current inputs will be replaced by the ${h.calendarYear} snapshot.`)) {
-            restoreHistorySnapshot(h.id);
-            showToast(`Restored plan to ${h.calendarYear} snapshot!`);
-        }
+        setConfirmDialog({
+            title: `Restore ${h.calendarYear} Snapshot?`,
+            message: `Restore your active plan to the exact state of ${h.calendarYear}? Your current inputs will be replaced by the ${h.calendarYear} snapshot.`,
+            confirmLabel: 'Restore',
+            variant: 'warning',
+            onConfirm: () => {
+                restoreHistorySnapshot(h.id);
+                showToast(`Restored plan to ${h.calendarYear} snapshot!`);
+                setConfirmDialog(null);
+            },
+        });
     };
 
     const handleSavePastYear = (e: React.FormEvent) => {
@@ -503,13 +519,20 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
     };
 
     const handleDeleteEntry = (hId: string) => {
-        if (confirm('Are you sure you want to remove this historical year from your Data Bank?')) {
-            setData(prev => ({
-                ...prev,
-                history: (prev.history || []).filter((h: any) => h.id !== hId)
-            }));
-            showToast('Historical record removed.');
-        }
+        setConfirmDialog({
+            title: 'Remove Historical Year?',
+            message: 'Are you sure you want to remove this historical year from your Data Bank?',
+            confirmLabel: 'Remove',
+            variant: 'danger',
+            onConfirm: () => {
+                setData(prev => ({
+                    ...prev,
+                    history: (prev.history || []).filter((h: any) => h.id !== hId)
+                }));
+                showToast('Historical record removed.');
+                setConfirmDialog(null);
+            },
+        });
     };
 
     // Calculate cumulative lifetime investment gains (ignoring baseline snapshot year where opening NW is 0)
@@ -1470,6 +1493,15 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
                 isOpen={showLocalRollForward} 
                 onClose={() => setShowLocalRollForward(false)} 
                 showToast={showToast} 
+            />
+            <ConfirmModal
+                open={Boolean(confirmDialog)}
+                title={confirmDialog?.title || ''}
+                message={confirmDialog?.message || ''}
+                confirmLabel={confirmDialog?.confirmLabel}
+                variant={confirmDialog?.variant}
+                onConfirm={() => confirmDialog?.onConfirm()}
+                onCancel={() => setConfirmDialog(null)}
             />
         </div>
     );

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { ConfirmModal } from '../SharedUI';
 
 interface DataBankModalProps {
     isOpen: boolean;
@@ -13,6 +14,13 @@ export default function DataBankModal({ isOpen, onClose, onOpenRollForward, show
     const historyList = (data.history || []) as any[];
 
     const [expandedYear, setExpandedYear] = useState<number | null>(null);
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string;
+        message: string;
+        confirmLabel: string;
+        variant: 'danger' | 'warning';
+        onConfirm: () => void;
+    } | null>(null);
 
     if (!isOpen) return null;
 
@@ -49,21 +57,35 @@ export default function DataBankModal({ isOpen, onClose, onOpenRollForward, show
     };
 
     const handleRestore = (h: any) => {
-        if (confirm(`Restore your active plan to the exact state of ${h.calendarYear}? Your current inputs will be replaced by the ${h.calendarYear} snapshot.`)) {
-            restoreHistorySnapshot(h.id);
-            if (showToast) showToast(`Restored plan to ${h.calendarYear} snapshot!`);
-            onClose();
-        }
+        setConfirmDialog({
+            title: `Restore ${h.calendarYear} Snapshot?`,
+            message: `Restore your active plan to the exact state of ${h.calendarYear}? Your current inputs will be replaced by the ${h.calendarYear} snapshot.`,
+            confirmLabel: 'Restore',
+            variant: 'warning',
+            onConfirm: () => {
+                restoreHistorySnapshot(h.id);
+                if (showToast) showToast(`Restored plan to ${h.calendarYear} snapshot!`);
+                setConfirmDialog(null);
+                onClose();
+            },
+        });
     };
 
     const handleDeleteEntry = (hId: string) => {
-        if (confirm('Are you sure you want to remove this historical year from your Data Bank?')) {
-            setData(prev => ({
-                ...prev,
-                history: (prev.history || []).filter((h: any) => h.id !== hId)
-            }));
-            if (showToast) showToast('Historical record removed.');
-        }
+        setConfirmDialog({
+            title: 'Remove Historical Year?',
+            message: 'Are you sure you want to remove this historical year from your Data Bank?',
+            confirmLabel: 'Remove',
+            variant: 'danger',
+            onConfirm: () => {
+                setData(prev => ({
+                    ...prev,
+                    history: (prev.history || []).filter((h: any) => h.id !== hId)
+                }));
+                if (showToast) showToast('Historical record removed.');
+                setConfirmDialog(null);
+            },
+        });
     };
 
     return (
@@ -258,6 +280,15 @@ export default function DataBankModal({ isOpen, onClose, onOpenRollForward, show
                 </div>
 
             </div>
+            <ConfirmModal
+                open={Boolean(confirmDialog)}
+                title={confirmDialog?.title || ''}
+                message={confirmDialog?.message || ''}
+                confirmLabel={confirmDialog?.confirmLabel}
+                variant={confirmDialog?.variant}
+                onConfirm={() => confirmDialog?.onConfirm()}
+                onCancel={() => setConfirmDialog(null)}
+            />
         </div>
     );
 }

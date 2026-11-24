@@ -447,3 +447,92 @@ export const ModernDropdown = ({
         </div>
     );
 };
+
+// --- REUSABLE CONFIRMATION MODAL ---
+export const ConfirmModal = ({
+    open,
+    title,
+    message,
+    confirmLabel = 'Confirm',
+    cancelLabel = 'Cancel',
+    variant = 'danger',
+    onConfirm,
+    onCancel,
+}: {
+    open: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void;
+    onCancel: () => void;
+}) => {
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onCancel();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [open, onCancel]);
+
+    if (!open || typeof document === 'undefined') return null;
+
+    const iconClass =
+        variant === 'danger'
+            ? 'bi-exclamation-triangle-fill text-danger'
+            : variant === 'warning'
+            ? 'bi-exclamation-circle-fill text-warning'
+            : 'bi-question-circle-fill text-primary';
+
+    const btnClass =
+        variant === 'danger'
+            ? 'btn-danger'
+            : variant === 'warning'
+            ? 'btn-warning text-dark'
+            : 'btn-primary';
+
+    return createPortal(
+        <div
+            className="modal fade show d-block"
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 1300 }}
+        >
+            <div className="position-fixed top-0 start-0 w-100 h-100" onClick={onCancel} />
+            <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{ zIndex: 1310 }}>
+                <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
+                    <div className="modal-header border-bottom border-secondary p-3">
+                        <h6 className="modal-title fw-bold d-flex align-items-center mb-0">
+                            <i className={`bi ${iconClass} me-2`}></i>
+                            {title}
+                        </h6>
+                        <button type="button" className="btn-close" aria-label="Close" onClick={onCancel} />
+                    </div>
+                    <div className="modal-body p-4 text-center">
+                        <p className="text-muted small mb-4">{message}</p>
+                        <div className="d-flex gap-2">
+                            <button
+                                type="button"
+                                className="btn btn-outline-secondary w-50 fw-bold rounded-pill"
+                                onClick={onCancel}
+                            >
+                                {cancelLabel}
+                            </button>
+                            <button
+                                type="button"
+                                className={`btn ${btnClass} w-50 fw-bold rounded-pill`}
+                                onClick={onConfirm}
+                            >
+                                {confirmLabel}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};

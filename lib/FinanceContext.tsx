@@ -343,96 +343,138 @@ export const useFinanceStore = create<FinanceState>((set) => ({
     setIsCalculating: (isCalculating) => set({ isCalculating })
 }));
 
-// --- GLOBAL HOOK FOR COMPONENTS ---
-export function useFinance() {
-    const store = useFinanceStore();
-
-    return {
-        ...store,
-        updateInput: (key: string, value: any) => store.setData((prev) => {
+// --- STABLE STORE ACTIONS (ZERO RE-RENDERS WHEN IMPORTED ALONE) ---
+export const financeActions = {
+    setData: (updater: FinanceData | ((prev: FinanceData) => FinanceData)) =>
+        useFinanceStore.getState().setData(updater),
+    setResults: (results: any) => useFinanceStore.getState().setResults(results),
+    setIsCalculating: (isCalculating: boolean) => useFinanceStore.getState().setIsCalculating(isCalculating),
+    setMcResults: (mcResults: any) => useFinanceStore.getState().setMcResults(mcResults),
+    updateInput: (key: string, value: any) =>
+        useFinanceStore.getState().setData((prev) => {
             const finalInputs = { ...prev.inputs, [key]: sanitizeValue(value) };
             syncAgeAndDob('p1', prev.inputs, finalInputs);
             syncAgeAndDob('p2', prev.inputs, finalInputs);
             return { ...prev, inputs: finalInputs };
         }),
-        updateMultipleInputs: (updates: Record<string, any>) => {
-            const cleanUpdates: Record<string, any> = {};
-            Object.keys(updates).forEach(k => cleanUpdates[k] = sanitizeValue(updates[k]));
-            store.setData((prev) => {
-                const finalInputs = { ...prev.inputs, ...cleanUpdates };
-                syncAgeAndDob('p1', prev.inputs, finalInputs);
-                syncAgeAndDob('p2', prev.inputs, finalInputs);
-                return { ...prev, inputs: finalInputs };
-            });
-        },
-        updateMode: (newMode: 'Single' | 'Couple') => store.setData((prev) => ({ ...prev, mode: newMode })),
-        updateUseRealDollars: (val: boolean) => store.setData((prev) => ({ ...prev, useRealDollars: val })),
-        addArrayItem: (listName: keyof FinanceData, defaultObj: any) => store.setData((prev) => ({ 
-            ...prev, [listName]: [...((prev[listName] as any[]) || []), defaultObj] 
+    updateMultipleInputs: (updates: Record<string, any>) => {
+        const cleanUpdates: Record<string, any> = {};
+        Object.keys(updates).forEach((k) => (cleanUpdates[k] = sanitizeValue(updates[k])));
+        useFinanceStore.getState().setData((prev) => {
+            const finalInputs = { ...prev.inputs, ...cleanUpdates };
+            syncAgeAndDob('p1', prev.inputs, finalInputs);
+            syncAgeAndDob('p2', prev.inputs, finalInputs);
+            return { ...prev, inputs: finalInputs };
+        });
+    },
+    updateMode: (newMode: 'Single' | 'Couple') =>
+        useFinanceStore.getState().setData((prev) => ({ ...prev, mode: newMode })),
+    updateUseRealDollars: (val: boolean) =>
+        useFinanceStore.getState().setData((prev) => ({ ...prev, useRealDollars: val })),
+    addArrayItem: (listName: keyof FinanceData, defaultObj: any) =>
+        useFinanceStore.getState().setData((prev) => ({
+            ...prev,
+            [listName]: [...((prev[listName] as any[]) || []), defaultObj],
         })),
-        updateArrayItem: (listName: keyof FinanceData, index: number, field: string, value: any) => store.setData((prev) => {
+    updateArrayItem: (listName: keyof FinanceData, index: number, field: string, value: any) =>
+        useFinanceStore.getState().setData((prev) => {
             const newList = [...((prev[listName] as any[]) || [])];
             newList[index] = { ...newList[index], [field]: sanitizeValue(value) };
             return { ...prev, [listName]: newList };
         }),
-        removeArrayItem: (listName: keyof FinanceData, index: number) => store.setData((prev) => {
+    removeArrayItem: (listName: keyof FinanceData, index: number) =>
+        useFinanceStore.getState().setData((prev) => {
             const newList = [...((prev[listName] as any[]) || [])];
             newList.splice(index, 1);
             return { ...prev, [listName]: newList };
         }),
-        updateStrategy: (type: 'accum' | 'shortfall' | 'decum', newList: string[]) => store.setData((prev) => ({ 
-            ...prev, strategies: { ...prev.strategies, [type]: newList } 
+    updateStrategy: (type: 'accum' | 'shortfall' | 'decum', newList: string[]) =>
+        useFinanceStore.getState().setData((prev) => ({
+            ...prev,
+            strategies: { ...prev.strategies, [type]: newList },
         })),
-        rollForwardPlan: (record: any, newInputs: Record<string, any>, newCustomAssets?: any[], newProperties?: any[]) => {
-            store.setData((prev) => {
-                const history = [...(prev.history || []), record];
-                const updated = {
-                    ...prev,
-                    history,
-                    inputs: { ...prev.inputs, ...newInputs },
-                    customAssets: newCustomAssets !== undefined ? newCustomAssets : prev.customAssets,
-                    properties: newProperties !== undefined ? newProperties : prev.properties
-                };
-                try {
-                    const backupKey = `rp_saved_plan_Pre_Rollforward_${record.calendarYear}`;
-                    localStorage.setItem(backupKey, JSON.stringify(prev));
-                    let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-                    const cleanName = backupKey.replace('rp_saved_plan_', '');
-                    if (!plans.includes(cleanName)) {
-                        plans.push(cleanName);
-                        localStorage.setItem('rp_plan_list', JSON.stringify(plans));
-                    }
-                } catch (e) {
-                    console.error('Backup save failed', e);
+    rollForwardPlan: (
+        record: any,
+        newInputs: Record<string, any>,
+        newCustomAssets?: any[],
+        newProperties?: any[]
+    ) => {
+        useFinanceStore.getState().setData((prev) => {
+            const history = [...(prev.history || []), record];
+            const updated = {
+                ...prev,
+                history,
+                inputs: { ...prev.inputs, ...newInputs },
+                customAssets: newCustomAssets !== undefined ? newCustomAssets : prev.customAssets,
+                properties: newProperties !== undefined ? newProperties : prev.properties,
+            };
+            try {
+                const backupKey = `rp_saved_plan_Pre_Rollforward_${record.calendarYear}`;
+                localStorage.setItem(backupKey, JSON.stringify(prev));
+                const plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
+                const cleanName = backupKey.replace('rp_saved_plan_', '');
+                if (!plans.includes(cleanName)) {
+                    plans.push(cleanName);
+                    localStorage.setItem('rp_plan_list', JSON.stringify(plans));
                 }
-                return updated;
-            });
-        },
-        restoreHistorySnapshot: (historyId: string) => {
-            store.setData((prev) => {
-                const entry = (prev.history || []).find((h: any) => h.id === historyId);
-                if (!entry || !entry.fullSnapshot) return prev;
-                return { ...entry.fullSnapshot, history: prev.history };
-            });
-        },
-        updateExpenseCategory: (catKey: string, items: any[]) => store.setData((prev) => ({
+            } catch (e) {
+                console.error('Backup save failed', e);
+            }
+            return updated;
+        });
+    },
+    restoreHistorySnapshot: (historyId: string) => {
+        useFinanceStore.getState().setData((prev) => {
+            const entry = (prev.history || []).find((h: any) => h.id === historyId);
+            if (!entry || !entry.fullSnapshot) return prev;
+            return { ...entry.fullSnapshot, history: prev.history };
+        });
+    },
+    updateExpenseCategory: (catKey: string, items: any[]) =>
+        useFinanceStore.getState().setData((prev) => ({
             ...prev,
             expensesByCategory: {
                 ...prev.expensesByCategory,
                 [catKey]: {
                     items: items.map((item: any) => {
                         const cleanItem: any = {};
-                        Object.keys(item).forEach(k => cleanItem[k] = sanitizeValue(item[k]));
+                        Object.keys(item).forEach((k) => (cleanItem[k] = sanitizeValue(item[k])));
                         return cleanItem;
-                    })
-                }
-            }
+                    }),
+                },
+            },
         })),
-        loadData: (newPlanData: any) => store.setData(migrateLegacyData(newPlanData, emptyData)),
-        resetData: () => {
-            store.setData(emptyData);
-            localStorage.removeItem('retirement_plan_data');
-        }
+    loadData: (newPlanData: any) =>
+        useFinanceStore.getState().setData(migrateLegacyData(newPlanData, emptyData)),
+    resetData: () => {
+        useFinanceStore.getState().setData(emptyData);
+        localStorage.removeItem('retirement_plan_data');
+    },
+};
+
+// --- GRANULAR SELECTOR HOOKS ---
+export const useFinanceData = () => useFinanceStore((state) => state.data);
+export const useFinanceResults = () => useFinanceStore((state) => state.results);
+export const useFinancePlanScore = () => useFinanceStore((state) => state.planScore);
+export const useFinanceIsCalculating = () => useFinanceStore((state) => state.isCalculating);
+export const useFinanceMonteCarlo = () => useFinanceStore((state) => state.mcResults);
+export const useFinanceActions = () => financeActions;
+
+// --- BACKWARDS-COMPATIBLE GLOBAL HOOK ---
+export function useFinance() {
+    const data = useFinanceStore((state) => state.data);
+    const results = useFinanceStore((state) => state.results);
+    const planScore = useFinanceStore((state) => state.planScore);
+    const isCalculating = useFinanceStore((state) => state.isCalculating);
+    const mcResults = useFinanceStore((state) => state.mcResults);
+
+    return {
+        data,
+        results,
+        planScore,
+        isCalculating,
+        mcResults,
+        ...financeActions,
     };
 }
 
