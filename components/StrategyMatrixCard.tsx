@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useFinance } from '../lib/FinanceContext';
-import { InfoBtn } from './SharedUI';
+import { InfoBtn, SegmentedControl } from './SharedUI';
 import type { StrategyMatrixRow } from '../lib/engine/strategyMatrix';
 
 export default function StrategyMatrixCard() {
@@ -115,45 +115,29 @@ export default function StrategyMatrixCard() {
   const topWinner = sortedRows.length > 0 ? sortedRows[0] : null;
 
   return (
-    <div className="rp-card border border-primary border-opacity-50 rounded-4 shadow-sm overflow-hidden">
+    <div className="rp-card border border-secondary rounded-4 shadow-sm">
       <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom border-secondary p-3 surface-card">
         <div className="d-flex align-items-center">
-          <i className="bi bi-stars text-warning fs-4 me-3"></i>
-          <div>
-            <div className="d-flex align-items-center gap-2">
-              <h5 className="mb-0 fw-bold text-uppercase ls-1">Auto-Optimize Strategy Matrix</h5>
-              <span className="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 rounded-pill" style={{ fontSize: '0.68rem' }}>
-                7 Strategies
-              </span>
-              <InfoBtn
-                align="left"
-                title="Auto-Optimize Strategy Matrix"
-                text="Tests 7 Canadian retirement strategies in the background against your exact plan (RRSP Meltdown, OAS Clawback Shield, Pension Splitting, CPP/OAS at 60/65/70, Classic vs. TFSA-First) and ranks them by After-Tax Estate or Lowest Lifetime Tax."
-              />
-            </div>
-            <div className="small text-muted" style={{ fontSize: '0.75rem' }}>
-              Benchmark withdrawal orders, tax toggles, and CPP/OAS timing in 1 click ({data.useRealDollars ? "Today's $" : 'Nominal $'})
-            </div>
-          </div>
+          <i className="bi bi-stars text-primary fs-4 me-3"></i>
+          <h5 className="mb-0 fw-bold text-uppercase ls-1">Auto-Optimize Strategy Matrix</h5>
+          <InfoBtn
+            align="left"
+            title="Auto-Optimize Strategy Matrix"
+            text="Tests 7 Canadian retirement strategies in the background against your exact plan (RRSP Meltdown, OAS Clawback Shield, Pension Splitting, CPP/OAS at 60/65/70, Classic vs. TFSA-First) and ranks them by After-Tax Estate or Lowest Lifetime Tax."
+          />
         </div>
 
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex flex-wrap align-items-center gap-2">
           {rows && (
-            <div className="btn-group btn-group-sm" role="group" aria-label="Sort strategy results">
-              <button
-                type="button"
-                className={`btn fw-bold ${sortBy === 'estate' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => setSortBy('estate')}
-              >
-                Max Estate
-              </button>
-              <button
-                type="button"
-                className={`btn fw-bold ${sortBy === 'tax' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => setSortBy('tax')}
-              >
-                Lowest Tax
-              </button>
+            <div style={{ minWidth: '210px' }}>
+              <SegmentedControl
+                value={sortBy}
+                onChange={setSortBy}
+                options={[
+                  { value: 'estate', label: 'Max Estate' },
+                  { value: 'tax', label: 'Lowest Tax' },
+                ]}
+              />
             </div>
           )}
 
@@ -186,47 +170,71 @@ export default function StrategyMatrixCard() {
         </div>
       </div>
 
-      <div className="card-body p-3 p-md-4 bg-secondary bg-opacity-10">
+      <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-3">
         {errorMsg && (
-          <div className="alert alert-danger py-2 px-3 small fw-bold rounded-3 mb-3 d-flex align-items-center justify-content-between" role="alert">
+          <div className="alert alert-danger py-2 px-3 small fw-bold rounded-4 mb-0 d-flex align-items-center justify-content-between" role="alert">
             <span><i className="bi bi-exclamation-triangle-fill me-2"></i>{errorMsg}</span>
             <button type="button" className="btn-close btn-close-white ms-2" style={{ fontSize: '0.65rem' }} aria-label="Dismiss" onClick={() => setErrorMsg(null)} />
           </div>
         )}
 
         {appliedMsg && (
-          <div className="alert alert-success py-2 px-3 small fw-bold rounded-3 mb-3 d-flex align-items-center justify-content-between" role="status">
+          <div className="alert alert-success py-2 px-3 small fw-bold rounded-4 mb-0 d-flex align-items-center justify-content-between" role="status">
             <span><i className="bi bi-check-circle-fill me-2"></i>{appliedMsg}</span>
             <button type="button" className="btn-close ms-2" style={{ fontSize: '0.65rem' }} aria-label="Dismiss" onClick={() => setAppliedMsg(null)} />
           </div>
         )}
 
         {!rows ? (
-          <div className="text-center py-4 text-muted">
-            <i className="bi bi-cpu fs-2 text-primary opacity-75 d-block mb-2"></i>
-            <p className="mb-1 fw-bold text-main small">Not sure which withdrawal order or CPP/OAS age wins for your plan?</p>
-            <p className="mb-0 small">Click <strong>Run Strategy Optimizer</strong> to test 7 Canadian strategies side-by-side without changing your current inputs.</p>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center p-4 bg-input border border-secondary rounded-4 shadow-sm gap-3">
+            <div className="d-flex align-items-start gap-3">
+              <div
+                className="bg-primary bg-opacity-15 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                style={{ width: '40px', height: '40px' }}
+              >
+                <i className="bi bi-cpu fs-5"></i>
+              </div>
+              <div>
+                <h6 className="fw-bold mb-1 text-main text-uppercase ls-1" style={{ fontSize: '0.82rem' }}>
+                  Benchmark 7 Canadian Retirement Strategies ({data.useRealDollars ? "Today's $" : 'Nominal $'})
+                </h6>
+                <p className="small text-muted mb-0" style={{ lineHeight: 1.5 }}>
+                  Compare RRSP Meltdown, OAS Clawback Shield, Pension Splitting, CPP/OAS timing (60 / 65 / 70), and Classic vs. TFSA-First drawdown side-by-side without changing your current inputs.
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <>
             {isStale && (
-              <div className="alert alert-warning py-2 px-3 small fw-bold rounded-3 mb-3 d-flex align-items-center justify-content-between">
-                <span><i className="bi bi-info-circle-fill me-2"></i>Your plan inputs changed since this matrix was run. Click <strong>Re-Run Matrix</strong> for updated numbers.</span>
+              <div className="alert border-warning bg-warning bg-opacity-10 rounded-4 p-3 mb-0 d-flex align-items-center gap-2 small fw-bold text-warning">
+                <i className="bi bi-info-circle-fill"></i>
+                <span>Your plan inputs changed since this matrix was run. Click <strong>Re-Run Matrix</strong> for updated numbers.</span>
               </div>
             )}
 
             {topWinner && !topWinner.isBaseline && topWinner.deltaEstate > 500 && (
-              <div className="alert border-success bg-success bg-opacity-10 rounded-3 p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div className="small">
-                  <span className="fw-bold text-success"><i className="bi bi-trophy-fill me-2"></i>Top Recommendation: {topWinner.name}</span>
-                  <span className="text-muted ms-2">
-                    Projected <strong className="text-success">+{formatCurrency(topWinner.deltaEstate)}</strong> after-tax estate
-                    {topWinner.deltaTax < 0 && <> and <strong className="text-success">{formatCurrency(Math.abs(topWinner.deltaTax))}</strong> less lifetime tax</>} vs. your current setup.
-                  </span>
+              <div className="alert border-success bg-success bg-opacity-10 rounded-4 p-3 mb-0 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div className="d-flex align-items-center gap-3">
+                  <div
+                    className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: '36px', height: '36px' }}
+                  >
+                    <i className="bi bi-trophy-fill fs-6"></i>
+                  </div>
+                  <div className="small">
+                    <div className="fw-bold text-success text-uppercase ls-1" style={{ fontSize: '0.78rem' }}>
+                      Top Recommendation: {topWinner.name}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      Projected <strong className="text-success">+{formatCurrency(topWinner.deltaEstate)}</strong> after-tax estate
+                      {topWinner.deltaTax < 0 && <> and <strong className="text-success">{formatCurrency(Math.abs(topWinner.deltaTax))}</strong> less lifetime tax</>} vs. your current setup.
+                    </div>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  className="btn btn-success btn-sm fw-bold rounded-pill px-3"
+                  className="btn btn-success btn-sm fw-bold rounded-pill px-3 shadow-sm"
                   onClick={() => handleApply(topWinner)}
                 >
                   Apply Winner
@@ -234,17 +242,17 @@ export default function StrategyMatrixCard() {
               </div>
             )}
 
-            <div className="table-responsive rounded-3 border border-secondary">
-              <table className="table table-hover align-middle mb-0 small">
+            <div className="table-responsive rounded-4 border border-secondary bg-input shadow-sm overflow-hidden">
+              <table className="table table-dark table-hover align-middle mb-0 small">
                 <thead className="surface-card border-bottom border-secondary">
                   <tr className="text-muted text-uppercase" style={{ fontSize: '0.7rem' }}>
-                    <th className="ps-3 py-2">Rank</th>
-                    <th className="py-2">Strategy</th>
-                    <th className="py-2 text-end">After-Tax Estate</th>
-                    <th className="py-2 text-end">Lifetime Tax</th>
-                    <th className="py-2 text-end">vs. Current</th>
-                    <th className="py-2 text-center">Status</th>
-                    <th className="pe-3 py-2 text-end">Action</th>
+                    <th className="ps-3 py-2.5">Rank</th>
+                    <th className="py-2.5">Strategy</th>
+                    <th className="py-2.5 text-end">After-Tax Estate</th>
+                    <th className="py-2.5 text-end">Lifetime Tax</th>
+                    <th className="py-2.5 text-end">vs. Current</th>
+                    <th className="py-2.5 text-center">Status</th>
+                    <th className="pe-3 py-2.5 text-end">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -252,7 +260,7 @@ export default function StrategyMatrixCard() {
                     const rankBadge =
                       idx === 0 ? 'bg-warning text-dark' :
                       idx === 1 ? 'bg-secondary text-white' :
-                      idx === 2 ? 'bg-info text-dark' : 'bg-dark text-muted border border-secondary';
+                      idx === 2 ? 'bg-info text-dark' : 'bg-input text-muted border border-secondary';
 
                     const estateDeltaPositive = row.deltaEstate > 0;
                     const estateDeltaNeutral = Math.abs(row.deltaEstate) < 100;
