@@ -361,19 +361,23 @@ export function calculateTaxDetailed(
         
         provTax = Math.max(0, provTax - otrAmount);
         
-        let ti = craTaxableIncome;
+        const ohpTiers = Array.isArray(constants.ON_OHP_TIERS) && constants.ON_OHP_TIERS.length > 0
+            ? constants.ON_OHP_TIERS
+            : [
+                { threshold: 20000, base: 0, maxAdd: 300, rate: 0.06 },
+                { threshold: 36000, base: 300, maxAdd: 150, rate: 0.06 },
+                { threshold: 48000, base: 450, maxAdd: 150, rate: 0.25 },
+                { threshold: 72000, base: 600, maxAdd: 150, rate: 0.25 },
+                { threshold: 200000, base: 750, maxAdd: 150, rate: 0.25 }
+            ];
         let ohp = 0;
-        if (ti <= 20000) ohp = 0;
-        else if (ti <= 25000) ohp = (ti - 20000) * 0.06;
-        else if (ti <= 36000) ohp = 300;
-        else if (ti <= 38500) ohp = 300 + (ti - 36000) * 0.06;
-        else if (ti <= 48000) ohp = 450;
-        else if (ti <= 48600) ohp = 450 + (ti - 48000) * 0.25;
-        else if (ti <= 72000) ohp = 600;
-        else if (ti <= 72600) ohp = 600 + (ti - 72000) * 0.25;
-        else if (ti <= 200000) ohp = 750;
-        else if (ti <= 200600) ohp = 750 + (ti - 200000) * 0.25;
-        else ohp = 900;
+        for (let i = ohpTiers.length - 1; i >= 0; i--) {
+            const tier = ohpTiers[i];
+            if (craTaxableIncome > tier.threshold) {
+                ohp = tier.base + Math.min(tier.maxAdd, (craTaxableIncome - tier.threshold) * tier.rate);
+                break;
+            }
+        }
         
         ontarioHealthPremium = ohp;
         provTax += ontarioHealthPremium;

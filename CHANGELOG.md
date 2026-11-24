@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Tooltip HTML sanitization (`lib/sanitizeHtml.ts`, `components/SharedUI.tsx`)**: Added an allowlist HTML sanitizer to `InfoBtn` to strip scripts, iframes, and event handlers before rendering tooltips.
 
 ### Fixed
+- **Complete 13-jurisdiction tax constants & OHP consolidation (`lib/config.js`, `lib/engine/tax.ts`)**: Added missing territorial (`YT`, `NT`, `NU`) entries for `PROV_BPA`, `PROV_DISABILITY_AMOUNT`, `PROV_DIV_CREDIT_ELIGIBLE`, and `PROV_DIV_CREDIT_NON_ELIGIBLE`; populated `PROV_PENSION_AMOUNT` across all 13 provinces and territories; and consolidated Ontario Health Premium calculation in `tax.ts` to read directly from `constants.ON_OHP_TIERS`.
 - **Ontario Surtax & Dividend Tax Credit order (`lib/engine/tax.ts`)**: Applied the Ontario Dividend Tax Credit to Basic Ontario Tax *before* calculating Ontario Surtax per CRA Form ON428, and read the configured `taxData.ON.surtaxes` thresholds ($5,818 / $7,446) instead of falling back to stale 2024 thresholds ($5,554 / $7,108).
 - **Real-dollar discounting in Compare tab (`components/CompareTab.tsx`)**: Discounted each year's tax and expenses individually by its own year before summing instead of discounting lifetime nominal totals by the final year. Aligned both active and comparison plans (metrics and chart) to use the active `useRealDollars` toggle.
 - **Stale favicon metadata (`app/layout.tsx`)**: Removed the `/favicon.ico` reference after migrating to `icon.svg`.
