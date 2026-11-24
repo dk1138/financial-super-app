@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFinance, migrateLegacyData, emptyData } from '../lib/FinanceContext';
-import { FinanceEngine } from '../lib/financeEngine';
 import { FINANCIAL_CONSTANTS } from '../lib/config';
 import { InfoBtn, SegmentedControl } from './SharedUI';
 import CanadianPeerBenchmarks from './compare/CanadianPeerBenchmarks';
@@ -38,27 +37,62 @@ export default function CompareTab() {
     }, []);
 
     useEffect(() => {
-        if (comparePlanName) {
-            setIsCalculating(true);
-            setTimeout(() => {
-                const planStr = localStorage.getItem(`rp_saved_plan_${comparePlanName}`);
-                if (planStr) {
-                    const parsed = JSON.parse(planStr);
-                    const migrated = migrateLegacyData(parsed, emptyData);
-                    migrated.constants = FINANCIAL_CONSTANTS; 
-                    
-                    setCompareData(migrated);
-                    
-                    const engine = new FinanceEngine(JSON.parse(JSON.stringify(migrated)));
-                    const sim = engine.runSimulation(true, null);
-                    setCompareResults(sim);
-                }
-                setIsCalculating(false);
-            }, 50);
-        } else {
+        if (!comparePlanName) {
             setCompareResults(null);
             setCompareData(null);
+            return;
         }
+
+        const planStr = localStorage.getItem(`rp_saved_plan_${comparePlanName}`);
+        if (!planStr) {
+            setCompareResults(null);
+            setCompareData(null);
+            return;
+        }
+
+        let worker: Worker | null = null;
+        let cancelled = false;
+
+        try {
+            setIsCalculating(true);
+            const parsed = JSON.parse(planStr);
+            const migrated = migrateLegacyData(parsed, emptyData);
+            migrated.constants = FINANCIAL_CONSTANTS;
+            setCompareData(migrated);
+
+            worker = new Worker(new URL('../lib/financeWorker.ts', import.meta.url));
+            worker.onmessage = (e: MessageEvent) => {
+                if (cancelled) return;
+                if (e.data.status === 'success') {
+                    setCompareResults(e.data.results?.timeline || null);
+                } else {
+                    console.error('Compare Worker Error:', e.data.error);
+                    setCompareResults(null);
+                }
+                setIsCalculating(false);
+                worker?.terminate();
+            };
+            worker.onerror = (err) => {
+                if (cancelled) return;
+                console.error('Compare Worker Error:', err);
+                setCompareResults(null);
+                setIsCalculating(false);
+                worker?.terminate();
+            };
+            worker.postMessage({
+                data: JSON.parse(JSON.stringify(migrated)),
+                detailed: true,
+            });
+        } catch (err) {
+            console.error('Failed to simulate comparison plan:', err);
+            setCompareResults(null);
+            setIsCalculating(false);
+        }
+
+        return () => {
+            cancelled = true;
+            worker?.terminate();
+        };
     }, [comparePlanName]);
 
     const formatCurrency = (val: number) => {

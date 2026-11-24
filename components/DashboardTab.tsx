@@ -87,8 +87,9 @@ export default function DashboardTab() {
     document.head.appendChild(styleEl);
 
     try {
+      const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
       return await html2canvas(dashboardRef.current!, {
-        backgroundColor: '#16181d',
+        backgroundColor: isLight ? '#f8fafc' : '#16181d',
         scale: 2,
         useCORS: true,
         logging: false,

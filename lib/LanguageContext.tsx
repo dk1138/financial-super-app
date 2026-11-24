@@ -37,6 +37,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Sync <html lang="..."> attribute for accessibility & SEO
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang;
+    }
+  }, [lang]);
+
   const setLang = (newLang: Language) => {
     setLangState(newLang);
     try {

@@ -174,8 +174,9 @@ export default function ProjectionTab() {
 
       setTimeout(async () => {
           try {
+              const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
               const canvas = await html2canvas(targetEl, { 
-                  backgroundColor: '#16181d', 
+                  backgroundColor: isLight ? '#f8fafc' : '#16181d', 
                   scale: 2,
                   windowHeight: targetEl.scrollHeight + 100 
               });

@@ -27,18 +27,26 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
     pathname?.startsWith("/tools") || 
     pathname === "/databank";
 
+  // Only mount FinanceProvider (and its background Web Worker) on interactive routes that consume it
+  const needsFinanceProvider =
+    pathname?.startsWith("/planner") ||
+    pathname?.startsWith("/tools/") ||
+    pathname?.startsWith("/expenses");
+
+  const content = (
+    <LanguageProvider>
+      {!isMarketingPage && <GlobalHeader />}
+      <main>
+        {children}
+      </main>
+      <Analytics />
+      <SpeedInsights />
+    </LanguageProvider>
+  );
+
   return (
     <SessionWrapper>
-      <FinanceProvider>
-        <LanguageProvider>
-          {!isMarketingPage && <GlobalHeader />}
-          <main>
-            {children}
-          </main>
-          <Analytics />
-          <SpeedInsights />
-        </LanguageProvider>
-      </FinanceProvider>
+      {needsFinanceProvider ? <FinanceProvider>{content}</FinanceProvider> : content}
     </SessionWrapper>
   );
 }
