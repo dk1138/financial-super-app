@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, SegmentedControl } from './SharedUI';
+import StrategyMatrixCard from './StrategyMatrixCard';
 
 const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, desc: string, contextDesc?: Record<string, string> }> = {
   tfsa: { 
@@ -251,6 +252,9 @@ export default function StrategyTab() {
   return (
     <div className="p-3 p-md-4 d-flex flex-column gap-4">
       
+      {/* --- AUTO-OPTIMIZE STRATEGY MATRIX --- */}
+      <StrategyMatrixCard />
+
       {/* --- SECTION 1: PRIORITY QUEUES --- */}
       <div className="rp-card border border-secondary rounded-4 shadow-sm">
         <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">

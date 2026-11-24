@@ -1,5 +1,6 @@
 import { FinanceEngine } from './financeEngine';
 import { runMonteCarloSimulation } from './engine/monteCarlo';
+import { runStrategyMatrix } from './engine/strategyMatrix';
 
 self.onmessage = (e: MessageEvent) => {
     const { type, data, detailed, simContext, simCount, method, volatility } = e.data;
@@ -13,6 +14,14 @@ self.onmessage = (e: MessageEvent) => {
                     self.postMessage({ status: 'progress', progress });
                 }
             );
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'strategyMatrix') {
+            const results = runStrategyMatrix(data, (progress) => {
+                self.postMessage({ status: 'progress', progress });
+            });
             self.postMessage({ status: 'success', results });
             return;
         }
