@@ -316,22 +316,26 @@ export function calculateTaxDetailed(
     let ontarioHealthPremium = 0;
 
     if (province === 'ON') { 
-        let s1 = (constants.ON_SURTAX_1 || 5554) * baseInflation;
-        let s2 = (constants.ON_SURTAX_2 || 7108) * baseInflation;
+        // CRA ON428: Ontario Dividend Tax Credit reduces Basic Ontario Tax BEFORE Surtax
+        provTax = Math.max(0, provTax - provDividendCredit);
+
+        const onSurtaxes = Array.isArray(taxData.ON?.surtaxes) && taxData.ON.surtaxes.length > 0
+            ? taxData.ON.surtaxes
+            : [
+                { threshold: (constants.ON_SURTAX_1 || 5818) * baseInflation, rate: 0.20 },
+                { threshold: (constants.ON_SURTAX_2 || 7446) * baseInflation, rate: 0.36 }
+            ];
+
         let surtaxMultiplier = 1;
-        
-        if (provTax > s1) {
-            ontarioSurtaxAmt += (provTax - s1) * 0.20;
-            surtaxMultiplier += 0.20;
-        }
-        if (provTax > s2) {
-            ontarioSurtaxAmt += (provTax - s2) * 0.36; 
-            surtaxMultiplier += 0.36;
+        for (const tier of onSurtaxes) {
+            if (provTax > tier.threshold) {
+                ontarioSurtaxAmt += (provTax - tier.threshold) * tier.rate;
+                surtaxMultiplier += tier.rate;
+            }
         }
         
         if (ontarioSurtaxAmt > 0) provMarginalRate *= surtaxMultiplier;
 
-        provTax = Math.max(0, provTax - provDividendCredit);
         provTax += ontarioSurtaxAmt;
 
         let liftMax = (constants.ON_LIFT_MAX || 875) * baseInflation;

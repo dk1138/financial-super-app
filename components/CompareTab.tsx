@@ -76,17 +76,18 @@ export default function CompareTab() {
         
         const startYear = planTimeline[0].year;
         const inflation = (planData.inputs.inflation_rate || 2.1) / 100;
+        const useReal = data?.useRealDollars ?? planData.useRealDollars ?? false;
         
         const getReal = (nominal: number, yOut: number) => {
-            if (!planData.useRealDollars) return nominal;
+            if (!useReal) return nominal;
             return nominal / Math.pow(1 + inflation, Math.max(0, yOut - startYear));
         };
 
         const finalYear = planTimeline[planTimeline.length - 1];
         const finalEstateVal = finalYear.afterTaxEstate !== undefined ? finalYear.afterTaxEstate : (finalYear.liquidNW + (finalYear.reIncludedEq || 0));
         
-        const totalTax = planTimeline.reduce((sum: number, y: any) => sum + (y.taxP1 || 0) + (y.taxP2 || 0), 0);
-        const totalSpend = planTimeline.reduce((sum: number, y: any) => sum + (y.expenses || 0), 0);
+        const totalTax = planTimeline.reduce((sum: number, y: any) => sum + getReal((y.taxP1 || 0) + (y.taxP2 || 0), y.year), 0);
+        const totalSpend = planTimeline.reduce((sum: number, y: any) => sum + getReal(y.expenses || 0, y.year), 0);
 
         const isSuccess = planTimeline.every((y: any) => Math.round(y.liquidNW || 0) >= 0);
 
@@ -98,8 +99,8 @@ export default function CompareTab() {
             p1RetAge: Number(planData.inputs.p1_retireAge) || 60,
             p2RetAge: planData.mode === 'Couple' ? (Number(planData.inputs.p2_retireAge) || 60) : null,
             finalNW: getReal(finalEstateVal, finalYear.year),
-            totalTax: getReal(totalTax, finalYear.year),
-            totalSpend: getReal(totalSpend, finalYear.year),
+            totalTax,
+            totalSpend,
             isSuccess,
             isCouple: planData.mode === 'Couple'
         };
@@ -159,7 +160,8 @@ export default function CompareTab() {
     const inputDiffs = getChangedInputs();
 
     const getRealValue = (nominal: number, yOut: number, planData: any, baseYear: number) => {
-        if (!planData || !planData.useRealDollars) return nominal;
+        const useReal = data?.useRealDollars ?? planData?.useRealDollars ?? false;
+        if (!planData || !useReal) return nominal;
         const inf = (planData.inputs.inflation_rate || 2.1) / 100;
         return nominal / Math.pow(1 + inf, Math.max(0, yOut - baseYear));
     };
