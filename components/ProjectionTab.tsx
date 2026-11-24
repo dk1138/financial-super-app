@@ -1634,14 +1634,14 @@ export default function ProjectionTab() {
                 return (
                   <React.Fragment key={y.year}>
                     {y.year === firstDepYear && (
-                      <tr key={`depleted-milestone-${y.year}`} className="bg-danger bg-opacity-20 border-top border-bottom border-danger">
+                      <tr key={`depleted-milestone-${y.year}`} className="bg-danger bg-opacity-25 border-top border-bottom border-danger">
                         <td colSpan={8} className="py-2 px-3 text-center text-danger fw-bold small">
                           <i className="bi bi-exclamation-triangle-fill text-warning me-2 fs-6"></i>
                           <span>PORTFOLIO DEPLETED AT AGE {y.p1Age} ({y.year}) — From this point forward, remaining Net Worth is 100% Real Estate Equity.</span>
                         </td>
                       </tr>
                     )}
-                    <tr id={`proj-row-${y.year}`} className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : (isLiquidDepleted ? 'bg-danger bg-opacity-5' : '')}`} onClick={() => toggleRow(y.year)}>
+                    <tr id={`proj-row-${y.year}`} className={`cursor-pointer transition-all ${isExpanded ? 'bg-primary bg-opacity-10' : (isLiquidDepleted ? 'bg-danger bg-opacity-10' : '')}`} onClick={() => toggleRow(y.year)}>
                       <td className="py-3 ps-3 text-center text-primary border-bottom border-secondary border-opacity-25">
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} transition-all`}></i>
                       </td>

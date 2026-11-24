@@ -32,8 +32,12 @@ export default function CompareTab() {
     const [milestonesOnly, setMilestonesOnly] = useState(false);
 
     useEffect(() => {
-        const plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
-        setSavedPlans(plans);
+        try {
+            const plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
+            setSavedPlans(Array.isArray(plans) ? plans : []);
+        } catch {
+            setSavedPlans([]);
+        }
     }, []);
 
     useEffect(() => {

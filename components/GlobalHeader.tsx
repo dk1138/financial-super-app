@@ -60,7 +60,11 @@ export default function GlobalHeader() {
         const currentName = localStorage.getItem('active_plan_name') || 'Untitled Plan';
         setActivePlanName(currentName);
         setNewPlanName(currentName === 'Untitled Plan' ? '' : currentName);
-        setSavedPlans(JSON.parse(localStorage.getItem('rp_plan_list') || '[]'));
+        try {
+            setSavedPlans(JSON.parse(localStorage.getItem('rp_plan_list') || '[]'));
+        } catch {
+            setSavedPlans([]);
+        }
 
         const handlePlanChange = (e: Event) => setActivePlanName((e as CustomEvent).detail);
         window.addEventListener('updateActivePlan', handlePlanChange);

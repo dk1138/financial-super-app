@@ -33,9 +33,6 @@ export default function PlannerPage() {
   
   // --- FEEDBACK STATE ---
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [sendSuccess, setSendSuccess] = useState(false);
 
   const isCouple = data.mode === 'Couple';
 
@@ -116,28 +113,6 @@ export default function PlannerPage() {
           updateInput('retire_same_time', false);
       }
   };
-
-    const handleSendFeedback = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSending(true);
-
-    const response = await fetch('/api/auth/feedback', { // Make sure this path is correct!
-        method: 'POST',
-        body: JSON.stringify({ message: feedbackText }),
-    });
-
-    if (response.ok) {
-        // If the POST was successful, the email was sent!
-        // No need to GET or check any IDs.
-        setSendSuccess(true);
-        setFeedbackText('');
-        setTimeout(() => {
-        setShowFeedbackModal(false);
-        setSendSuccess(false);
-        }, 2000);
-    }
-    setIsSending(false);
-    };
 
   const tabs = [
     { id: 'plan', label: t('tabs.inputs', 'Inputs'), icon: 'bi-pencil-square' },
@@ -274,100 +249,11 @@ export default function PlannerPage() {
           </div>
       </footer>
 
-      {/* --- FEEDBACK MODAL POPUP --- */}
-      {showFeedbackModal && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center px-3" style={{ zIndex: 2000, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
-          <div className="bg-body border border-secondary shadow-lg rounded-4 overflow-hidden fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-            <div className="p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h6 className="mb-0 fw-bold text-uppercase ls-1"><i className="bi bi-chat-left-heart text-primary me-2"></i>Send Feedback</h6>
-                <button className="btn-close" onClick={() => setShowFeedbackModal(false)}></button>
-              </div>
-
-              {sendSuccess ? (
-                <div className="text-center py-4">
-                  <div className="text-success fs-1 mb-2"><i className="bi bi-check-circle-fill"></i></div>
-                  <h6 className="fw-bold">Feedback Sent!</h6>
-                  <p className="text-muted small">Thanks for helping us improve Planfolio.</p>
-                </div>
-              ) : (
-                <form onSubmit={handleSendFeedback}>
-                  <textarea 
-                    className="form-control bg-input border-secondary mb-3 rounded-3 text-sm" 
-                    rows={5} 
-                    placeholder="Found a bug? Have a feature request? Let us know..." 
-                    required
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value)}
-                    style={{ resize: 'none', fontSize: '0.9rem' }}
-                  ></textarea>
-                  <button 
-                    type="submit" 
-                    disabled={isSending || !feedbackText.trim()}
-                    className="btn btn-primary w-100 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
-                  >
-                    {isSending ? (
-                      <><span className="spinner-border spinner-border-sm"></span> Sending...</>
-                    ) : (
-                      <><i className="bi bi-send"></i> Submit Feedback</>
-                    )}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-{/* --- QUICK ADJUST POPUP --- */}
+      {/* --- QUICK ADJUST POPUP --- */}
       <QuickAdjustModal 
         isOpen={showQuickAdjust} 
         onClose={() => setShowQuickAdjust(false)} 
       />
-
-      {/* --- FEEDBACK BUTTON (Right Side, Indigo Pop) --- */}
-      <button 
-          type="button"
-          className="btn border-0 shadow-lg position-fixed d-flex align-items-center justify-content-center text-white" 
-          style={{ 
-              width: '48px', 
-              height: '48px', 
-              borderRadius: '14px',
-              backgroundColor: '#6265e8',
-              bottom: '30px', 
-              right: '90px', 
-              zIndex: 1050,
-              cursor: 'pointer',
-              boxShadow: '0 6px 18px rgba(98, 101, 232, 0.35)',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }} 
-          title="Send Feedback" 
-          onClick={() => setShowFeedbackModal(true)}
-      >
-          <i className="bi bi-chat-left-dots-fill fs-5"></i>
-      </button>
-
-      {/* --- FEEDBACK MODAL --- */}
-      <FeedbackModal 
-        isOpen={showFeedbackModal} 
-        onClose={() => setShowFeedbackModal(false)} 
-      />
-
-      {/* --- QUICK ADJUST BUTTON (Bottom Right, Primary Blue) --- */}
-      <button 
-          className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
-          style={{ 
-              width: '48px', 
-              height: '48px', 
-              bottom: '30px', 
-              right: '30px', 
-              zIndex: 1050 
-          }} 
-          title="Quick Adjust Variables" 
-          onClick={() => setShowQuickAdjust(!showQuickAdjust)}
-      >
-          <i className={`bi ${showQuickAdjust ? 'bi-x-lg' : 'bi-sliders'} fs-5`}></i>
-      </button>
 
       {/* --- FEEDBACK BUTTON (Right Side, Indigo Pop) --- */}
       <button 
@@ -407,6 +293,7 @@ export default function PlannerPage() {
 
       {/* --- QUICK ADJUST BUTTON (Bottom Right, Primary Blue) --- */}
       <button 
+          type="button"
           className="btn btn-primary rounded-circle shadow-lg position-fixed d-flex align-items-center justify-content-center hover-opacity-100 transition-all" 
           style={{ 
               width: '48px', 

@@ -28,13 +28,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const tool = TOOLS_BY_SLUG[slug];
     if (!tool) {
         return {
-            title: 'Tool Not Found | Planfolio',
+            title: 'Tool Not Found',
             description: 'The requested financial calculator could not be found.',
         };
     }
 
     return {
-        title: `${tool.title} | Planfolio Canada`,
+        title: `${tool.title} (Canada)`,
         description: tool.subtitle,
         keywords: [
             tool.title,
@@ -212,6 +212,20 @@ export default async function ToolPage({ params }: PageProps) {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'BreadcrumbList',
+                        itemListElement: [
+                            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.planfolio.ca' },
+                            { '@type': 'ListItem', position: 2, name: 'Tools & Calculators', item: 'https://www.planfolio.ca/tools' },
+                            { '@type': 'ListItem', position: 3, name: tool.title, item: `https://www.planfolio.ca/tools/${tool.slug}` },
+                        ],
+                    }),
+                }}
             />
 
             {/* UNIVERSAL NAVIGATION HEADER */}
