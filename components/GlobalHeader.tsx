@@ -10,6 +10,7 @@ import ExpenseHeaderActions from './expenses/ExpenseHeaderActions';
 import { ENGINE_VERSION } from '../lib/financeEngine';
 import SharePlanModal from './SharePlanModal';
 import CommandPaletteModal from './CommandPaletteModal';
+import PlanNotesModal from './PlanNotesModal';
 
 function fingerprintPlan(planData: any): string {
     if (!planData) return '';
@@ -62,6 +63,7 @@ export default function GlobalHeader() {
     const [showLoadModal, setShowLoadModal] = useState(false);
     const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showNotesModal, setShowNotesModal] = useState(false);
     const [showCommandPalette, setShowCommandPalette] = useState(false);
     const [planToLoad, setPlanToLoad] = useState<string | null>(null);
     const [planToDelete, setPlanToDelete] = useState<string | null>(null);
@@ -565,7 +567,8 @@ export default function GlobalHeader() {
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setNewPlanName(activePlanName); setShowSaveModal(true); setFileMenuOpen(false); }}><i className="bi bi-copy text-info me-2"></i> Save As Copy...</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={() => { setShowLoadModal(true); setFileMenuOpen(false); }}><i className="bi bi-folder2-open text-info me-2"></i> Open Saved Plan</button></li>
                                         <li><hr className="dropdown-divider border-secondary opacity-25" /></li>
-                                        <li><button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setFileMenuOpen(false); setShowShareModal(true); }}><i className="bi bi-share-fill me-2"></i> Share Plan Link (URL)...</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setShowNotesModal(true); }}><i className="bi bi-journal-text me-2"></i> {lang === 'fr' ? 'Notes du plan...' : 'Plan Notes & Journal...'}</button></li>
+                                        <li><button className="dropdown-item py-2 fw-bold text-primary" onClick={() => { setFileMenuOpen(false); setShowShareModal(true); }}><i className="bi bi-share-fill me-2"></i> {lang === 'fr' ? 'Partager / Résumé IA...' : 'Share Link / AI Summary...'}</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold" onClick={handleExportJson}><i className="bi bi-download text-success me-2"></i> Export to PC (.json)</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold text-warning" onClick={() => { setFileMenuOpen(false); plannerFileInputRef.current?.click(); }}><i className="bi bi-upload me-2"></i> Load from PC (.json)</button></li>
                                         <li><button className="dropdown-item py-2 fw-bold text-info" onClick={() => { setFileMenuOpen(false); setPastedJsonText(''); setShowPasteJsonModal(true); }}><i className="bi bi-clipboard-check me-2"></i> Paste JSON Plan</button></li>
@@ -574,6 +577,20 @@ export default function GlobalHeader() {
                                     </ul>
                                 )}
                             </div>
+
+                            {/* PLAN NOTES BUTTON */}
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-outline-secondary bg-input rounded-circle d-flex align-items-center justify-content-center shadow-sm position-relative p-0"
+                                style={{ width: '34px', height: '34px' }}
+                                onClick={() => setShowNotesModal(true)}
+                                title={lang === 'fr' ? 'Notes du plan' : 'Plan Notes & Assumptions'}
+                            >
+                                <i className="bi bi-journal-text text-info" style={{ fontSize: '0.88rem' }}></i>
+                                {Boolean((data as any)?.notes && String((data as any).notes).trim()) && (
+                                    <span className="position-absolute top-0 start-100 translate-middle p-1 bg-info border border-dark rounded-circle"></span>
+                                )}
+                            </button>
 
                             {/* UNSAVED CHANGES INDICATOR + 1-CLICK QUICK SAVE (Ctrl+S) */}
                             {hasUnsavedChanges && (
@@ -883,6 +900,11 @@ export default function GlobalHeader() {
                 onClose={() => setShowShareModal(false)}
                 planData={data}
                 onCopied={showToast}
+            />
+            <PlanNotesModal
+                isOpen={showNotesModal}
+                onClose={() => setShowNotesModal(false)}
+                planName={activePlanName}
             />
             <CommandPaletteModal
                 isOpen={showCommandPalette}

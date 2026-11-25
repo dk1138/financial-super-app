@@ -243,20 +243,40 @@ export function runConsumptionSmoother(
   };
 }
 
-export function runSorrShock(data: any) {
+export type SorrPreset = 'standard' | 'gfc2008' | 'dotcom2000' | 'stagflation1966';
+
+export function runSorrShock(data: any, preset: SorrPreset = 'standard') {
   const retAge = Number(data?.inputs?.p1_retireAge) || 65;
   const currentAge = Number(data?.inputs?.p1_age) || 35;
   const retYearIndex = Math.max(0, retAge - currentAge);
 
   const shockSeq = new Array(100).fill(0);
-  shockSeq[retYearIndex] = -0.35;
-  shockSeq[retYearIndex + 1] = -0.15;
-  shockSeq[retYearIndex + 2] = 0.05;
-  shockSeq[retYearIndex + 3] = 0.05;
-
   const clonedData = JSON.parse(JSON.stringify(data));
+
+  if (preset === 'gfc2008') {
+    // 2008–2011 Global Financial Crisis (S&P 500 nominal shock deltas)
+    const seq = [-0.37, 0.2, 0.08, -0.04];
+    seq.forEach((v, i) => { shockSeq[retYearIndex + i] = v; });
+  } else if (preset === 'dotcom2000') {
+    // 2000–2002 Dot-Com 3-year consecutive bear market
+    const seq = [-0.15, -0.18, -0.28, 0.15, 0.04];
+    seq.forEach((v, i) => { shockSeq[retYearIndex + i] = v; });
+  } else if (preset === 'stagflation1966') {
+    // 1966–1974 Stagflation: choppy real returns + elevated inflation
+    const seq = [-0.16, 0.12, 0.02, -0.14, -0.02, 0.06, -0.21, -0.32];
+    seq.forEach((v, i) => { shockSeq[retYearIndex + i] = v; });
+    const baseInf = Number(clonedData?.inputs?.inflation_rate ?? 2.1);
+    clonedData.inputs.inflation_rate = Math.min(8, baseInf + 2.5);
+  } else {
+    // Standard SORR Crash
+    shockSeq[retYearIndex] = -0.35;
+    shockSeq[retYearIndex + 1] = -0.15;
+    shockSeq[retYearIndex + 2] = 0.05;
+    shockSeq[retYearIndex + 3] = 0.05;
+  }
+
   const sorrEngine = new FinanceEngine(clonedData);
   const sorrTimeline = sorrEngine.runSimulation(true, { shockSequence: shockSeq });
 
-  return { sorrTimeline, retAge };
+  return { sorrTimeline, retAge, preset };
 }

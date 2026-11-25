@@ -263,6 +263,31 @@ export default function MonteCarloCard() {
                 </h5>
                 <div className="rp-card p-4 surface-card border border-secondary rounded-4 flex-grow-1 d-flex flex-column shadow-sm">
                     {chartComponent}
+                    {chartData && chartData.length > 0 && (() => {
+                        const last = chartData[chartData.length - 1];
+                        return (
+                            <div className="row g-2 mt-3 pt-3 border-top border-secondary border-opacity-25 text-center">
+                                <div className="col-4">
+                                    <div className="p-2 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25">
+                                        <div className="text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>10th Percentile (Downside)</div>
+                                        <div className="fw-bolder text-danger fs-6">{formatCurrency(last.p10 || 0)}</div>
+                                    </div>
+                                </div>
+                                <div className="col-4">
+                                    <div className="p-2 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
+                                        <div className="text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>50th Percentile (Median)</div>
+                                        <div className="fw-bolder text-primary fs-6">{formatCurrency(last.p50 || 0)}</div>
+                                    </div>
+                                </div>
+                                <div className="col-4">
+                                    <div className="p-2 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25">
+                                        <div className="text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>90th Percentile (Upside)</div>
+                                        <div className="fw-bolder text-success fs-6">{formatCurrency(last.p90 || 0)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         </div>

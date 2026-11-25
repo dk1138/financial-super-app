@@ -163,9 +163,38 @@ export default function LivingExpensesCard() {
                 <h6 className="mb-0 fw-bold text-info text-uppercase ls-1 d-flex align-items-center gap-2">
                     <i className="bi bi-calendar-range"></i> {t('expensesCard.phasedTitle', 'Phased Expenses & Housing Transitions')}
                 </h6>
-                <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('expensePhases', { name: 'Future Rent / LTC', amount: 4000, startAge: 80, endAge: 100, isPhased: true })}>
+                <div className="d-flex align-items-center gap-2 flex-wrap">
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1"
+                        style={{ fontSize: "0.74rem" }}
+                        title="Auto-populate Go-Go (100%), Slow-Go (85%), and No-Go (75%) retirement spending phases"
+                        onClick={() => {
+                            const retAge = Number(data.inputs.p1_retireAge) || 65;
+                            const lifeExp = Number(data.inputs.p1_lifeExp) || 95;
+                            let baseMonthly = Math.round((Number(data.inputs.exp_basic_ret) || 60000) / 12);
+                            if (data.expenseMode === "advanced" && data.expensesByCategory) {
+                                let sum = 0;
+                                Object.values(data.expensesByCategory).forEach((cat: any) => {
+                                    (cat?.items || []).forEach((it: any) => {
+                                        sum += (Number(it.ret) || 0) * (Number(it.freq) || 12);
+                                    });
+                                });
+                                if (sum > 0) baseMonthly = Math.round(sum / 12);
+                            }
+                            const slowStart = Math.min(lifeExp - 5, Math.max(retAge + 5, 75));
+                            const noGoStart = Math.min(lifeExp - 2, Math.max(slowStart + 5, 85));
+                            addArrayItem("expensePhases", { name: "Go-Go Years (Active Travel)", amount: baseMonthly, startAge: retAge, endAge: slowStart - 1, isPhased: true });
+                            addArrayItem("expensePhases", { name: "Slow-Go Years (-15%)", amount: Math.round(baseMonthly * 0.85), startAge: slowStart, endAge: noGoStart - 1, isPhased: true });
+                            addArrayItem("expensePhases", { name: "No-Go Years (-25%)", amount: Math.round(baseMonthly * 0.75), startAge: noGoStart, endAge: lifeExp, isPhased: true });
+                        }}
+                    >
+                        <i className="bi bi-stars me-1"></i> Go-Go / Slow-Go / No-Go
+                    </button>
+                    <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('expensePhases', { name: 'Future Rent / LTC', amount: 4000, startAge: 80, endAge: 100, isPhased: true })}>
                     <i className="bi bi-plus-lg me-1"></i> {t('expensesCard.addPhase', 'Add Phase')}
-                </button>
+                    </button>
+                </div>
             </div>
             
             {(!data.expensePhases || data.expensePhases.length === 0) ? (

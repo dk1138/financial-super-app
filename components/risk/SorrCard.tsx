@@ -5,11 +5,19 @@ import { InfoBtn } from '../SharedUI';
 
 export default function SorrCard() {
     const { data, results } = useFinance();
+    const [preset, setPreset] = useState<'standard' | 'gfc2008' | 'dotcom2000' | 'stagflation1966'>('standard');
     const [sorrData, setSorrData] = useState<any[]>([]);
     const [isSorrSuccess, setIsSorrSuccess] = useState(false);
     const [shortfallYear, setShortfallYear] = useState<number | null>(null);
     const [isSorrCalculating, setIsSorrCalculating] = useState(true);
     const workerRef = useRef<Worker | null>(null);
+
+    const PRESETS: Array<{ id: 'standard' | 'gfc2008' | 'dotcom2000' | 'stagflation1966'; label: string; desc: string }> = [
+        { id: 'standard', label: 'Standard (-35% / -15%)', desc: 'Severe 2-year market crash on retirement day.' },
+        { id: 'gfc2008', label: '2008 Financial Crisis', desc: 'Sharp -37% crash followed by V-shaped rebound.' },
+        { id: 'dotcom2000', label: '2000 Dot-Com Bust', desc: '3 consecutive down years (-15%, -18%, -28%).' },
+        { id: 'stagflation1966', label: '1966 Stagflation', desc: 'Choppy bear decade with +2.5% higher inflation.' },
+    ];
 
     const formatCurrency = (val: number) => {
         if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
@@ -76,7 +84,8 @@ export default function SorrCard() {
 
                 worker.postMessage({
                     type: 'sorrShock',
-                    data: JSON.parse(JSON.stringify(data)),
+                    data,
+                    preset,
                 });
             } catch {
                 if (active) setIsSorrCalculating(false);
@@ -89,7 +98,7 @@ export default function SorrCard() {
             workerRef.current?.terminate();
             workerRef.current = null;
         };
-    }, [data, results]);
+    }, [data, results, preset]);
 
     const CustomSorrTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -113,11 +122,31 @@ export default function SorrCard() {
         return null;
     };
 
+    const activePresetMeta = PRESETS.find((p) => p.id === preset) || PRESETS[0];
+
     return (
         <>
-            <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary">
-                <h5 className="text-muted small text-uppercase fw-bold ls-1 mb-0"><i className="bi bi-activity me-2 text-warning"></i>Market Timing Risk</h5>
-                {isSorrCalculating && <span className="spinner-border spinner-border-sm text-warning"></span>}
+            <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary">
+                <h5 className="text-muted small text-uppercase fw-bold ls-1 mb-0"><i className="bi bi-activity me-2 text-warning"></i>Market Timing Risk &amp; Historical Crashes</h5>
+                <div className="d-flex flex-wrap align-items-center gap-1.5">
+                    {PRESETS.map((p) => (
+                        <button
+                            key={p.id}
+                            type="button"
+                            className={`btn btn-sm rounded-pill fw-bold px-2.5 py-1 ${preset === p.id ? 'btn-warning text-dark' : 'btn-outline-secondary text-muted'}`}
+                            style={{ fontSize: '0.7rem' }}
+                            onClick={() => setPreset(p.id)}
+                            title={p.desc}
+                        >
+                            {p.label}
+                        </button>
+                    ))}
+                    {isSorrCalculating && <span className="spinner-border spinner-border-sm text-warning ms-1"></span>}
+                </div>
+            </div>
+            <div className="small text-muted mb-3">
+                <i className="bi bi-info-circle me-1 text-warning"></i>
+                <strong>{activePresetMeta.label}:</strong> {activePresetMeta.desc}
             </div>
 
             <div className="row mb-5">

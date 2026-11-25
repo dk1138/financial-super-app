@@ -472,6 +472,8 @@ export const financeActions = {
                 },
             },
         })),
+    updateNotes: (notes: string) =>
+        useFinanceStore.getState().setData((prev) => ({ ...prev, notes }), false),
     loadData: (newPlanData: any) =>
         useFinanceStore.getState().setData(migrateLegacyData(newPlanData, emptyData)),
     resetData: () => {

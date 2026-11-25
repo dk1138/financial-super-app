@@ -20,7 +20,38 @@ export default function ProjectionTab() {
   const data = useFinanceData();
   const results = useFinanceResults();
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
-  const [phaseFilter, setPhaseFilter] = useState<'all' | 'pre' | 'ret' | 'milestones'>('all');
+  const [phaseFilter, setPhaseFilterState] = useState<'all' | 'pre' | 'ret' | 'milestones'>(() => {
+    if (typeof window === 'undefined') return 'all';
+    const saved = localStorage.getItem('rp_proj_phase_filter');
+    return (saved === 'pre' || saved === 'ret' || saved === 'milestones') ? saved : 'all';
+  });
+  const setPhaseFilter = (next: 'all' | 'pre' | 'ret' | 'milestones') => {
+    setPhaseFilterState(next);
+    try { localStorage.setItem('rp_proj_phase_filter', next); } catch {}
+  };
+  const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('rp_proj_hidden_cols') || '{}') || {};
+    } catch {
+      return {};
+    }
+  });
+  const toggleCol = (key: string) => {
+    setHiddenCols((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem('rp_proj_hidden_cols', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const visibleColCount =
+    3 +
+    (hiddenCols.phase ? 0 : 1) +
+    (hiddenCols.ages ? 0 : 1) +
+    (hiddenCols.income ? 0 : 1) +
+    (hiddenCols.taxes ? 0 : 1) +
+    (hiddenCols.expenses ? 0 : 1);
+
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   const toggleRow = (year: number) => {
@@ -34,6 +65,7 @@ export default function ProjectionTab() {
 
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [jumpMenuOpen, setJumpMenuOpen] = useState(false);
+  const [colMenuOpen, setColMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
@@ -1511,11 +1543,51 @@ export default function ProjectionTab() {
                 </span>
               </button>
 
+              {/* COLUMN PICKER DROPDOWN */}
+              <div className="position-relative">
+                  <div
+                      className="bg-input border border-secondary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer text-nowrap"
+                      style={{ height: '36px' }}
+                      onClick={() => { setColMenuOpen(!colMenuOpen); setExportMenuOpen(false); setJumpMenuOpen(false); }}
+                      title="Show or hide table columns"
+                  >
+                      <span className="small fw-bold text-uppercase ls-1 text-muted d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
+                          <i className="bi bi-layout-three-columns me-1.5 text-info"></i>
+                          Columns
+                          <i className={`bi bi-chevron-${colMenuOpen ? 'up' : 'down'} ms-1.5 opacity-75`} style={{ fontSize: '0.65rem' }}></i>
+                      </span>
+                  </div>
+                  {colMenuOpen && (
+                      <>
+                          <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setColMenuOpen(false)}></div>
+                          <div className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-2" style={{ zIndex: 1060, top: '100%', right: 0, minWidth: '185px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
+                              {[
+                                  { key: 'phase', label: 'Phase' },
+                                  { key: 'ages', label: 'Ages' },
+                                  { key: 'income', label: 'Net Income' },
+                                  { key: 'taxes', label: 'Taxes' },
+                                  { key: 'expenses', label: 'Expenses' },
+                              ].map((col) => (
+                                  <label key={col.key} className="dropdown-item py-1.5 px-2 rounded-2 d-flex align-items-center gap-2 cursor-pointer small fw-bold text-main">
+                                      <input
+                                          type="checkbox"
+                                          className="form-check-input m-0 cursor-pointer"
+                                          checked={!hiddenCols[col.key]}
+                                          onChange={() => toggleCol(col.key)}
+                                      />
+                                      <span>{col.label}</span>
+                                  </label>
+                              ))}
+                          </div>
+                      </>
+                  )}
+              </div>
+
               <div className="position-relative">
                   <div 
                       className="bg-primary bg-opacity-10 border border-primary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer text-nowrap"
                       style={{ height: '36px' }}
-                      onClick={() => { setExportMenuOpen(!exportMenuOpen); setJumpMenuOpen(false); }}
+                      onClick={() => { setExportMenuOpen(!exportMenuOpen); setJumpMenuOpen(false); setColMenuOpen(false); }}
                       title="Export projection data"
                   >
                       <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
@@ -1548,18 +1620,18 @@ export default function ProjectionTab() {
       <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm position-relative">
         <div className="table-responsive hide-scrollbar" style={{ maxHeight: '75vh' }} ref={tableRef} onScroll={handleTableScroll}>
           
-          <table className="table table-hover align-middle mb-0" style={{ tableLayout: 'fixed', minWidth: '1100px', width: '100%' }}>
+          <table className="table table-hover align-middle mb-0" style={{ tableLayout: 'fixed', minWidth: '920px', width: '100%' }}>
             
-            <thead className="surface-card" style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg-card)' }}>
+            <thead className="surface-card" style={{ position: 'sticky', top: 0, zIndex: 12, backgroundColor: 'var(--bg-card)' }}>
               <tr style={{ fontSize: '0.75rem', letterSpacing: '0.05em' }}>
-                <th className="py-3 ps-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '4%' }}></th>
-                <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '16%' }}>Year & Events</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>
-                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>
-                <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>
-                <th className="py-3 pe-4 text-muted text-uppercase text-center border-bottom border-secondary text-success" style={{ width: '14%' }}>Net Worth</th>
+                <th className="py-3 ps-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '44px' }}></th>
+                <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '18%', position: 'sticky', left: 0, zIndex: 14, backgroundColor: 'var(--bg-card)' }}>Year & Events</th>
+                {!hiddenCols.phase && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>}
+                {!hiddenCols.ages && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>}
+                {!hiddenCols.income && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>}
+                {!hiddenCols.taxes && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>}
+                {!hiddenCols.expenses && <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>}
+                <th className="py-3 pe-4 text-muted text-uppercase text-center border-bottom border-secondary text-success" style={{ width: '16%' }}>Net Worth</th>
               </tr>
             </thead>
             
@@ -1572,7 +1644,7 @@ export default function ProjectionTab() {
                 if (filteredTimeline.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={8} className="py-5 text-center text-muted">
+                      <td colSpan={visibleColCount} className="py-5 text-center text-muted">
                         <i className="bi bi-funnel fs-2 mb-2 d-block opacity-50"></i>
                         <span className="fw-medium">No timeline years match the selected filter.</span>
                       </td>
@@ -1636,7 +1708,7 @@ export default function ProjectionTab() {
                   <React.Fragment key={y.year}>
                     {y.year === firstDepYear && (
                       <tr key={`depleted-milestone-${y.year}`} className="bg-danger bg-opacity-25 border-top border-bottom border-danger">
-                        <td colSpan={8} className="py-2 px-3 text-center text-danger fw-bold small">
+                        <td colSpan={visibleColCount} className="py-2 px-3 text-center text-danger fw-bold small">
                           <i className="bi bi-exclamation-triangle-fill text-warning me-2 fs-6"></i>
                           <span>PORTFOLIO DEPLETED AT AGE {y.p1Age} ({y.year}) — From this point forward, remaining Net Worth is 100% Real Estate Equity.</span>
                         </td>
@@ -1646,7 +1718,7 @@ export default function ProjectionTab() {
                       <td className="py-3 ps-3 text-center text-primary border-bottom border-secondary border-opacity-25">
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} transition-all`}></i>
                       </td>
-                      <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
+                      <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25" style={{ position: 'sticky', left: 0, zIndex: 5, backgroundColor: 'var(--bg-card)' }}>
                         <div className="d-flex align-items-center flex-wrap gap-1">
                             <span className="fs-6 me-1">{y.year}</span>
                             {isLiquidDepleted && (
@@ -1657,15 +1729,25 @@ export default function ProjectionTab() {
                             {getEventIcons(y.events, y)}
                         </div>
                       </td>
-                      <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
-                        {getPhaseBadge(y)}
-                      </td>
-                      <td className="py-3 text-center border-bottom border-secondary border-opacity-25">
-                        {renderAges(y)}
-                      </td>
-                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
-                      <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
-                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
+                      {!hiddenCols.phase && (
+                        <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
+                          {getPhaseBadge(y)}
+                        </td>
+                      )}
+                      {!hiddenCols.ages && (
+                        <td className="py-3 text-center border-bottom border-secondary border-opacity-25">
+                          {renderAges(y)}
+                        </td>
+                      )}
+                      {!hiddenCols.income && (
+                        <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
+                      )}
+                      {!hiddenCols.taxes && (
+                        <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
+                      )}
+                      {!hiddenCols.expenses && (
+                        <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
+                      )}
                       <td className="py-3 pe-4 text-center border-bottom border-secondary border-opacity-25">
                         {isLiquidDepleted ? (
                             <div className="d-flex flex-column align-items-center lh-sm">
@@ -1680,7 +1762,7 @@ export default function ProjectionTab() {
 
                     {isExpanded && (
                       <tr style={{ position: 'relative', zIndex: 999 }}>
-                        <td colSpan={8} className="p-0 border-bottom border-secondary border-opacity-50 position-relative" style={{ zIndex: 999 }}>
+                        <td colSpan={visibleColCount} className="p-0 border-bottom border-secondary border-opacity-50 position-relative" style={{ zIndex: 999 }}>
                           <div className="m-0 m-md-2 rounded-4 surface-card border border-primary border-opacity-25 shadow-inner slide-down position-relative" style={{ zIndex: 999 }}>
                             
                             <div className="row g-0 align-items-stretch">

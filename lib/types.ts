@@ -107,7 +107,8 @@ export interface PlanData {
     strategies: PlanStrategies;
     expensesByCategory: Record<string, ExpenseCategory>;
     constants?: any;
-    taxCredits?: any; 
+    taxCredits?: any;
+    notes?: string;
 }
 
 export interface SimulationDashboard {

@@ -25,6 +25,7 @@ self.onmessage = (e: MessageEvent) => {
         targetEstate,
         testRetAge,
         targetLegacy,
+        preset,
     } = e.data;
 
     try {
@@ -94,7 +95,7 @@ self.onmessage = (e: MessageEvent) => {
         }
 
         if (type === 'sorrShock') {
-            const results = runSorrShock(data);
+            const results = runSorrShock(data, preset);
             self.postMessage({ status: 'success', results });
             return;
         }
