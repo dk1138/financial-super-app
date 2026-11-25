@@ -140,11 +140,11 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
           <div>
             <div className="d-flex align-items-center gap-1">
               <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>
-                Sensitivity Heatmap &amp; Max Spend
+                Sensitivity Heatmap &amp; Max Safe Spend
               </h5>
               <InfoBtn
                 align="left"
-                title="Sensitivity Heatmap & Max Spend Solver"
+                title="Sensitivity Heatmap & Max Safe Spend Solver"
                 text="Tests 25 combinations of Retirement Age (-4 to +4 years) and Retirement Spending (-20% to +20%) in the background, plus solves for the maximum monthly retirement spend your plan can sustain for a chosen target legacy."
               />
             </div>

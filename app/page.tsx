@@ -132,7 +132,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { id: 'toronto-couple', title: 'Toronto Starter Couple', meta: 'Ages 32 & 30 • ON', desc: '$175k combined, TFSA/RRSP/FHSA, $780k home', icon: 'bi-house-heart-fill', color: 'text-blue-400' },
+              { id: 'toronto-couple', title: 'Toronto Starter Couple', meta: 'Ages 32 & 30 • ON', desc: '$175k combined income, TFSA/RRSP/FHSA, $780k home', icon: 'bi-house-heart-fill', color: 'text-blue-400' },
               { id: 'vancouver-fire', title: 'Vancouver FIRE Single', meta: 'Age 38 • BC', desc: '$145k income, $495k invested, retire at 50', icon: 'bi-fire', color: 'text-emerald-400' },
               { id: 'ottawa-db-couple', title: 'Ottawa DB Pension Couple', meta: 'Ages 55 & 53 • ON', desc: 'Public sector DB pension + RRSP meltdown', icon: 'bi-building-check', color: 'text-amber-400' },
               { id: 'calgary-retiring-60', title: 'Retiring Soon (Age 60)', meta: 'Ages 60 & 59 • AB', desc: '$1.35M portfolio, CPP/OAS & decumulation', icon: 'bi-sunrise-fill', color: 'text-cyan-400' },

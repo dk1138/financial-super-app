@@ -37,7 +37,7 @@ const CoastFireCalculator = dynamic(() => import('./optimizers/CoastFireCalculat
 
 // --- SEARCH & FILTER METADATA MAP ---
 const TOOL_METADATA: Record<string, { title: string; category: string; keywords: string[] }> = {
-  'sensitivity': { title: 'Retirement Age vs. Spend Heatmap & Max Spend Solver', category: 'Master Simulations', keywords: ['heatmap', 'sensitivity', 'matrix', 'max spend', 'safe spend', 'retirement age', 'spending', 'tradeoff', 'grid'] },
+  'sensitivity': { title: 'Retirement Age vs. Spend Heatmap & Max Safe Spend Solver', category: 'Master Simulations', keywords: ['heatmap', 'sensitivity', 'matrix', 'max spend', 'safe spend', 'retirement age', 'spending', 'tradeoff', 'grid'] },
   'coast-fire': { title: 'Coast FIRE & Barista FIRE Calculator', category: 'Master Simulations', keywords: ['coast fire', 'barista fire', 'fire', 'early retirement', 'semi retirement', 'financial independence', 'swr', '4% rule'] },
   'dwz': { title: 'Die With Zero', category: 'Master Simulations', keywords: ['die with zero', 'maximum spend', 'lifestyle', 'budget', 'spending'] },
   'smoother': { title: 'Consumption Smoothing', category: 'Master Simulations', keywords: ['consumption smoothing', 'maxifi', 'living standard', 'discretionary spending', 'lifestyle'] },
@@ -196,7 +196,7 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-3 border-bottom border-secondary">
         <div>
           <h5 className="fw-bold text-uppercase ls-1 text-primary mb-1 d-flex align-items-center">
-            <i className="bi bi-magic me-3"></i> Smart Optimizers
+            <i className="bi bi-magic me-3"></i> Tools &amp; Calculators
           </h5>
           <span className="text-muted small">
             30 specialized Canadian financial, tax, and debt calculators

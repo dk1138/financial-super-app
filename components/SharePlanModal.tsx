@@ -102,7 +102,7 @@ export default function SharePlanModal({
               <div className="form-check form-switch mb-0 d-flex align-items-center justify-content-between px-0">
                 <div>
                   <label className="form-check-label small fw-bold text-main cursor-pointer d-block" htmlFor="shareAnonToggle">
-                    Anonymize names &amp; strip DataBank history
+                    Anonymize names &amp; strip Data Bank history
                   </label>
                   <span className="text-muted" style={{ fontSize: '0.72rem' }}>
                     Replaces property, dependent, and custom asset names with generic labels.

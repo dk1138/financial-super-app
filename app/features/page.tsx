@@ -91,7 +91,7 @@ export default function FeaturesPage() {
       features: [
         { name: "1,000-Trial Monte Carlo Engine", desc: "Calculates your plan's true statistical probability of success across random return paths (LHS, QHS, PRNG, and Historical)." },
         { name: "Survivor & Widow's Tax Trap Stress Test", desc: "Models early passing of either spouse, loss of pension splitting, single tax brackets, and OAS clawback compression." },
-        { name: "Sequence of Returns Risk (SRR)", desc: "Simulates early retirement market drawdowns (-35% / -15% crash) right at retirement onset." },
+        { name: "Sequence of Returns Risk (SORR)", desc: "Simulates early retirement market drawdowns (-35% / -15% crash) right at retirement onset." },
         { name: "Macro Inflation & LTC Shocks", desc: "Stress test sustained inflation spikes (4% to 6%), real estate drops, and long-term care facility costs." }
       ]
     },
@@ -123,7 +123,7 @@ export default function FeaturesPage() {
       tools: [
         {
           id: "sensitivity",
-          name: "Retirement Age vs. Spend Heatmap & Max Spend Solver",
+          name: "Retirement Age vs. Spend Heatmap & Max Safe Spend Solver",
           badge: "5×5 Matrix",
           icon: "bi-grid-3x3-gap-fill",
           desc: "Runs 25 CRA-accurate simulations across retire age (−4 to +4 yrs) and spending (−20% to +20%), plus solves for your maximum sustainable monthly budget."
@@ -659,7 +659,7 @@ export default function FeaturesPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { id: 'toronto-couple', title: 'Toronto Starter Couple', meta: 'Ages 32 & 30 • ON', desc: '$175k income, TFSA/RRSP/FHSA, $780k home', icon: 'bi-house-heart-fill', color: 'text-blue-400' },
+              { id: 'toronto-couple', title: 'Toronto Starter Couple', meta: 'Ages 32 & 30 • ON', desc: '$175k combined income, TFSA/RRSP/FHSA, $780k home', icon: 'bi-house-heart-fill', color: 'text-blue-400' },
               { id: 'vancouver-fire', title: 'Vancouver FIRE Single', meta: 'Age 38 • BC', desc: '$145k income, $495k invested, retire at 50', icon: 'bi-fire', color: 'text-emerald-400' },
               { id: 'ottawa-db-couple', title: 'Ottawa DB Pension Couple', meta: 'Ages 55 & 53 • ON', desc: 'Public sector DB pension + RRSP meltdown', icon: 'bi-building-check', color: 'text-amber-400' },
               { id: 'calgary-retiring-60', title: 'Retiring Soon (Age 60)', meta: 'Ages 60 & 59 • AB', desc: '$1.35M portfolio, CPP/OAS & decumulation', icon: 'bi-sunrise-fill', color: 'text-cyan-400' },

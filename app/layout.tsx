@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s | Planfolio",
   },
   description:
-    "Free, local-first Canadian retirement and cash flow planner. Model CPP, OAS clawback, all 13 provincial tax brackets, TFSA vs RRSP, LIF unlocking, and 28 specialized financial optimizers with zero sign-up.",
+    "Free, local-first Canadian retirement and cash flow planner. Model CPP, OAS clawback, all 13 provincial tax brackets, TFSA vs RRSP, LIF unlocking, and 30 specialized financial optimizers with zero sign-up.",
   keywords: [
     "Canadian retirement calculator",
     "retirement planner Canada",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     siteName: "Planfolio Canada",
     title: "Planfolio | Canadian Retirement & Cash Flow Planner",
     description:
-      "Free, local-first Canadian retirement and cash flow planning. Model your real estate, CPP/OAS pensions, CRA tax brackets, and 28 financial optimizers with zero sign-up.",
+      "Free, local-first Canadian retirement and cash flow planning. Model your real estate, CPP/OAS pensions, CRA tax brackets, and 30 financial optimizers with zero sign-up.",
     images: [
       {
         url: "/preview-summary.png",
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Planfolio | Canadian Retirement & Cash Flow Planner",
     description:
-      "Free, local-first Canadian retirement and cash flow planning. Model CPP/OAS, CRA taxes, and 28 financial optimizers.",
+      "Free, local-first Canadian retirement and cash flow planning. Model CPP/OAS, CRA taxes, and 30 financial optimizers.",
     images: ["/preview-summary.png"],
   },
   robots: {
