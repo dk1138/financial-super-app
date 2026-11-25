@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { FinanceEngine } from '../../lib/financeEngine';
 import { InfoBtn, CurrencyInput, PercentInput } from '../SharedUI';
 
 export default function MacroShocksCard() {
@@ -21,13 +20,45 @@ export default function MacroShocksCard() {
     const [reCrashPct, setReCrashPct] = useState(30);
     const [reResult, setReResult] = useState<any>(null);
 
+    const workersRef = useRef<Set<Worker>>(new Set());
+
+    useEffect(() => {
+        return () => {
+            workersRef.current.forEach((w) => w.terminate());
+            workersRef.current.clear();
+        };
+    }, []);
+
     const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
-    const runSandbox = (modifyDataFn: (d: any) => void) => {
+    const runSandboxAsync = (modifyDataFn: (d: any) => void, onComplete: (timeline: any[]) => void) => {
         const clonedData = JSON.parse(JSON.stringify(data));
         modifyDataFn(clonedData);
-        const engine = new FinanceEngine(clonedData);
-        return engine.runSimulation(true, null);
+        try {
+            const worker = new Worker(new URL('../../lib/financeWorker.ts', import.meta.url));
+            workersRef.current.add(worker);
+
+            worker.onmessage = (e: MessageEvent) => {
+                if (e.data?.status === 'success' && e.data?.results?.timeline) {
+                    onComplete(e.data.results.timeline);
+                }
+                worker.terminate();
+                workersRef.current.delete(worker);
+            };
+
+            worker.onerror = () => {
+                worker.terminate();
+                workersRef.current.delete(worker);
+            };
+
+            worker.postMessage({
+                data: clonedData,
+                detailed: true,
+                simContext: null,
+            });
+        } catch (err) {
+            console.error('MacroShocksCard worker error:', err);
+        }
     };
 
     // Calculate Widow's Penalty on load if Couple
@@ -58,64 +89,74 @@ export default function MacroShocksCard() {
         const startYearOffset = Math.max(0, ltcAge - p1Age);
         const startYearStr = `${new Date().getFullYear() + startYearOffset}-01`;
 
-        const ltcTimeline = runSandbox((d: any) => {
-            if(!d.debt) d.debt = [];
-            d.debt.push({ name: 'LTC Facility', amount: ltcCost, start: startYearStr, type: 'yearly', duration: ltcDuration, rate: 0 });
-        });
+        runSandboxAsync(
+            (d: any) => {
+                if (!d.debt) d.debt = [];
+                d.debt.push({ name: 'LTC Facility', amount: ltcCost, start: startYearStr, type: 'yearly', duration: ltcDuration, rate: 0 });
+            },
+            (ltcTimeline) => {
+                const baseFinal = results?.timeline[results.timeline.length - 1];
+                const ltcFinal = ltcTimeline[ltcTimeline.length - 1];
 
-        const baseFinal = results?.timeline[results.timeline.length - 1];
-        const ltcFinal = ltcTimeline[ltcTimeline.length - 1];
-
-        if (baseFinal && ltcFinal) {
-            const bEstate = baseFinal.afterTaxEstate !== undefined ? baseFinal.afterTaxEstate : (baseFinal.liquidNW + (baseFinal.reIncludedEq || 0));
-            const lEstate = ltcFinal.afterTaxEstate !== undefined ? ltcFinal.afterTaxEstate : (ltcFinal.liquidNW + (ltcFinal.reIncludedEq || 0));
-            setLtcResult({
-                baseEstate: bEstate,
-                shockEstate: lEstate,
-                survived: ltcTimeline.every((y:any) => y.liquidNW > 0)
-            });
-        }
+                if (baseFinal && ltcFinal) {
+                    const bEstate = baseFinal.afterTaxEstate !== undefined ? baseFinal.afterTaxEstate : (baseFinal.liquidNW + (baseFinal.reIncludedEq || 0));
+                    const lEstate = ltcFinal.afterTaxEstate !== undefined ? ltcFinal.afterTaxEstate : (ltcFinal.liquidNW + (ltcFinal.reIncludedEq || 0));
+                    setLtcResult({
+                        baseEstate: bEstate,
+                        shockEstate: lEstate,
+                        survived: ltcTimeline.every((y: any) => y.liquidNW > 0)
+                    });
+                }
+            }
+        );
     };
 
     const runInflationShock = () => {
-        const infTimeline = runSandbox((d: any) => { d.inputs.inflation_rate = infRate; });
         const targetAge = 85;
-        
-        const baseYear = results?.timeline.find((y:any) => y.p1Age === targetAge);
-        const infYear = infTimeline.find((y:any) => y.p1Age === targetAge);
+        runSandboxAsync(
+            (d: any) => { d.inputs.inflation_rate = infRate; },
+            (infTimeline) => {
+                const baseYear = results?.timeline.find((y: any) => y.p1Age === targetAge);
+                const infYear = infTimeline.find((y: any) => y.p1Age === targetAge);
 
-        if (baseYear && infYear) {
-            const baseReal = (baseYear.liquidNW + (baseYear.reIncludedEq || 0)) / Math.pow(1 + ((data.inputs.inflation_rate||2.1)/100), targetAge - (data.inputs.p1_age||35));
-            const infReal = (infYear.liquidNW + (infYear.reIncludedEq || 0)) / Math.pow(1 + (infRate/100), targetAge - (data.inputs.p1_age||35));
-            
-            setInfResult({
-                basePurchasingPower: baseReal,
-                shockPurchasingPower: infReal,
-                lossPct: baseReal > 0 ? ((baseReal - infReal) / baseReal) * 100 : 0
-            });
-        }
+                if (baseYear && infYear) {
+                    const baseReal = (baseYear.liquidNW + (baseYear.reIncludedEq || 0)) / Math.pow(1 + ((data.inputs.inflation_rate||2.1)/100), targetAge - (data.inputs.p1_age||35));
+                    const infReal = (infYear.liquidNW + (infYear.reIncludedEq || 0)) / Math.pow(1 + (infRate/100), targetAge - (data.inputs.p1_age||35));
+                    
+                    setInfResult({
+                        basePurchasingPower: baseReal,
+                        shockPurchasingPower: infReal,
+                        lossPct: baseReal > 0 ? ((baseReal - infReal) / baseReal) * 100 : 0
+                    });
+                }
+            }
+        );
     };
 
     const runReCrash = () => {
-        const crashTimeline = runSandbox((d: any) => {
-            if (d.properties) {
-                d.properties.forEach((p:any) => {
-                    p.value = p.value * (1 - (reCrashPct/100));
-                });
-            }
-        });
-        const baseFinal = results?.timeline[results.timeline.length - 1];
-        const crashFinal = crashTimeline[crashTimeline.length - 1];
+        runSandboxAsync(
+            (d: any) => {
+                if (d.properties) {
+                    d.properties.forEach((p: any) => {
+                        p.value = p.value * (1 - (reCrashPct / 100));
+                    });
+                }
+            },
+            (crashTimeline) => {
+                const baseFinal = results?.timeline[results.timeline.length - 1];
+                const crashFinal = crashTimeline[crashTimeline.length - 1];
 
-        if (baseFinal && crashFinal) {
-            const bEstate = baseFinal.afterTaxEstate !== undefined ? baseFinal.afterTaxEstate : (baseFinal.liquidNW + (baseFinal.reIncludedEq || 0));
-            const cEstate = crashFinal.afterTaxEstate !== undefined ? crashFinal.afterTaxEstate : (crashFinal.liquidNW + (crashFinal.reIncludedEq || 0));
-            setReResult({
-                baseEstate: bEstate,
-                shockEstate: cEstate,
-                drop: bEstate - cEstate
-            });
-        }
+                if (baseFinal && crashFinal) {
+                    const bEstate = baseFinal.afterTaxEstate !== undefined ? baseFinal.afterTaxEstate : (baseFinal.liquidNW + (baseFinal.reIncludedEq || 0));
+                    const cEstate = crashFinal.afterTaxEstate !== undefined ? crashFinal.afterTaxEstate : (crashFinal.liquidNW + (crashFinal.reIncludedEq || 0));
+                    setReResult({
+                        baseEstate: bEstate,
+                        shockEstate: cEstate,
+                        drop: bEstate - cEstate
+                    });
+                }
+            }
+        );
     };
 
     return (

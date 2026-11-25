@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { FinanceEngine } from '../../lib/financeEngine';
 
 export default function CPPGridSearch() {
     const { data, updateInput } = useFinance();
@@ -9,54 +8,55 @@ export default function CPPGridSearch() {
     const [isCalculating, setIsCalculating] = useState(false);
     const [cppResult, setCppResult] = useState<any>(null);
     const [toastMsg, setToastMsg] = useState('');
+    const workerRef = useRef<Worker | null>(null);
 
     const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
-    const getRealValue = (nominalValue: number, startYear: number, endYear: number) => {
-        if (!data.useRealDollars) return nominalValue;
-        const inflation = (data.inputs.inflation_rate || 2.1) / 100;
-        const yearsOut = Math.max(0, endYear - startYear);
-        return nominalValue / Math.pow(1 + inflation, yearsOut);
-    };
-
-    const runSandbox = (inputOverrides: any = {}) => {
-        const clonedData = JSON.parse(JSON.stringify(data));
-        Object.assign(clonedData.inputs, inputOverrides);
-        const engine = new FinanceEngine(clonedData);
-        return engine.runSimulation(true, null);
-    };
+    const inputsKey = JSON.stringify(data.inputs);
 
     useEffect(() => {
         setIsCalculating(true);
+        let active = true;
         const timer = setTimeout(() => {
-            const cppResultsArr: any[] = [];
-            for (let cpp = 60; cpp <= 70; cpp++) {
-                for (let oas = 65; oas <= 70; oas++) {
-                    const overrides = { 
-                        p1_cpp_start: cpp, p2_cpp_start: cpp,
-                        p1_oas_start: oas, p2_oas_start: oas 
-                    };
-                    const timeline = runSandbox(overrides);
-                    const startYear = timeline[0].year;
-                    const finalEstate = timeline[timeline.length - 1].afterTaxEstate !== undefined ? timeline[timeline.length - 1].afterTaxEstate : (timeline[timeline.length - 1].liquidNW + (timeline[timeline.length - 1].reIncludedEq || 0));
-                    
-                    cppResultsArr.push({
-                        cppAge: cpp,
-                        oasAge: oas,
-                        finalEstate: getRealValue(finalEstate, startYear, timeline[timeline.length-1].year)
-                    });
-                }
-            }
+            if (!active) return;
+            workerRef.current?.terminate();
+            try {
+                const worker = new Worker(new URL('../../lib/financeWorker.ts', import.meta.url));
+                workerRef.current = worker;
 
-            const sortedCpp = [...cppResultsArr].sort((a, b) => b.finalEstate - a.finalEstate);
-            setCppResult({
-                winner: sortedCpp[0],
-                scenarios: sortedCpp.slice(0, 5)
-            });
-            setIsCalculating(false);
-        }, 50);
-        return () => clearTimeout(timer);
-    }, [JSON.stringify(data.inputs)]);
+                worker.onmessage = (e: MessageEvent) => {
+                    if (!active) return;
+                    if (e.data?.status === 'success') {
+                        setCppResult(e.data.results);
+                    }
+                    setIsCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
+
+                worker.onerror = () => {
+                    if (!active) return;
+                    setIsCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
+
+                worker.postMessage({
+                    type: 'cppGridSearch',
+                    data: JSON.parse(JSON.stringify(data)),
+                });
+            } catch {
+                if (active) setIsCalculating(false);
+            }
+        }, 120);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+            workerRef.current?.terminate();
+            workerRef.current = null;
+        };
+    }, [inputsKey, data.useRealDollars, data.mode]);
 
     const applyCppStrategy = () => {
         if (cppResult && cppResult.winner) {

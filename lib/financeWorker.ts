@@ -3,9 +3,29 @@ import { runMonteCarloSimulation } from './engine/monteCarlo';
 import { runStrategyMatrix } from './engine/strategyMatrix';
 import { runSurvivorStressTest } from './engine/survivorStress';
 import { runSensitivityHeatmap, solveMaxRetirementSpend } from './engine/sensitivity';
+import {
+    runCppGridSearch,
+    runDieWithZero,
+    runConsumptionSmoother,
+    runSorrShock,
+} from './engine/optimizers';
 
 self.onmessage = (e: MessageEvent) => {
-    const { type, data, detailed, simContext, simCount, method, volatility, deceased, deathAge, expenseReductionPct, targetEstate } = e.data;
+    const {
+        type,
+        data,
+        detailed,
+        simContext,
+        simCount,
+        method,
+        volatility,
+        deceased,
+        deathAge,
+        expenseReductionPct,
+        targetEstate,
+        testRetAge,
+        targetLegacy,
+    } = e.data;
 
     try {
         if (type === 'monteCarlo') {
@@ -48,6 +68,33 @@ self.onmessage = (e: MessageEvent) => {
 
         if (type === 'maxSpend') {
             const results = solveMaxRetirementSpend(data, { targetEstate: Number(targetEstate) || 0 });
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'cppGridSearch') {
+            const results = runCppGridSearch(data);
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'dieWithZero') {
+            const results = runDieWithZero(data);
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'consumptionSmoother') {
+            const results = runConsumptionSmoother(data, {
+                testRetAge: Number(testRetAge),
+                targetLegacy: Number(targetLegacy) || 0,
+            });
+            self.postMessage({ status: 'success', results });
+            return;
+        }
+
+        if (type === 'sorrShock') {
+            const results = runSorrShock(data);
             self.postMessage({ status: 'success', results });
             return;
         }

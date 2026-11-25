@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { FinanceEngine } from '../../lib/financeEngine';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { InfoBtn } from '../SharedUI';
 
@@ -10,6 +9,7 @@ export default function SorrCard() {
     const [isSorrSuccess, setIsSorrSuccess] = useState(false);
     const [shortfallYear, setShortfallYear] = useState<number | null>(null);
     const [isSorrCalculating, setIsSorrCalculating] = useState(true);
+    const workerRef = useRef<Worker | null>(null);
 
     const formatCurrency = (val: number) => {
         if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
@@ -20,51 +20,75 @@ export default function SorrCard() {
     useEffect(() => {
         if (!results || !results.timeline) return;
         setIsSorrCalculating(true);
-        
-        setTimeout(() => {
-            const retAge = Number(data.inputs.p1_retireAge) || 65;
-            const currentAge = Number(data.inputs.p1_age) || 35;
-            const retYearIndex = Math.max(0, retAge - currentAge);
-            
-            const shockSeq = new Array(100).fill(0);
-            shockSeq[retYearIndex] = -0.35;      
-            shockSeq[retYearIndex + 1] = -0.15;  
-            shockSeq[retYearIndex + 2] = 0.05;   
-            shockSeq[retYearIndex + 3] = 0.05;   
+        let active = true;
 
-            const clonedData = JSON.parse(JSON.stringify(data));
-            const sorrEngine = new FinanceEngine(clonedData);
-            const sorrTimeline = sorrEngine.runSimulation(true, { shockSequence: shockSeq });
+        const timer = setTimeout(() => {
+            if (!active) return;
+            workerRef.current?.terminate();
+            try {
+                const worker = new Worker(new URL('../../lib/financeWorker.ts', import.meta.url));
+                workerRef.current = worker;
 
-            let localChartData: any[] = [];
-            let failedYear = null;
-            let ok = true;
+                worker.onmessage = (e: MessageEvent) => {
+                    if (!active) return;
+                    if (e.data?.status === 'success') {
+                        const { sorrTimeline, retAge } = e.data.results;
+                        const localChartData: any[] = [];
+                        let failedYear: number | null = null;
+                        let ok = true;
 
-            for (let i=0; i<results.timeline.length; i++) {
-                const baseYear = results.timeline[i];
-                const sorrYear = sorrTimeline[i];
-                if (!baseYear || !sorrYear) break;
+                        for (let i = 0; i < results.timeline.length; i++) {
+                            const baseYear = results.timeline[i];
+                            const sorrYear = sorrTimeline[i];
+                            if (!baseYear || !sorrYear) break;
 
-                const baseNW = baseYear.liquidNW + (baseYear.reIncludedEq || 0);
-                const sorrNW = sorrYear.liquidNW + (sorrYear.reIncludedEq || 0);
-                
-                localChartData.push({
-                    year: baseYear.year,
-                    age: baseYear.p1Age,
-                    Base: baseNW,
-                    Crash: Math.max(0, sorrNW)
+                            const baseNW = baseYear.liquidNW + (baseYear.reIncludedEq || 0);
+                            const sorrNW = sorrYear.liquidNW + (sorrYear.reIncludedEq || 0);
+
+                            localChartData.push({
+                                year: baseYear.year,
+                                age: baseYear.p1Age,
+                                Base: baseNW,
+                                Crash: Math.max(0, sorrNW)
+                            });
+
+                            if (sorrYear.liquidNW < 1 && ok && baseYear.p1Age >= retAge) {
+                                ok = false;
+                                failedYear = sorrYear.p1Age;
+                            }
+                        }
+
+                        setSorrData(localChartData);
+                        setIsSorrSuccess(ok);
+                        setShortfallYear(failedYear);
+                    }
+                    setIsSorrCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
+
+                worker.onerror = () => {
+                    if (!active) return;
+                    setIsSorrCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
+
+                worker.postMessage({
+                    type: 'sorrShock',
+                    data: JSON.parse(JSON.stringify(data)),
                 });
-
-                if (sorrYear.liquidNW < 1 && ok && baseYear.p1Age >= retAge) {
-                    ok = false;
-                    failedYear = sorrYear.p1Age;
-                }
+            } catch {
+                if (active) setIsSorrCalculating(false);
             }
-            setSorrData(localChartData);
-            setIsSorrSuccess(ok);
-            setShortfallYear(failedYear);
-            setIsSorrCalculating(false);
-        }, 50);
+        }, 80);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+            workerRef.current?.terminate();
+            workerRef.current = null;
+        };
     }, [data, results]);
 
     const CustomSorrTooltip = ({ active, payload, label }: any) => {

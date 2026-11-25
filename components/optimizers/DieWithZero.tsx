@@ -1,86 +1,60 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { FinanceEngine } from '../../lib/financeEngine';
 
 export default function DieWithZero() {
     const { data } = useFinance();
     const [isCalculating, setIsCalculating] = useState(false);
     const [maxSpendResult, setMaxSpendResult] = useState<any>(null);
+    const workerRef = useRef<Worker | null>(null);
 
     const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
-    const getRealValue = (nominalValue: number, startYear: number, endYear: number) => {
-        if (!data.useRealDollars) return nominalValue;
-        const inflation = (data.inputs.inflation_rate || 2.1) / 100;
-        const yearsOut = Math.max(0, endYear - startYear);
-        return nominalValue / Math.pow(1 + inflation, yearsOut);
-    };
-
-    const runSandbox = (expenseMultiplier: number = 1.0) => {
-        const clonedData = JSON.parse(JSON.stringify(data));
-        if (expenseMultiplier !== 1.0) {
-            Object.keys(clonedData.expensesByCategory).forEach(cat => {
-                clonedData.expensesByCategory[cat].items.forEach((item: any) => {
-                    if (item.curr) item.curr *= expenseMultiplier;
-                    if (item.ret) item.ret *= expenseMultiplier;
-                    if (item.trans) item.trans *= expenseMultiplier;
-                    if (item.gogo) item.gogo *= expenseMultiplier;
-                    if (item.slow) item.slow *= expenseMultiplier;
-                    if (item.nogo) item.nogo *= expenseMultiplier;
-                });
-            });
-        }
-        const engine = new FinanceEngine(clonedData);
-        return engine.runSimulation(true, null);
-    };
+    const inputsKey = JSON.stringify(data.inputs);
+    const expensesKey = JSON.stringify(data.expensesByCategory);
 
     useEffect(() => {
         setIsCalculating(true);
+        let active = true;
         const timer = setTimeout(() => {
-            let low = 0.05; 
-            let high = 5.0; 
-            let bestMultiplier = 0;
-            let bestEstate = 0;
-            let bestTimeline: any = null;
+            if (!active) return;
+            workerRef.current?.terminate();
+            try {
+                const worker = new Worker(new URL('../../lib/financeWorker.ts', import.meta.url));
+                workerRef.current = worker;
 
-            for (let i = 0; i < 15; i++) { 
-                const mid = (low + high) / 2;
-                const timeline = runSandbox(mid);
-                const isSuccess = timeline.every((y: any) => y.liquidNW > 0);
+                worker.onmessage = (e: MessageEvent) => {
+                    if (!active) return;
+                    if (e.data?.status === 'success') {
+                        setMaxSpendResult(e.data.results);
+                    }
+                    setIsCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
 
-                if (isSuccess) {
-                    bestMultiplier = mid;
-                    bestEstate = timeline[timeline.length - 1].afterTaxEstate !== undefined ? timeline[timeline.length - 1].afterTaxEstate : (timeline[timeline.length - 1].liquidNW + (timeline[timeline.length - 1].reIncludedEq || 0));
-                    bestTimeline = timeline;
-                    low = mid; 
-                } else {
-                    high = mid; 
-                }
-            }
+                worker.onerror = () => {
+                    if (!active) return;
+                    setIsCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
 
-            if (bestTimeline && bestMultiplier > 0) {
-                const baseTimeline = runSandbox();
-                const baseRetYear = baseTimeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || baseTimeline[baseTimeline.length - 1];
-                const optRetYear = bestTimeline.find((y: any) => y.p1Age >= data.inputs.p1_retireAge) || bestTimeline[bestTimeline.length - 1];
-                
-                const startYear = baseTimeline[0].year;
-                const baseSpend = getRealValue(baseRetYear.expenses || 0, startYear, baseRetYear.year);
-                const optSpend = getRealValue(optRetYear.expenses || 0, startYear, optRetYear.year);
-                
-                setMaxSpendResult({
-                    multiplier: bestMultiplier,
-                    baseSpend: baseSpend,
-                    optSpend: optSpend,
-                    difference: optSpend - baseSpend,
-                    finalEstate: getRealValue(bestEstate, startYear, bestTimeline[bestTimeline.length-1].year)
+                worker.postMessage({
+                    type: 'dieWithZero',
+                    data: JSON.parse(JSON.stringify(data)),
                 });
-            } else {
-                setMaxSpendResult({ difference: -999999, optSpend: 0 });
+            } catch {
+                if (active) setIsCalculating(false);
             }
-            setIsCalculating(false);
-        }, 50);
-        return () => clearTimeout(timer);
-    }, [JSON.stringify(data.inputs), JSON.stringify(data.expensesByCategory)]);
+        }, 120);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+            workerRef.current?.terminate();
+            workerRef.current = null;
+        };
+    }, [inputsKey, expensesKey, data.useRealDollars, data.mode]);
 
     return (
         <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">

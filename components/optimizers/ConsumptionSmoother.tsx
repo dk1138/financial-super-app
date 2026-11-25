@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
-import { FinanceEngine } from '../../lib/financeEngine';
 import { SegmentedControl, CurrencyInput, StepperInput, InfoBtn } from '../SharedUI';
 
 export default function ConsumptionSmoother() {
     const { data } = useFinance();
-    const isCouple = data.mode === 'Couple';
 
     const useRealDollars = Boolean(
-        data.useRealDollars === true || 
-        data.inputs?.todays_dollars === true || 
+        data.useRealDollars === true ||
+        data.inputs?.todays_dollars === true ||
         data.inputs?.use_real_dollars === true ||
         data.inputs?.useRealDollars === true
     );
@@ -25,128 +23,61 @@ export default function ConsumptionSmoother() {
     const [viewMode, setViewMode] = useState<'summary' | 'levers'>('summary');
     const [isCalculating, setIsCalculating] = useState(false);
     const [smoothResult, setSmoothResult] = useState<any>(null);
+    const workerRef = useRef<Worker | null>(null);
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
     };
 
-    const getRealValue = (nominalValue: number, startYear: number, endYear: number) => {
-        if (!useRealDollars) return nominalValue;
-        const inflation = (data.inputs?.inflation_rate !== undefined && data.inputs?.inflation_rate !== '' ? Number(data.inputs.inflation_rate) : 2.1) / 100;
-        const yearsOut = Math.max(0, endYear - startYear);
-        return nominalValue / Math.pow(1 + inflation, yearsOut);
-    };
-
-    // Helper to run simulation sandbox with candidate annual real discretionary budget
-    const solveMaxDiscretionary = (candidateRetAge: number, delayCppTo70: boolean = false, legacyTarget: number = 0) => {
-        const runWithBudget = (annualRealSpend: number) => {
-            const clonedData = JSON.parse(JSON.stringify(data));
-            clonedData.inputs.p1_retireAge = candidateRetAge;
-            if (isCouple) clonedData.inputs.p2_retireAge = candidateRetAge;
-
-            if (delayCppTo70) {
-                clonedData.inputs.p1_cpp_start = 70;
-                clonedData.inputs.p1_oas_start = 70;
-                if (isCouple) {
-                    clonedData.inputs.p2_cpp_start = 70;
-                    clonedData.inputs.p2_oas_start = 70;
-                }
-            }
-
-            // Replace lifestyle expenses with flat candidate discretionary spend
-            // Keep fixed costs (debt, mortgages, rent) intact in their dedicated properties/debt structures
-            if (clonedData.expensesByCategory) {
-                const cats = Object.keys(clonedData.expensesByCategory);
-                if (cats.length > 0) {
-                    const firstCat = cats[0];
-                    clonedData.expensesByCategory[firstCat].items = [
-                        { name: 'Smoothed Lifestyle', curr: annualRealSpend, ret: annualRealSpend, trans: annualRealSpend, gogo: annualRealSpend, slow: annualRealSpend, nogo: annualRealSpend, freq: 1 }
-                    ];
-                    // Zero out other categories so only fixed obligations + smoothed lifestyle run
-                    for (let c = 1; c < cats.length; c++) {
-                        clonedData.expensesByCategory[cats[c]].items = [];
-                    }
-                }
-            }
-
-            const engine = new FinanceEngine(clonedData);
-            return engine.runSimulation(true, null);
-        };
-
-        // Binary search bisection across 18 iterations (\$12k/yr to \$350k/yr)
-        let low = 12000;
-        let high = 350000;
-        let bestSpend = low;
-        let bestTimeline: any = null;
-
-        for (let iter = 0; iter < 18; iter++) {
-            const mid = (low + high) / 2;
-            const timeline = runWithBudget(mid);
-            if (!timeline || timeline.length === 0) break;
-
-            const finalYear = timeline[timeline.length - 1];
-            const finalLiquid = finalYear.liquidNW || 0;
-            const isSolvent = timeline.every((y: any) => (y.liquidNW || 0) >= 0) && (finalLiquid >= legacyTarget);
-
-            if (isSolvent) {
-                bestSpend = mid;
-                bestTimeline = timeline;
-                low = mid; // Can afford more
-            } else {
-                high = mid; // Too aggressive
-            }
-        }
-
-        return {
-            annualSpend: Math.round(bestSpend),
-            monthlySpend: Math.round(bestSpend / 12),
-            timeline: bestTimeline
-        };
-    };
+    const inputsKey = JSON.stringify(data.inputs);
+    const expensesKey = JSON.stringify(data.expensesByCategory);
 
     useEffect(() => {
         setIsCalculating(true);
+        let active = true;
         const timer = setTimeout(() => {
+            if (!active) return;
+            workerRef.current?.terminate();
             try {
-                // 1. Solve base optimal smoothed spending
-                const baseOptimal = solveMaxDiscretionary(testRetAge, false, targetLegacy);
+                const worker = new Worker(new URL('../../lib/financeWorker.ts', import.meta.url));
+                workerRef.current = worker;
 
-                // 2. Lever A: Impact of delaying CPP/OAS from age 65 to 70
-                const delayedOptimal = solveMaxDiscretionary(testRetAge, true, targetLegacy);
-                const cppDelayGainMonthly = Math.max(0, delayedOptimal.monthlySpend - baseOptimal.monthlySpend);
+                worker.onmessage = (e: MessageEvent) => {
+                    if (!active) return;
+                    if (e.data?.status === 'success') {
+                        setSmoothResult(e.data.results);
+                    }
+                    setIsCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
 
-                // 3. Lever B: Impact of working 2 years longer (or retiring 2 years earlier)
-                const retireEarlierAge = Math.max(55, testRetAge - 2);
-                const earlierOptimal = solveMaxDiscretionary(retireEarlierAge, false, targetLegacy);
-                const earlyRetireCostMonthly = baseOptimal.monthlySpend - earlierOptimal.monthlySpend;
+                worker.onerror = () => {
+                    if (!active) return;
+                    setIsCalculating(false);
+                    worker.terminate();
+                    if (workerRef.current === worker) workerRef.current = null;
+                };
 
-                // Estimate baseline current retirement expense for comparison
-                const baseEngine = new FinanceEngine(JSON.parse(JSON.stringify(data)));
-                const defaultTimeline = baseEngine.runSimulation(true, null);
-                const retYearItem = defaultTimeline.find((y: any) => y.p1Age >= defaultRetAge) || defaultTimeline[defaultTimeline.length - 1];
-                const startYear = defaultTimeline[0].year;
-                const baselineCurrentSpend = retYearItem ? getRealValue(retYearItem.expenses || 60000, startYear, retYearItem.year) : 60000;
-
-                setSmoothResult({
-                    annualSpend: baseOptimal.annualSpend,
-                    monthlySpend: baseOptimal.monthlySpend,
-                    baselineSpend: Math.round(baselineCurrentSpend),
-                    baselineMonthly: Math.round(baselineCurrentSpend / 12),
-                    differenceAnnual: baseOptimal.annualSpend - Math.round(baselineCurrentSpend),
-                    differenceMonthly: baseOptimal.monthlySpend - Math.round(baselineCurrentSpend / 12),
-                    cppDelayGainMonthly,
-                    earlyRetireCostMonthly: Math.max(0, earlyRetireCostMonthly),
-                    retireEarlierAge
+                worker.postMessage({
+                    type: 'consumptionSmoother',
+                    data: JSON.parse(JSON.stringify(data)),
+                    testRetAge,
+                    targetLegacy,
                 });
             } catch (err) {
-                console.error('ConsumptionSmoother calculation error:', err);
-            } finally {
-                setIsCalculating(false);
+                console.error('ConsumptionSmoother worker error:', err);
+                if (active) setIsCalculating(false);
             }
-        }, 60);
+        }, 120);
 
-        return () => clearTimeout(timer);
-    }, [JSON.stringify(data.inputs), JSON.stringify(data.expensesByCategory), testRetAge, targetLegacy, useRealDollars]);
+        return () => {
+            active = false;
+            clearTimeout(timer);
+            workerRef.current?.terminate();
+            workerRef.current = null;
+        };
+    }, [inputsKey, expensesKey, testRetAge, targetLegacy, useRealDollars, data.mode]);
 
     return (
         <div className="rp-card border-secondary rounded-4 p-4 h-100 position-relative overflow-hidden d-flex flex-column shadow-sm">
