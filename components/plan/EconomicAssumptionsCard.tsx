@@ -24,8 +24,8 @@ export default function EconomicAssumptionsCard() {
                               <i className="bi bi-percent"></i>
                           </div>
                           <div className="d-flex align-items-center gap-2">
-                              <span className="fw-bold text-main small text-uppercase ls-1">Inflation Rate</span>
-                              <InfoBtn align="right" title="Inflation Rate" text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%.<br><br><a href='https://www.bankofcanada.ca/core-functions/monetary-policy/inflation/' target='_blank' class='text-primary'>Learn more at Bank of Canada</a>"/>
+                              <span className="fw-bold text-main small text-uppercase ls-1">{t('economicCard.inflationRate', 'Inflation Rate')}</span>
+                              <InfoBtn align="right" title={t('economicCard.inflationRate', 'Inflation Rate')} text="The expected annual increase in the cost of living. The Bank of Canada target is 2.0%.<br><br><a href='https://www.bankofcanada.ca/core-functions/monetary-policy/inflation/' target='_blank' class='text-primary'>Learn more at Bank of Canada</a>"/>
                           </div>
                       </div>
                       <div className="p-3 bg-input rounded-bottom-4 flex-grow-1 d-flex flex-column justify-content-center">
@@ -42,8 +42,8 @@ export default function EconomicAssumptionsCard() {
                               <i className="bi bi-box-arrow-in-right"></i>
                           </div>
                           <div className="d-flex align-items-center gap-2">
-                              <span className="fw-bold text-main small text-uppercase ls-1">Contribution Timing</span>
-                              <InfoBtn align="right" title="Contribution Timing" text="Determines when surplus cash is invested into your portfolio.<br/><br/><b class='text-main'>End of Year (Conservative):</b> Earns no investment growth during the current year.<br/><br/><b class='text-main'>Mid-Year:</b> Earns half a year of growth.<br/><br/><b class='text-main'>Start of Year (Aggressive):</b> Earns a full year of growth immediately."/>
+                              <span className="fw-bold text-main small text-uppercase ls-1">{t('economicCard.contributionTiming', 'Contribution Timing')}</span>
+                              <InfoBtn align="right" title={t('economicCard.contributionTiming', 'Contribution Timing')} text="Determines when surplus cash is invested into your portfolio.<br/><br/><b class='text-main'>End of Year (Conservative):</b> Earns no investment growth during the current year.<br/><br/><b class='text-main'>Mid-Year:</b> Earns half a year of growth.<br/><br/><b class='text-main'>Start of Year (Aggressive):</b> Earns a full year of growth immediately."/>
                           </div>
                       </div>
                       <div className="p-3 bg-input rounded-bottom-4 flex-grow-1 d-flex flex-column justify-content-center">
@@ -51,9 +51,9 @@ export default function EconomicAssumptionsCard() {
                               value={data.inputs.contribution_timing || data.inputs.cashflow_timing || 'end'} 
                               onChange={(val: string) => updateInput('contribution_timing', val)}
                               options={[
-                                  { value: 'start', label: 'Start' },
-                                  { value: 'mid', label: 'Mid' },
-                                  { value: 'end', label: 'End' }
+                                  { value: 'start', label: t('economicCard.startOfYear', 'Start') },
+                                  { value: 'mid', label: t('economicCard.midYear', 'Mid') },
+                                  { value: 'end', label: t('economicCard.endOfYear', 'End') }
                               ]}
                           />
                       </div>
@@ -68,8 +68,8 @@ export default function EconomicAssumptionsCard() {
                               <i className="bi bi-box-arrow-right"></i>
                           </div>
                           <div className="d-flex align-items-center gap-2">
-                              <span className="fw-bold text-main small text-uppercase ls-1">Withdrawal Timing</span>
-                              <InfoBtn align="right" title="Withdrawal Timing" text="Determines when cash is withdrawn to fund your lifestyle.<br/><br/><b class='text-main'>Start of Year (Conservative):</b> Misses out on a full year of growth.<br/><br/><b class='text-main'>Mid-Year:</b> Misses out on half a year of growth.<br/><br/><b class='text-main'>End of Year (Aggressive):</b> Benefits from a full year of growth before being withdrawn."/>
+                              <span className="fw-bold text-main small text-uppercase ls-1">{t('economicCard.withdrawalTiming', 'Withdrawal Timing')}</span>
+                              <InfoBtn align="right" title={t('economicCard.withdrawalTiming', 'Withdrawal Timing')} text="Determines when cash is withdrawn to fund your lifestyle.<br/><br/><b class='text-main'>Start of Year (Conservative):</b> Misses out on a full year of growth.<br/><br/><b class='text-main'>Mid-Year:</b> Misses out on half a year of growth.<br/><br/><b class='text-main'>End of Year (Aggressive):</b> Benefits from a full year of growth before being withdrawn."/>
                           </div>
                       </div>
                       <div className="p-3 bg-input rounded-bottom-4 flex-grow-1 d-flex flex-column justify-content-center">
@@ -77,9 +77,9 @@ export default function EconomicAssumptionsCard() {
                               value={data.inputs.withdrawal_timing || data.inputs.cashflow_timing || 'end'} 
                               onChange={(val: string) => updateInput('withdrawal_timing', val)}
                               options={[
-                                  { value: 'start', label: 'Start' },
-                                  { value: 'mid', label: 'Mid' },
-                                  { value: 'end', label: 'End' }
+                                  { value: 'start', label: t('economicCard.startOfYear', 'Start') },
+                                  { value: 'mid', label: t('economicCard.midYear', 'Mid') },
+                                  { value: 'end', label: t('economicCard.endOfYear', 'End') }
                               ]}
                           />
                       </div>

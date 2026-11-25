@@ -277,19 +277,19 @@ export default function CoastFireCalculator() {
 
             <div className="row g-2 small">
               <div className="col-6">
-                <div className="text-muted" style={{ fontSize: '0.68rem' }}>Full FI Target ({targetRetireAge})</div>
+                <div className="text-muted" style={{ fontSize: '0.68rem' }}>{t('coastFire.fullFiTarget', 'Full FI Target')} ({targetRetireAge})</div>
                 <div className="fw-bold text-main">{fmtCompact(calc.fiNumber)}</div>
               </div>
               <div className="col-6">
                 <div className="text-muted" style={{ fontSize: '0.68rem' }}>
-                  {calc.isAlreadyCoast ? 'Projected w/ $0 Saved' : 'Est. Coast Hit Age'}
+                  {calc.isAlreadyCoast ? t('coastFire.projectedZeroSaved', 'Projected w/ $0 Saved') : t('coastFire.estCoastHitAge', 'Est. Coast Hit Age')}
                 </div>
                 <div className={`fw-bold ${calc.isAlreadyCoast ? 'text-success' : 'text-info'}`}>
                   {calc.isAlreadyCoast
                     ? fmtCompact(calc.projectedCoastBalance)
                     : calc.coastHitAge
-                    ? `Age ${calc.coastHitAge}`
-                    : `After Age ${targetRetireAge}`}
+                    ? `${t('sensitivity.agePrefix', 'Age')} ${calc.coastHitAge}`
+                    : `${t('coastFire.afterAge', 'After Age')} ${targetRetireAge}`}
                 </div>
               </div>
             </div>
@@ -315,12 +315,12 @@ export default function CoastFireCalculator() {
             <div className="fs-4 fw-bolder text-main mb-2">{fmtCurrency(calc.baristaFiNumber)}</div>
 
             <div className="small text-muted mb-2" style={{ fontSize: '0.74rem' }}>
-              Earning <strong>{fmtCurrency(baristaIncomeAnnual)}/yr</strong> part-time reduces your needed portfolio from{' '}
-              <strong>{fmtCompact(calc.fiNumber)}</strong> to <strong>{fmtCompact(calc.baristaFiNumber)}</strong>.
+              {t('coastFire.baristaSummary1', 'Earning')} <strong>{fmtCurrency(baristaIncomeAnnual)}/yr</strong> {t('coastFire.baristaSummary2', 'part-time reduces your needed portfolio from')}{' '}
+              <strong>{fmtCompact(calc.fiNumber)}</strong> {t('coastFire.baristaSummary3', 'to')} <strong>{fmtCompact(calc.baristaFiNumber)}</strong>.
             </div>
 
             <div className="d-flex justify-content-between pt-2 border-top border-secondary border-opacity-50 small">
-              <span className="text-muted" style={{ fontSize: '0.7rem' }}>Real Growth Rate:</span>
+              <span className="text-muted" style={{ fontSize: '0.7rem' }}>{t('coastFire.realGrowthRate', 'Real Growth Rate:')}</span>
               <span className="fw-bold text-info" style={{ fontSize: '0.74rem' }}>{calc.realRatePct.toFixed(2)}% / yr</span>
             </div>
           </>

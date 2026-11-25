@@ -134,13 +134,13 @@ export default function SurvivorStressCard() {
         {/* CONTROLS ROW */}
         <div className="row g-3 p-3 bg-input border border-secondary rounded-4 shadow-sm mx-0">
           <div className="col-12 col-md-4">
-            <label className="form-label small fw-bold text-muted mb-2">Early Passing Scenario</label>
+            <label className="form-label small fw-bold text-muted mb-2">{t('survivorStress.earlyPassingScenario', 'Early Passing Scenario')}</label>
             <SegmentedControl
               value={deceased}
               onChange={(val: 'p1' | 'p2') => setDeceased(val)}
               options={[
-                { value: 'p1', label: 'P1 Passes First' },
-                { value: 'p2', label: 'P2 Passes First' },
+                { value: 'p1', label: t('survivorStress.p1PassesFirst', 'P1 Passes First') },
+                { value: 'p2', label: t('survivorStress.p2PassesFirst', 'P2 Passes First') },
               ]}
             />
           </div>

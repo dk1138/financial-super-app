@@ -171,7 +171,7 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
       </div>
 
       <p className="text-muted small mb-3" style={{ fontSize: '0.78rem' }}>
-        Solve your max sustainable monthly retirement spend ({data.useRealDollars ? t('nav.todaysDollars', "Today's $") : 'Nominal $'}) and test 25 age vs. spend tradeoffs.
+        {t('sensitivity.introPrefix', 'Solve your max sustainable monthly retirement spend')} ({data.useRealDollars ? t('nav.todaysDollars', "Today's $") : t('sensitivity.nominalDollars', 'Nominal $')}) {t('sensitivity.introSuffix', 'and test 25 age vs. spend tradeoffs.')}
       </p>
 
       {errorMsg && (
@@ -274,10 +274,10 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
             <table className="table align-middle mb-0 text-center" style={{ fontSize: isExpanded ? '0.8rem' : '0.68rem' }}>
               <thead className="surface-card border-bottom border-secondary">
                 <tr className="text-muted text-uppercase" style={{ fontSize: isExpanded ? '0.7rem' : '0.62rem' }}>
-                  <th className="py-2 text-start ps-2">Age \ Spend</th>
+                  <th className="py-2 text-start ps-2">{t('sensitivity.ageSpendHeader', 'Age \\ Spend')}</th>
                   {heatmap.spendDeltas.map((d) => (
                     <th key={d} className="py-2 px-1">
-                      <div>{d === 0 ? 'Base' : `${d > 0 ? '+' : ''}${d}%`}</div>
+                      <div>{d === 0 ? t('sensitivity.base', 'Base') : `${d > 0 ? '+' : ''}${d}%`}</div>
                       {isExpanded && (
                         <div className="fw-normal opacity-75" style={{ fontSize: '0.64rem' }}>
                           {fmt(Math.round(heatmap.baseMonthlyRetireSpend * (1 + d / 100)))}/mo
@@ -293,7 +293,7 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
                     <td className="text-start ps-2 py-2 fw-bold text-main surface-card text-nowrap">
                       {heatmap.retireAges[rIdx]}
                       {row[0]?.retireOffset === 0 && (
-                        <span className="badge bg-primary bg-opacity-25 text-primary ms-1" style={{ fontSize: '0.56rem' }}>Base</span>
+                        <span className="badge bg-primary bg-opacity-25 text-primary ms-1" style={{ fontSize: '0.56rem' }}>{t('sensitivity.base', 'Base')}</span>
                       )}
                     </td>
                     {row.map((cell, cIdx) => {
@@ -319,7 +319,7 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
                             <div>{fmtCompact(cell.afterTaxEstate)}</div>
                           ) : (
                             <div>
-                              <div>Age {cell.shortfallAge}</div>
+                              <div>{t('sensitivity.agePrefix', 'Age')} {cell.shortfallAge}</div>
                             </div>
                           )}
                         </td>

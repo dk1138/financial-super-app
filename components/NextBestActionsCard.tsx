@@ -48,10 +48,9 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         id: 'shortfall',
         severity: 'danger',
         icon: 'bi-exclamation-triangle-fill',
-        title: `Liquid portfolio runs out at age ${firstDepleted.p1Age}`,
-        description:
-          'Your projected liquid assets hit $0 before the end of your plan. Open Tools & Calculators to run the Max Safe Spend Solver and 5×5 Sensitivity Heatmap, or run 1-Click Auto-Optimize in Strategy.',
-        impactLabel: 'High Priority',
+        title: `${t('nextBestActions.shortfallTitle', 'Liquid portfolio runs out at age')} ${firstDepleted.p1Age}`,
+        description: t('nextBestActions.shortfallDesc', 'Your projected liquid assets hit $0 before the end of your plan. Open Tools & Calculators to run the Max Safe Spend Solver and 5×5 Sensitivity Heatmap, or run 1-Click Auto-Optimize in Strategy.'),
+        impactLabel: t('nextBestActions.highPriority', 'High Priority'),
         ctaLabel: onNavigate ? t('nextBestActions.shortfallCta', 'Open Sensitivity Heatmap') : undefined,
         onApply: onNavigate ? () => onNavigate('optimizers', 'sensitivity') : undefined,
       });
@@ -64,9 +63,8 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         severity: 'warning',
         icon: 'bi-people-fill',
         title: t('nextBestActions.pensionSplitTitle', 'Enable Canadian Pension Income Splitting'),
-        description:
-          'Couples can split up to 50% of eligible RRIF/LIF/DB pension income starting at age 65, lowering household marginal tax brackets and protecting both partners from OAS clawback.',
-        impactLabel: 'Tax Savings',
+        description: t('nextBestActions.pensionSplitDesc', 'Couples can split up to 50% of eligible RRIF/LIF/DB pension income starting at age 65, lowering household marginal tax brackets and protecting both partners from OAS clawback.'),
+        impactLabel: t('nextBestActions.taxSavings', 'Tax Savings'),
         ctaLabel: t('nextBestActions.pensionSplitCta', 'Enable Pension Split'),
         onApply: () => {
           updateInput('pension_split_enabled', true);
@@ -90,10 +88,9 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         id: 'oas-shield',
         severity: 'warning',
         icon: 'bi-shield-exclamation',
-        title: `OAS clawback detected in ${clawbackYears} ${clawbackYears === 1 ? 'year' : 'years'} (${fmtCurrency(totalClawback)} total)`,
-        description:
-          'Your taxable retirement income crosses the CRA OAS recovery threshold. Turning on the OAS Clawback Shield prioritizes TFSA/Non-Reg draws once you approach the threshold.',
-        impactLabel: 'Protect OAS',
+        title: `${t('nextBestActions.oasShieldTitlePrefix', 'OAS clawback detected in')} ${clawbackYears} (${fmtCurrency(totalClawback)})`,
+        description: t('nextBestActions.oasShieldDesc', 'Your taxable retirement income crosses the CRA OAS recovery threshold. Turning on the OAS Clawback Shield prioritizes TFSA/Non-Reg draws once you approach the threshold.'),
+        impactLabel: t('nextBestActions.protectOas', 'Protect OAS'),
         ctaLabel: t('nextBestActions.oasShieldCta', 'Enable OAS Shield'),
         onApply: () => {
           updateInput('oas_clawback_optimize', true);
@@ -116,8 +113,8 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         severity: 'info',
         icon: 'bi-sliders',
         title: t('nextBestActions.rrspMeltdownTitle', 'Consider Smart RRSP Meltdown before age 71'),
-        description: `You hold ${fmtCurrency(totalRrsp)} in RRSP/RRIF accounts. Proactively melting down RRSPs in low-income early retirement years can reduce forced RRIF withdrawals and terminal estate taxes.`,
-        impactLabel: 'Estate & Tax',
+        description: `${t('nextBestActions.rrspMeltdownDescPrefix', 'You hold')} ${fmtCurrency(totalRrsp)} ${t('nextBestActions.rrspMeltdownDescSuffix', 'in RRSP/RRIF accounts. Proactively melting down RRSPs in low-income early retirement years can reduce forced RRIF withdrawals and terminal estate taxes.')}`,
+        impactLabel: t('nextBestActions.estateAndTax', 'Estate & Tax'),
         ctaLabel: t('nextBestActions.rrspMeltdownCta', 'Enable RRSP Meltdown'),
         onApply: () => {
           updateInput('fully_optimize_tax', true);
@@ -132,10 +129,9 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         id: 'emergency-fund',
         severity: 'info',
         icon: 'bi-umbrella-fill',
-        title: `Build liquid cash / TFSA buffer (Score: ${planScore.emergencyFund}/10)`,
-        description:
-          'Planfolio targets 6 months of core expenses in liquid cash or TFSA. Strengthening your short-term buffer prevents forced selling during market downturns.',
-        impactLabel: 'Resilience',
+        title: `${t('nextBestActions.emergencyTitlePrefix', 'Build liquid cash / TFSA buffer (Score:')} ${planScore.emergencyFund}/10)`,
+        description: t('nextBestActions.emergencyDesc', 'Planfolio targets 6 months of core expenses in liquid cash or TFSA. Strengthening your short-term buffer prevents forced selling during market downturns.'),
+        impactLabel: t('nextBestActions.resilience', 'Resilience'),
         ctaLabel: onNavigate ? t('nextBestActions.emergencyCta', 'Emergency Fund Tool') : undefined,
         onApply: onNavigate ? () => onNavigate('optimizers', 'emerg') : undefined,
       });
@@ -147,10 +143,9 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         id: 'debt-health',
         severity: 'warning',
         icon: 'bi-credit-card-2-back-fill',
-        title: `High debt-to-income ratio (Score: ${planScore.debtHealth}/20)`,
-        description:
-          'Mortgage and debt repayments exceed the 36% DTI guideline. Accelerating high-interest debt payoff or refinancing before retirement improves cash-flow flexibility.',
-        impactLabel: 'Cash Flow',
+        title: `${t('nextBestActions.debtTitlePrefix', 'High debt-to-income ratio (Score:')} ${planScore.debtHealth}/20)`,
+        description: t('nextBestActions.debtDesc', 'Mortgage and debt repayments exceed the 36% DTI guideline. Accelerating high-interest debt payoff or refinancing before retirement improves cash-flow flexibility.'),
+        impactLabel: t('nextBestActions.cashFlow', 'Cash Flow'),
         ctaLabel: onNavigate ? t('nextBestActions.debtCta', 'Review Debt Inputs') : undefined,
         onApply: onNavigate ? () => onNavigate('plan') : undefined,
       });

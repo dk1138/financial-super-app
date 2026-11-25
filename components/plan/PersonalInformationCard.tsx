@@ -112,14 +112,14 @@ export default function PersonalInformationCard() {
                 <div className="form-check form-switch mb-0 d-flex align-items-center pe-3 border-end border-secondary">
                     <input className="form-check-input m-0 cursor-pointer" type="checkbox" id="syncRetireToggle" checked={data.inputs.retire_same_time ?? false} onChange={(e) => handleSyncToggle(e.target.checked)} />
                     <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-2 cursor-pointer text-nowrap d-flex align-items-center" htmlFor="syncRetireToggle">
-                        Sync Ret.
+                        {t('personalCard.syncRet', 'Sync Ret.')}
                         <InfoBtn align="right" title="Sync Retirement" text="Automatically calculates and adjusts your partner's target retirement age so that you both retire in the exact same chronological year." />
                     </label>
                 </div>
             )}
             <div className="segmented-kumo shadow-sm">
-                <button type="button" className={`seg-btn px-4 ${!isCouple ? 'active' : ''}`} onClick={() => updateMode('Single')}>Single</button>
-                <button type="button" className={`seg-btn px-4 ${isCouple ? 'active purple' : ''}`} onClick={() => updateMode('Couple')}>Couple</button>
+                <button type="button" className={`seg-btn px-4 ${!isCouple ? 'active' : ''}`} onClick={() => updateMode('Single')}>{t('personalCard.single', 'Single')}</button>
+                <button type="button" className={`seg-btn px-4 ${isCouple ? 'active purple' : ''}`} onClick={() => updateMode('Couple')}>{t('personalCard.couple', 'Couple')}</button>
             </div>
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function PersonalInformationCard() {
                 
                 <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                        <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
+                        <span className="small text-muted fw-bold text-nowrap">{t('personalCard.birthDate', 'Birth Date')}</span>
                         <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                           <MonthYearStepper 
                             min="1900-01" 
@@ -159,7 +159,7 @@ export default function PersonalInformationCard() {
                         </div>
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                        <span className="small text-muted fw-bold text-nowrap">Current Age</span>
+                        <span className="small text-muted fw-bold text-nowrap">{t('personalCard.currentAge', 'Current Age')}</span>
                         <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                           <StepperInput 
                             min={1} 
@@ -170,7 +170,7 @@ export default function PersonalInformationCard() {
                         </div>
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                        <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
+                        <span className="small text-muted fw-bold text-nowrap">{t('personalCard.targetRetirement', 'Target Retirement')}</span>
                         <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                           <StepperInput 
                             min={data.inputs.p1_age ?? 18} 
@@ -181,7 +181,7 @@ export default function PersonalInformationCard() {
                         </div>
                     </div>
                     <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                        <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
+                        <span className="small text-muted fw-bold text-nowrap">{t('personalCard.lifeExpectancy', 'Life Expectancy')}</span>
                         <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                           <StepperInput 
                             min={Math.max(data.inputs.p1_age ?? 18, data.inputs.p1_retireAge ?? 60)} 
@@ -219,7 +219,7 @@ export default function PersonalInformationCard() {
                     
                     <div className="p-3 d-flex flex-column gap-2 bg-secondary bg-opacity-10 rounded-bottom-4 flex-grow-1">
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                            <span className="small text-muted fw-bold text-nowrap">Birth Date</span>
+                            <span className="small text-muted fw-bold text-nowrap">{t('personalCard.birthDate', 'Birth Date')}</span>
                             <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                               <MonthYearStepper 
                                 min="1900-01" 
@@ -230,7 +230,7 @@ export default function PersonalInformationCard() {
                             </div>
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                            <span className="small text-muted fw-bold text-nowrap">Current Age</span>
+                            <span className="small text-muted fw-bold text-nowrap">{t('personalCard.currentAge', 'Current Age')}</span>
                             <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                               <StepperInput 
                                 min={1} 
@@ -241,7 +241,7 @@ export default function PersonalInformationCard() {
                             </div>
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                            <span className="small text-muted fw-bold text-nowrap">Target Retirement</span>
+                            <span className="small text-muted fw-bold text-nowrap">{t('personalCard.targetRetirement', 'Target Retirement')}</span>
                             <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                               <StepperInput 
                                 disabled={data.inputs.retire_same_time} 
@@ -253,7 +253,7 @@ export default function PersonalInformationCard() {
                             </div>
                         </div>
                         <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-input border border-secondary rounded-3 shadow-sm gap-3">
-                            <span className="small text-muted fw-bold text-nowrap">Life Expectancy</span>
+                            <span className="small text-muted fw-bold text-nowrap">{t('personalCard.lifeExpectancy', 'Life Expectancy')}</span>
                             <div className="w-50 flex-grow-1" style={{maxWidth: '240px'}}>
                               <StepperInput 
                                 min={Math.max(data.inputs.p2_age ?? 18, data.inputs.p2_retireAge ?? 60)} 
