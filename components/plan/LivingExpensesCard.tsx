@@ -173,7 +173,7 @@ export default function LivingExpensesCard() {
                             const retAge = Number(data.inputs.p1_retireAge) || 65;
                             const lifeExp = Number(data.inputs.p1_lifeExp) || 95;
                             let baseMonthly = Math.round((Number(data.inputs.exp_basic_ret) || 60000) / 12);
-                            if (data.expenseMode === "advanced" && data.expensesByCategory) {
+                            if (String(data.expenseMode || '').toLowerCase() === 'advanced' && data.expensesByCategory) {
                                 let sum = 0;
                                 Object.values(data.expensesByCategory).forEach((cat: any) => {
                                     (cat?.items || []).forEach((it: any) => {

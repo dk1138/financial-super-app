@@ -270,19 +270,19 @@ export default function MonteCarloCard() {
                                 <div className="col-4">
                                     <div className="p-2 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25">
                                         <div className="text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>10th Percentile (Downside)</div>
-                                        <div className="fw-bolder text-danger fs-6">{formatCurrency(last.p10 || 0)}</div>
+                                        <div className="fw-bolder text-danger fs-6">{formatCurrencyAxis(last.p10 || 0)}</div>
                                     </div>
                                 </div>
                                 <div className="col-4">
                                     <div className="p-2 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
                                         <div className="text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>50th Percentile (Median)</div>
-                                        <div className="fw-bolder text-primary fs-6">{formatCurrency(last.p50 || 0)}</div>
+                                        <div className="fw-bolder text-primary fs-6">{formatCurrencyAxis(last.p50 || 0)}</div>
                                     </div>
                                 </div>
                                 <div className="col-4">
                                     <div className="p-2 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25">
                                         <div className="text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>90th Percentile (Upside)</div>
-                                        <div className="fw-bolder text-success fs-6">{formatCurrency(last.p90 || 0)}</div>
+                                        <div className="fw-bolder text-success fs-6">{formatCurrencyAxis(last.p90 || 0)}</div>
                                     </div>
                                 </div>
                             </div>
