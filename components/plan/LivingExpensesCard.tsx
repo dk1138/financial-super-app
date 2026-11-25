@@ -302,7 +302,7 @@ export default function LivingExpensesCard() {
 
       {/* --- THEMED POPUPS (Currently Hidden via disabled button) --- */}
       {(showSyncError || showSyncConfirm) && (
-          <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center z-3" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+          <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center z-3" style={{ background: 'rgba(0,0,0,0.6)' }}>
               <div className="card border-secondary shadow-lg p-4 fade-in-tab" style={{ maxWidth: '400px', width: '90%' }}>
                   <div className="text-center mb-3">
                       <i className={`bi ${showSyncError ? 'bi-exclamation-triangle text-warning' : 'bi-magic text-primary'} fs-1`}></i>

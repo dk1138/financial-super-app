@@ -1073,7 +1073,7 @@ export default function DataBankTab({ onOpenRollForward }: DataBankTabProps) {
 
                         {/* ADD PAST YEAR MODAL */}
             {showAddPastYear && (
-                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center px-3 py-4" style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.82)', backdropFilter: 'blur(6px)', overflowY: 'auto' }}>
+                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center px-3 py-4" style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.82)', overflowY: 'auto' }}>
                     <div className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column my-auto" style={{ maxWidth: '680px', maxHeight: '92vh', overflowY: 'auto' }}>
                         <div className="card-header border-bottom border-secondary p-3 d-flex justify-content-between align-items-center sticky-top surface-card" style={{ zIndex: 10 }}>
                             <div className="d-flex align-items-center gap-2.5">

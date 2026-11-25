@@ -616,12 +616,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return () => clearTimeout(saveTimeoutId);
     }, [data, hasHydrated]);
 
+    const lastBackedUpDataRef = useRef<any>(null);
+
     useEffect(() => {
         if (!hasHydrated) return;
         const backupIntervalId = setInterval(() => {
+            if (lastBackedUpDataRef.current === dataRef.current) return;
             try {
                 const backupName = "Latest Auto-Backup";
                 localStorage.setItem(`rp_saved_plan_${backupName}`, JSON.stringify(dataRef.current));
+                lastBackedUpDataRef.current = dataRef.current;
 
                 let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
                 if (!plans.includes(backupName)) {

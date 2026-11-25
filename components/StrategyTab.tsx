@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFinance } from '../lib/FinanceContext';
+import { useFinanceData, useFinanceResults, useFinanceActions } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, SegmentedControl } from './SharedUI';
 import StrategyMatrixCard from './StrategyMatrixCard';
@@ -31,7 +31,9 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
 };
 
 export default function StrategyTab() {
-  const { data, updateInput, updateStrategy, results } = useFinance();
+  const data = useFinanceData();
+  const results = useFinanceResults();
+  const { updateInput, updateStrategy } = useFinanceActions();
   const { t } = useTranslation();
   
   const isCouple = data.mode === 'Couple';
@@ -345,7 +347,7 @@ export default function StrategyTab() {
                         {/* COMPACT OVERLAY FOR SMART OPTIMIZER */}
                         {isOptimized && (
                             <div className="position-absolute top-50 start-50 translate-middle" style={{ zIndex: 10, width: 'fit-content', minWidth: '230px' }}>
-                                <div className="border border-success rounded-4 shadow-lg p-3 py-4 px-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(8px)' }}>
+                                <div className="border border-success rounded-4 shadow-lg p-3 py-4 px-4 text-center d-flex flex-column align-items-center justify-content-center" style={{ backgroundColor: 'var(--bg-card)' }}>
                                     <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
                                         <i className="bi bi-lock-fill fs-5"></i>
                                     </div>

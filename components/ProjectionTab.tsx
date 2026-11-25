@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { useFinance } from '../lib/FinanceContext';
+import { useFinanceData, useFinanceResults } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
 import html2canvas from 'html2canvas';
 import { ENGINE_VERSION } from '../lib/financeEngine';
@@ -17,7 +17,8 @@ const getRrifFactor = (age: number) => {
 };
 
 export default function ProjectionTab() {
-  const { data, results } = useFinance();
+  const data = useFinanceData();
+  const results = useFinanceResults();
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
   const [phaseFilter, setPhaseFilter] = useState<'all' | 'pre' | 'ret' | 'milestones'>('all');
   const [showBackToTop, setShowBackToTop] = useState(false);

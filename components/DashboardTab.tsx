@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useFinance } from '../lib/FinanceContext';
+import { useFinanceData, useFinanceResults, useFinancePlanScore } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
@@ -40,7 +40,9 @@ function ScoreCard({ title, score, max, tooltip, align = 'left' }: { title: stri
 }
 
 export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, toolId?: string) => void } = {}) {
-  const { data, results, planScore } = useFinance();
+  const data = useFinanceData();
+  const results = useFinanceResults();
+  const planScore = useFinancePlanScore();
   const { t, formatCurrency: fmtExactCurrency, formatShortCurrency: fmtShortCurrency } = useTranslation();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);

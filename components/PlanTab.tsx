@@ -11,12 +11,25 @@ import FutureExpensesCard from './plan/FutureExpensesCard';
 import WindfallsCard from './plan/WindfallsCard';
 import GovtBenefitsCard from './plan/GovtBenefitsCard';
 import EconomicAssumptionsCard from './plan/EconomicAssumptionsCard';
-import { useFinance } from '../lib/FinanceContext';
+import { useFinanceData, useFinanceResults, useFinancePlanScore } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import { validatePlanInputs, getSectionCompletion } from '../lib/planValidation';
 
+const MemoPersonalCard = React.memo(PersonalInformationCard);
+const MemoDependentsCard = React.memo(DependentsCard);
+const MemoPortfolioCard = React.memo(PortfolioAssetsCard);
+const MemoLivingCostCard = React.memo(LivingCostCard);
+const MemoIncomeTaxCard = React.memo(IncomeTaxCard);
+const MemoLivingExpensesCard = React.memo(LivingExpensesCard);
+const MemoFutureExpensesCard = React.memo(FutureExpensesCard);
+const MemoWindfallsCard = React.memo(WindfallsCard);
+const MemoGovtBenefitsCard = React.memo(GovtBenefitsCard);
+const MemoEconomicCard = React.memo(EconomicAssumptionsCard);
+
 export default function PlanTab() {
-  const { data, results, planScore } = useFinance();
+  const data = useFinanceData();
+  const results = useFinanceResults();
+  const planScore = useFinancePlanScore();
   const { t, lang, formatShortCurrency } = useTranslation();
   const isFr = lang === 'fr';
 
@@ -633,16 +646,16 @@ export default function PlanTab() {
 
       {/* --- FORM WITH THE 10 CARDS --- */}
       <form id="financialForm" onSubmit={e => e.preventDefault()}>
-        {renderSectionCard('personal', <PersonalInformationCard />, 1)}
-        {renderSectionCard('dependents', <DependentsCard />, 2)}
-        {renderSectionCard('portfolio', <PortfolioAssetsCard />, 3)}
-        {renderSectionCard('realestate', <LivingCostCard />, 4)}
-        {renderSectionCard('tax', <IncomeTaxCard />, 5)}
-        {renderSectionCard('living', <LivingExpensesCard />, 6)}
-        {renderSectionCard('future', <FutureExpensesCard />, 7)}
-        {renderSectionCard('windfalls', <WindfallsCard />, 8)}
-        {renderSectionCard('govt', <GovtBenefitsCard />, 9)}
-        {renderSectionCard('economic', <EconomicAssumptionsCard />)}
+        {renderSectionCard('personal', <MemoPersonalCard />, 1)}
+        {renderSectionCard('dependents', <MemoDependentsCard />, 2)}
+        {renderSectionCard('portfolio', <MemoPortfolioCard />, 3)}
+        {renderSectionCard('realestate', <MemoLivingCostCard />, 4)}
+        {renderSectionCard('tax', <MemoIncomeTaxCard />, 5)}
+        {renderSectionCard('living', <MemoLivingExpensesCard />, 6)}
+        {renderSectionCard('future', <MemoFutureExpensesCard />, 7)}
+        {renderSectionCard('windfalls', <MemoWindfallsCard />, 8)}
+        {renderSectionCard('govt', <MemoGovtBenefitsCard />, 9)}
+        {renderSectionCard('economic', <MemoEconomicCard />)}
       </form>
 
       {/* --- LIVE OUTCOME RIBBON (#1) --- */}

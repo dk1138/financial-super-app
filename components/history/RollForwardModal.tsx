@@ -294,8 +294,7 @@ export default function RollForwardModal({ isOpen, onClose, showToast }: RollFor
             className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center px-3 py-4 py-md-5" 
             style={{ 
                 zIndex: 9999, 
-                backgroundColor: 'rgba(0, 0, 0, 0.8)', 
-                backdropFilter: 'blur(6px)',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 overflowY: 'auto'
             }}
         >

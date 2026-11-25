@@ -89,7 +89,7 @@ export default function DataBankModal({ isOpen, onClose, onOpenRollForward, show
     };
 
     return (
-        <div className="position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-75 d-flex align-items-center justify-content-center p-3" style={{ zIndex: 2000, backdropFilter: 'blur(6px)' }}>
+        <div className="position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-75 d-flex align-items-center justify-content-center p-3" style={{ zIndex: 2000 }}>
             <div className="card surface-card border border-secondary shadow-lg rounded-4 w-100 d-flex flex-column" style={{ maxWidth: '880px', maxHeight: '90vh' }}>
                 
                 {/* MODAL HEADER */}

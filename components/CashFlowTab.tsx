@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useFinance } from '../lib/FinanceContext';
+import { useFinanceData, useFinanceResults } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
 
 export default function CashFlowTab() {
-  const { data, results } = useFinance();
+  const data = useFinanceData();
+  const results = useFinanceResults();
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [isPlaying, setIsPlaying] = useState(false);
   const [detailedMode, setDetailedMode] = useState(false);

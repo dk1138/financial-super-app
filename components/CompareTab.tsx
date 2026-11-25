@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useFinance, migrateLegacyData, emptyData } from '../lib/FinanceContext';
+import { useFinanceData, useFinanceResults, useFinanceActions, migrateLegacyData, emptyData } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import { FINANCIAL_CONSTANTS } from '../lib/config';
 import { InfoBtn, SegmentedControl, ConfirmModal } from './SharedUI';
@@ -20,7 +20,9 @@ const formatInputKey = (key: string) => {
 };
 
 export default function CompareTab() {
-    const { data, results, loadData } = useFinance();
+    const data = useFinanceData();
+    const results = useFinanceResults();
+    const { loadData } = useFinanceActions();
     const { t, formatCurrency: fmtCurrency, formatShortCurrency: fmtShortCurrency } = useTranslation();
     const [compareMode, setCompareMode] = useState<'benchmarks' | 'scenarios'>('benchmarks');
     const [savedPlans, setSavedPlans] = useState<string[]>([]);
