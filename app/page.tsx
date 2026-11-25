@@ -105,6 +105,62 @@ export default function LandingPage() {
       </header>
 
       {/* ========================================================= */}
+      {/* 1-CLICK CANADIAN PERSONA LAUNCH STRIP                     */}
+      {/* ========================================================= */}
+      <section className="py-14 border-t border-slate-800/80 bg-[#0d1526]">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[11px] font-bold uppercase tracking-wider mb-2">
+                <i className="bi bi-rocket-takeoff-fill"></i> Try Live in 1 Click
+              </span>
+              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-1">
+                Launch a Realistic Canadian Persona
+              </h2>
+              <p className="text-slate-400 text-sm mb-0">
+                Explore the full dashboard, Monte Carlo, and CRA tax projections immediately — no setup required.
+              </p>
+            </div>
+            <Link
+              href="/planner"
+              className="text-xs font-bold text-blue-400 hover:text-blue-300 text-decoration-none flex items-center gap-1 flex-shrink-0"
+            >
+              <span>Or start from scratch</span>
+              <i className="bi bi-arrow-right"></i>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { id: 'toronto-couple', title: 'Toronto Starter Couple', meta: 'Ages 32 & 30 • ON', desc: '$175k combined, TFSA/RRSP/FHSA, $780k home', icon: 'bi-house-heart-fill', color: 'text-blue-400' },
+              { id: 'vancouver-fire', title: 'Vancouver FIRE Single', meta: 'Age 38 • BC', desc: '$145k income, $495k invested, retire at 50', icon: 'bi-fire', color: 'text-emerald-400' },
+              { id: 'ottawa-db-couple', title: 'Ottawa DB Pension Couple', meta: 'Ages 55 & 53 • ON', desc: 'Public sector DB pension + RRSP meltdown', icon: 'bi-building-check', color: 'text-amber-400' },
+              { id: 'calgary-retiring-60', title: 'Retiring Soon (Age 60)', meta: 'Ages 60 & 59 • AB', desc: '$1.35M portfolio, CPP/OAS & decumulation', icon: 'bi-sunrise-fill', color: 'text-cyan-400' },
+            ].map((p) => (
+              <Link
+                key={p.id}
+                href={`/planner?persona=${p.id}`}
+                className="group p-5 rounded-2xl bg-[#111a2e] border border-slate-800 hover:border-blue-500/50 transition-all text-decoration-none flex flex-col justify-between shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <i className={`bi ${p.icon} text-xl ${p.color}`}></i>
+                    <span className="text-[11px] font-semibold text-slate-400">{p.meta}</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">{p.title}</h3>
+                  <p className="text-xs text-slate-400 mb-4 leading-relaxed">{p.desc}</p>
+                </div>
+                <div className="text-xs font-bold text-blue-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                  <span>Open Live Plan</span>
+                  <i className="bi bi-arrow-right"></i>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
       {/* THE 6 CORE PILLARS (BENTO FEATURE GRID)                   */}
       {/* ========================================================= */}
       <section id="features" className="py-24 border-t border-slate-800 relative bg-[#0b1220] scroll-mt-28">

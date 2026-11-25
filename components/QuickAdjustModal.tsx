@@ -11,13 +11,15 @@ interface QuickAdjustModalProps {
 
 export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalProps) {
   const finance = useFinance() as any;
-  const { data, updateInput, updateMultipleInputs, results, isCalculating } = finance;
+  const { data, updateInput, updateMultipleInputs, results, planScore, isCalculating } = finance;
 
   const cardRef = useRef<HTMLDivElement>(null);
   const isCouple = data.mode === 'Couple';
 
-  // Snapshot initial baseline values when modal opens so user can "Revert"
+  // Snapshot initial baseline values when modal opens so user can "Revert" and see live deltas
   const [baseline, setBaseline] = useState<Record<string, any>>({});
+  const [baselineEstate, setBaselineEstate] = useState<number | null>(null);
+  const [baselineScore, setBaselineScore] = useState<number | null>(null);
   const [hasTweaks, setHasTweaks] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,8 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
         inflation_rate: data.inputs.inflation_rate ?? 2.1,
         p1_tfsa_ret: data.inputs.p1_tfsa_ret ?? 6.0,
       });
+      setBaselineEstate(null);
+      setBaselineScore(planScore?.totalScore ?? null);
       setHasTweaks(false);
     }
   }, [isOpen]);
@@ -128,6 +132,12 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
       useRealDollars
     };
   }, [results, data]);
+
+  useEffect(() => {
+    if (isOpen && liveStats && baselineEstate === null && !isCalculating) {
+      setBaselineEstate(liveStats.finalEstate);
+    }
+  }, [isOpen, liveStats, baselineEstate, isCalculating]);
 
   if (!isOpen) return null;
 
@@ -296,6 +306,56 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
                 </div>
               </div>
             </div>
+
+            {hasTweaks && !isCalculating && baselineEstate !== null && (
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25">
+                {(() => {
+                  const estateDiff = liveStats.finalEstate - baselineEstate;
+                  const scoreDiff =
+                    baselineScore !== null && planScore?.totalScore !== undefined
+                      ? Math.round(planScore.totalScore - baselineScore)
+                      : null;
+                  const fmtDiff = (val: number) => {
+                    const abs = Math.abs(val);
+                    const sign = val >= 0 ? '+' : '-';
+                    if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
+                    if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}k`;
+                    return `${sign}$${Math.round(abs)}`;
+                  };
+                  return (
+                    <>
+                      <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.4px' }}>
+                        Impact vs. Baseline
+                      </span>
+                      <div className="d-flex align-items-center gap-1.5">
+                        <span
+                          className={`badge rounded-pill border ${
+                            estateDiff >= 0
+                              ? 'bg-success bg-opacity-10 text-success border-success'
+                              : 'bg-danger bg-opacity-10 text-danger border-danger'
+                          }`}
+                          style={{ fontSize: '0.64rem' }}
+                        >
+                          {fmtDiff(estateDiff)} Estate
+                        </span>
+                        {scoreDiff !== null && scoreDiff !== 0 && (
+                          <span
+                            className={`badge rounded-pill border ${
+                              scoreDiff > 0
+                                ? 'bg-success bg-opacity-10 text-success border-success'
+                                : 'bg-warning bg-opacity-10 text-warning border-warning'
+                            }`}
+                            style={{ fontSize: '0.64rem' }}
+                          >
+                            {scoreDiff > 0 ? `+${scoreDiff}` : scoreDiff} pts
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
 

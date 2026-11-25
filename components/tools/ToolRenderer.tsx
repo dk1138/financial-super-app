@@ -58,10 +58,12 @@ const GISMaximizer = dynamic(() => import('../optimizers/GISMaximizer'), { ssr: 
 const EstateTaxCalculator = dynamic(() => import('../optimizers/EstateTaxCalculator'), { ssr: false, loading: () => <ToolSkeleton /> });
 const MarginalTaxCurve = dynamic(() => import('../optimizers/MarginalTaxCurve'), { ssr: false, loading: () => <ToolSkeleton /> });
 const SensitivityHeatmap = dynamic(() => import('../optimizers/SensitivityHeatmap'), { ssr: false, loading: () => <ToolSkeleton /> });
+const CoastFireCalculator = dynamic(() => import('../optimizers/CoastFireCalculator'), { ssr: false, loading: () => <ToolSkeleton /> });
 
 export default function ToolRenderer({ toolKey }: { toolKey: string }) {
     switch (toolKey) {
         case 'sensitivity': return <SensitivityHeatmap isExpanded={true} />;
+        case 'coast-fire': return <CoastFireCalculator />;
         case 'pensionbb': return <PensionBuyback />;
         case 'lif-unlock': return <LIFtoRRIFOptimizer />;
         case 'tfsavsrrsp': return <TFSAvsRRSP />;

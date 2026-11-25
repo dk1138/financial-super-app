@@ -129,6 +129,13 @@ export default function FeaturesPage() {
           desc: "Runs 25 CRA-accurate simulations across retire age (−4 to +4 yrs) and spending (−20% to +20%), plus solves for your maximum sustainable monthly budget."
         },
         {
+          id: "coast-fire",
+          name: "Coast FIRE & Barista FIRE Calculator",
+          badge: "Early Retirement",
+          icon: "bi-compass-fill",
+          desc: "Finds the exact portfolio size today where you can stop saving and let compounding carry you to FI—with optional Canadian CPP & OAS pension offsets."
+        },
+        {
           id: "dwz",
           name: "Die With Zero Optimizer",
           badge: "Spending Model",

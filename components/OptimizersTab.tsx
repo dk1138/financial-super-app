@@ -33,10 +33,12 @@ const GISMaximizer = dynamic(() => import('./optimizers/GISMaximizer'), { ssr: f
 const EstateTaxCalculator = dynamic(() => import('./optimizers/EstateTaxCalculator'), { ssr: false });
 const MarginalTaxCurve = dynamic(() => import('./optimizers/MarginalTaxCurve'), { ssr: false });
 const SensitivityHeatmap = dynamic(() => import('./optimizers/SensitivityHeatmap'), { ssr: false });
+const CoastFireCalculator = dynamic(() => import('./optimizers/CoastFireCalculator'), { ssr: false });
 
 // --- SEARCH & FILTER METADATA MAP ---
 const TOOL_METADATA: Record<string, { title: string; category: string; keywords: string[] }> = {
   'sensitivity': { title: 'Retirement Age vs. Spend Heatmap & Max Spend Solver', category: 'Master Simulations', keywords: ['heatmap', 'sensitivity', 'matrix', 'max spend', 'safe spend', 'retirement age', 'spending', 'tradeoff', 'grid'] },
+  'coast-fire': { title: 'Coast FIRE & Barista FIRE Calculator', category: 'Master Simulations', keywords: ['coast fire', 'barista fire', 'fire', 'early retirement', 'semi retirement', 'financial independence', 'swr', '4% rule'] },
   'dwz': { title: 'Die With Zero', category: 'Master Simulations', keywords: ['die with zero', 'maximum spend', 'lifestyle', 'budget', 'spending'] },
   'smoother': { title: 'Consumption Smoothing', category: 'Master Simulations', keywords: ['consumption smoothing', 'maxifi', 'living standard', 'discretionary spending', 'lifestyle'] },
   'cpp': { title: 'CPP Grid Search', category: 'Master Simulations', keywords: ['cpp', 'oas', 'pension', 'grid search', 'retirement age', 'start age', 'government benefits'] },
@@ -95,7 +97,7 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
 
   const toolCategories = [
     { title: "All Tools", keys: ALL_TOOL_KEYS },
-    { title: "Master Simulations", keys: ['sensitivity', 'dwz', 'smoother', 'cpp', 'pensioncv', 'pensionbb'] },
+    { title: "Master Simulations", keys: ['sensitivity', 'coast-fire', 'dwz', 'smoother', 'cpp', 'pensioncv', 'pensionbb'] },
     { title: "Tax & Registered", keys: ['tax-curve', 'sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'lif-unlock', 'gis-maximizer', 'estate-tax', 'ccb', 'fhsa', 'resp', 'medical'] },
     { title: "Business & Income", keys: ['sidehustle'] },
     { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal', 'reversemortgage'] },
@@ -128,6 +130,7 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
 
     switch (id) {
       case 'sensitivity': ContentComponent = <SensitivityHeatmap isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
+      case 'coast-fire': ContentComponent = <CoastFireCalculator />; break;
       case 'tax-curve': ContentComponent = <MarginalTaxCurve />; break;
       case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
       case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
@@ -196,7 +199,7 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
             <i className="bi bi-magic me-3"></i> Smart Optimizers
           </h5>
           <span className="text-muted small">
-            29 specialized Canadian financial, tax, and debt calculators
+            30 specialized Canadian financial, tax, and debt calculators
           </span>
         </div>
 

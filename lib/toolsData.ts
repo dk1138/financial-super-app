@@ -51,6 +51,30 @@ export const TOOLS_DATA: ToolMeta[] = [
         ]
     },
     {
+        slug: 'coast-fire-calculator',
+        title: 'Canadian Coast FIRE & Barista FIRE Calculator',
+        subtitle: 'Find the exact portfolio size today where you can stop saving and let compounding carry you to retirement—or calculate your Barista FIRE semi-retirement target with CPP & OAS.',
+        category: 'Pensions & Retirement Income',
+        toolKey: 'coast-fire',
+        badge: 'FIRE & Early Retirement',
+        icon: 'bi-compass-fill',
+        overview: 'Coast FIRE is the milestone where your existing invested portfolio (TFSA, RRSP, FHSA, Non-Registered) will grow to your full Financial Independence target by retirement age without adding another dollar of savings. Barista FIRE models stepping back to lower-stress part-time income while covering the rest from your portfolio. Unlike generic US calculators, this tool lets you factor in estimated Canadian CPP and OAS government pensions so you do not over-save.',
+        faqs: [
+            {
+                q: 'What is a Coast FIRE number in Canada?',
+                a: 'Your Coast FIRE number is your target FI portfolio discounted back to today using your expected real (inflation-adjusted) rate of return. Once your TFSA, RRSP, and investments cross this threshold, you only need to earn enough to cover current living expenses.'
+            },
+            {
+                q: 'Should I include CPP and OAS in my Coast FIRE calculation?',
+                a: 'Yes, for most Canadians planning to retire around age 60–65, CPP and OAS can cover $19,000–$34,000+ per year in inflation-indexed retirement income, dramatically reducing the portfolio you need to accumulate.'
+            },
+            {
+                q: 'What is the difference between Coast FIRE and Barista FIRE?',
+                a: 'With Coast FIRE, you stop contributing to investments and cover 100% of current expenses with work income until full retirement. With Barista FIRE, you begin drawing modestly from your portfolio early while part-time work covers the remaining living expenses.'
+            }
+        ]
+    },
+    {
         slug: 'pension-buyback',
         title: 'Defined Benefit Pension Buyback Calculator',
         subtitle: 'Evaluate if buying back past credited service is worth the upfront lump-sum cost, factoring in CRA tax deductions, early retirement dates, and guaranteed lifetime payouts.',
