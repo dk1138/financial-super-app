@@ -61,7 +61,7 @@ const SensitivityHeatmap = dynamic(() => import('../optimizers/SensitivityHeatma
 
 export default function ToolRenderer({ toolKey }: { toolKey: string }) {
     switch (toolKey) {
-        case 'sensitivity': return <SensitivityHeatmap />;
+        case 'sensitivity': return <SensitivityHeatmap isExpanded={true} />;
         case 'pensionbb': return <PensionBuyback />;
         case 'lif-unlock': return <LIFtoRRIFOptimizer />;
         case 'tfsavsrrsp': return <TFSAvsRRSP />;

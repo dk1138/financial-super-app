@@ -124,10 +124,10 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
 
   const renderToolCard = (id: string) => {
     let ContentComponent = null;
-    const isExpanded = expandedTool === id || id === 'sensitivity';
+    const isExpanded = expandedTool === id;
 
     switch (id) {
-      case 'sensitivity': ContentComponent = <SensitivityHeatmap />; break;
+      case 'sensitivity': ContentComponent = <SensitivityHeatmap isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
       case 'tax-curve': ContentComponent = <MarginalTaxCurve />; break;
       case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
       case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;

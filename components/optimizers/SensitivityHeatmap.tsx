@@ -5,7 +5,12 @@ import { useFinance } from '../../lib/FinanceContext';
 import { InfoBtn, SegmentedControl } from '../SharedUI';
 import type { SensitivityHeatmapResult, MaxSpendResult } from '../../lib/engine/sensitivity';
 
-export default function SensitivityMatrixCard() {
+interface Props {
+  isExpanded?: boolean;
+  onToggle?: () => void;
+}
+
+export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: Props) {
   const { data } = useFinance();
 
   // Heatmap state
@@ -122,21 +127,122 @@ export default function SensitivityMatrixCard() {
   };
 
   return (
-    <div className="rp-card border border-secondary rounded-4 shadow-sm mb-4">
-      <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom border-secondary p-3 surface-card">
+    <div className="rp-card border border-secondary rounded-4 p-4 h-100 position-relative d-flex flex-column shadow-sm">
+      {/* HEADER MATCHING STANDARD OPTIMIZER CARDS */}
+      <div className="d-flex align-items-start justify-content-between gap-2 mb-3">
         <div className="d-flex align-items-center">
-          <i className="bi bi-grid-3x3-gap-fill text-primary fs-4 me-3"></i>
-          <h5 className="mb-0 fw-bold text-uppercase ls-1">Retirement Age vs. Spend Heatmap &amp; Max Spend Solver</h5>
-          <InfoBtn
-            align="left"
-            title="Sensitivity Heatmap & Max Spend Solver"
-            text="Tests 25 combinations of Retirement Age (-4 to +4 years) and Retirement Spending (-20% to +20%) in the background, plus solves for the maximum monthly retirement spend your plan can sustain for a chosen target legacy."
-          />
+          <div
+            className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3 flex-shrink-0"
+            style={{ width: '45px', height: '45px' }}
+          >
+            <i className="bi bi-grid-3x3-gap-fill fs-4"></i>
+          </div>
+          <div>
+            <div className="d-flex align-items-center gap-1">
+              <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>
+                Sensitivity Heatmap &amp; Max Spend
+              </h5>
+              <InfoBtn
+                align="left"
+                title="Sensitivity Heatmap & Max Spend Solver"
+                text="Tests 25 combinations of Retirement Age (-4 to +4 years) and Retirement Spending (-20% to +20%) in the background, plus solves for the maximum monthly retirement spend your plan can sustain for a chosen target legacy."
+              />
+            </div>
+            <span className="text-muted small" style={{ fontSize: '0.72rem' }}>
+              5×5 Retire Age × Spend Matrix
+            </span>
+          </div>
         </div>
 
+        {onToggle && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 flex-shrink-0"
+            onClick={onToggle}
+            title={isExpanded ? 'Collapse to grid view' : 'Expand full width'}
+            style={{ fontSize: '0.72rem' }}
+          >
+            <i className={`bi ${isExpanded ? 'bi-arrows-angle-contract' : 'bi-arrows-angle-expand'} me-1`}></i>
+            {isExpanded ? 'Compact' : 'Expand'}
+          </button>
+        )}
+      </div>
+
+      <p className="text-muted small mb-3" style={{ fontSize: '0.78rem' }}>
+        Solve your max sustainable monthly retirement spend ({data.useRealDollars ? "Today's $" : 'Nominal $'}) and test 25 age vs. spend tradeoffs.
+      </p>
+
+      {errorMsg && (
+        <div className="alert alert-danger py-2 px-3 small fw-bold rounded-4 mb-3" role="alert">
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>{errorMsg}
+        </div>
+      )}
+
+      {/* MAX SAFE SPEND SOLVER */}
+      <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm mb-3">
+        <div className={isExpanded ? 'row g-3 align-items-center' : 'd-flex flex-column gap-2'}>
+          <div className={isExpanded ? 'col-12 col-lg-5' : ''}>
+            <div className="d-flex align-items-center gap-2">
+              <i className="bi bi-cash-coin text-success"></i>
+              <span className="fw-bold text-main text-uppercase ls-1" style={{ fontSize: '0.74rem' }}>
+                Max Safe Spend Solver
+              </span>
+            </div>
+          </div>
+
+          <div className={isExpanded ? 'col-12 col-md-7 col-lg-4' : ''}>
+            <SegmentedControl
+              value={targetEstate}
+              onChange={setTargetEstate}
+              options={[
+                { value: 0, label: '$0 (DWZ)' },
+                { value: 250000, label: '$250k' },
+                { value: 500000, label: '$500k' },
+              ]}
+            />
+          </div>
+
+          <div className={isExpanded ? 'col-12 col-md-5 col-lg-3' : ''}>
+            <button
+              type="button"
+              className="btn btn-success btn-sm fw-bold rounded-pill px-3 py-2 shadow-sm w-100"
+              onClick={runMaxSpendSolver}
+              disabled={isSolvingSpend}
+            >
+              {isSolvingSpend ? (
+                <><span className="spinner-border spinner-border-sm me-2"></span>Solving...</>
+              ) : (
+                <><i className="bi bi-calculator-fill me-2"></i>Solve Max Spend</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {maxSpend && (
+          <div className="row g-2 mt-2 pt-2 border-top border-secondary border-opacity-50">
+            <div className={isExpanded ? 'col-4' : 'col-6'}>
+              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>Current</div>
+              <div className="fw-bold text-main" style={{ fontSize: '0.92rem' }}>{fmt(maxSpend.baseMonthlySpend)}/mo</div>
+            </div>
+            <div className={isExpanded ? 'col-4' : 'col-6'}>
+              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>Max Safe</div>
+              <div className="fw-bolder text-success" style={{ fontSize: '0.92rem' }}>{fmt(maxSpend.maxMonthlySpend)}/mo</div>
+            </div>
+            <div className={isExpanded ? 'col-4' : 'col-12'}>
+              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>Cushion / Gap</div>
+              <div className={`fw-bold ${maxSpend.deltaMonthly >= 0 ? 'text-success' : 'text-danger'}`} style={{ fontSize: '0.88rem' }}>
+                {maxSpend.deltaMonthly >= 0 ? '+' : '-'}{fmt(Math.abs(maxSpend.deltaMonthly))}/mo ({maxSpend.deltaPct >= 0 ? '+' : ''}{maxSpend.deltaPct}%)
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 5x5 HEATMAP ACTION + TABLE */}
+      <div className="mt-auto d-flex flex-column gap-3">
         <button
           type="button"
-          className="btn btn-primary btn-sm fw-bold rounded-pill px-4 py-2 shadow-sm position-relative overflow-hidden border-0"
+          className="btn btn-primary btn-sm fw-bold rounded-pill px-4 py-2 shadow-sm position-relative overflow-hidden border-0 w-100"
           onClick={runHeatmap}
           disabled={isRunningMap}
         >
@@ -146,7 +252,7 @@ export default function SensitivityMatrixCard() {
               style={{ width: `${mapProgress}%`, backgroundColor: 'rgba(255,255,255,0.25)', transition: 'width 0.15s linear' }}
             />
           )}
-          <span className="position-relative d-flex align-items-center gap-2">
+          <span className="position-relative d-flex align-items-center justify-content-center gap-2">
             {isRunningMap ? (
               <>
                 <span className="spinner-border spinner-border-sm"></span>
@@ -160,97 +266,21 @@ export default function SensitivityMatrixCard() {
             )}
           </span>
         </button>
-      </div>
 
-      <div className="card-body p-4 bg-secondary bg-opacity-10 d-flex flex-column gap-4">
-        {errorMsg && (
-          <div className="alert alert-danger py-2 px-3 small fw-bold rounded-4 mb-0" role="alert">
-            <i className="bi bi-exclamation-triangle-fill me-2"></i>{errorMsg}
-          </div>
-        )}
-
-        {/* MAX SPENDABLE INCOME SOLVER */}
-        <div className="p-4 bg-input border border-secondary rounded-4 shadow-sm">
-          <div className="row g-3 align-items-center">
-            <div className="col-12 col-lg-5">
-              <div className="d-flex align-items-center gap-2 mb-1">
-                <i className="bi bi-cash-coin text-success fs-5"></i>
-                <h6 className="fw-bold text-main text-uppercase ls-1 mb-0" style={{ fontSize: '0.82rem' }}>
-                  Max Safe Retirement Spend Solver
-                </h6>
-              </div>
-              <p className="small text-muted mb-0" style={{ fontSize: '0.76rem' }}>
-                Finds the highest sustainable monthly retirement spending that ends with at least your chosen target estate ({data.useRealDollars ? "Today's $" : 'Nominal $'}).
-              </p>
-            </div>
-
-            <div className="col-12 col-md-7 col-lg-4">
-              <label className="form-label small fw-bold text-muted mb-1">Target Final Estate</label>
-              <SegmentedControl
-                value={targetEstate}
-                onChange={setTargetEstate}
-                options={[
-                  { value: 0, label: '$0 (DWZ)' },
-                  { value: 250000, label: '$250k' },
-                  { value: 500000, label: '$500k' },
-                ]}
-              />
-            </div>
-
-            <div className="col-12 col-md-5 col-lg-3 d-flex justify-content-md-end">
-              <button
-                type="button"
-                className="btn btn-success btn-sm fw-bold rounded-pill px-4 py-2 shadow-sm w-100"
-                onClick={runMaxSpendSolver}
-                disabled={isSolvingSpend}
-              >
-                {isSolvingSpend ? (
-                  <><span className="spinner-border spinner-border-sm me-2"></span>Solving...</>
-                ) : (
-                  <><i className="bi bi-calculator-fill me-2"></i>Solve Max Spend</>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {maxSpend && (
-            <div className="row g-3 mt-3 pt-3 border-top border-secondary border-opacity-50">
-              <div className="col-6 col-md-4">
-                <div className="text-muted small fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>Current Retirement Spend</div>
-                <div className="fs-5 fw-bold text-main">{fmt(maxSpend.baseMonthlySpend)}/mo</div>
-              </div>
-              <div className="col-6 col-md-4">
-                <div className="text-muted small fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>Max Sustainable Spend</div>
-                <div className="fs-5 fw-bolder text-success">{fmt(maxSpend.maxMonthlySpend)}/mo</div>
-              </div>
-              <div className="col-12 col-md-4">
-                <div className="text-muted small fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>Monthly Cushion / Gap</div>
-                <div className={`fs-5 fw-bold ${maxSpend.deltaMonthly >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {maxSpend.deltaMonthly >= 0 ? '+' : '-'}{fmt(Math.abs(maxSpend.deltaMonthly))}/mo ({maxSpend.deltaPct >= 0 ? '+' : ''}{maxSpend.deltaPct}%)
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 5x5 SENSITIVITY HEATMAP */}
-        {!heatmap ? (
-          <div className="p-4 bg-input border border-secondary rounded-4 text-center text-muted small">
-            <i className="bi bi-grid-3x3 fs-2 text-primary opacity-75 d-block mb-2"></i>
-            Click <strong>Generate 5×5 Heatmap</strong> to see how retiring ±4 years earlier/later and spending ±20% more/less changes your final after-tax estate.
-          </div>
-        ) : (
+        {heatmap && (
           <div className="table-responsive rounded-4 border border-secondary bg-input shadow-sm overflow-hidden">
-            <table className="table table-dark align-middle mb-0 text-center small">
+            <table className="table table-dark align-middle mb-0 text-center" style={{ fontSize: isExpanded ? '0.8rem' : '0.68rem' }}>
               <thead className="surface-card border-bottom border-secondary">
-                <tr className="text-muted text-uppercase" style={{ fontSize: '0.7rem' }}>
-                  <th className="py-2.5 text-start ps-3">Retire Age \ Spend</th>
+                <tr className="text-muted text-uppercase" style={{ fontSize: isExpanded ? '0.7rem' : '0.62rem' }}>
+                  <th className="py-2 text-start ps-2">Age \ Spend</th>
                   {heatmap.spendDeltas.map((d) => (
-                    <th key={d} className="py-2.5">
-                      <div>{d === 0 ? 'Base Spend' : `${d > 0 ? '+' : ''}${d}%`}</div>
-                      <div className="fw-normal opacity-75" style={{ fontSize: '0.66rem' }}>
-                        {fmt(Math.round(heatmap.baseMonthlyRetireSpend * (1 + d / 100)))}/mo
-                      </div>
+                    <th key={d} className="py-2 px-1">
+                      <div>{d === 0 ? 'Base' : `${d > 0 ? '+' : ''}${d}%`}</div>
+                      {isExpanded && (
+                        <div className="fw-normal opacity-75" style={{ fontSize: '0.64rem' }}>
+                          {fmt(Math.round(heatmap.baseMonthlyRetireSpend * (1 + d / 100)))}/mo
+                        </div>
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -258,10 +288,10 @@ export default function SensitivityMatrixCard() {
               <tbody>
                 {heatmap.cells.map((row, rIdx) => (
                   <tr key={rIdx}>
-                    <td className="text-start ps-3 py-2.5 fw-bold text-main surface-card">
-                      Age {heatmap.retireAges[rIdx]}
+                    <td className="text-start ps-2 py-2 fw-bold text-main surface-card text-nowrap">
+                      {heatmap.retireAges[rIdx]}
                       {row[0]?.retireOffset === 0 && (
-                        <span className="badge bg-primary bg-opacity-25 text-primary ms-2" style={{ fontSize: '0.6rem' }}>Base</span>
+                        <span className="badge bg-primary bg-opacity-25 text-primary ms-1" style={{ fontSize: '0.56rem' }}>Base</span>
                       )}
                     </td>
                     {row.map((cell, cIdx) => {
@@ -276,7 +306,7 @@ export default function SensitivityMatrixCard() {
                       return (
                         <td
                           key={cIdx}
-                          className={`py-2.5 fw-bold ${bgClass} ${cell.isBaseCell ? 'border border-2 border-primary' : ''}`}
+                          className={`py-2 px-1 fw-bold ${bgClass} ${cell.isBaseCell ? 'border border-2 border-primary' : ''}`}
                           title={
                             cell.survived
                               ? `Retire ${cell.retireAgeP1}, ${fmt(cell.monthlyRetireSpend)}/mo → ${fmt(cell.afterTaxEstate)} estate`
@@ -287,8 +317,7 @@ export default function SensitivityMatrixCard() {
                             <div>{fmtCompact(cell.afterTaxEstate)}</div>
                           ) : (
                             <div>
-                              <div>Shortfall</div>
-                              <div style={{ fontSize: '0.65rem' }}>Age {cell.shortfallAge}</div>
+                              <div>Age {cell.shortfallAge}</div>
                             </div>
                           )}
                         </td>
