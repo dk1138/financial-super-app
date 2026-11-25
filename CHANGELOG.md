@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Tooltip HTML sanitization (`lib/sanitizeHtml.ts`, `components/SharedUI.tsx`)**: Added an allowlist HTML sanitizer to `InfoBtn` to strip scripts, iframes, and event handlers before rendering tooltips.
 
 ### Fixed
+- **UX polish & 60fps scroll performance (`components/OptimizersTab.tsx`, `components/GlobalHeader.tsx`, `components/PlanTab.tsx`, `app/globals.css`)**:
+  - Kept tool cards at standard 3-column grid size when jumped to via `Ctrl+K` (using a clean border outline highlight instead of auto-expanding and breaking the grid).
+  - Fixed the amber **Save** / Unsaved Changes pill in `GlobalHeader.tsx` to baseline against the initial loaded plan (so edits on untitled/sample/persona plans immediately show the pill), debounced plan fingerprinting (`300ms`), and added a compact responsive Save pill for smaller viewports.
+  - Eliminated scroll jank by removing `backdrop-filter: blur(...)` from sticky bars (`.sticky-jump-bar-wrapper`, `.floating-readiness-island`), switching `.fade-in-tab` to opacity-only (removing the permanent `transform: translateY(0)` full-page stacking context), and adding `contain: layout style` to `.plan-card-wrapper`.
 - **Mathematical audit fixes (`lib/financeEngine.ts`, `lib/engine/survivorStress.ts`, `lib/engine/sensitivity.ts`, `lib/engine/strategyMatrix.ts`, `lib/engine/benefits.ts`, `components/optimizers/CoastFireCalculator.tsx`)**:
   - Fixed FHSA 15-year rollover counter in `financeEngine.ts` (was toggling `1`/`0` instead of incrementing yearly, preventing the CRA 15-year rollover to RRSP before age 71).
   - Fixed portfolio shortfall detection across `sensitivity.ts`, `strategyMatrix.ts`, and `survivorStress.ts` to check `liquidNW <= 0` in retirement (since `financeEngine.ts` clamps account balances at `0`, `< 0` could never trigger).

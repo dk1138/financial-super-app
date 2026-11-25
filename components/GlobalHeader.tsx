@@ -64,33 +64,49 @@ export default function GlobalHeader() {
     const [planToDelete, setPlanToDelete] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-    const currentFingerprint = useMemo(() => fingerprintPlan(data), [data]);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    // Sync saved fingerprint whenever active plan name changes
-    const refreshSavedFingerprint = useCallback((planName: string) => {
+    // Sync saved fingerprint whenever active plan name changes;
+    // for unsaved/untitled plans, baseline against the initial loaded snapshot so edits trigger the amber Save pill.
+    const refreshSavedFingerprint = useCallback((planName: string, fallbackData?: any) => {
         try {
             const raw = localStorage.getItem(`rp_saved_plan_${planName}`);
-            if (!raw) {
-                setSavedFingerprint(null);
-            } else {
+            if (raw) {
                 setSavedFingerprint(fingerprintPlan(JSON.parse(raw)));
+            } else if (fallbackData) {
+                setSavedFingerprint(fingerprintPlan(fallbackData));
+            } else {
+                setSavedFingerprint(null);
             }
         } catch {
-            setSavedFingerprint(null);
+            setSavedFingerprint(fallbackData ? fingerprintPlan(fallbackData) : null);
         }
     }, []);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            refreshSavedFingerprint(activePlanName);
+            refreshSavedFingerprint(activePlanName, data);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activePlanName, refreshSavedFingerprint]);
 
-    const hasUnsavedChanges = useMemo(() => {
-        if (activeModule !== 'planner') return false;
-        if (!savedFingerprint) return false; // Only show unsaved dot for named/saved plans
-        return currentFingerprint !== savedFingerprint;
-    }, [activeModule, savedFingerprint, currentFingerprint]);
+    // Debounced unsaved-changes check so rapid typing/scrolling never blocks the main thread
+    useEffect(() => {
+        if (activeModule !== 'planner') {
+            setHasUnsavedChanges(false);
+            return;
+        }
+        const timer = setTimeout(() => {
+            const fp = fingerprintPlan(data);
+            if (!savedFingerprint) {
+                setSavedFingerprint(fp);
+                setHasUnsavedChanges(false);
+            } else {
+                setHasUnsavedChanges(fp !== savedFingerprint);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [activeModule, data, savedFingerprint]);
 
     // --- INITIALIZATION & HEIGHT TRACKING ---
     useEffect(() => {
@@ -589,6 +605,18 @@ export default function GlobalHeader() {
                         {/* QUICK JUMP (CTRL+K) + UNDO / REDO + TODAY'S $ TOGGLE */}
                         {activeModule === 'planner' && (
                             <>
+                                {hasUnsavedChanges && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm bg-warning bg-opacity-10 text-warning border border-warning border-opacity-50 rounded-pill px-2.5 py-1 fw-bold d-flex d-lg-none align-items-center gap-1 shadow-sm"
+                                        style={{ height: '36px', fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                                        onClick={handleQuickSave}
+                                        title={lang === 'fr' ? 'Modifications non sauvegardées — Cliquez pour sauvegarder (Ctrl+S)' : 'Unsaved changes — Click to Quick Save (Ctrl+S)'}
+                                    >
+                                        <span className="rounded-circle bg-warning d-inline-block" style={{ width: '6px', height: '6px' }}></span>
+                                        <i className="bi bi-floppy-fill"></i>
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     className="btn btn-outline-secondary bg-input rounded-pill d-flex align-items-center gap-1.5 px-2.5 shadow-sm fw-bold"

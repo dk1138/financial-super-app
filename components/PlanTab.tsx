@@ -388,6 +388,7 @@ export default function PlanTab() {
             position: relative;
             scroll-margin-top: 140px;
             border-radius: 1rem;
+            contain: layout style;
         }
         .plan-card-wrapper .card-header {
             padding-right: 48px !important;
@@ -453,9 +454,8 @@ export default function PlanTab() {
             padding: 10px 16px 14px;
             margin: -0.75rem -0.75rem 1.25rem -0.75rem;
             border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transform: translateZ(0);
         }
         @media (min-width: 768px) {
             .sticky-jump-bar-wrapper {
@@ -543,17 +543,17 @@ export default function PlanTab() {
             }
         }
 
-        /* Floating Readiness Island styling */
+        /* Floating Readiness Island styling (solid surface, no scroll-jank blur) */
         .floating-readiness-island {
-            max-width: 680px;
+            max-width: 780px;
             width: 100%;
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            background-color: var(--bg-card, #ffffff);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+            transform: translateZ(0);
         }
         [data-bs-theme="dark"] .floating-readiness-island {
-            background-color: rgba(15, 23, 42, 0.92);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            background-color: #161d2f;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
         }
       `}</style>
 
@@ -647,17 +647,11 @@ export default function PlanTab() {
       {liveStats && (
         <div 
           className="position-sticky bottom-0 z-3 mt-4 pt-2 d-flex justify-content-center"
-          style={{ bottom: '1.25rem', transition: 'all 0.3s ease', pointerEvents: 'none' }}
+          style={{ bottom: '1.25rem', pointerEvents: 'none' }}
         >
           <div 
             className="floating-readiness-island border border-primary border-opacity-50 rounded-pill py-2 px-3 d-flex align-items-center justify-content-between gap-3 text-nowrap shadow-lg"
-            style={{ 
-              pointerEvents: 'auto',
-              maxWidth: '780px',
-              backgroundColor: 'var(--bg-card)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)'
-            }}
+            style={{ pointerEvents: 'auto' }}
           >
             {/* Left: Plan Score + Health Status */}
             <div className="d-flex align-items-center gap-2 overflow-hidden">

@@ -75,25 +75,31 @@ const ALL_TOOL_KEYS = Object.keys(TOOL_METADATA);
 export default function OptimizersTab({ initialToolId }: { initialToolId?: string | null } = {}) {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string>('All Tools');
-  const [expandedTool, setExpandedTool] = useState<string | null>(initialToolId || null);
+  const [expandedTool, setExpandedTool] = useState<string | null>(null);
   const [highlightedTool, setHighlightedTool] = useState<string | null>(initialToolId || null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Automatically scroll to and highlight requested tool if navigated from Features page
+  // Automatically scroll to and border-highlight requested tool without breaking the 3-column grid
   useEffect(() => {
     if (initialToolId) {
-      setExpandedTool(initialToolId);
       setHighlightedTool(initialToolId);
       const meta = TOOL_METADATA[initialToolId];
       if (meta && meta.category) {
         setActiveCategory('All Tools');
       }
-      setTimeout(() => {
+      const scrollTimer = setTimeout(() => {
         const el = document.getElementById(`tool-card-${initialToolId}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 350);
+      }, 200);
+      const clearTimer = setTimeout(() => {
+        setHighlightedTool((prev) => (prev === initialToolId ? null : prev));
+      }, 6500);
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(clearTimer);
+      };
     }
   }, [initialToolId]);
 
@@ -169,24 +175,24 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
       <div 
         key={id} 
         id={`tool-card-${id}`} 
-        className={`transition-all ${isExpanded ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"} ${isHighlighted ? "p-1 rounded-4 border-2 border-primary shadow-lg ring-2 ring-primary bg-primary bg-opacity-10" : ""}`}
+        className={isExpanded ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"}
+        onClick={isHighlighted ? () => setHighlightedTool(null) : undefined}
       >
-        {isHighlighted && (
-          <div className="d-flex justify-content-between align-items-center mb-2 px-2 pt-1">
-            <span className="badge bg-primary text-white py-1 px-2.5 rounded-pill shadow-sm">
-              <i className="bi bi-star-fill me-1 text-warning"></i> Selected from Features Directory
-            </span>
-            <button 
-              type="button" 
-              className="btn btn-sm btn-link text-muted p-0 text-decoration-none" 
-              onClick={() => setHighlightedTool(null)}
-              title="Dismiss highlight"
-            >
-              <i className="bi bi-x-circle"></i>
-            </button>
-          </div>
-        )}
-        {ContentComponent}
+        <div
+          className="h-100 rounded-4"
+          style={
+            isHighlighted
+              ? {
+                  outline: '2px solid var(--bs-primary)',
+                  outlineOffset: '2px',
+                  boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.2), 0 8px 24px rgba(59, 130, 246, 0.22)',
+                  transition: 'outline 0.25s ease, box-shadow 0.25s ease',
+                }
+              : undefined
+          }
+        >
+          {ContentComponent}
+        </div>
       </div>
     );
   };
