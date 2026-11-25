@@ -159,7 +159,6 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         width: '100vw',
         height: '100vh',
         backgroundColor: 'rgba(0, 0, 0, 0.65)', 
-        backdropFilter: 'blur(4px)', 
         zIndex: 10000,
         display: 'flex',
         alignItems: 'center',

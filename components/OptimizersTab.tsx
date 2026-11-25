@@ -72,6 +72,55 @@ const TOOL_METADATA: Record<string, { title: string; category: string; keywords:
 
 const ALL_TOOL_KEYS = Object.keys(TOOL_METADATA);
 
+function LazyToolSlot({
+  eager,
+  children,
+}: {
+  eager: boolean;
+  children: React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(eager);
+  const slotRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (eager) {
+      setMounted(true);
+      return;
+    }
+    if (mounted) return;
+    const el = slotRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setMounted(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setMounted(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '320px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [eager, mounted]);
+
+  if (!mounted) {
+    return (
+      <div
+        ref={slotRef}
+        className="rp-card border border-secondary rounded-4 surface-card d-flex align-items-center justify-content-center text-muted small"
+        style={{ minHeight: '340px' }}
+      >
+        <span className="spinner-border spinner-border-sm text-primary opacity-50" role="status" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function OptimizersTab({ initialToolId }: { initialToolId?: string | null } = {}) {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string>('All Tools');
@@ -132,7 +181,7 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
     return currentCat ? currentCat.keys : ALL_TOOL_KEYS;
   }, [searchQuery, activeCategory]);
 
-  const renderToolCard = (id: string) => {
+  const renderToolCard = (id: string, idx: number) => {
     let ContentComponent = null;
     const isExpanded = expandedTool === id;
 
@@ -171,11 +220,13 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
     }
 
     const isHighlighted = highlightedTool === id;
+    const eager = idx < 6 || isHighlighted || isExpanded || searchQuery.trim().length > 0;
     return (
       <div 
         key={id} 
         id={`tool-card-${id}`} 
         className={isExpanded ? "col-12 mb-3" : "col-12 col-md-6 col-xl-4"}
+        style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 420px' }}
         onClick={isHighlighted ? () => setHighlightedTool(null) : undefined}
       >
         <div
@@ -191,7 +242,9 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
               : undefined
           }
         >
-          {ContentComponent}
+          <LazyToolSlot eager={eager}>
+            {ContentComponent}
+          </LazyToolSlot>
         </div>
       </div>
     );
@@ -283,7 +336,7 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
       {/* --- CARDS GRID --- */}
       {visibleToolKeys.length > 0 ? (
         <div className="row g-4 mb-5">
-          {visibleToolKeys.map((toolId) => renderToolCard(toolId))}
+          {visibleToolKeys.map((toolId, idx) => renderToolCard(toolId, idx))}
         </div>
       ) : (
         /* Empty Search State */

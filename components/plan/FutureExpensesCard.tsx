@@ -1,11 +1,12 @@
 import React from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, MonthYearStepper, SegmentedControl } from '../SharedUI';
 
 export default function FutureExpensesCard() {
   const { t } = useTranslation();
-  const { data, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
+  const data = useFinanceData();
+  const { addArrayItem, updateArrayItem, removeArrayItem } = useFinanceActions();
   const isCouple = data.mode === 'Couple';
 
   // Fallbacks for dynamic player names

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceResults, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, ProvinceSelector, FrequencyToggle, MonthYearStepper, StepperInput } from '../SharedUI';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
@@ -426,7 +426,9 @@ const DetailedCreditInfoButton = ({ title, desc, link, details }: { title: strin
 
 export default function IncomeTaxCard() {
   const { t } = useTranslation();
-  const { data, results, updateInput, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
+  const data = useFinanceData();
+  const results = useFinanceResults();
+  const { updateInput, addArrayItem, updateArrayItem, removeArrayItem } = useFinanceActions();
   const isCouple = data.mode === 'Couple';
   
   // State for collapsible panels

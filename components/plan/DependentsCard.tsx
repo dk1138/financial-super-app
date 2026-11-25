@@ -1,11 +1,12 @@
 import React from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, MonthYearStepper, CurrencyInput } from '../SharedUI';
 
 export default function DependentsCard() {
   const { t } = useTranslation();
-  const { data, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
+  const data = useFinanceData();
+  const { addArrayItem, updateArrayItem, removeArrayItem } = useFinanceActions();
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">

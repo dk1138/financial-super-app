@@ -1,11 +1,12 @@
 import React from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, PercentInput, SegmentedControl } from '../SharedUI';
 
 export default function EconomicAssumptionsCard() {
   const { t } = useTranslation();
-  const { data, updateInput } = useFinance();
+  const data = useFinanceData();
+  const { updateInput } = useFinanceActions();
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">

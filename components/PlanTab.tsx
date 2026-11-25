@@ -389,6 +389,8 @@ export default function PlanTab() {
             scroll-margin-top: 140px;
             border-radius: 1rem;
             contain: layout style;
+            content-visibility: auto;
+            contain-intrinsic-size: auto 420px;
         }
         .plan-card-wrapper .card-header {
             padding-right: 48px !important;

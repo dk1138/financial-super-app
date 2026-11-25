@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, SegmentedControl, ModernDropdown } from '../SharedUI';
 
@@ -29,7 +29,8 @@ const EXTENDED_ACCOUNT_TYPES = [
 
 export default function PortfolioAssetsCard() {
   const { t, formatCurrency: fmtCurrency } = useTranslation();
-  const { data, updateInput, updateMultipleInputs, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
+  const data = useFinanceData();
+  const { updateInput, updateMultipleInputs, addArrayItem, updateArrayItem, removeArrayItem } = useFinanceActions();
   
   const isCouple = data.mode === 'Couple';
   const hasAutoAllocation = data.inputs.portfolio_allocation !== 'custom' && data.inputs.portfolio_allocation !== undefined;

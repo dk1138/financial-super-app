@@ -96,8 +96,6 @@ export default function OnboardingWizardModal({
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
         zIndex: 10050,
         overflowY: 'auto',
         padding: '1rem',

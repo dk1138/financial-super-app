@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, PercentInput, StepperInput, SegmentedControl } from '../SharedUI';
 
@@ -22,7 +22,8 @@ const calc25YearPayment = (principal: number, rate: number) => {
 
 export default function LivingCostCard() {
   const { t } = useTranslation();
-  const { data, updateInput, updateArrayItem, addArrayItem, removeArrayItem } = useFinance();
+  const data = useFinanceData();
+  const { updateInput, updateArrayItem, addArrayItem, removeArrayItem } = useFinanceActions();
 
   const currentMode = data.inputs.housing_mode || 'own';
   const transitions = data.housingTransitions || [];

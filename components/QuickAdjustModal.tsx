@@ -216,7 +216,6 @@ export default function QuickAdjustModal({ isOpen, onClose }: QuickAdjustModalPr
         maxWidth: 'calc(100vw - 32px)',
         backgroundColor: 'var(--bg-body, #0f172a)',
         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(12px)',
       }}
     >
       {/* 1. HEADER */}

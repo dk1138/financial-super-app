@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { FINANCIAL_CONSTANTS } from '../../lib/config';
 import { InfoBtn, CurrencyInput, StepperInput, ModernDropdown } from '../SharedUI';
@@ -40,7 +40,8 @@ const getAdjustedOAS = (yearsInCanada: number, startAge: number, startMonth: num
 
 export default function GovtBenefitsCard() {
   const { t } = useTranslation();
-  const { data, updateInput } = useFinance();
+  const data = useFinanceData();
+  const { updateInput } = useFinanceActions();
   const isCouple = data.mode === 'Couple';
 
   const [p1DbEnabled, setP1DbEnabled] = useState(data.inputs.p1_db_enabled ?? false);

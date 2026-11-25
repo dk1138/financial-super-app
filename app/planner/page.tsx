@@ -1,29 +1,39 @@
 'use client'; 
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import PlanTab from '../../components/PlanTab';
-import StrategyTab from '../../components/StrategyTab';
-import DashboardTab from '../../components/DashboardTab';
-import ProjectionTab from '../../components/ProjectionTab';
-import RiskTab from '../../components/RiskTab';
-import CashFlowTab from '../../components/CashFlowTab';
-import OptimizersTab from '../../components/OptimizersTab';
-import CompareTab from '../../components/CompareTab';
-import DataBankTab from '../../components/DataBankTab';
 import { useTranslation } from '../../lib/LanguageContext';
-import { useFinance } from '../../lib/FinanceContext';
-import { StepperInput, PercentInput, ConfirmModal } from '../../components/SharedUI'; 
-import FeedbackModal from '../../components/FeedbackModal';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
+import { ConfirmModal } from '../../components/SharedUI'; 
 import SplashScreen from '../../components/SplashScreen';
 import { sampleProfile } from '../../lib/sampleData';
-import QuickAdjustModal from '../../components/QuickAdjustModal';
-import OnboardingWizardModal from '../../components/OnboardingWizardModal';
 import { decodePlanFromHash } from '../../lib/sharePlan';
 import { CANADIAN_PERSONAS } from '../../lib/personas';
 
+const TabLoader = () => (
+  <div className="d-flex align-items-center justify-content-center py-5 my-5 text-muted gap-2 small">
+    <span className="spinner-border spinner-border-sm text-primary" role="status" />
+    <span>Loading view...</span>
+  </div>
+);
+
+const StrategyTab = dynamic(() => import('../../components/StrategyTab'), { ssr: false, loading: TabLoader });
+const DashboardTab = dynamic(() => import('../../components/DashboardTab'), { ssr: false, loading: TabLoader });
+const ProjectionTab = dynamic(() => import('../../components/ProjectionTab'), { ssr: false, loading: TabLoader });
+const RiskTab = dynamic(() => import('../../components/RiskTab'), { ssr: false, loading: TabLoader });
+const CashFlowTab = dynamic(() => import('../../components/CashFlowTab'), { ssr: false, loading: TabLoader });
+const OptimizersTab = dynamic(() => import('../../components/OptimizersTab'), { ssr: false, loading: TabLoader });
+const CompareTab = dynamic(() => import('../../components/CompareTab'), { ssr: false, loading: TabLoader });
+const DataBankTab = dynamic(() => import('../../components/DataBankTab'), { ssr: false, loading: TabLoader });
+const QuickAdjustModal = dynamic(() => import('../../components/QuickAdjustModal'), { ssr: false });
+const OnboardingWizardModal = dynamic(() => import('../../components/OnboardingWizardModal'), { ssr: false });
+const FeedbackModal = dynamic(() => import('../../components/FeedbackModal'), { ssr: false });
+
 export default function PlannerPage() {
-  const financeContext = useFinance() as any; 
-  const { data, updateInput, updateMultipleInputs, resetData } = financeContext;
+  const data = useFinanceData();
+  const financeContext = useFinanceActions();
+  const { updateInput, updateMultipleInputs, resetData } = financeContext;
   const { t } = useTranslation();
   
   // --- UI STATE ---

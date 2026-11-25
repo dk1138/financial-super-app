@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
-import { useFinance } from '../lib/FinanceContext';
+import { useFinanceData, useFinanceCanUndo, useFinanceCanRedo, useFinanceActions } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import ExpenseHeaderActions from './expenses/ExpenseHeaderActions';
 import { ENGINE_VERSION } from '../lib/financeEngine';
@@ -24,8 +24,11 @@ function fingerprintPlan(planData: any): string {
 export default function GlobalHeader() {
     const { data: session } = useSession();
     const pathname = usePathname();
-    const financeContext = useFinance() as any;
-    const { data, updateUseRealDollars, resetData, undo, redo, canUndo, canRedo } = financeContext;
+    const data = useFinanceData();
+    const canUndo = useFinanceCanUndo();
+    const canRedo = useFinanceCanRedo();
+    const financeContext = useFinanceActions();
+    const { updateUseRealDollars, resetData, undo, redo } = financeContext;
     const translationCtx = useTranslation() as any;
     const { lang } = translationCtx;
     const setLanguage = translationCtx.setLang || translationCtx.setLanguage;
@@ -702,7 +705,7 @@ export default function GlobalHeader() {
 
             {/* RENAME MODAL */}
             {showRenameModal && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1060 }}>
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowRenameModal(false)}></div>
                     <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{ zIndex: 1070 }}>
                         <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
@@ -735,7 +738,7 @@ export default function GlobalHeader() {
 
             {/* SAVE MODAL */}
             {showSaveModal && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowSaveModal(false)}></div>
                     <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{ zIndex: 1060 }}>
                         <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
@@ -755,7 +758,7 @@ export default function GlobalHeader() {
 
             {/* OPEN SAVED PLAN MODAL */}
             {showLoadModal && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowLoadModal(false)}></div>
                     <div className="modal-dialog modal-dialog-centered position-relative" style={{ zIndex: 1060 }}>
                         <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
@@ -790,7 +793,7 @@ export default function GlobalHeader() {
 
             {/* PASTE JSON MODAL */}
             {showPasteJsonModal && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 1050 }}>
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1050 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowPasteJsonModal(false)}></div>
                     <div className="modal-dialog modal-dialog-centered modal-lg position-relative" style={{ zIndex: 1060 }}>
                         <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
@@ -812,7 +815,7 @@ export default function GlobalHeader() {
 
             {/* CONFIRM LOAD MODAL */}
             {planToLoad && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToLoad(null)}></div>
                     <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{ zIndex: 1080 }}>
                         <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
@@ -834,7 +837,7 @@ export default function GlobalHeader() {
 
             {/* CONFIRM DELETE MODAL */}
             {planToDelete && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setPlanToDelete(null)}></div>
                     <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{ zIndex: 1080 }}>
                         <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">
@@ -856,7 +859,7 @@ export default function GlobalHeader() {
 
             {/* CONFIRM RESET MODAL */}
             {showResetConfirm && (
-                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1070 }}>
+                <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1070 }}>
                     <div className="position-fixed top-0 start-0 w-100 h-100" onClick={() => setShowResetConfirm(false)}></div>
                     <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{ zIndex: 1080 }}>
                         <div className="modal-content surface-card border border-secondary shadow-lg rounded-4">

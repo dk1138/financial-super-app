@@ -499,7 +499,7 @@ export const ConfirmModal = ({
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 1300 }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.68)', zIndex: 1300 }}
         >
             <div className="position-fixed top-0 start-0 w-100 h-100" onClick={onCancel} />
             <div className="modal-dialog modal-dialog-centered modal-sm position-relative" style={{ zIndex: 1310 }}>

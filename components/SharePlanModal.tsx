@@ -78,7 +78,6 @@ export default function SharePlanModal({
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        backdropFilter: 'blur(6px)',
         zIndex: 10050,
         padding: '1rem',
       }}

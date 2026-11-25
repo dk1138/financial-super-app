@@ -589,14 +589,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (!hasHydrated) return;
-        setIsCalculating(true);
-        useFinanceStore.setState({ mcResults: null });
+        const st = useFinanceStore.getState();
+        if (!st.isCalculating || st.mcResults !== null) {
+            useFinanceStore.setState({ isCalculating: true, mcResults: null });
+        }
 
         const calcTimeoutId = setTimeout(() => {
             if (workerRef.current) {
-                workerRef.current.postMessage({ data: JSON.parse(JSON.stringify(data)), detailed: true });
+                workerRef.current.postMessage({ data, detailed: true });
             }
-        }, 300);
+        }, 150);
 
         return () => clearTimeout(calcTimeoutId);
     }, [data, hasHydrated]);

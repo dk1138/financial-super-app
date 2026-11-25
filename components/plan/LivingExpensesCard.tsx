@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, StepperInput, FrequencyToggle, ModernDropdown } from '../SharedUI';
 
 export default function LivingExpensesCard() {
   const { t } = useTranslation();
-  const { data, updateInput, updateExpenseCategory, addArrayItem, updateArrayItem, removeArrayItem } = useFinance(); 
+  const data = useFinanceData();
+  const { updateInput, updateExpenseCategory, addArrayItem, updateArrayItem, removeArrayItem } = useFinanceActions(); 
   const [expenseAdvancedMode, setExpenseAdvancedMode] = useState(false);
 
   // --- STATE FOR THEMED POPUPS ---

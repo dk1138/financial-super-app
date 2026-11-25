@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { InfoBtn, CurrencyInput, PercentInput, StepperInput, SegmentedControl } from '../SharedUI';
 
 const calcAmortization = (principal: number, rate: number, payment: number) => {
@@ -20,7 +20,8 @@ const calc25YearPayment = (principal: number, rate: number) => {
 };
 
 export default function RealEstateCard() {
-  const { data, updateArrayItem, addArrayItem, removeArrayItem } = useFinance();
+  const data = useFinanceData();
+  const { updateArrayItem, addArrayItem, removeArrayItem } = useFinanceActions();
   const isCouple = data.mode === 'Couple';
 
   // Fallbacks for dynamic customizable player names

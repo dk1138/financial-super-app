@@ -1,11 +1,12 @@
 import React from 'react';
-import { useFinance } from '../../lib/FinanceContext';
+import { useFinanceData, useFinanceActions } from '../../lib/FinanceContext';
 import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, MonthYearStepper, StepperInput } from '../SharedUI';
 
 export default function PersonalInformationCard() {
   const { t } = useTranslation();
-  const { data, updateInput, updateMultipleInputs, updateMode } = useFinance();
+  const data = useFinanceData();
+  const { updateInput, updateMultipleInputs, updateMode } = useFinanceActions();
   const isCouple = data.mode === 'Couple';
 
   // Fallbacks for custom names if they aren't initialized yet
