@@ -72,7 +72,10 @@ function evaluatePlan(plan: any, useReal: boolean, inflation: number) {
   const afterTaxEstate = Math.round(
     useReal ? rawEstate / Math.pow(1 + inflation, years) : rawEstate
   );
-  const shortfall = timeline.find((y: any) => Math.round(y.liquidNW || 0) < 0);
+  const retireAge = Number(plan?.inputs?.p1_retireAge) || 65;
+  const shortfall = timeline.find(
+    (y: any) => Math.round(y.liquidNW || 0) <= 0 && y.p1Age >= retireAge
+  );
   return {
     afterTaxEstate,
     survived: !shortfall,

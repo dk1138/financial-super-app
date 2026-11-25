@@ -164,7 +164,10 @@ export function runStrategyMatrix(
         0
       )
     );
-    const survived = timeline.every((y: any) => Math.round(y.liquidNW || 0) >= 0);
+    const retireAge = Number(cloned?.inputs?.p1_retireAge) || 65;
+    const survived = !timeline.some(
+      (y: any) => Math.round(y.liquidNW || 0) <= 0 && y.p1Age >= retireAge
+    );
 
     rawRows.push({
       id: preset.id,

@@ -62,17 +62,19 @@ export function calcBenefitAmount(maxAmount: number, startAge: number, proportio
     let monthsDifference = (startAge - 65) * 12 + startMonthOffset; 
     
     if (type === 'cpp') {
-        if (monthsDifference < 0) {
-            benefitValue *= (1 - (Math.abs(monthsDifference) * 0.006));
+        const clampedMonths = Math.max(-60, Math.min(60, monthsDifference));
+        if (clampedMonths < 0) {
+            benefitValue *= (1 - (Math.abs(clampedMonths) * 0.006));
         } else {
-            benefitValue *= (1 + (monthsDifference * 0.007)); 
+            benefitValue *= (1 + (clampedMonths * 0.007)); 
         }
         if (retireAge < 60) {
             benefitValue *= Math.max(0, (39 - Math.max(0, (65 - retireAge) - 8)) / 39); 
         }
     } else if (type === 'oas') {
-        if (monthsDifference > 0) {
-            benefitValue *= (1 + (monthsDifference * 0.006));
+        const clampedMonths = Math.max(0, Math.min(60, monthsDifference));
+        if (clampedMonths > 0) {
+            benefitValue *= (1 + (clampedMonths * 0.006));
         }
     }
     return benefitValue; 

@@ -116,7 +116,7 @@ export default function CoastFireCalculator() {
     }
 
     // Barista FIRE: portfolio needed today if part-time income covers baristaIncomeAnnual
-    const baristaNetNeed = Math.max(0, annualRetSpend - baristaIncomeAnnual);
+    const baristaNetNeed = Math.max(0, netSpendFromPortfolio - baristaIncomeAnnual);
     const baristaFiNumber = swr > 0 ? baristaNetNeed / (swr / 100) : 0;
     const isBaristaReady = currentPortfolio >= baristaFiNumber;
     const baristaGap = Math.max(0, baristaFiNumber - currentPortfolio);
@@ -314,7 +314,7 @@ export default function CoastFireCalculator() {
 
             <div className="small text-muted mb-2" style={{ fontSize: '0.74rem' }}>
               Earning <strong>{fmtCurrency(baristaIncomeAnnual)}/yr</strong> part-time reduces your needed portfolio from{' '}
-              <strong>{fmtCompact(annualRetSpend / (swr / 100))}</strong> to <strong>{fmtCompact(calc.baristaFiNumber)}</strong>.
+              <strong>{fmtCompact(calc.fiNumber)}</strong> to <strong>{fmtCompact(calc.baristaFiNumber)}</strong>.
             </div>
 
             <div className="d-flex justify-content-between pt-2 border-top border-secondary border-opacity-50 small">

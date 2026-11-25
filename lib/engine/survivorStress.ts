@@ -58,24 +58,12 @@ export function runSurvivorStressTest(
     survData.inputs[survivorLifeExpKey] = Math.min(100, clampedDeathAge + 15);
   }
 
-  // Scale down retirement expenses modestly for single-person household if requested
-  if (expenseReductionPct > 0 && survData.expensesByCategory) {
-    const factor = Math.max(0.5, 1 - expenseReductionPct / 100);
-    Object.values(survData.expensesByCategory).forEach((cat: any) => {
-      if (cat?.items && Array.isArray(cat.items)) {
-        cat.items.forEach((item: any) => {
-          ['ret', 'trans', 'gogo', 'slow', 'nogo'].forEach((field) => {
-            if (typeof item[field] === 'number') {
-              item[field] = Math.round(item[field] * factor);
-            }
-          });
-        });
-      }
-    });
-  }
+  // Apply survivor expense reduction ONLY in years after the deceased spouse passes away
+  const survivorExpenseFactor =
+    expenseReductionPct > 0 ? Math.max(0.5, 1 - expenseReductionPct / 100) : 1;
 
   const survEngine = new FinanceEngine(survData);
-  const survTimeline = survEngine.runSimulation(true, null);
+  const survTimeline = survEngine.runSimulation(true, { survivorExpenseFactor });
 
   const startYear = baseTimeline[0]?.year || new Date().getFullYear();
   const getReal = (nominal: number, year: number) =>
@@ -114,7 +102,11 @@ export function runSurvivorStressTest(
   const baselineLifetimeTax = sumTax(baseTimeline);
   const survivorLifetimeTax = sumTax(survTimeline);
 
-  const shortfallRow = survTimeline.find((y: any) => Math.round(y.liquidNW || 0) < 0);
+  const survivorRetireAge = Number(survData.inputs[`${survivor}_retireAge`]) || Number(survData.inputs.p1_retireAge) || 65;
+  const shortfallRow = survTimeline.find((y: any) => {
+    const survAge = (survivor === 'p1' ? y.p1Age : y.p2Age) ?? y.p1Age;
+    return Math.round(y.liquidNW || 0) <= 0 && survAge >= survivorRetireAge;
+  });
   const survived = !shortfallRow;
   const firstShortfallAge = shortfallRow
     ? (survivor === 'p1' ? shortfallRow.p1Age : shortfallRow.p2Age) || shortfallRow.p1Age

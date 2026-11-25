@@ -1355,7 +1355,7 @@ export class FinanceEngine {
             applyTiming(person2, postGrowthP2, ratesP2);
 
             if (alive1 && !fhsaClosed1) {
-                if (person1.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p1.fhsa > 0)) { fhsaYearsP1 = fhsaYearsP1 === 0 ? 1 : 0; }
+                if (fhsaYearsP1 > 0 || person1.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p1.fhsa > 0)) { fhsaYearsP1 += 1; }
                 if (fhsaYearsP1 >= 15 || age1 >= 71) {
                     if (person1.fhsa > 0) {
                         if (age1 >= rrifStartAge) person1.rrif_acct += person1.fhsa; else person1.rrsp += person1.fhsa;
@@ -1364,7 +1364,7 @@ export class FinanceEngine {
                 }
             }
             if (alive2 && !fhsaClosed2 && this.mode === 'Couple') {
-                if (person2.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p2.fhsa > 0)) { fhsaYearsP2 = fhsaYearsP2 === 0 ? 1 : 0; }
+                if (fhsaYearsP2 > 0 || person2.fhsa > 0 || (detailed && flowLog && flowLog.contributions.p2.fhsa > 0)) { fhsaYearsP2 += 1; }
                 if (fhsaYearsP2 >= 15 || age2 >= 71) {
                     if (person2.fhsa > 0) {
                         if (age2 >= rrifStartAge) person2.rrif_acct += person2.fhsa; else person2.rrsp += person2.fhsa;
