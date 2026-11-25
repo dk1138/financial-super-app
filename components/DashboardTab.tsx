@@ -38,7 +38,7 @@ function ScoreCard({ title, score, max, tooltip, align = 'left' }: { title: stri
   );
 }
 
-export default function DashboardTab() {
+export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, toolId?: string) => void } = {}) {
   const { data, results, planScore } = useFinance();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -1034,7 +1034,7 @@ export default function DashboardTab() {
           
       </div>
 
-      <NextBestActionsCard />
+      <NextBestActionsCard onNavigate={onNavigate} />
 
       {/* --- IMGUR LINK FLOATING POPUP (ABOVE FLOATING ACTION BUTTONS) --- */}
       {imgurModalOpen && typeof document !== 'undefined' && createPortal(

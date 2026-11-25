@@ -19,6 +19,7 @@ import { sampleProfile } from '../../lib/sampleData';
 import QuickAdjustModal from '../../components/QuickAdjustModal';
 import OnboardingWizardModal from '../../components/OnboardingWizardModal';
 import { decodePlanFromHash } from '../../lib/sharePlan';
+import { CANADIAN_PERSONAS } from '../../lib/personas';
 
 export default function PlannerPage() {
   const financeContext = useFinance() as any; 
@@ -27,6 +28,7 @@ export default function PlannerPage() {
   
   // --- UI STATE ---
   const [activeTab, setActiveTab] = useState('plan');
+  const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [showQuickAdjust, setShowQuickAdjust] = useState(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [pendingSharedPlan, setPendingSharedPlan] = useState<any | null>(null);
@@ -36,15 +38,38 @@ export default function PlannerPage() {
 
   const isCouple = data.mode === 'Couple';
 
-  // --- SET PAGE TITLE & DETECT SHARED PLAN HASH ---
+  // --- SET PAGE TITLE, DETECT SHARED PLAN HASH & DEEP-LINK QUERY PARAMS ---
   useEffect(() => {
       document.title = "Planfolio - Planner";
-      if (typeof window !== 'undefined' && window.location.hash.startsWith('#plan=')) {
+      if (typeof window === 'undefined') return;
+
+      if (window.location.hash.startsWith('#plan=')) {
           decodePlanFromHash(window.location.hash).then((decoded) => {
               if (decoded) {
                   setPendingSharedPlan(decoded);
               }
           });
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const personaId = params.get('persona');
+      const tabParam = params.get('tab');
+      const toolParam = params.get('tool');
+
+      if (personaId) {
+          const persona = CANADIAN_PERSONAS.find((p) => p.id === personaId);
+          if (persona && financeContext.loadData) {
+              financeContext.loadData(persona.buildPlan());
+              localStorage.setItem('active_plan_name', persona.title);
+              window.dispatchEvent(new CustomEvent('updateActivePlan', { detail: persona.title }));
+              setActiveTab(tabParam || 'dashboard');
+              window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+          }
+      } else if (toolParam) {
+          setSelectedToolId(toolParam);
+          setActiveTab('optimizers');
+      } else if (tabParam) {
+          setActiveTab(tabParam);
       }
   }, []);
 
@@ -225,11 +250,18 @@ export default function PlannerPage() {
                 </>
               )}
               {activeTab === 'strategy' && <StrategyTab />}
-              {activeTab === 'dashboard' && <DashboardTab />}
+              {activeTab === 'dashboard' && (
+                <DashboardTab
+                  onNavigate={(tab, toolId) => {
+                    setSelectedToolId(toolId || null);
+                    setActiveTab(tab);
+                  }}
+                />
+              )}
               {activeTab === 'projection' && <ProjectionTab />}
               {activeTab === 'risk' && <RiskTab />}
               {activeTab === 'cashflow' && <CashFlowTab />}
-              {activeTab === 'optimizers' && <OptimizersTab />}
+              {activeTab === 'optimizers' && <OptimizersTab initialToolId={selectedToolId} />}
               {activeTab === 'compare' && <CompareTab />}
               {activeTab === 'databank' && <DataBankTab />}
             </div>

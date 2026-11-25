@@ -89,26 +89,26 @@ export default function FeaturesPage() {
       borderColor: "border-amber-500/30",
       description: "Retirement plans fail because of volatility timing, not average returns. Planfolio stress-tests your wealth against historical crashes and stochastic trials.",
       features: [
-        { name: "1,000-Trial Monte Carlo Engine", desc: "Calculates your plan's true statistical probability of success across random return paths." },
-        { name: "Sequence of Returns Risk (SRR)", desc: "Simulates early retirement market drawdowns (1970s stagflation, 2000 Dot-com, 2008 GFC)." },
-        { name: "Macro Inflation Shocks", desc: "Stress test sustained inflation spikes (4% to 6%) to evaluate purchasing power erosion." },
-        { name: "Dynamic Cash Buffer Reserves", desc: "Models multi-year cash cushions to avoid selling equities during market downturns." }
+        { name: "1,000-Trial Monte Carlo Engine", desc: "Calculates your plan's true statistical probability of success across random return paths (LHS, QHS, PRNG, and Historical)." },
+        { name: "Survivor & Widow's Tax Trap Stress Test", desc: "Models early passing of either spouse, loss of pension splitting, single tax brackets, and OAS clawback compression." },
+        { name: "Sequence of Returns Risk (SRR)", desc: "Simulates early retirement market drawdowns (-35% / -15% crash) right at retirement onset." },
+        { name: "Macro Inflation & LTC Shocks", desc: "Stress test sustained inflation spikes (4% to 6%), real estate drops, and long-term care facility costs." }
       ]
     },
     {
-      title: "Multi-Plan Scenario Compare & Milestones",
+      title: "1-Click Optimization, Compare & Sharing",
       badge: "Decision Support",
       badgeColor: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
       icon: "bi-bar-chart-line",
       color: "text-cyan-400",
       bgGradient: "from-cyan-950/20 to-slate-900",
       borderColor: "border-cyan-500/30",
-      description: "Make confident life decisions. Compare saved scenarios side-by-side, test retirement ages, and evaluate milestone trade-offs.",
+      description: "Make confident life decisions. Benchmark 7 Canadian strategies in 1 click, compare scenarios side-by-side, and share anonymized links.",
       features: [
-        { name: "Side-by-Side Plan Comparisons", desc: "Overlay liquid assets, net worth, and annual tax curves across alternate retirement dates." },
-        { name: "Multi-Plan Trajectory Overlays", desc: "Compare retiring at 55 vs 60, aggressive equity vs conservative allocation, or downsizing." },
-        { name: "Granular Living Cost Integration", desc: "Feeds realistic categorized expenses (housing, lifestyle, healthcare) straight into simulation engines." },
-        { name: "Instant Safety Restore Points", desc: "Save and restore plan snapshots with one click without overwriting your active baseline." }
+        { name: "1-Click Auto-Optimize Strategy Matrix", desc: "Benchmarks 7 Canadian decumulation & CPP/OAS strategies in a Web Worker and applies the highest-estate or lowest-tax winner." },
+        { name: "Next Best Actions Checklist", desc: "Live dashboard diagnostics flagging shortfalls, OAS clawbacks, pension splitting, and RRSP meltdown opportunities with 1-click fixes." },
+        { name: "Shareable Anonymized Plan Links", desc: "Compresses your plan into a private URL hash (#plan=gz:...) with zero backend storage and automatic name/history masking." },
+        { name: "60-Second Guided Setup & Undo/Redo", desc: "4-step onboarding wizard, 4 Canadian personas, side-by-side plan comparisons, and full Ctrl+Z / Ctrl+Y undo history." }
       ]
     }
   ];
@@ -121,6 +121,13 @@ export default function FeaturesPage() {
       groupColor: "text-blue-400",
       groupDesc: "Advanced stochastic engines and lifecycle spending models that solve for maximum sustainable living standards.",
       tools: [
+        {
+          id: "sensitivity",
+          name: "Retirement Age vs. Spend Heatmap & Max Spend Solver",
+          badge: "5×5 Matrix",
+          icon: "bi-grid-3x3-gap-fill",
+          desc: "Runs 25 CRA-accurate simulations across retire age (−4 to +4 yrs) and spending (−20% to +20%), plus solves for your maximum sustainable monthly budget."
+        },
         {
           id: "dwz",
           name: "Die With Zero Optimizer",
@@ -625,6 +632,51 @@ export default function FeaturesPage() {
             </div>
           )}
 
+        </div>
+      </section>
+
+      {/* --- 1-CLICK CANADIAN PERSONAS --- */}
+      <section className="py-16 border-t border-slate-800 bg-[#0d1526]">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="text-center mb-10">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider mb-3">
+              <i className="bi bi-rocket-takeoff-fill"></i> Instant Demo Profiles
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">
+              Try a Realistic Canadian Persona in 1 Click
+            </h2>
+            <p className="text-slate-400 text-sm max-w-2xl mx-auto">
+              Skip manual data entry and launch the full planner pre-loaded with a realistic Canadian household.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { id: 'toronto-couple', title: 'Toronto Starter Couple', meta: 'Ages 32 & 30 • ON', desc: '$175k income, TFSA/RRSP/FHSA, $780k home', icon: 'bi-house-heart-fill', color: 'text-blue-400' },
+              { id: 'vancouver-fire', title: 'Vancouver FIRE Single', meta: 'Age 38 • BC', desc: '$145k income, $495k invested, retire at 50', icon: 'bi-fire', color: 'text-emerald-400' },
+              { id: 'ottawa-db-couple', title: 'Ottawa DB Pension Couple', meta: 'Ages 55 & 53 • ON', desc: 'Public sector DB pension + RRSP meltdown', icon: 'bi-building-check', color: 'text-amber-400' },
+              { id: 'calgary-retiring-60', title: 'Retiring Soon (Age 60)', meta: 'Ages 60 & 59 • AB', desc: '$1.35M portfolio, CPP/OAS & decumulation', icon: 'bi-sunrise-fill', color: 'text-cyan-400' },
+            ].map((p) => (
+              <Link
+                key={p.id}
+                href={`/planner?persona=${p.id}`}
+                className="group p-5 rounded-2xl bg-[#111a2e] border border-slate-800 hover:border-blue-500/50 transition-all text-decoration-none flex flex-col justify-between shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <i className={`bi ${p.icon} text-xl ${p.color}`}></i>
+                    <span className="text-[11px] font-semibold text-slate-400">{p.meta}</span>
+                  </div>
+                  <h3 className="text-sm font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">{p.title}</h3>
+                  <p className="text-xs text-slate-400 mb-4 leading-relaxed">{p.desc}</p>
+                </div>
+                <div className="text-xs font-bold text-blue-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                  <span>Load Persona</span>
+                  <i className="bi bi-arrow-right"></i>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

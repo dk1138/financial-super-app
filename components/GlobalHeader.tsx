@@ -14,7 +14,7 @@ export default function GlobalHeader() {
     const { data: session } = useSession();
     const pathname = usePathname();
     const financeContext = useFinance() as any;
-    const { data, updateUseRealDollars, resetData } = financeContext;
+    const { data, updateUseRealDollars, resetData, undo, redo, canUndo, canRedo } = financeContext;
     const translationCtx = useTranslation() as any;
     const { lang } = translationCtx;
     const setLanguage = translationCtx.setLang || translationCtx.setLanguage;
@@ -476,14 +476,38 @@ export default function GlobalHeader() {
                     <div className="d-flex align-items-center gap-2 justify-content-end" style={{ flexShrink: 0 }}>
                         {activeModule === 'expenses' && <ExpenseHeaderActions showToast={showToast} />}
 
-                        {/* TODAY'S $ TOGGLE */}
+                        {/* UNDO / REDO + TODAY'S $ TOGGLE */}
                         {activeModule === 'planner' && (
-                            <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all d-none d-sm-flex" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
-                                <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
-                                    <input className="form-check-input m-0 cursor-pointer shadow-none" type="checkbox" id="useRealDollars" checked={data.useRealDollars ?? false} onChange={(e) => updateUseRealDollars(e.target.checked)} />
-                                    <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-xl-block" style={{ paddingTop: '2px' }} htmlFor="useRealDollars">Today's $</label>
+                            <>
+                                <div className="btn-group d-none d-md-inline-flex shadow-sm" role="group" aria-label="Undo and Redo">
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-secondary bg-input d-flex align-items-center justify-content-center px-2"
+                                        style={{ height: '36px', borderTopLeftRadius: '50rem', borderBottomLeftRadius: '50rem' }}
+                                        onClick={undo}
+                                        disabled={!canUndo}
+                                        title="Undo (Ctrl+Z)"
+                                    >
+                                        <i className="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-secondary bg-input d-flex align-items-center justify-content-center px-2"
+                                        style={{ height: '36px', borderTopRightRadius: '50rem', borderBottomRightRadius: '50rem' }}
+                                        onClick={redo}
+                                        disabled={!canRedo}
+                                        title="Redo (Ctrl+Y)"
+                                    >
+                                        <i className="bi bi-arrow-clockwise"></i>
+                                    </button>
                                 </div>
-                            </div>
+                                <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all d-none d-sm-flex" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
+                                    <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
+                                        <input className="form-check-input m-0 cursor-pointer shadow-none" type="checkbox" id="useRealDollars" checked={data.useRealDollars ?? false} onChange={(e) => updateUseRealDollars(e.target.checked)} />
+                                        <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-xl-block" style={{ paddingTop: '2px' }} htmlFor="useRealDollars">Today's $</label>
+                                    </div>
+                                </div>
+                            </>
                         )}
 
                         {/* LANGUAGE TOGGLE [EN | FR] */}

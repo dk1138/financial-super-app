@@ -22,7 +22,11 @@ const fmtCurrency = (val: number) =>
     Math.round(val || 0)
   );
 
-export default function NextBestActionsCard() {
+interface NextBestActionsCardProps {
+  onNavigate?: (tab: string, toolId?: string) => void;
+}
+
+export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardProps = {}) {
   const { data, results, planScore, updateInput } = useFinance();
   const [appliedIds, setAppliedIds] = useState<Record<string, boolean>>({});
 
@@ -46,6 +50,8 @@ export default function NextBestActionsCard() {
         description:
           'Your projected liquid assets hit $0 before the end of your plan. Open Tools & Calculators to run the Max Safe Spend Solver and 5×5 Sensitivity Heatmap, or run 1-Click Auto-Optimize in Strategy.',
         impactLabel: 'High Priority',
+        ctaLabel: onNavigate ? 'Open Sensitivity Heatmap' : undefined,
+        onApply: onNavigate ? () => onNavigate('optimizers', 'sensitivity') : undefined,
       });
     }
 
@@ -128,6 +134,8 @@ export default function NextBestActionsCard() {
         description:
           'Planfolio targets 6 months of core expenses in liquid cash or TFSA. Strengthening your short-term buffer prevents forced selling during market downturns.',
         impactLabel: 'Resilience',
+        ctaLabel: onNavigate ? 'Emergency Fund Tool' : undefined,
+        onApply: onNavigate ? () => onNavigate('optimizers', 'emerg') : undefined,
       });
     }
 
@@ -141,11 +149,13 @@ export default function NextBestActionsCard() {
         description:
           'Mortgage and debt repayments exceed the 36% DTI guideline. Accelerating high-interest debt payoff or refinancing before retirement improves cash-flow flexibility.',
         impactLabel: 'Cash Flow',
+        ctaLabel: onNavigate ? 'Review Debt Inputs' : undefined,
+        onApply: onNavigate ? () => onNavigate('plan') : undefined,
       });
     }
 
     return list.slice(0, 5);
-  }, [data, results, planScore, updateInput]);
+  }, [data, results, planScore, updateInput, onNavigate]);
 
   return (
     <div className="rp-card border border-secondary rounded-4 shadow-sm mt-4" data-html2canvas-ignore="true">

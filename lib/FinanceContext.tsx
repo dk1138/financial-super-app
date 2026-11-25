@@ -34,11 +34,15 @@ export interface FinanceData {
 
 interface FinanceState {
     data: FinanceData;
+    past: FinanceData[];
+    future: FinanceData[];
     results: any;
     planScore: any;
     isCalculating: boolean;
     mcResults: any;
-    setData: (updater: FinanceData | ((prev: FinanceData) => FinanceData)) => void;
+    setData: (updater: FinanceData | ((prev: FinanceData) => FinanceData), recordHistory?: boolean) => void;
+    undo: () => void;
+    redo: () => void;
     setResults: (results: any) => void;
     setIsCalculating: (isCalculating: boolean) => void;
     setMcResults: (mcResults: any) => void;
@@ -324,17 +328,39 @@ export const migrateLegacyData = (parsedData: any, baseData: FinanceData): Finan
     return merged;
 };
 
+const MAX_UNDO_HISTORY = 25;
+
 // --- ZUSTAND STORE ---
 export const useFinanceStore = create<FinanceState>((set) => ({
     data: defaultData,
+    past: [],
+    future: [],
     results: null,
     planScore: null,
     isCalculating: true,
     mcResults: null,
     setMcResults: (mcResults) => set({ mcResults }),
-    setData: (updater) => set((state) => ({ 
-        data: typeof updater === 'function' ? updater(state.data) : updater 
-    })),
+    setData: (updater, recordHistory = true) => set((state) => {
+        const nextData = typeof updater === 'function' ? updater(state.data) : updater;
+        if (nextData === state.data) return state;
+        if (!recordHistory) return { data: nextData };
+        const nextPast = [...state.past, state.data].slice(-MAX_UNDO_HISTORY);
+        return { data: nextData, past: nextPast, future: [] };
+    }),
+    undo: () => set((state) => {
+        if (state.past.length === 0) return state;
+        const previous = state.past[state.past.length - 1];
+        const nextPast = state.past.slice(0, -1);
+        const nextFuture = [state.data, ...state.future].slice(0, MAX_UNDO_HISTORY);
+        return { data: previous, past: nextPast, future: nextFuture };
+    }),
+    redo: () => set((state) => {
+        if (state.future.length === 0) return state;
+        const next = state.future[0];
+        const nextFuture = state.future.slice(1);
+        const nextPast = [...state.past, state.data].slice(-MAX_UNDO_HISTORY);
+        return { data: next, past: nextPast, future: nextFuture };
+    }),
     setResults: (results) => set((state) => ({
         results,
         planScore: calculatePlanScore(state.data, results?.timeline),
@@ -345,8 +371,10 @@ export const useFinanceStore = create<FinanceState>((set) => ({
 
 // --- STABLE STORE ACTIONS (ZERO RE-RENDERS WHEN IMPORTED ALONE) ---
 export const financeActions = {
-    setData: (updater: FinanceData | ((prev: FinanceData) => FinanceData)) =>
-        useFinanceStore.getState().setData(updater),
+    setData: (updater: FinanceData | ((prev: FinanceData) => FinanceData), recordHistory?: boolean) =>
+        useFinanceStore.getState().setData(updater, recordHistory),
+    undo: () => useFinanceStore.getState().undo(),
+    redo: () => useFinanceStore.getState().redo(),
     setResults: (results: any) => useFinanceStore.getState().setResults(results),
     setIsCalculating: (isCalculating: boolean) => useFinanceStore.getState().setIsCalculating(isCalculating),
     setMcResults: (mcResults: any) => useFinanceStore.getState().setMcResults(mcResults),
@@ -458,6 +486,8 @@ export const useFinanceResults = () => useFinanceStore((state) => state.results)
 export const useFinancePlanScore = () => useFinanceStore((state) => state.planScore);
 export const useFinanceIsCalculating = () => useFinanceStore((state) => state.isCalculating);
 export const useFinanceMonteCarlo = () => useFinanceStore((state) => state.mcResults);
+export const useFinanceCanUndo = () => useFinanceStore((state) => state.past.length > 0);
+export const useFinanceCanRedo = () => useFinanceStore((state) => state.future.length > 0);
 export const useFinanceActions = () => financeActions;
 
 // --- BACKWARDS-COMPATIBLE GLOBAL HOOK ---
@@ -467,6 +497,8 @@ export function useFinance() {
     const planScore = useFinanceStore((state) => state.planScore);
     const isCalculating = useFinanceStore((state) => state.isCalculating);
     const mcResults = useFinanceStore((state) => state.mcResults);
+    const canUndo = useFinanceStore((state) => state.past.length > 0);
+    const canRedo = useFinanceStore((state) => state.future.length > 0);
 
     return {
         data,
@@ -474,6 +506,8 @@ export function useFinance() {
         planScore,
         isCalculating,
         mcResults,
+        canUndo,
+        canRedo,
         ...financeActions,
     };
 }
@@ -493,13 +527,45 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         dataRef.current = data;
     }, [data]);
 
+    // Global Ctrl+Z / Cmd+Z (Undo) & Ctrl+Y / Cmd+Shift+Z (Redo) shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null;
+            if (
+                target &&
+                (target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.tagName === 'SELECT' ||
+                    target.isContentEditable)
+            ) {
+                return;
+            }
+            const isMod = e.ctrlKey || e.metaKey;
+            if (!isMod) return;
+            const key = e.key.toLowerCase();
+            if (key === 'z' && !e.shiftKey) {
+                if (useFinanceStore.getState().past.length > 0) {
+                    e.preventDefault();
+                    useFinanceStore.getState().undo();
+                }
+            } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+                if (useFinanceStore.getState().future.length > 0) {
+                    e.preventDefault();
+                    useFinanceStore.getState().redo();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     useEffect(() => {
         try {
             const savedData = localStorage.getItem('retirement_plan_data');
             if (savedData) {
                 const parsedData = JSON.parse(savedData);
                 if (parsedData && parsedData.inputs) {
-                    setData(migrateLegacyData(parsedData, emptyData));
+                    setData(migrateLegacyData(parsedData, emptyData), false);
                 }
             }
         } catch (e) {
