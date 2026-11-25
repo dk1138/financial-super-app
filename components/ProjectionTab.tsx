@@ -1625,7 +1625,7 @@ export default function ProjectionTab() {
             <thead className="surface-card" style={{ position: 'sticky', top: 0, zIndex: 12, backgroundColor: 'var(--bg-card)' }}>
               <tr style={{ fontSize: '0.75rem', letterSpacing: '0.05em' }}>
                 <th className="py-3 ps-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '44px' }}></th>
-                <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '18%', position: 'sticky', left: 0, zIndex: 14, backgroundColor: 'var(--bg-card)' }}>Year & Events</th>
+                <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '18%' }}>Year & Events</th>
                 {!hiddenCols.phase && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>}
                 {!hiddenCols.ages && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>}
                 {!hiddenCols.income && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>}
@@ -1718,7 +1718,7 @@ export default function ProjectionTab() {
                       <td className="py-3 ps-3 text-center text-primary border-bottom border-secondary border-opacity-25">
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} transition-all`}></i>
                       </td>
-                      <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25" style={{ position: 'sticky', left: 0, zIndex: 5, backgroundColor: 'var(--bg-card)' }}>
+                      <td className="py-3 fw-bold text-start ps-2 text-main border-bottom border-secondary border-opacity-25">
                         <div className="d-flex align-items-center flex-wrap gap-1">
                             <span className="fs-6 me-1">{y.year}</span>
                             {isLiquidDepleted && (

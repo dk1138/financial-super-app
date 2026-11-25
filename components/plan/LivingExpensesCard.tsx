@@ -46,6 +46,25 @@ export default function LivingExpensesCard() {
     updateExpenseCategory(cat, newList);
   };
 
+  const applyGoGoPreset = () => {
+    setExpenseAdvancedMode(true);
+    Object.keys(data.expensesByCategory || {}).forEach((cat) => {
+      const items = data.expensesByCategory[cat]?.items || [];
+      const updated = items.map((item: any) => {
+        const base = Number(item.ret) || Number(item.curr) || 0;
+        return {
+          ...item,
+          ret: Math.round(base),
+          trans: Math.round(base),
+          gogo: Math.round(base),
+          slow: Math.round(base * 0.85),
+          nogo: Math.round(base * 0.70),
+        };
+      });
+      updateExpenseCategory(cat, updated);
+    });
+  };
+
   const calcExpenseTotal = (phase: string) => {
       let total = 0;
       Object.values(data.expensesByCategory || {}).forEach((cat: any) => {
@@ -148,11 +167,22 @@ export default function LivingExpensesCard() {
                 <i className="bi bi-magic me-1"></i> Auto-Fill
             </button>
         </div>
-        <div className="form-check form-switch mb-0 d-flex align-items-center">
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-info rounded-pill fw-bold px-3 py-1 d-flex align-items-center gap-1 shadow-sm"
+            style={{ fontSize: "0.74rem" }}
+            onClick={applyGoGoPreset}
+            title="Enable Adv. Mode and auto-fill Go-Go (100%), Slow-Go (-15%), and No-Go (-30%) for all expenses"
+          >
+            <i className="bi bi-stars"></i> Go-Go / Slow-Go / No-Go
+          </button>
+          <div className="form-check form-switch mb-0 d-flex align-items-center">
             <input className="form-check-input m-0 mt-1 cursor-pointer" type="checkbox" id="advancedModeToggle" checked={expenseAdvancedMode} onChange={(e) => setExpenseAdvancedMode(e.target.checked)} />
             <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-2 cursor-pointer d-flex align-items-center" htmlFor="advancedModeToggle">
                 {t('expensesCard.advMode', 'Adv. Mode')}
             </label>
+          </div>
         </div>
       </div>
 
@@ -163,38 +193,9 @@ export default function LivingExpensesCard() {
                 <h6 className="mb-0 fw-bold text-info text-uppercase ls-1 d-flex align-items-center gap-2">
                     <i className="bi bi-calendar-range"></i> {t('expensesCard.phasedTitle', 'Phased Expenses & Housing Transitions')}
                 </h6>
-                <div className="d-flex align-items-center gap-2 flex-wrap">
-                    <button
-                        type="button"
-                        className="btn btn-sm btn-outline-info fw-bold rounded-pill px-3 py-1"
-                        style={{ fontSize: "0.74rem" }}
-                        title="Auto-populate Go-Go (100%), Slow-Go (85%), and No-Go (75%) retirement spending phases"
-                        onClick={() => {
-                            const retAge = Number(data.inputs.p1_retireAge) || 65;
-                            const lifeExp = Number(data.inputs.p1_lifeExp) || 95;
-                            let baseMonthly = Math.round((Number(data.inputs.exp_basic_ret) || 60000) / 12);
-                            if (String(data.expenseMode || '').toLowerCase() === 'advanced' && data.expensesByCategory) {
-                                let sum = 0;
-                                Object.values(data.expensesByCategory).forEach((cat: any) => {
-                                    (cat?.items || []).forEach((it: any) => {
-                                        sum += (Number(it.ret) || 0) * (Number(it.freq) || 12);
-                                    });
-                                });
-                                if (sum > 0) baseMonthly = Math.round(sum / 12);
-                            }
-                            const slowStart = Math.min(lifeExp - 5, Math.max(retAge + 5, 75));
-                            const noGoStart = Math.min(lifeExp - 2, Math.max(slowStart + 5, 85));
-                            addArrayItem("expensePhases", { name: "Go-Go Years (Active Travel)", amount: baseMonthly, startAge: retAge, endAge: slowStart - 1, isPhased: true });
-                            addArrayItem("expensePhases", { name: "Slow-Go Years (-15%)", amount: Math.round(baseMonthly * 0.85), startAge: slowStart, endAge: noGoStart - 1, isPhased: true });
-                            addArrayItem("expensePhases", { name: "No-Go Years (-25%)", amount: Math.round(baseMonthly * 0.75), startAge: noGoStart, endAge: lifeExp, isPhased: true });
-                        }}
-                    >
-                        <i className="bi bi-stars me-1"></i> Go-Go / Slow-Go / No-Go
-                    </button>
-                    <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('expensePhases', { name: 'Future Rent / LTC', amount: 4000, startAge: 80, endAge: 100, isPhased: true })}>
+                <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('expensePhases', { name: 'Future Rent / LTC', amount: 4000, startAge: 80, endAge: 100, isPhased: true })}>
                     <i className="bi bi-plus-lg me-1"></i> {t('expensesCard.addPhase', 'Add Phase')}
-                    </button>
-                </div>
+                </button>
             </div>
             
             {(!data.expensePhases || data.expensePhases.length === 0) ? (
