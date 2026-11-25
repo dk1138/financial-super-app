@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useFinance } from '../lib/FinanceContext';
+import {
+  useFinanceStore,
+  useFinanceCanUndo,
+  useFinanceCanRedo,
+  useFinanceActions,
+} from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
 import { CANADIAN_PERSONAS } from '../lib/personas';
 
@@ -12,7 +17,7 @@ interface CommandItem {
   label: string;
   subtitle?: string;
   icon: string;
-  keywords: string;
+  searchIndex: string;
   shortcut?: string;
   action: () => void;
 }
@@ -58,17 +63,18 @@ const QUICK_TOOLS: Array<{ id: string; title: string; frTitle: string; category:
   { id: 'cppimport', title: 'CPP Statement Importer', frTitle: 'Importateur relevé RPC', category: 'Data Importers', keywords: 'cpp import service canada statement' },
 ];
 
-export default function CommandPaletteModal({
-  isOpen,
+function CommandPaletteContent({
   onClose,
   onToggleTheme,
   onQuickSave,
   onOpenShare,
-}: CommandPaletteModalProps) {
+}: Omit<CommandPaletteModalProps, 'isOpen'>) {
   const router = useRouter();
   const pathname = usePathname();
-  const financeContext = useFinance() as any;
-  const { data, updateUseRealDollars, undo, redo, canUndo, canRedo, loadData } = financeContext;
+  const useRealDollars = useFinanceStore((s) => Boolean(s.data.useRealDollars));
+  const canUndo = useFinanceCanUndo();
+  const canRedo = useFinanceCanRedo();
+  const { updateUseRealDollars, undo, redo, loadData } = useFinanceActions();
   const { lang, toggleLang, t } = useTranslation();
   const isFr = lang === 'fr';
 
@@ -77,12 +83,8 @@ export default function CommandPaletteModal({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 30);
-    }
-  }, [isOpen]);
+    inputRef.current?.focus();
+  }, []);
 
   const navigatePlanner = (tab: string, toolId?: string, sectionId?: string) => {
     onClose();
@@ -100,72 +102,78 @@ export default function CommandPaletteModal({
 
   const allItems = useMemo<CommandItem[]>(() => {
     const items: CommandItem[] = [];
+    const pushItem = (
+      item: Omit<CommandItem, 'searchIndex'> & { keywords: string }
+    ) => {
+      items.push({
+        ...item,
+        searchIndex: `${item.label} ${item.subtitle || ''} ${item.group} ${item.keywords}`.toLowerCase(),
+      });
+    };
 
     // 1. Quick Actions
     const actionsGroup = isFr ? 'Actions rapides' : 'Quick Actions';
-    items.push(
-      {
-        id: 'act-save',
-        group: actionsGroup,
-        label: isFr ? 'Sauvegarder le plan actuel' : 'Quick Save Current Plan',
-        icon: 'bi-floppy-fill text-primary',
-        keywords: 'save sauvegarde enregistrer ctrl+s',
-        shortcut: 'Ctrl+S',
-        action: () => {
-          onClose();
-          onQuickSave();
-        },
+    pushItem({
+      id: 'act-save',
+      group: actionsGroup,
+      label: isFr ? 'Sauvegarder le plan actuel' : 'Quick Save Current Plan',
+      icon: 'bi-floppy-fill text-primary',
+      keywords: 'save sauvegarde enregistrer ctrl+s',
+      shortcut: 'Ctrl+S',
+      action: () => {
+        onClose();
+        onQuickSave();
       },
-      {
-        id: 'act-real',
-        group: actionsGroup,
-        label: data.useRealDollars
-          ? (isFr ? 'Passer en dollars nominaux ($)' : 'Switch to Nominal Dollars')
-          : (isFr ? "Passer en dollars d'aujourd'hui" : "Switch to Today's Dollars (Real)"),
-        icon: 'bi-currency-dollar text-info',
-        keywords: 'real nominal todays dollars inflation toggle',
-        action: () => {
-          updateUseRealDollars(!data.useRealDollars);
-          onClose();
-        },
+    });
+    pushItem({
+      id: 'act-real',
+      group: actionsGroup,
+      label: useRealDollars
+        ? (isFr ? 'Passer en dollars nominaux ($)' : 'Switch to Nominal Dollars')
+        : (isFr ? "Passer en dollars d'aujourd'hui" : "Switch to Today's Dollars (Real)"),
+      icon: 'bi-currency-dollar text-info',
+      keywords: 'real nominal todays dollars inflation toggle',
+      action: () => {
+        updateUseRealDollars(!useRealDollars);
+        onClose();
       },
-      {
-        id: 'act-lang',
-        group: actionsGroup,
-        label: isFr ? 'Switch to English (EN)' : 'Passer en français (FR)',
-        icon: 'bi-translate text-primary',
-        keywords: 'language langue english french francais en fr',
-        action: () => {
-          toggleLang();
-          onClose();
-        },
+    });
+    pushItem({
+      id: 'act-lang',
+      group: actionsGroup,
+      label: isFr ? 'Switch to English (EN)' : 'Passer en français (FR)',
+      icon: 'bi-translate text-primary',
+      keywords: 'language langue english french francais en fr',
+      action: () => {
+        toggleLang();
+        onClose();
       },
-      {
-        id: 'act-theme',
-        group: actionsGroup,
-        label: isFr ? 'Changer le thème (Sombre / Clair)' : 'Toggle Dark / Light Theme',
-        icon: 'bi-circle-half text-warning',
-        keywords: 'dark light theme mode sombre clair',
-        action: () => {
-          onToggleTheme();
-          onClose();
-        },
+    });
+    pushItem({
+      id: 'act-theme',
+      group: actionsGroup,
+      label: isFr ? 'Changer le thème (Sombre / Clair)' : 'Toggle Dark / Light Theme',
+      icon: 'bi-circle-half text-warning',
+      keywords: 'dark light theme mode sombre clair',
+      action: () => {
+        onToggleTheme();
+        onClose();
       },
-      {
-        id: 'act-share',
-        group: actionsGroup,
-        label: isFr ? 'Partager le lien du plan (URL)' : 'Share Plan Link (URL)',
-        icon: 'bi-share-fill text-success',
-        keywords: 'share link url export',
-        action: () => {
-          onClose();
-          onOpenShare();
-        },
-      }
-    );
+    });
+    pushItem({
+      id: 'act-share',
+      group: actionsGroup,
+      label: isFr ? 'Partager le lien du plan (URL)' : 'Share Plan Link (URL)',
+      icon: 'bi-share-fill text-success',
+      keywords: 'share link url export',
+      action: () => {
+        onClose();
+        onOpenShare();
+      },
+    });
 
     if (canUndo) {
-      items.push({
+      pushItem({
         id: 'act-undo',
         group: actionsGroup,
         label: isFr ? 'Annuler la dernière modification' : 'Undo Last Change',
@@ -179,7 +187,7 @@ export default function CommandPaletteModal({
       });
     }
     if (canRedo) {
-      items.push({
+      pushItem({
         id: 'act-redo',
         group: actionsGroup,
         label: isFr ? 'Rétablir la modification' : 'Redo Change',
@@ -207,12 +215,12 @@ export default function CommandPaletteModal({
       { id: 'databank', label: t('tabs.dataBank', 'Data Bank'), icon: 'bi-clock-history', kw: 'data bank banque donnees' },
     ];
     tabDefs.forEach((tb) => {
-      items.push({
+      pushItem({
         id: `tab-${tb.id}`,
         group: tabsGroup,
         label: tb.label,
         icon: `${tb.icon} text-primary`,
-        keywords: `${tb.label} ${tb.kw}`,
+        keywords: tb.kw,
         action: () => navigatePlanner(tb.id),
       });
     });
@@ -227,12 +235,12 @@ export default function CommandPaletteModal({
       { id: 'tax', en: '5. Income & Taxation', fr: '5. Revenus et impôts', icon: 'bi-cash-coin' },
       { id: 'living', en: '6. Living Expenses', fr: '6. Frais de subsistance', icon: 'bi-cart4' },
       { id: 'future', en: '7. Debts & Future Expenses', fr: '7. Dettes et dépenses futures', icon: 'bi-cart-dash' },
-      { id: 'windfalls', en: '8. Windfalls & Inflows', fr: '8. Rentrees et héritages', icon: 'bi-gift' },
+      { id: 'windfalls', en: '8. Windfalls & Inflows', fr: '8. Rentrées et héritages', icon: 'bi-gift' },
       { id: 'govt', en: '9. Government Benefits (CPP, OAS, DB)', fr: '9. Prestations gouv. (RPC/RRQ, SV, PD)', icon: 'bi-bank' },
       { id: 'economic', en: '10. Economic Assumptions', fr: '10. Hypothèses économiques', icon: 'bi-graph-up-arrow' },
     ];
     sections.forEach((s) => {
-      items.push({
+      pushItem({
         id: `sec-${s.id}`,
         group: secGroup,
         label: isFr ? s.fr : s.en,
@@ -245,13 +253,13 @@ export default function CommandPaletteModal({
     // 4. 30 Tools & Calculators
     const toolsGroup = isFr ? 'Outils et calculateurs (30)' : 'Tools & Calculators (30)';
     QUICK_TOOLS.forEach((tool) => {
-      items.push({
+      pushItem({
         id: `tool-${tool.id}`,
         group: toolsGroup,
         label: isFr ? tool.frTitle : tool.title,
         subtitle: tool.category,
         icon: 'bi-calculator text-success',
-        keywords: `${tool.title} ${tool.frTitle} ${tool.category} ${tool.keywords}`,
+        keywords: `${tool.title} ${tool.frTitle} ${tool.keywords}`,
         action: () => navigatePlanner('optimizers', tool.id),
       });
     });
@@ -259,13 +267,13 @@ export default function CommandPaletteModal({
     // 5. Canadian Personas
     const personaGroup = isFr ? 'Profils canadiens prêts à l’emploi' : 'Canadian Persona Presets';
     CANADIAN_PERSONAS.forEach((p) => {
-      items.push({
+      pushItem({
         id: `persona-${p.id}`,
         group: personaGroup,
         label: p.title,
         subtitle: p.subtitle,
         icon: 'bi-person-badge text-warning',
-        keywords: `${p.title} ${p.subtitle} persona preset sample`,
+        keywords: 'persona preset sample',
         action: () => {
           if (loadData) {
             loadData(p.buildPlan());
@@ -278,26 +286,32 @@ export default function CommandPaletteModal({
     });
 
     return items;
-  }, [isFr, data.useRealDollars, canUndo, canRedo, pathname]);
+  }, [isFr, useRealDollars, canUndo, canRedo, pathname]);
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) {
-      // Show Quick Actions + Tabs + top Tools by default
-      return allItems.slice(0, 18);
+    if (!q) return allItems.slice(0, 16);
+    const tokens = q.split(/\s+/);
+    const matches: CommandItem[] = [];
+    for (let i = 0; i < allItems.length; i++) {
+      const item = allItems[i];
+      let ok = true;
+      for (let j = 0; j < tokens.length; j++) {
+        if (!item.searchIndex.includes(tokens[j])) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        matches.push(item);
+        if (matches.length >= 16) break;
+      }
     }
-    const tokens = q.split(/\s+/).filter(Boolean);
-    return allItems
-      .filter((item) => {
-        const hay = `${item.label} ${item.subtitle || ''} ${item.group} ${item.keywords}`.toLowerCase();
-        return tokens.every((tok) => hay.includes(tok));
-      })
-      .slice(0, 20);
+    return matches;
   }, [allItems, query]);
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+  const safeSelectedIndex =
+    filteredItems.length === 0 ? 0 : Math.min(selectedIndex, filteredItems.length - 1);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -308,16 +322,14 @@ export default function CommandPaletteModal({
       setSelectedIndex((prev) =>
         filteredItems.length ? (prev - 1 + filteredItems.length) % filteredItems.length : 0
       );
-    } else if (e.key === 'Enter' && filteredItems[selectedIndex]) {
+    } else if (e.key === 'Enter' && filteredItems[safeSelectedIndex]) {
       e.preventDefault();
-      filteredItems[selectedIndex].action();
+      filteredItems[safeSelectedIndex].action();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       onClose();
     }
   };
-
-  if (!isOpen) return null;
 
   let lastGroup = '';
 
@@ -326,15 +338,18 @@ export default function CommandPaletteModal({
       className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-start justify-content-center px-3"
       style={{
         zIndex: 10050,
-        backgroundColor: 'rgba(15, 23, 42, 0.58)',
-        backdropFilter: 'blur(4px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
         paddingTop: '11vh',
       }}
       onClick={onClose}
     >
       <div
         className="rp-card border border-secondary rounded-4 shadow-lg overflow-hidden w-100"
-        style={{ maxWidth: '620px', backgroundColor: 'var(--bg-card)' }}
+        style={{
+          maxWidth: '620px',
+          backgroundColor: 'var(--bg-card)',
+          contain: 'layout style',
+        }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
@@ -351,7 +366,10 @@ export default function CommandPaletteModal({
                 : 'Jump to any tab, input card, calculator (e.g. CPP, RRSP, FIRE), or action...'
             }
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
             style={{ fontSize: '0.95rem' }}
           />
           <kbd className="bg-secondary bg-opacity-25 text-muted px-2 py-1 rounded small fw-bold" style={{ fontSize: '0.68rem' }}>
@@ -370,7 +388,7 @@ export default function CommandPaletteModal({
             filteredItems.map((item, idx) => {
               const showGroup = item.group !== lastGroup;
               lastGroup = item.group;
-              const isSelected = idx === selectedIndex;
+              const isSelected = idx === safeSelectedIndex;
 
               return (
                 <React.Fragment key={item.id}>
@@ -384,10 +402,10 @@ export default function CommandPaletteModal({
                   )}
                   <button
                     type="button"
-                    className={`w-100 btn text-start d-flex align-items-center justify-content-between gap-2 px-2.5 py-2 rounded-3 border-0 transition-all ${
+                    className={`w-100 btn text-start d-flex align-items-center justify-content-between gap-2 px-2.5 py-2 rounded-3 border-0 ${
                       isSelected ? 'bg-primary bg-opacity-10 text-main' : 'bg-transparent text-main'
                     }`}
-                    onMouseEnter={() => setSelectedIndex(idx)}
+                    onMouseMove={isSelected ? undefined : () => setSelectedIndex(idx)}
                     onClick={item.action}
                   >
                     <div className="d-flex align-items-center gap-2.5 overflow-hidden">
@@ -434,5 +452,17 @@ export default function CommandPaletteModal({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CommandPaletteModal(props: CommandPaletteModalProps) {
+  if (!props.isOpen) return null;
+  return (
+    <CommandPaletteContent
+      onClose={props.onClose}
+      onToggleTheme={props.onToggleTheme}
+      onQuickSave={props.onQuickSave}
+      onOpenShare={props.onOpenShare}
+    />
   );
 }

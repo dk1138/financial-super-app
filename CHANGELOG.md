@@ -22,7 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Tooltip HTML sanitization (`lib/sanitizeHtml.ts`, `components/SharedUI.tsx`)**: Added an allowlist HTML sanitizer to `InfoBtn` to strip scripts, iframes, and event handlers before rendering tooltips.
 
 ### Fixed
-- **UX polish & 60fps scroll performance (`components/OptimizersTab.tsx`, `components/GlobalHeader.tsx`, `components/PlanTab.tsx`, `app/globals.css`)**:
+- **UX polish & 60fps scroll / search performance (`components/OptimizersTab.tsx`, `components/GlobalHeader.tsx`, `components/CommandPaletteModal.tsx`, `components/PlanTab.tsx`, `app/globals.css`)**:
+  - Made `Ctrl+K` Command Palette search instant by removing full-screen `backdrop-filter: blur(4px)`, mounting hooks only when open, subscribing to granular Zustand selectors instead of the full store, and precomputing lowercase search indices.
   - Kept tool cards at standard 3-column grid size when jumped to via `Ctrl+K` (using a clean border outline highlight instead of auto-expanding and breaking the grid).
   - Fixed the amber **Save** / Unsaved Changes pill in `GlobalHeader.tsx` to baseline against the initial loaded plan (so edits on untitled/sample/persona plans immediately show the pill), debounced plan fingerprinting (`300ms`), and added a compact responsive Save pill for smaller viewports.
   - Eliminated scroll jank by removing `backdrop-filter: blur(...)` from sticky bars (`.sticky-jump-bar-wrapper`, `.floating-readiness-island`), switching `.fade-in-tab` to opacity-only (removing the permanent `transform: translateY(0)` full-page stacking context), and adding `contain: layout style` to `.plan-card-wrapper`.
