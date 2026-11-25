@@ -266,7 +266,7 @@ export default function CoastFireCalculator() {
 
             <div className="fs-4 fw-bolder text-main mb-2">{fmtCurrency(calc.coastNumberToday)}</div>
 
-            <div className="progress bg-black bg-opacity-25 rounded-pill mb-3" style={{ height: '7px' }}>
+            <div className="progress bg-secondary bg-opacity-25 rounded-pill mb-3" style={{ height: '7px' }}>
               <div
                 className={`progress-bar rounded-pill ${calc.isAlreadyCoast ? 'bg-success' : 'bg-info'}`}
                 style={{ width: `${calc.coastProgressPct}%` }}

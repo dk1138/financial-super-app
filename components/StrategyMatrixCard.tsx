@@ -243,7 +243,7 @@ export default function StrategyMatrixCard() {
             )}
 
             <div className="table-responsive rounded-4 border border-secondary bg-input shadow-sm overflow-hidden">
-              <table className="table table-dark table-hover align-middle mb-0 small">
+              <table className="table table-hover align-middle mb-0 small">
                 <thead className="surface-card border-bottom border-secondary">
                   <tr className="text-muted text-uppercase" style={{ fontSize: '0.7rem' }}>
                     <th className="ps-3 py-2.5">Rank</th>

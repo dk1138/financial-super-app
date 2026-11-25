@@ -269,7 +269,7 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
 
         {heatmap && (
           <div className="table-responsive rounded-4 border border-secondary bg-input shadow-sm overflow-hidden">
-            <table className="table table-dark align-middle mb-0 text-center" style={{ fontSize: isExpanded ? '0.8rem' : '0.68rem' }}>
+            <table className="table align-middle mb-0 text-center" style={{ fontSize: isExpanded ? '0.8rem' : '0.68rem' }}>
               <thead className="surface-card border-bottom border-secondary">
                 <tr className="text-muted text-uppercase" style={{ fontSize: isExpanded ? '0.7rem' : '0.62rem' }}>
                   <th className="py-2 text-start ps-2">Age \ Spend</th>

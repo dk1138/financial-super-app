@@ -49,11 +49,20 @@
   /* Kumo Light Signal & Accent Roles */
   --primary: #0284c7;                   /* Accessible brand blue */
   --primary-hover: #0369a1;
+  --bs-primary: #0284c7;
+  --bs-primary-rgb: 2, 132, 199;
   --info: #0369a1;                      /* Deep ocean cyan */
+  --bs-info: #0369a1;
+  --bs-info-rgb: 3, 105, 161;
   --success: #16a34a;                   /* High-contrast emerald green */
-  --warning: #d97706;                   /* Darker amber/orange for strong contrast */
-  --bs-warning: #d97706;
+  --bs-success: #16a34a;
+  --bs-success-rgb: 22, 163, 74;
+  --warning: #b45309;                   /* High-contrast deep amber on white */
+  --bs-warning: #b45309;
+  --bs-warning-rgb: 180, 83, 9;
   --danger: #dc2626;                    /* Clear scarlet red */
+  --bs-danger: #dc2626;
+  --bs-danger-rgb: 220, 38, 38;
   --purple: #6366f1;                    /* Indigo */
   --bs-purple: #6366f1;
 
@@ -204,16 +213,19 @@ body {
   border-color: var(--border-soft);
 }
 
-/* Table Dark Inversion for Light Mode */
+/* Table Dark Inversion for Light Mode (preserves utility cell colors & highlights) */
 [data-bs-theme="light"] .table-dark {
   --bs-table-bg: #ffffff;
+  --bs-table-striped-bg: #f8fafc;
+  --bs-table-hover-bg: #f1f5f9;
+  --bs-table-active-bg: #e2e8f0;
   --bs-table-color: var(--text-main);
+  --bs-table-striped-color: var(--text-main);
+  --bs-table-hover-color: var(--text-main);
   --bs-table-border-color: var(--border-soft);
 }
 [data-bs-theme="light"] .table-dark th,
 [data-bs-theme="light"] .table-dark td {
-  background-color: #ffffff !important;
-  color: var(--text-main) !important;
   border-bottom-color: var(--border-soft) !important;
 }
 [data-bs-theme="light"] .table-dark .surface-card,
