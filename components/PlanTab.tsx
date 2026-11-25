@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import PersonalInformationCard from './plan/PersonalInformationCard';
 import DependentsCard from './plan/DependentsCard';
 import PortfolioAssetsCard from './plan/PortfolioAssetsCard';
@@ -13,23 +13,28 @@ import GovtBenefitsCard from './plan/GovtBenefitsCard';
 import EconomicAssumptionsCard from './plan/EconomicAssumptionsCard';
 import { useFinance } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
+import { validatePlanInputs, getSectionCompletion } from '../lib/planValidation';
 
 export default function PlanTab() {
-  const { data, results } = useFinance();
-  const { t, lang } = useTranslation();
+  const { data, results, planScore } = useFinance();
+  const { t, lang, formatShortCurrency } = useTranslation();
   const isFr = lang === 'fr';
 
   // Collapsed state map for the 10 sections
   const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
   const [activeJumpSection, setActiveJumpSection] = useState<string>('personal');
+  const [estateDelta, setEstateDelta] = useState<number>(0);
+  const prevEstateRef = useRef<number | null>(null);
+  const deltaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sectionWarnings = useMemo(() => validatePlanInputs(data, lang), [data, lang]);
+  const sectionCompletion = useMemo(() => getSectionCompletion(data), [data]);
 
   // Auto-expand and scroll to Tax Card when DTC is toggled from LTC housing phase
   useEffect(() => {
-    const handleFocusDtc = (e: any) => {
-      // 1. Expand Card 5 (tax) if collapsed
+    const handleFocusDtc = () => {
       setCollapsedMap(prev => ({ ...prev, tax: false }));
       setActiveJumpSection('tax');
-      // 2. Smoothly scroll into view
       setTimeout(() => {
         const el = document.getElementById('section-tax');
         if (el) {
@@ -111,11 +116,19 @@ export default function PlanTab() {
     }, 60);
   };
 
-  const formatShort = (val: number) => {
-    if (Math.abs(val) >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
-    if (Math.abs(val) >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-    return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
-  };
+  // Listen for Command Palette section jumps
+  useEffect(() => {
+    const handleScrollSection = (e: Event) => {
+      const sectionId = (e as CustomEvent).detail;
+      if (typeof sectionId === 'string') {
+        scrollToSection(sectionId);
+      }
+    };
+    window.addEventListener('planfolio:scrollSection', handleScrollSection);
+    return () => window.removeEventListener('planfolio:scrollSection', handleScrollSection);
+  }, []);
+
+  const formatShort = (val: number) => formatShortCurrency(val);
 
   // --- SMART COLLAPSED CARD SUMMARIES (CENTERED & MATCHING TITLE SCALE) ---
   const sectionSummaries = useMemo(() => {
@@ -279,6 +292,84 @@ export default function PlanTab() {
       useRealDollars
     };
   }, [results, data]);
+
+  // Flash live estate delta whenever user edits an input
+  useEffect(() => {
+    if (!liveStats) return;
+    if (prevEstateRef.current !== null && Math.abs(liveStats.finalEstate - prevEstateRef.current) >= 500) {
+      setEstateDelta(liveStats.finalEstate - prevEstateRef.current);
+      if (deltaTimerRef.current) clearTimeout(deltaTimerRef.current);
+      deltaTimerRef.current = setTimeout(() => setEstateDelta(0), 4000);
+    }
+    prevEstateRef.current = liveStats.finalEstate;
+  }, [liveStats?.finalEstate]);
+
+  const completedCount = useMemo(
+    () => Object.values(sectionCompletion).filter(Boolean).length,
+    [sectionCompletion]
+  );
+
+  const renderSectionCard = (id: string, cardEl: React.ReactNode, nextIdx?: number) => {
+    const warnings = sectionWarnings[id] || [];
+    const nextSec = nextIdx !== undefined ? jumpSections[nextIdx] : undefined;
+    const isCollapsed = Boolean(collapsedMap[id]);
+
+    return (
+      <div id={`section-${id}`} className={`plan-card-wrapper ${isCollapsed ? 'is-collapsed' : ''}`} key={id}>
+        {isCollapsed && (
+          <div className="collapse-summary-text d-none d-md-flex">
+            {(sectionSummaries as Record<string, string>)[id]}
+          </div>
+        )}
+        <button
+          type="button"
+          className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
+          onClick={() => toggleSection(id)}
+          title={isCollapsed ? (isFr ? 'Déplier la section' : 'Expand section') : (isFr ? 'Replier la section' : 'Collapse section')}
+        >
+          <i className={`bi bi-chevron-${isCollapsed ? 'down' : 'up'} fs-5`}></i>
+        </button>
+
+        {/* Smart Input Validation / Sanity Check Banner (#3) */}
+        {warnings.length > 0 && !isCollapsed && (
+          <div className="d-flex flex-column gap-1.5 mb-2">
+            {warnings.map((w) => (
+              <div
+                key={w.id}
+                className={`alert py-2 px-3 mb-0 rounded-3 d-flex align-items-center gap-2 small fw-semibold ${
+                  w.severity === 'warning'
+                    ? 'border-warning bg-warning bg-opacity-10 text-warning'
+                    : 'border-info bg-info bg-opacity-10 text-info'
+                }`}
+                style={{ fontSize: '0.78rem' }}
+              >
+                <i className={`bi ${w.severity === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'} flex-shrink-0`}></i>
+                <span>{w.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {cardEl}
+
+        {/* Guided "Next Section →" Footer (#6) */}
+        {!isCollapsed && nextSec && (
+          <div className="d-flex justify-content-end mb-4" style={{ marginTop: '-0.85rem' }}>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold bg-input shadow-sm d-inline-flex align-items-center gap-1.5"
+              style={{ fontSize: '0.74rem' }}
+              onClick={() => scrollToSection(nextSec.id)}
+            >
+              <span className="text-muted">{isFr ? 'Suivant :' : 'Next:'}</span>
+              <span className="text-main">{nextSec.label}</span>
+              <i className="bi bi-arrow-down-short fs-6 text-primary"></i>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="p-3 p-md-4 position-relative">
@@ -470,20 +561,50 @@ export default function PlanTab() {
       <div className="sticky-jump-bar-wrapper">
         <div className="d-flex align-items-center justify-content-between gap-2">
           <div className="jump-pills-scroll flex-grow-1">
-            {jumpSections.map((sec) => (
-              <button
-                key={sec.id}
-                type="button"
-                className={`jump-pill-btn ${activeJumpSection === sec.id ? 'active' : ''}`}
-                onClick={() => scrollToSection(sec.id)}
-              >
-                <i className={`bi ${sec.icon}`} style={{ fontSize: '0.8rem' }}></i>
-                <span>{sec.label}</span>
-              </button>
-            ))}
+            {jumpSections.map((sec) => {
+              const hasWarning = (sectionWarnings[sec.id]?.length || 0) > 0;
+              const isDone = Boolean(sectionCompletion[sec.id]);
+              return (
+                <button
+                  key={sec.id}
+                  type="button"
+                  className={`jump-pill-btn ${activeJumpSection === sec.id ? 'active' : ''}`}
+                  onClick={() => scrollToSection(sec.id)}
+                  title={
+                    hasWarning
+                      ? sectionWarnings[sec.id][0].message
+                      : isDone
+                      ? (isFr ? 'Section remplie' : 'Section populated')
+                      : undefined
+                  }
+                >
+                  <i className={`bi ${sec.icon}`} style={{ fontSize: '0.8rem' }}></i>
+                  <span>{sec.label}</span>
+                  {hasWarning ? (
+                    <i
+                      className="bi bi-exclamation-circle-fill text-warning ms-0.5"
+                      style={{ fontSize: '0.72rem' }}
+                    ></i>
+                  ) : isDone ? (
+                    <i
+                      className={`bi bi-check-circle-fill ms-0.5 ${activeJumpSection === sec.id ? 'text-white opacity-75' : 'text-success'}`}
+                      style={{ fontSize: '0.68rem' }}
+                    ></i>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
 
           <div className="d-flex align-items-center gap-1.5 flex-shrink-0 ms-1 border-start border-secondary ps-2">
+            <span
+              className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1 fw-bold d-none d-xl-inline-flex align-items-center gap-1"
+              style={{ fontSize: '0.7rem' }}
+              title={isFr ? 'Sections complétées' : 'Populated sections'}
+            >
+              <i className="bi bi-check2-all"></i>
+              <span>{completedCount}/10</span>
+            </span>
             <button 
               type="button" 
               className="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold bg-input shadow-sm"
@@ -510,190 +631,19 @@ export default function PlanTab() {
 
       {/* --- FORM WITH THE 10 CARDS --- */}
       <form id="financialForm" onSubmit={e => e.preventDefault()}>
-        
-        {/* 1. Personal Information */}
-        <div id="section-personal" className={`plan-card-wrapper ${collapsedMap['personal'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['personal'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.personal}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('personal')}
-            title={collapsedMap['personal'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['personal'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <PersonalInformationCard />
-        </div>
-
-        {/* 2. Dependents & Family */}
-        <div id="section-dependents" className={`plan-card-wrapper ${collapsedMap['dependents'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['dependents'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.dependents}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('dependents')}
-            title={collapsedMap['dependents'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['dependents'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <DependentsCard />
-        </div>
-
-        {/* 3. Portfolio Assets */}
-        <div id="section-portfolio" className={`plan-card-wrapper ${collapsedMap['portfolio'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['portfolio'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.portfolio}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('portfolio')}
-            title={collapsedMap['portfolio'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['portfolio'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <PortfolioAssetsCard />
-        </div>
-
-        {/* 4. Real Estate & Living Costs */}
-        <div id="section-realestate" className={`plan-card-wrapper ${collapsedMap['realestate'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['realestate'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.realestate}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('realestate')}
-            title={collapsedMap['realestate'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['realestate'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <LivingCostCard />
-        </div>
-
-        {/* 5. Income & Taxes */}
-        <div id="section-tax" className={`plan-card-wrapper ${collapsedMap['tax'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['tax'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.tax}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('tax')}
-            title={collapsedMap['tax'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['tax'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <IncomeTaxCard />
-        </div>
-
-        {/* 6. Living Expenses */}
-        <div id="section-living" className={`plan-card-wrapper ${collapsedMap['living'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['living'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.living}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('living')}
-            title={collapsedMap['living'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['living'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <LivingExpensesCard />
-        </div>
-
-        {/* 7. Future Milestone Expenses */}
-        <div id="section-future" className={`plan-card-wrapper ${collapsedMap['future'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['future'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.future}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('future')}
-            title={collapsedMap['future'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['future'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <FutureExpensesCard />
-        </div>
-
-        {/* 8. Windfalls */}
-        <div id="section-windfalls" className={`plan-card-wrapper ${collapsedMap['windfalls'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['windfalls'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.windfalls}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('windfalls')}
-            title={collapsedMap['windfalls'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['windfalls'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <WindfallsCard />
-        </div>
-
-        {/* 9. Government Benefits */}
-        <div id="section-govt" className={`plan-card-wrapper ${collapsedMap['govt'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['govt'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.govt}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('govt')}
-            title={collapsedMap['govt'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['govt'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <GovtBenefitsCard />
-        </div>
-
-        {/* 10. Economic Assumptions */}
-        <div id="section-economic" className={`plan-card-wrapper ${collapsedMap['economic'] ? 'is-collapsed' : ''}`}>
-          {collapsedMap['economic'] && (
-            <div className="collapse-summary-text d-none d-md-flex">
-              {sectionSummaries.economic}
-            </div>
-          )}
-          <button 
-            type="button" 
-            className="btn btn-sm btn-link text-muted p-0 collapse-chevron-btn"
-            onClick={() => toggleSection('economic')}
-            title={collapsedMap['economic'] ? "Expand section" : "Collapse section"}
-          >
-            <i className={`bi bi-chevron-${collapsedMap['economic'] ? 'down' : 'up'} fs-5`}></i>
-          </button>
-          <EconomicAssumptionsCard />
-        </div>
-
+        {renderSectionCard('personal', <PersonalInformationCard />, 1)}
+        {renderSectionCard('dependents', <DependentsCard />, 2)}
+        {renderSectionCard('portfolio', <PortfolioAssetsCard />, 3)}
+        {renderSectionCard('realestate', <LivingCostCard />, 4)}
+        {renderSectionCard('tax', <IncomeTaxCard />, 5)}
+        {renderSectionCard('living', <LivingExpensesCard />, 6)}
+        {renderSectionCard('future', <FutureExpensesCard />, 7)}
+        {renderSectionCard('windfalls', <WindfallsCard />, 8)}
+        {renderSectionCard('govt', <GovtBenefitsCard />, 9)}
+        {renderSectionCard('economic', <EconomicAssumptionsCard />)}
       </form>
 
-      {/* --- CENTERED FLOATING READINESS ISLAND --- */}
+      {/* --- LIVE OUTCOME RIBBON (#1) --- */}
       {liveStats && (
         <div 
           className="position-sticky bottom-0 z-3 mt-4 pt-2 d-flex justify-content-center"
@@ -703,45 +653,74 @@ export default function PlanTab() {
             className="floating-readiness-island border border-primary border-opacity-50 rounded-pill py-2 px-3 d-flex align-items-center justify-content-between gap-3 text-nowrap shadow-lg"
             style={{ 
               pointerEvents: 'auto',
+              maxWidth: '780px',
               backgroundColor: 'var(--bg-card)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)'
             }}
           >
-            {/* Left: Health Status */}
+            {/* Left: Plan Score + Health Status */}
             <div className="d-flex align-items-center gap-2 overflow-hidden">
+              {planScore && (
+                <span
+                  className={`badge rounded-pill px-2 py-1 fw-bolder d-none d-md-inline-flex align-items-center gap-1 ${
+                    planScore.totalScore >= 80
+                      ? 'bg-success bg-opacity-25 text-success'
+                      : planScore.totalScore >= 60
+                      ? 'bg-warning bg-opacity-25 text-warning'
+                      : 'bg-danger bg-opacity-25 text-danger'
+                  }`}
+                  style={{ fontSize: '0.72rem' }}
+                  title={isFr ? 'Score global du plan' : 'Overall Plan Health Score'}
+                >
+                  <i className="bi bi-speedometer2"></i>
+                  <span>{Math.round(planScore.totalScore)}/100</span>
+                </span>
+              )}
               <div 
                 className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${liveStats.isFullyFunded ? 'bg-success bg-opacity-25 text-success' : 'bg-warning bg-opacity-25 text-warning'}`} 
-                style={{ width: '28px', height: '28px' }}
+                style={{ width: '26px', height: '26px' }}
               >
-                <i className={`bi ${liveStats.isFullyFunded ? 'bi-shield-check-fill fs-6' : 'bi-exclamation-triangle-fill fs-6'}`}></i>
+                <i className={`bi ${liveStats.isFullyFunded ? 'bi-shield-check-fill' : 'bi-exclamation-triangle-fill'}`} style={{ fontSize: '0.85rem' }}></i>
               </div>
               <div className="d-flex align-items-center gap-2 overflow-hidden">
-                <span className={`fw-bold text-uppercase ls-1 text-truncate ${liveStats.isFullyFunded ? 'text-success' : 'text-warning'}`} style={{ fontSize: '0.78rem' }}>
+                <span className={`fw-bold text-uppercase ls-1 text-truncate ${liveStats.isFullyFunded ? 'text-success' : 'text-warning'}`} style={{ fontSize: '0.76rem' }}>
                   {liveStats.isFullyFunded 
-                    ? (isFr ? `Entièrement financé (jusqu'à l'âge ${liveStats.lifeExp})` : `Fully Funded (to Age ${liveStats.lifeExp})`) 
-                    : (isFr ? `Épuisé à l'âge ${liveStats.failureAge}` : `Depletes at Age ${liveStats.failureAge}`)}
+                    ? (isFr ? `Financé (âge ${liveStats.lifeExp})` : `Funded (to Age ${liveStats.lifeExp})`) 
+                    : (isFr ? `Épuisé à ${liveStats.failureAge} ans` : `Depletes at Age ${liveStats.failureAge}`)}
                 </span>
                 {liveStats.useRealDollars && (
-                  <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 d-none d-sm-inline-block" style={{ fontSize: '0.62rem' }}>
-                    {isFr ? "Dollars d'ajourd'hui" : "Today's $"}
+                  <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 d-none d-lg-inline-block" style={{ fontSize: '0.62rem' }}>
+                    {isFr ? "Dollars d'aujourd'hui" : "Today's $"}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Right: Key Financial Metrics */}
+            {/* Right: Key Financial Metrics + Live Delta Flash */}
             <div className="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
               <div className="border-start border-secondary opacity-50" style={{ height: '18px' }}></div>
               <div className="d-flex align-items-baseline gap-1">
-                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>{isFr ? 'LIQ. RETRAITE' : 'LIQ @'} {liveStats.retAge}:</span>
-                <span className="fw-bold text-main" style={{ fontSize: '0.85rem' }}>{formatShort(liveStats.liquidAtRet)}</span>
+                <span className="text-muted fw-bold" style={{ fontSize: '0.66rem' }}>{isFr ? 'LIQ.' : 'LIQ @'} {liveStats.retAge}:</span>
+                <span className="fw-bold text-main" style={{ fontSize: '0.84rem' }}>{formatShort(liveStats.liquidAtRet)}</span>
               </div>
 
               <div className="border-start border-secondary opacity-50" style={{ height: '18px' }}></div>
-              <div className="d-flex align-items-baseline gap-1">
-                <span className="text-muted fw-bold" style={{ fontSize: '0.68rem' }}>{isFr ? 'SUCCESSION' : 'ESTATE'}:</span>
-                <span className="fw-bold text-success" style={{ fontSize: '0.85rem' }}>{formatShort(liveStats.finalEstate)}</span>
+              <div className="d-flex align-items-center gap-1.5">
+                <span className="text-muted fw-bold" style={{ fontSize: '0.66rem' }}>{isFr ? 'SUCCESSION' : 'ESTATE'}:</span>
+                <span className="fw-bold text-success" style={{ fontSize: '0.84rem' }}>{formatShort(liveStats.finalEstate)}</span>
+                {estateDelta !== 0 && (
+                  <span
+                    className={`badge rounded-pill px-1.5 py-0.5 fw-bold ${
+                      estateDelta > 0
+                        ? 'bg-success bg-opacity-25 text-success'
+                        : 'bg-danger bg-opacity-25 text-danger'
+                    }`}
+                    style={{ fontSize: '0.66rem' }}
+                  >
+                    {estateDelta > 0 ? '+' : ''}{formatShort(estateDelta)}
+                  </span>
+                )}
               </div>
             </div>
 

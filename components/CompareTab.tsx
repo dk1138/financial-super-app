@@ -21,7 +21,7 @@ const formatInputKey = (key: string) => {
 
 export default function CompareTab() {
     const { data, results, loadData } = useFinance();
-    const { t } = useTranslation();
+    const { t, formatCurrency: fmtCurrency, formatShortCurrency: fmtShortCurrency } = useTranslation();
     const [compareMode, setCompareMode] = useState<'benchmarks' | 'scenarios'>('benchmarks');
     const [savedPlans, setSavedPlans] = useState<string[]>([]);
     const [comparePlanName, setComparePlanName] = useState<string>('');
@@ -101,15 +101,9 @@ export default function CompareTab() {
         };
     }, [comparePlanName]);
 
-    const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
-    };
+    const formatCurrency = (val: number) => fmtCurrency(val || 0);
 
-    const formatShortCurrency = (val: number) => {
-        if (Math.abs(val) >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-        if (Math.abs(val) >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-        return `$${Math.round(val)}`;
-    };
+    const formatShortCurrency = (val: number) => fmtShortCurrency(val || 0);
 
     const getMetrics = (planData: any, planTimeline: any) => {
         if (!planData || !planTimeline || planTimeline.length === 0) return null;

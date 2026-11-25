@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
@@ -9,6 +9,17 @@ import { useTranslation } from '../lib/LanguageContext';
 import ExpenseHeaderActions from './expenses/ExpenseHeaderActions';
 import { ENGINE_VERSION } from '../lib/financeEngine';
 import SharePlanModal from './SharePlanModal';
+import CommandPaletteModal from './CommandPaletteModal';
+
+function fingerprintPlan(planData: any): string {
+    if (!planData) return '';
+    try {
+        const { constants, ...rest } = planData;
+        return JSON.stringify(rest);
+    } catch {
+        return '';
+    }
+}
 
 export default function GlobalHeader() {
     const { data: session } = useSession();
@@ -35,6 +46,7 @@ export default function GlobalHeader() {
     const [savedPlans, setSavedPlans] = useState<string[]>([]);
     const [newPlanName, setNewPlanName] = useState('');
     const [pastedJsonText, setPastedJsonText] = useState('');
+    const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
 
     // --- RENAMING STATE ---
     const [showRenameModal, setShowRenameModal] = useState(false);
@@ -47,9 +59,38 @@ export default function GlobalHeader() {
     const [showLoadModal, setShowLoadModal] = useState(false);
     const [showPasteJsonModal, setShowPasteJsonModal] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showCommandPalette, setShowCommandPalette] = useState(false);
     const [planToLoad, setPlanToLoad] = useState<string | null>(null);
     const [planToDelete, setPlanToDelete] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+    const currentFingerprint = useMemo(() => fingerprintPlan(data), [data]);
+
+    // Sync saved fingerprint whenever active plan name changes
+    const refreshSavedFingerprint = useCallback((planName: string) => {
+        try {
+            const raw = localStorage.getItem(`rp_saved_plan_${planName}`);
+            if (!raw) {
+                setSavedFingerprint(null);
+            } else {
+                setSavedFingerprint(fingerprintPlan(JSON.parse(raw)));
+            }
+        } catch {
+            setSavedFingerprint(null);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            refreshSavedFingerprint(activePlanName);
+        }
+    }, [activePlanName, refreshSavedFingerprint]);
+
+    const hasUnsavedChanges = useMemo(() => {
+        if (activeModule !== 'planner') return false;
+        if (!savedFingerprint) return false; // Only show unsaved dot for named/saved plans
+        return currentFingerprint !== savedFingerprint;
+    }, [activeModule, savedFingerprint, currentFingerprint]);
 
     // --- INITIALIZATION & HEIGHT TRACKING ---
     useEffect(() => {
@@ -60,13 +101,18 @@ export default function GlobalHeader() {
         const currentName = localStorage.getItem('active_plan_name') || 'Untitled Plan';
         setActivePlanName(currentName);
         setNewPlanName(currentName === 'Untitled Plan' ? '' : currentName);
+        refreshSavedFingerprint(currentName);
         try {
             setSavedPlans(JSON.parse(localStorage.getItem('rp_plan_list') || '[]'));
         } catch {
             setSavedPlans([]);
         }
 
-        const handlePlanChange = (e: Event) => setActivePlanName((e as CustomEvent).detail);
+        const handlePlanChange = (e: Event) => {
+            const nextName = (e as CustomEvent).detail;
+            setActivePlanName(nextName);
+            refreshSavedFingerprint(nextName);
+        };
         window.addEventListener('updateActivePlan', handlePlanChange);
 
         const updateHeight = () => {
@@ -81,7 +127,7 @@ export default function GlobalHeader() {
             window.removeEventListener('updateActivePlan', handlePlanChange);
             resizeObserver.disconnect();
         };
-    }, [activeModule]);
+    }, [activeModule, refreshSavedFingerprint]);
 
     // Handle clicking outside of the file menu to close it
     useEffect(() => {
@@ -106,6 +152,52 @@ export default function GlobalHeader() {
         setToastMsg(msg);
         setTimeout(() => setToastMsg(''), 3000);
     };
+
+    const handleQuickSave = useCallback(() => {
+        if (activeModule !== 'planner') return;
+        const trimmed = activePlanName.trim();
+        if (!trimmed || trimmed === 'Untitled Plan') {
+            setNewPlanName('');
+            setShowSaveModal(true);
+            return;
+        }
+        try {
+            localStorage.setItem(`rp_saved_plan_${trimmed}`, JSON.stringify(data));
+            localStorage.setItem('active_plan_name', trimmed);
+            let plans: string[] = [];
+            try {
+                plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
+            } catch {
+                plans = [];
+            }
+            if (!plans.includes(trimmed)) {
+                plans.push(trimmed);
+                localStorage.setItem('rp_plan_list', JSON.stringify(plans));
+                setSavedPlans(plans);
+            }
+            setSavedFingerprint(fingerprintPlan(data));
+            showToast(lang === 'fr' ? `Plan « ${trimmed} » sauvegardé !` : `Saved "${trimmed}"!`);
+        } catch {
+            showToast(lang === 'fr' ? 'Erreur lors de la sauvegarde.' : 'Failed to save plan.');
+        }
+    }, [activeModule, activePlanName, data, lang]);
+
+    // Global keyboard shortcuts: Ctrl+K / Cmd+K (Command Palette) and Ctrl+S / Cmd+S (Quick Save)
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            const mod = e.metaKey || e.ctrlKey;
+            if (!mod) return;
+            if (e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                setShowCommandPalette((prev) => !prev);
+            } else if (e.key.toLowerCase() === 's' && activeModule === 'planner') {
+                e.preventDefault();
+                handleQuickSave();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [activeModule, handleQuickSave]);
 
     const toggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -178,6 +270,7 @@ export default function GlobalHeader() {
         localStorage.setItem(`rp_saved_plan_${name}`, JSON.stringify(data));
         localStorage.setItem('active_plan_name', name);
         setActivePlanName(name);
+        setSavedFingerprint(fingerprintPlan(data));
 
         let plans = JSON.parse(localStorage.getItem('rp_plan_list') || '[]');
         if (!plans.includes(name)) {
@@ -193,9 +286,11 @@ export default function GlobalHeader() {
         if (planToLoad) {
             const planDataStr = localStorage.getItem(`rp_saved_plan_${planToLoad}`);
             if (planDataStr && financeContext.loadData) {
-                financeContext.loadData(JSON.parse(planDataStr)); 
+                const parsed = JSON.parse(planDataStr);
+                financeContext.loadData(parsed); 
                 localStorage.setItem('active_plan_name', planToLoad);
                 setActivePlanName(planToLoad);
+                setSavedFingerprint(fingerprintPlan(parsed));
                 showToast(`Loaded ${planToLoad}`);
             }
             setPlanToLoad(null);
@@ -461,6 +556,21 @@ export default function GlobalHeader() {
                                 )}
                             </div>
 
+                            {/* UNSAVED CHANGES INDICATOR + 1-CLICK QUICK SAVE (Ctrl+S) */}
+                            {hasUnsavedChanges && (
+                                <button
+                                    type="button"
+                                    className="btn btn-sm bg-warning bg-opacity-10 text-warning border border-warning border-opacity-50 rounded-pill px-2.5 py-1 fw-bold d-flex align-items-center gap-1.5 shadow-sm"
+                                    style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                                    onClick={handleQuickSave}
+                                    title={lang === 'fr' ? 'Modifications non sauvegardées — Cliquez pour sauvegarder (Ctrl+S)' : 'Unsaved changes — Click to Quick Save (Ctrl+S)'}
+                                >
+                                    <span className="rounded-circle bg-warning d-inline-block" style={{ width: '6px', height: '6px' }}></span>
+                                    <span>{lang === 'fr' ? 'Sauvegarder' : 'Save'}</span>
+                                    <i className="bi bi-floppy-fill"></i>
+                                </button>
+                            )}
+
                             {/* VERSION BADGE */}
                             <span 
                                 className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold shadow-sm" 
@@ -476,9 +586,20 @@ export default function GlobalHeader() {
                     <div className="d-flex align-items-center gap-2 justify-content-end" style={{ flexShrink: 0 }}>
                         {activeModule === 'expenses' && <ExpenseHeaderActions showToast={showToast} />}
 
-                        {/* UNDO / REDO + TODAY'S $ TOGGLE */}
+                        {/* QUICK JUMP (CTRL+K) + UNDO / REDO + TODAY'S $ TOGGLE */}
                         {activeModule === 'planner' && (
                             <>
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-secondary bg-input rounded-pill d-flex align-items-center gap-1.5 px-2.5 shadow-sm fw-bold"
+                                    style={{ height: '36px', fontSize: '0.75rem' }}
+                                    onClick={() => setShowCommandPalette(true)}
+                                    title={lang === 'fr' ? 'Recherche rapide (Ctrl+K)' : 'Quick Jump / Command Palette (Ctrl+K)'}
+                                >
+                                    <i className="bi bi-search text-primary"></i>
+                                    <span className="d-none d-xxl-inline text-muted">{lang === 'fr' ? 'Rechercher' : 'Jump'}</span>
+                                    <kbd className="bg-secondary bg-opacity-25 text-muted px-1.5 py-0 rounded d-none d-md-inline" style={{ fontSize: '0.64rem' }}>⌘K</kbd>
+                                </button>
                                 <div className="btn-group d-none d-md-inline-flex shadow-sm" role="group" aria-label="Undo and Redo">
                                     <button
                                         type="button"
@@ -731,6 +852,13 @@ export default function GlobalHeader() {
                 onClose={() => setShowShareModal(false)}
                 planData={data}
                 onCopied={showToast}
+            />
+            <CommandPaletteModal
+                isOpen={showCommandPalette}
+                onClose={() => setShowCommandPalette(false)}
+                onToggleTheme={toggleTheme}
+                onQuickSave={handleQuickSave}
+                onOpenShare={() => setShowShareModal(true)}
             />
         </>
     );

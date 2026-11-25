@@ -41,7 +41,7 @@ function ScoreCard({ title, score, max, tooltip, align = 'left' }: { title: stri
 
 export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, toolId?: string) => void } = {}) {
   const { data, results, planScore } = useFinance();
-  const { t } = useTranslation();
+  const { t, formatCurrency: fmtExactCurrency, formatShortCurrency: fmtShortCurrency } = useTranslation();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isUploadingImgur, setIsUploadingImgur] = useState(false);
@@ -257,20 +257,15 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
   };
 
   const formatCurrency = (val: number) => {
-      if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
-      if (val >= 10000) return `$${(val / 1000).toFixed(0)}k`;
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
+      if (Math.abs(val) >= 10000) return fmtShortCurrency(val || 0);
+      return fmtExactCurrency(val || 0);
   };
 
-  const formatExact = (val: number) => {
-      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
-  };
+  const formatExact = (val: number) => fmtExactCurrency(val || 0);
 
   const formatYAxis = (val: number) => {
-      if (val === 0) return "$0";
-      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-      if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-      return `$${Math.round(val)}`;
+      if (val === 0) return fmtExactCurrency(0);
+      return fmtShortCurrency(val || 0);
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { en } from './locales/en';
 import { fr } from './locales/fr';
+import { formatCurrencyLocale, formatShortCurrencyLocale } from './formatters';
 
 export type Language = 'en' | 'fr';
 
@@ -11,6 +12,8 @@ interface LanguageContextType {
   setLang: (lang: Language) => void;
   toggleLang: () => void;
   t: (path: string, fallback?: string) => string;
+  formatCurrency: (val: number, maxFractionDigits?: number) => string;
+  formatShortCurrency: (val: number) => string;
 }
 
 const dictionaries: Record<Language, any> = { en, fr };
@@ -19,7 +22,9 @@ const LanguageContext = createContext<LanguageContextType>({
   lang: 'en',
   setLang: () => {},
   toggleLang: () => {},
-  t: (path: string, fallback?: string) => fallback || path
+  t: (path: string, fallback?: string) => fallback || path,
+  formatCurrency: (val: number, maxFractionDigits = 0) => formatCurrencyLocale(val, 'en', maxFractionDigits),
+  formatShortCurrency: (val: number) => formatShortCurrencyLocale(val, 'en'),
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
@@ -74,7 +79,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return typeof cur === 'string' ? cur : (fallback || path);
   };
 
-  const value = useMemo(() => ({ lang, setLang, toggleLang, t }), [lang]);
+  const formatCurrency = (val: number, maxFractionDigits = 0) =>
+    formatCurrencyLocale(val, lang, maxFractionDigits);
+
+  const formatShortCurrency = (val: number) =>
+    formatShortCurrencyLocale(val, lang);
+
+  const value = useMemo(
+    () => ({ lang, setLang, toggleLang, t, formatCurrency, formatShortCurrency }),
+    [lang]
+  );
 
   return (
     <LanguageContext.Provider value={value}>

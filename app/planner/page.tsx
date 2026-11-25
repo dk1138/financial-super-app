@@ -71,6 +71,25 @@ export default function PlannerPage() {
       } else if (tabParam) {
           setActiveTab(tabParam);
       }
+
+      const handlePaletteNavigate = (e: Event) => {
+          const detail = (e as CustomEvent).detail || {};
+          if (detail.toolId) {
+              setSelectedToolId(detail.toolId);
+              setActiveTab('optimizers');
+          } else if (detail.tab) {
+              setActiveTab(detail.tab);
+              if (detail.sectionId) {
+                  setTimeout(() => {
+                      window.dispatchEvent(
+                          new CustomEvent('planfolio:scrollSection', { detail: detail.sectionId })
+                      );
+                  }, 120);
+              }
+          }
+      };
+      window.addEventListener('planfolio:navigate', handlePaletteNavigate);
+      return () => window.removeEventListener('planfolio:navigate', handlePaletteNavigate);
   }, []);
 
   // --- HANDLERS ---

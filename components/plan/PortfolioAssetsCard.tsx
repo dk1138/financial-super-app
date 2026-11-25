@@ -28,7 +28,7 @@ const EXTENDED_ACCOUNT_TYPES = [
 ];
 
 export default function PortfolioAssetsCard() {
-  const { t } = useTranslation();
+  const { t, formatCurrency: fmtCurrency } = useTranslation();
   const { data, updateInput, updateMultipleInputs, addArrayItem, updateArrayItem, removeArrayItem } = useFinance();
   
   const isCouple = data.mode === 'Couple';
@@ -100,7 +100,7 @@ export default function PortfolioAssetsCard() {
   const p2Total = ACCOUNT_TYPES.reduce((sum, acct) => sum + (Number(data.inputs[`p2_${acct.id}`]) || 0), 0) + (Number(data.inputs['p2_nonreg']) || 0) + (Number(data.inputs['p2_crypto']) || 0) + customP2Total;
   const hhTotal = p1Total + (isCouple ? p2Total : 0);
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
+  const formatCurrency = (val: number) => fmtCurrency(val);
 
   return (
     <div className="rp-card border border-secondary rounded-4 mb-4">

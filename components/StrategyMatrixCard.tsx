@@ -8,7 +8,7 @@ import type { StrategyMatrixRow } from '../lib/engine/strategyMatrix';
 
 export default function StrategyMatrixCard() {
   const { data, updateMultipleInputs, updateStrategy } = useFinance();
-  const { t } = useTranslation();
+  const { t, formatCurrency } = useTranslation();
   const [rows, setRows] = useState<StrategyMatrixRow[] | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -28,13 +28,6 @@ export default function StrategyMatrixCard() {
   useEffect(() => {
     if (rows) setIsStale(true);
   }, [data]);
-
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('en-CA', {
-      style: 'currency',
-      currency: 'CAD',
-      maximumFractionDigits: 0,
-    }).format(val || 0);
 
   const runOptimizer = () => {
     setIsRunning(true);

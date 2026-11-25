@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [2026-11-24]
 
+### Added
+- **Command Palette / Quick Jump (`components/CommandPaletteModal.tsx`, `components/GlobalHeader.tsx`, `app/planner/page.tsx`)**: Added a bilingual `Ctrl+K` / `⌘K` spotlight modal to jump straight to any of the 9 planner tabs, 10 input cards, 30 calculators, Canadian personas, or quick actions (Real/Nominal $, EN/FR, Dark/Light, Undo/Redo, Quick Save, Share).
+- **Unsaved Changes Indicator & `Ctrl+S` Quick Save (`components/GlobalHeader.tsx`)**: Added live plan fingerprinting against saved plans with a subtle amber `Save` badge and 1-click / `Ctrl+S` quick-save support.
+- **Smart Input Validation, Completion Checkmarks & Live Outcome Ribbon (`lib/planValidation.ts`, `lib/planValidation.test.mjs`, `components/PlanTab.tsx`)**: Added non-blocking sanity-check banners & jump-bar warning badges (negative mortgage amortization, `$0` retirement expenses, invalid life-expectancy ordering, FHSA cap notice, CPP/OAS bounds, extreme inflation), populated-section checkmarks (`X/10`) with *Next Section →* buttons, and an upgraded Live Outcome Ribbon displaying Plan Health Score (`X/100`) and live `+$ / -$` estate delta flashes on every edit.
+- **Native `fr-CA` Currency & Compact Number Formatting (`lib/formatters.ts`, `lib/LanguageContext.tsx`, `components/PlanTab.tsx`, `components/DashboardTab.tsx`, `components/CompareTab.tsx`, `components/StrategyMatrixCard.tsx`, `components/plan/PortfolioAssetsCard.tsx`)**: Exposed locale-aware `formatCurrency` and `formatShortCurrency` on `useTranslation()` so French mode formats currency natively (`125 000 $`, `1,25 M$`, `450 k$`).
+
 ### Security
 - **Untracked `.env.local` & added `.env.example` (`.gitignore`, `.env.example`)**: Removed `.env.local` from Git tracking so secrets are never committed, and added `.env.example` documenting required environment variables (`RESEND_API_KEY`, `FEEDBACK_TO_EMAIL`, `IMGUR_CLIENT_ID`, `EXPENSES_DEV_PASSCODE`).
 - **HTTP security headers (`next.config.ts`)**: Added global `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-DNS-Prefetch-Control`, and `Strict-Transport-Security` headers.
