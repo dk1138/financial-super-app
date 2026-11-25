@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslation } from '../lib/LanguageContext';
 
 // --- DYNAMIC IMPORTS (LAZY LOADING) ---
 const MedicalExpenseOptimizer = dynamic(() => import('./optimizers/MedicalExpenseOptimizer'), { ssr: false });
@@ -72,6 +73,7 @@ const TOOL_METADATA: Record<string, { title: string; category: string; keywords:
 const ALL_TOOL_KEYS = Object.keys(TOOL_METADATA);
 
 export default function OptimizersTab({ initialToolId }: { initialToolId?: string | null } = {}) {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string>('All Tools');
   const [expandedTool, setExpandedTool] = useState<string | null>(initialToolId || null);
   const [highlightedTool, setHighlightedTool] = useState<string | null>(initialToolId || null);
@@ -196,10 +198,10 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-3 border-bottom border-secondary">
         <div>
           <h5 className="fw-bold text-uppercase ls-1 text-primary mb-1 d-flex align-items-center">
-            <i className="bi bi-magic me-3"></i> Tools &amp; Calculators
+            <i className="bi bi-magic me-3"></i> {t('tools.title', 'Tools & Calculators')}
           </h5>
           <span className="text-muted small">
-            30 specialized Canadian financial, tax, and debt calculators
+            {t('tools.subtitle', '30 specialized Canadian financial, tax, and debt calculators')}
           </span>
         </div>
 

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { useTranslation } from '../lib/LanguageContext';
 import { InfoBtn } from './SharedUI';
 
 type ActionSeverity = 'danger' | 'warning' | 'info' | 'success';
@@ -28,6 +29,7 @@ interface NextBestActionsCardProps {
 
 export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardProps = {}) {
   const { data, results, planScore, updateInput } = useFinance();
+  const { t } = useTranslation();
   const [appliedIds, setAppliedIds] = useState<Record<string, boolean>>({});
 
   const actions = useMemo<NextBestAction[]>(() => {
@@ -50,7 +52,7 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         description:
           'Your projected liquid assets hit $0 before the end of your plan. Open Tools & Calculators to run the Max Safe Spend Solver and 5×5 Sensitivity Heatmap, or run 1-Click Auto-Optimize in Strategy.',
         impactLabel: 'High Priority',
-        ctaLabel: onNavigate ? 'Open Sensitivity Heatmap' : undefined,
+        ctaLabel: onNavigate ? t('nextBestActions.shortfallCta', 'Open Sensitivity Heatmap') : undefined,
         onApply: onNavigate ? () => onNavigate('optimizers', 'sensitivity') : undefined,
       });
     }
@@ -61,11 +63,11 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         id: 'pension-split',
         severity: 'warning',
         icon: 'bi-people-fill',
-        title: 'Enable Canadian Pension Income Splitting',
+        title: t('nextBestActions.pensionSplitTitle', 'Enable Canadian Pension Income Splitting'),
         description:
           'Couples can split up to 50% of eligible RRIF/LIF/DB pension income starting at age 65, lowering household marginal tax brackets and protecting both partners from OAS clawback.',
         impactLabel: 'Tax Savings',
-        ctaLabel: 'Enable Pension Split',
+        ctaLabel: t('nextBestActions.pensionSplitCta', 'Enable Pension Split'),
         onApply: () => {
           updateInput('pension_split_enabled', true);
           setAppliedIds(prev => ({ ...prev, 'pension-split': true }));
@@ -92,7 +94,7 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         description:
           'Your taxable retirement income crosses the CRA OAS recovery threshold. Turning on the OAS Clawback Shield prioritizes TFSA/Non-Reg draws once you approach the threshold.',
         impactLabel: 'Protect OAS',
-        ctaLabel: 'Enable OAS Shield',
+        ctaLabel: t('nextBestActions.oasShieldCta', 'Enable OAS Shield'),
         onApply: () => {
           updateInput('oas_clawback_optimize', true);
           setAppliedIds(prev => ({ ...prev, 'oas-shield': true }));
@@ -113,10 +115,10 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         id: 'rrsp-meltdown',
         severity: 'info',
         icon: 'bi-sliders',
-        title: 'Consider Smart RRSP Meltdown before age 71',
+        title: t('nextBestActions.rrspMeltdownTitle', 'Consider Smart RRSP Meltdown before age 71'),
         description: `You hold ${fmtCurrency(totalRrsp)} in RRSP/RRIF accounts. Proactively melting down RRSPs in low-income early retirement years can reduce forced RRIF withdrawals and terminal estate taxes.`,
         impactLabel: 'Estate & Tax',
-        ctaLabel: 'Enable RRSP Meltdown',
+        ctaLabel: t('nextBestActions.rrspMeltdownCta', 'Enable RRSP Meltdown'),
         onApply: () => {
           updateInput('fully_optimize_tax', true);
           setAppliedIds(prev => ({ ...prev, 'rrsp-meltdown': true }));
@@ -134,7 +136,7 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         description:
           'Planfolio targets 6 months of core expenses in liquid cash or TFSA. Strengthening your short-term buffer prevents forced selling during market downturns.',
         impactLabel: 'Resilience',
-        ctaLabel: onNavigate ? 'Emergency Fund Tool' : undefined,
+        ctaLabel: onNavigate ? t('nextBestActions.emergencyCta', 'Emergency Fund Tool') : undefined,
         onApply: onNavigate ? () => onNavigate('optimizers', 'emerg') : undefined,
       });
     }
@@ -149,13 +151,13 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         description:
           'Mortgage and debt repayments exceed the 36% DTI guideline. Accelerating high-interest debt payoff or refinancing before retirement improves cash-flow flexibility.',
         impactLabel: 'Cash Flow',
-        ctaLabel: onNavigate ? 'Review Debt Inputs' : undefined,
+        ctaLabel: onNavigate ? t('nextBestActions.debtCta', 'Review Debt Inputs') : undefined,
         onApply: onNavigate ? () => onNavigate('plan') : undefined,
       });
     }
 
     return list.slice(0, 5);
-  }, [data, results, planScore, updateInput, onNavigate]);
+  }, [data, results, planScore, updateInput, onNavigate, t]);
 
   return (
     <div className="rp-card border border-secondary rounded-4 shadow-sm mt-4" data-html2canvas-ignore="true">
@@ -163,10 +165,10 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
         <div className="d-flex align-items-center gap-2">
           <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary d-flex align-items-center">
             <i className="bi bi-check2-circle me-2"></i>
-            Next Best Actions
+            {t('nextBestActions.title', 'Next Best Actions')}
           </h6>
           <InfoBtn
-            title="Next Best Actions Checklist"
+            title={t('nextBestActions.title', 'Next Best Actions')}
             text="Live diagnostics over your current projection checking for portfolio shortfalls, OAS clawbacks, pension splitting opportunities, RRSP meltdown potential, emergency reserves, and debt health."
           />
         </div>
@@ -179,8 +181,8 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
           style={{ fontSize: '0.72rem' }}
         >
           {actions.length === 0
-            ? 'All Checks Passing'
-            : `${actions.length} ${actions.length === 1 ? 'Opportunity' : 'Opportunities'} Found`}
+            ? t('nextBestActions.allPassing', 'All Checks Passing')
+            : `${actions.length} ${actions.length === 1 ? t('nextBestActions.opportunity', 'Opportunity Found') : t('nextBestActions.opportunities', 'Opportunities Found')}`}
         </span>
       </div>
 
@@ -194,10 +196,9 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
               <i className="bi bi-stars fs-5"></i>
             </div>
             <div>
-              <div className="fw-bold text-main">Your plan looks well-optimized</div>
+              <div className="fw-bold text-main">{t('nextBestActions.wellOptimizedTitle', 'Your plan looks well-optimized')}</div>
               <div className="small text-muted">
-                No portfolio shortfalls, OAS clawback leaks, or unenabled Canadian tax optimizations were detected.
-                Try Stress Testing &amp; Risk to test extreme market or survivor scenarios.
+                {t('nextBestActions.wellOptimizedDesc', 'No portfolio shortfalls, OAS clawback leaks, or unenabled Canadian tax optimizations were detected. Try Stress Testing & Risk to test extreme market or survivor scenarios.')}
               </div>
             </div>
           </div>
@@ -257,7 +258,7 @@ export default function NextBestActionsCard({ onNavigate }: NextBestActionsCardP
                         disabled={isApplied}
                       >
                         <i className={`bi ${isApplied ? 'bi-check-lg' : 'bi-magic'} me-1`}></i>
-                        {isApplied ? 'Applied' : item.ctaLabel}
+                        {isApplied ? t('nextBestActions.applied', 'Applied') : item.ctaLabel}
                       </button>
                     </div>
                   )}

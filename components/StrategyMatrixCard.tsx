@@ -2,11 +2,13 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { useTranslation } from '../lib/LanguageContext';
 import { InfoBtn, SegmentedControl } from './SharedUI';
 import type { StrategyMatrixRow } from '../lib/engine/strategyMatrix';
 
 export default function StrategyMatrixCard() {
   const { data, updateMultipleInputs, updateStrategy } = useFinance();
+  const { t } = useTranslation();
   const [rows, setRows] = useState<StrategyMatrixRow[] | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -157,12 +159,12 @@ export default function StrategyMatrixCard() {
               {isRunning ? (
                 <>
                   <span className="spinner-border spinner-border-sm"></span>
-                  <span>Testing... {progress}%</span>
+                  <span>{progress}%</span>
                 </>
               ) : (
                 <>
                   <i className="bi bi-lightning-charge-fill"></i>
-                  <span>{rows ? 'Re-Run Matrix' : 'Run Strategy Optimizer'}</span>
+                  <span>{rows ? t('strategyMatrix.rerunBtn', 'Re-Run Matrix') : t('strategyMatrix.runBtn', 'Run Strategy Optimizer')}</span>
                 </>
               )}
             </span>

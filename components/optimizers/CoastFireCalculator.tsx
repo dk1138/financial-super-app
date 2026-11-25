@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { CurrencyInput, PercentInput, StepperInput, InfoBtn, SegmentedControl } from '../SharedUI';
 
 const fmtCurrency = (val: number) =>
@@ -17,6 +18,7 @@ const fmtCompact = (val: number) => {
 
 export default function CoastFireCalculator() {
   const { data } = useFinance();
+  const { t } = useTranslation();
   const isCouple = data?.mode === 'Couple';
 
   // Derive sensible defaults from the user's live plan
@@ -165,16 +167,16 @@ export default function CoastFireCalculator() {
         <div>
           <div className="d-flex align-items-center gap-1">
             <h5 className="fw-bold text-info mb-0 text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>
-              Coast &amp; Barista FIRE
+              {t('coastFire.title', 'Coast & Barista FIRE')}
             </h5>
             <InfoBtn
               align="left"
-              title="Coast FIRE & Barista FIRE"
+              title={t('coastFire.title', 'Coast & Barista FIRE')}
               text="Coast FIRE is the portfolio size today where you can stop saving and let compounding grow your investments to your full FI target by retirement. Barista FIRE calculates how much smaller your portfolio can be if part-time work covers part of your spending."
             />
           </div>
           <span className="text-muted small" style={{ fontSize: '0.72rem' }}>
-            Canadian FI &amp; Semi-Retirement Milestone
+            {t('coastFire.subtitle', 'Canadian FI & Semi-Retirement Milestone')}
           </span>
         </div>
       </div>
@@ -185,8 +187,8 @@ export default function CoastFireCalculator() {
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'coast', label: 'Coast FIRE' },
-            { value: 'barista', label: 'Barista FIRE' },
+            { value: 'coast', label: t('coastFire.coastMode', 'Coast FIRE') },
+            { value: 'barista', label: t('coastFire.baristaMode', 'Barista FIRE') },
           ]}
         />
       </div>
@@ -194,38 +196,38 @@ export default function CoastFireCalculator() {
       {/* INPUTS */}
       <div className="row g-2 mb-3">
         <div className="col-6">
-          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>Current Age</label>
+          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.currentAge', 'Current Age')}</label>
           <StepperInput min={18} max={85} value={currentAge} onChange={setCurrentAge} />
         </div>
         <div className="col-6">
-          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>Full FI Age</label>
+          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.fullFiAge', 'Full FI Age')}</label>
           <StepperInput min={currentAge + 1} max={90} value={targetRetireAge} onChange={setTargetRetireAge} />
         </div>
         <div className="col-6">
-          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>Invested Portfolio</label>
+          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.investedPortfolio', 'Invested Portfolio')}</label>
           <CurrencyInput value={currentPortfolio} onChange={setCurrentPortfolio} />
         </div>
         <div className="col-6">
-          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>Annual Ret. Spend</label>
+          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.annualRetSpend', 'Annual Ret. Spend')}</label>
           <CurrencyInput value={annualRetSpend} onChange={setAnnualRetSpend} />
         </div>
         {mode === 'coast' ? (
           <div className="col-6">
-            <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>Annual Savings</label>
+            <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.annualSavings', 'Annual Savings')}</label>
             <CurrencyInput value={annualSavings} onChange={setAnnualSavings} />
           </div>
         ) : (
           <div className="col-6">
-            <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>Part-Time Income/yr</label>
+            <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.partTimeIncome', 'Part-Time Income/yr')}</label>
             <CurrencyInput value={baristaIncomeAnnual} onChange={setBaristaIncomeAnnual} />
           </div>
         )}
         <div className="col-3">
-          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>Return</label>
+          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.returnLabel', 'Return')}</label>
           <PercentInput value={nomReturn} onChange={setNomReturn} />
         </div>
         <div className="col-3">
-          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>SWR</label>
+          <label className="form-label small fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>{t('coastFire.swrLabel', 'SWR')}</label>
           <PercentInput value={swr} onChange={setSwr} />
         </div>
       </div>
@@ -240,7 +242,7 @@ export default function CoastFireCalculator() {
           onChange={(e) => setIncludeGovPensions(e.target.checked)}
         />
         <label className="form-check-label small text-muted cursor-pointer" htmlFor="coastCppOasToggle" style={{ fontSize: '0.74rem' }}>
-          Factor in est. CPP + OAS ({fmtCurrency(isCouple ? 34000 : 19000)}/yr)
+          {t('coastFire.cppOasToggle', 'Factor in est. CPP + OAS')} ({fmtCurrency(isCouple ? 34000 : 19000)}/yr)
         </label>
       </div>
 
@@ -250,7 +252,7 @@ export default function CoastFireCalculator() {
           <>
             <div className="d-flex justify-content-between align-items-center mb-2">
               <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>
-                Coast FIRE Number (Today)
+                {t('coastFire.coastNumberToday', 'Coast FIRE Number (Today)')}
               </span>
               <span
                 className={`badge rounded-pill border ${
@@ -260,7 +262,7 @@ export default function CoastFireCalculator() {
                 }`}
                 style={{ fontSize: '0.66rem' }}
               >
-                {calc.isAlreadyCoast ? 'Coast FIRE Reached!' : `${calc.coastProgressPct}% Funded`}
+                {calc.isAlreadyCoast ? t('coastFire.coastReached', 'Coast FIRE Reached!') : `${calc.coastProgressPct}%`}
               </span>
             </div>
 
@@ -296,7 +298,7 @@ export default function CoastFireCalculator() {
           <>
             <div className="d-flex justify-content-between align-items-center mb-2">
               <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.68rem' }}>
-                Barista FIRE Target
+                {t('coastFire.baristaTarget', 'Barista FIRE Target')}
               </span>
               <span
                 className={`badge rounded-pill border ${
@@ -306,7 +308,7 @@ export default function CoastFireCalculator() {
                 }`}
                 style={{ fontSize: '0.66rem' }}
               >
-                {calc.isBaristaReady ? 'Ready to Semi-Retire!' : `${fmtCompact(calc.baristaGap)} to go`}
+                {calc.isBaristaReady ? t('coastFire.baristaReady', 'Ready to Semi-Retire!') : `${fmtCompact(calc.baristaGap)}`}
               </span>
             </div>
 

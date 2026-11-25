@@ -486,7 +486,7 @@ export default function GlobalHeader() {
                                         style={{ height: '36px', borderTopLeftRadius: '50rem', borderBottomLeftRadius: '50rem' }}
                                         onClick={undo}
                                         disabled={!canUndo}
-                                        title="Undo (Ctrl+Z)"
+                                        title={translationCtx.t ? translationCtx.t('header.undo', 'Undo (Ctrl+Z)') : 'Undo (Ctrl+Z)'}
                                     >
                                         <i className="bi bi-arrow-counterclockwise"></i>
                                     </button>
@@ -496,7 +496,7 @@ export default function GlobalHeader() {
                                         style={{ height: '36px', borderTopRightRadius: '50rem', borderBottomRightRadius: '50rem' }}
                                         onClick={redo}
                                         disabled={!canRedo}
-                                        title="Redo (Ctrl+Y)"
+                                        title={translationCtx.t ? translationCtx.t('header.redo', 'Redo (Ctrl+Y)') : 'Redo (Ctrl+Y)'}
                                     >
                                         <i className="bi bi-arrow-clockwise"></i>
                                     </button>
@@ -504,7 +504,7 @@ export default function GlobalHeader() {
                                 <div className="d-flex align-items-center bg-input border border-secondary rounded-pill px-3 shadow-sm transition-all d-none d-sm-flex" style={{ height: '36px' }} title="Toggle Real vs Nominal Dollars.">
                                     <div className="form-check form-switch mb-0 d-flex align-items-center p-0 m-0">
                                         <input className="form-check-input m-0 cursor-pointer shadow-none" type="checkbox" id="useRealDollars" checked={data.useRealDollars ?? false} onChange={(e) => updateUseRealDollars(e.target.checked)} />
-                                        <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-xl-block" style={{ paddingTop: '2px' }} htmlFor="useRealDollars">Today's $</label>
+                                        <label className="form-check-label small fw-bold text-info ms-2 cursor-pointer d-none d-xl-block" style={{ paddingTop: '2px' }} htmlFor="useRealDollars">{translationCtx.t ? translationCtx.t('nav.todaysDollars', "Today's $") : "Today's $"}</label>
                                     </div>
                                 </div>
                             </>

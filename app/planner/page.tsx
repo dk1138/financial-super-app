@@ -231,9 +231,9 @@ export default function PlannerPage() {
                           <i className="bi bi-magic fs-5"></i>
                         </div>
                         <div>
-                          <div className="fw-bold text-main small text-uppercase ls-1">New here? Build your plan in 60 seconds</div>
+                          <div className="fw-bold text-main small text-uppercase ls-1">{t('onboarding.bannerTitle', 'New here? Build your plan in 60 seconds')}</div>
                           <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                            Use the guided 4-step wizard or load a realistic Canadian persona preset.
+                            {t('onboarding.bannerSubtitle', 'Use the guided 4-step wizard or load a realistic Canadian persona preset.')}
                           </div>
                         </div>
                       </div>
@@ -242,7 +242,7 @@ export default function PlannerPage() {
                         className="btn btn-primary btn-sm rounded-pill fw-bold px-3 py-1.5 shadow-sm"
                         onClick={() => setShowOnboardingWizard(true)}
                       >
-                        <i className="bi bi-rocket-takeoff-fill me-2"></i>Quick Setup & Personas
+                        <i className="bi bi-rocket-takeoff-fill me-2"></i>{t('onboarding.bannerCta', 'Quick Setup & Personas')}
                       </button>
                     </div>
                   </div>

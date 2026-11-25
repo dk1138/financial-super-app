@@ -113,5 +113,93 @@ export const en = {
     back: 'Back',
     nextStep: 'Next Step',
     confirmRollover: 'Confirm & Rollover to'
+  },
+  header: {
+    undo: 'Undo (Ctrl+Z)',
+    redo: 'Redo (Ctrl+Y)',
+    shareLink: 'Share Plan Link'
+  },
+  onboarding: {
+    bannerTitle: 'New here? Build your plan in 60 seconds',
+    bannerSubtitle: 'Use the guided 4-step wizard or load a realistic Canadian persona preset.',
+    bannerCta: 'Quick Setup & Personas'
+  },
+  nextBestActions: {
+    title: 'Next Best Actions',
+    allPassing: 'All Checks Passing',
+    opportunity: 'Opportunity Found',
+    opportunities: 'Opportunities Found',
+    wellOptimizedTitle: 'Your plan looks well-optimized',
+    wellOptimizedDesc: 'No portfolio shortfalls, OAS clawback leaks, or unenabled Canadian tax optimizations were detected. Try Stress Testing & Risk to test extreme market or survivor scenarios.',
+    applied: 'Applied',
+    shortfallCta: 'Open Sensitivity Heatmap',
+    pensionSplitTitle: 'Enable Canadian Pension Income Splitting',
+    pensionSplitCta: 'Enable Pension Split',
+    oasShieldCta: 'Enable OAS Shield',
+    rrspMeltdownTitle: 'Consider Smart RRSP Meltdown before age 71',
+    rrspMeltdownCta: 'Enable RRSP Meltdown',
+    emergencyCta: 'Emergency Fund Tool',
+    debtCta: 'Review Debt Inputs'
+  },
+  strategyMatrix: {
+    title: '1-Click Auto-Optimize Strategy Matrix',
+    runBtn: 'Run Strategy Optimizer',
+    rerunBtn: 'Re-Run Matrix',
+    rankByEstate: 'Rank by After-Tax Estate',
+    rankByTax: 'Rank by Lowest Tax',
+    applyStrategy: 'Apply',
+    currentSetup: 'Current',
+    funded: 'Funded',
+    shortfall: 'Shortfall'
+  },
+  tools: {
+    title: 'Tools & Calculators',
+    subtitle: '30 specialized Canadian financial, tax, and debt calculators',
+    searchPlaceholder: 'Search tools (e.g. RRSP, CPP, Mortgage, Coast FIRE, Heatmap)...',
+    allTools: 'All Tools',
+    masterSimulations: 'Master Simulations',
+    taxRegistered: 'Tax & Registered',
+    businessIncome: 'Business & Income',
+    debtRealEstate: 'Debt, Real Estate & Cash',
+    dataImporters: 'Data Importers'
+  },
+  sensitivity: {
+    title: 'Sensitivity Heatmap & Max Safe Spend',
+    subtitle: '5×5 Retire Age × Spend Matrix',
+    solverTitle: 'Max Safe Spend Solver',
+    solveBtn: 'Solve Max Spend',
+    solving: 'Solving...',
+    generateBtn: 'Generate 5×5 Heatmap',
+    refreshBtn: 'Refresh 5×5 Heatmap',
+    currentSpend: 'Current',
+    maxSafe: 'Max Safe',
+    cushionGap: 'Cushion / Gap',
+    expand: 'Expand',
+    compact: 'Compact'
+  },
+  coastFire: {
+    title: 'Coast & Barista FIRE',
+    subtitle: 'Canadian FI & Semi-Retirement Milestone',
+    coastMode: 'Coast FIRE',
+    baristaMode: 'Barista FIRE',
+    currentAge: 'Current Age',
+    fullFiAge: 'Full FI Age',
+    investedPortfolio: 'Invested Portfolio',
+    annualRetSpend: 'Annual Ret. Spend',
+    annualSavings: 'Annual Savings',
+    partTimeIncome: 'Part-Time Income/yr',
+    returnLabel: 'Return',
+    swrLabel: 'SWR',
+    cppOasToggle: 'Factor in est. CPP + OAS',
+    coastNumberToday: 'Coast FIRE Number (Today)',
+    coastReached: 'Coast FIRE Reached!',
+    baristaTarget: 'Barista FIRE Target',
+    baristaReady: 'Ready to Semi-Retire!'
+  },
+  survivorStress: {
+    title: "Survivor & Widow's Tax Trap Stress Test",
+    runBtn: 'Run Survivor Stress Test',
+    rerunBtn: 'Re-Run Stress Test',
+    running: 'Simulating...'
   }
 };

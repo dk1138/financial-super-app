@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, SegmentedControl, StepperInput } from '../SharedUI';
 import type { SurvivorStressResult } from '../../lib/engine/survivorStress';
 import {
@@ -17,6 +18,7 @@ import {
 
 export default function SurvivorStressCard() {
   const { data } = useFinance();
+  const { t } = useTranslation();
   const isCouple = data.mode === 'Couple';
 
   const [deceased, setDeceased] = useState<'p1' | 'p2'>('p1');
@@ -102,10 +104,10 @@ export default function SurvivorStressCard() {
       <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom border-secondary p-3 surface-card">
         <div className="d-flex align-items-center">
           <i className="bi bi-heart-pulse-fill text-danger fs-4 me-3"></i>
-          <h5 className="mb-0 fw-bold text-uppercase ls-1">Survivor &amp; Widow&apos;s Tax Trap Stress Test</h5>
+          <h5 className="mb-0 fw-bold text-uppercase ls-1">{t('survivorStress.title', "Survivor & Widow's Tax Trap Stress Test")}</h5>
           <InfoBtn
             align="left"
-            title="Survivor / Widow's Tax Trap"
+            title={t('survivorStress.title', "Survivor & Widow's Tax Trap Stress Test")}
             text="Models an early passing of one spouse. In Canada, the surviving spouse loses pension income splitting, drops to single tax brackets, loses one OAS benefit, and hits OAS clawback thresholds much faster."
           />
         </div>
@@ -118,11 +120,11 @@ export default function SurvivorStressCard() {
         >
           {isRunning ? (
             <>
-              <span className="spinner-border spinner-border-sm me-2"></span>Simulating...
+              <span className="spinner-border spinner-border-sm me-2"></span>{t('survivorStress.running', 'Simulating...')}
             </>
           ) : (
             <>
-              <i className="bi bi-play-circle-fill me-2"></i>Run Survivor Test
+              <i className="bi bi-play-circle-fill me-2"></i>{t('survivorStress.runBtn', 'Run Survivor Stress Test')}
             </>
           )}
         </button>

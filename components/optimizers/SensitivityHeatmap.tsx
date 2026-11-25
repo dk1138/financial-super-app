@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useFinance } from '../../lib/FinanceContext';
+import { useTranslation } from '../../lib/LanguageContext';
 import { InfoBtn, SegmentedControl } from '../SharedUI';
 import type { SensitivityHeatmapResult, MaxSpendResult } from '../../lib/engine/sensitivity';
 
@@ -12,6 +13,7 @@ interface Props {
 
 export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: Props) {
   const { data } = useFinance();
+  const { t } = useTranslation();
 
   // Heatmap state
   const [heatmap, setHeatmap] = useState<SensitivityHeatmapResult | null>(null);
@@ -140,16 +142,16 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
           <div>
             <div className="d-flex align-items-center gap-1">
               <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>
-                Sensitivity Heatmap &amp; Max Safe Spend
+                {t('sensitivity.title', 'Sensitivity Heatmap & Max Safe Spend')}
               </h5>
               <InfoBtn
                 align="left"
-                title="Sensitivity Heatmap & Max Safe Spend Solver"
+                title={t('sensitivity.title', 'Sensitivity Heatmap & Max Safe Spend')}
                 text="Tests 25 combinations of Retirement Age (-4 to +4 years) and Retirement Spending (-20% to +20%) in the background, plus solves for the maximum monthly retirement spend your plan can sustain for a chosen target legacy."
               />
             </div>
             <span className="text-muted small" style={{ fontSize: '0.72rem' }}>
-              5×5 Retire Age × Spend Matrix
+              {t('sensitivity.subtitle', '5×5 Retire Age × Spend Matrix')}
             </span>
           </div>
         </div>
@@ -163,13 +165,13 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
             style={{ fontSize: '0.72rem' }}
           >
             <i className={`bi ${isExpanded ? 'bi-arrows-angle-contract' : 'bi-arrows-angle-expand'} me-1`}></i>
-            {isExpanded ? 'Compact' : 'Expand'}
+            {isExpanded ? t('sensitivity.compact', 'Compact') : t('sensitivity.expand', 'Expand')}
           </button>
         )}
       </div>
 
       <p className="text-muted small mb-3" style={{ fontSize: '0.78rem' }}>
-        Solve your max sustainable monthly retirement spend ({data.useRealDollars ? "Today's $" : 'Nominal $'}) and test 25 age vs. spend tradeoffs.
+        Solve your max sustainable monthly retirement spend ({data.useRealDollars ? t('nav.todaysDollars', "Today's $") : 'Nominal $'}) and test 25 age vs. spend tradeoffs.
       </p>
 
       {errorMsg && (
@@ -185,7 +187,7 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
             <div className="d-flex align-items-center gap-2">
               <i className="bi bi-cash-coin text-success"></i>
               <span className="fw-bold text-main text-uppercase ls-1" style={{ fontSize: '0.74rem' }}>
-                Max Safe Spend Solver
+                {t('sensitivity.solverTitle', 'Max Safe Spend Solver')}
               </span>
             </div>
           </div>
@@ -210,9 +212,9 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
               disabled={isSolvingSpend}
             >
               {isSolvingSpend ? (
-                <><span className="spinner-border spinner-border-sm me-2"></span>Solving...</>
+                <><span className="spinner-border spinner-border-sm me-2"></span>{t('sensitivity.solving', 'Solving...')}</>
               ) : (
-                <><i className="bi bi-calculator-fill me-2"></i>Solve Max Spend</>
+                <><i className="bi bi-calculator-fill me-2"></i>{t('sensitivity.solveBtn', 'Solve Max Spend')}</>
               )}
             </button>
           </div>
@@ -221,15 +223,15 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
         {maxSpend && (
           <div className="row g-2 mt-2 pt-2 border-top border-secondary border-opacity-50">
             <div className={isExpanded ? 'col-4' : 'col-6'}>
-              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>Current</div>
+              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>{t('sensitivity.currentSpend', 'Current')}</div>
               <div className="fw-bold text-main" style={{ fontSize: '0.92rem' }}>{fmt(maxSpend.baseMonthlySpend)}/mo</div>
             </div>
             <div className={isExpanded ? 'col-4' : 'col-6'}>
-              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>Max Safe</div>
+              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>{t('sensitivity.maxSafe', 'Max Safe')}</div>
               <div className="fw-bolder text-success" style={{ fontSize: '0.92rem' }}>{fmt(maxSpend.maxMonthlySpend)}/mo</div>
             </div>
             <div className={isExpanded ? 'col-4' : 'col-12'}>
-              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>Cushion / Gap</div>
+              <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.64rem' }}>{t('sensitivity.cushionGap', 'Cushion / Gap')}</div>
               <div className={`fw-bold ${maxSpend.deltaMonthly >= 0 ? 'text-success' : 'text-danger'}`} style={{ fontSize: '0.88rem' }}>
                 {maxSpend.deltaMonthly >= 0 ? '+' : '-'}{fmt(Math.abs(maxSpend.deltaMonthly))}/mo ({maxSpend.deltaPct >= 0 ? '+' : ''}{maxSpend.deltaPct}%)
               </div>
@@ -256,12 +258,12 @@ export default function SensitivityMatrixCard({ isExpanded = false, onToggle }: 
             {isRunningMap ? (
               <>
                 <span className="spinner-border spinner-border-sm"></span>
-                <span>Building 5×5 Grid... {mapProgress}%</span>
+                <span>{mapProgress}%</span>
               </>
             ) : (
               <>
                 <i className="bi bi-grid-fill"></i>
-                <span>{heatmap ? 'Refresh 5×5 Heatmap' : 'Generate 5×5 Heatmap'}</span>
+                <span>{heatmap ? t('sensitivity.refreshBtn', 'Refresh 5×5 Heatmap') : t('sensitivity.generateBtn', 'Generate 5×5 Heatmap')}</span>
               </>
             )}
           </span>

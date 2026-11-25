@@ -44,7 +44,7 @@ export const fr = {
     projection: 'Projections',
     risk: 'Risque',
     cashflow: 'Flux de trésorerie',
-    tools: 'Outils & Simulateurs',
+    tools: 'Outils & Calculateurs',
     compare: 'Comparer',
     dataBank: 'Banque de données'
   },
@@ -113,5 +113,93 @@ export const fr = {
     back: 'Retour',
     nextStep: 'Étape suivante',
     confirmRollover: 'Confirmer et reporter à'
+  },
+  header: {
+    undo: 'Annuler (Ctrl+Z)',
+    redo: 'Rétablir (Ctrl+Y)',
+    shareLink: 'Partager le lien du plan'
+  },
+  onboarding: {
+    bannerTitle: 'Nouveau ici ? Bâtissez votre plan en 60 secondes',
+    bannerSubtitle: 'Utilisez l’assistant guidé en 4 étapes ou chargez un profil canadien réaliste.',
+    bannerCta: 'Configuration rapide & Profils'
+  },
+  nextBestActions: {
+    title: 'Prochaines meilleures actions',
+    allPassing: 'Toutes les vérifications réussies',
+    opportunity: 'Opportunité détectée',
+    opportunities: 'Opportunités détectées',
+    wellOptimizedTitle: 'Votre plan semble bien optimisé',
+    wellOptimizedDesc: 'Aucun épuisement de portefeuille, aucune récupération de la SV ni d’optimisation fiscale canadienne manquante détectée. Essayez Risque pour tester des scénarios extrêmes.',
+    applied: 'Appliqué',
+    shortfallCta: 'Ouvrir la carte thermique',
+    pensionSplitTitle: 'Activer le fractionnement du revenu de pension',
+    pensionSplitCta: 'Activer le fractionnement',
+    oasShieldCta: 'Activer le bouclier SV',
+    rrspMeltdownTitle: 'Envisager le décaissement REER intelligent avant 71 ans',
+    rrspMeltdownCta: 'Activer le décaissement REER',
+    emergencyCta: 'Outil fonds d’urgence',
+    debtCta: 'Vérifier les dettes'
+  },
+  strategyMatrix: {
+    title: 'Matrice d’auto-optimisation en 1 clic',
+    runBtn: 'Lancer l’optimiseur de stratégie',
+    rerunBtn: 'Relancer la matrice',
+    rankByEstate: 'Classer par succession nette',
+    rankByTax: 'Classer par impôt minimal',
+    applyStrategy: 'Appliquer',
+    currentSetup: 'Actuel',
+    funded: 'Financé',
+    shortfall: 'Déficit'
+  },
+  tools: {
+    title: 'Outils & Calculateurs',
+    subtitle: '30 calculateurs canadiens spécialisés en finances, fiscalité et dettes',
+    searchPlaceholder: 'Rechercher un outil (ex. REER, RPC/RRQ, Hypothèque, Coast FIRE)...',
+    allTools: 'Tous les outils',
+    masterSimulations: 'Simulations maîtresses',
+    taxRegistered: 'Fiscalité & Comptes enregistrés',
+    businessIncome: 'Affaires & Revenus',
+    debtRealEstate: 'Dettes, Immobilier & Liquidités',
+    dataImporters: 'Importateurs de données'
+  },
+  sensitivity: {
+    title: 'Carte thermique & Dépense maximale sécuritaire',
+    subtitle: 'Matrice 5×5 Âge de retraite × Dépenses',
+    solverTitle: 'Solveur de dépense maximale',
+    solveBtn: 'Calculer la dépense max',
+    solving: 'Calcul en cours...',
+    generateBtn: 'Générer la carte thermique 5×5',
+    refreshBtn: 'Actualiser la carte 5×5',
+    currentSpend: 'Actuel',
+    maxSafe: 'Max sécuritaire',
+    cushionGap: 'Marge / Écart',
+    expand: 'Agrandir',
+    compact: 'Réduire'
+  },
+  coastFire: {
+    title: 'Coast FIRE & Barista FIRE',
+    subtitle: 'Jalons canadiens d’indépendance financière',
+    coastMode: 'Coast FIRE',
+    baristaMode: 'Barista FIRE',
+    currentAge: 'Âge actuel',
+    fullFiAge: 'Âge IF complet',
+    investedPortfolio: 'Portefeuille investi',
+    annualRetSpend: 'Dépenses annuelles (ret.)',
+    annualSavings: 'Épargne annuelle',
+    partTimeIncome: 'Revenu temps partiel/an',
+    returnLabel: 'Rendement',
+    swrLabel: 'Taux retrait',
+    cppOasToggle: 'Inclure RPC/RRQ + SV estimés',
+    coastNumberToday: 'Objectif Coast FIRE (Aujourd’hui)',
+    coastReached: 'Coast FIRE atteint !',
+    baristaTarget: 'Objectif Barista FIRE',
+    baristaReady: 'Prêt pour la semi-retraite !'
+  },
+  survivorStress: {
+    title: 'Test de stress du survivant et piège fiscal du veuvage',
+    runBtn: 'Lancer le test du survivant',
+    rerunBtn: 'Relancer le test',
+    running: 'Simulation...'
   }
 };
