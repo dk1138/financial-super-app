@@ -1022,7 +1022,7 @@ export default function IncomeTaxCard() {
       <div className="card-body p-4">
         
         <div className="mb-5">
-            <label className="form-label fw-bold small text-muted text-uppercase ls-1">Province of Residence</label>
+            <label className="form-label fw-bold small text-muted text-uppercase ls-1">{t('taxCard.provinceOfResidence', 'Province of Residence')}</label>
             <div className="d-flex w-100">
                 <ProvinceSelector value={data.inputs.tax_province} onChange={(v) => updateInput('tax_province', v)} />
             </div>
@@ -1040,25 +1040,25 @@ export default function IncomeTaxCard() {
               <div className="card h-100 border-secondary surface-card shadow-none mb-4">
                 <div className="card-body p-4">
                   <div className="d-flex justify-content-between mb-4 border-bottom border-secondary pb-2">
-                    <h6 className={`fw-bold text-uppercase ls-1 ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{currentName} Income</h6>
+                    <h6 className={`fw-bold text-uppercase ls-1 ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{currentName} {t('taxCard.incomeSuffix', 'Income')}</h6>
                     <div className="d-flex gap-2">
-                      <button type="button" className={`btn btn-sm btn-outline-${p === 'p1' ? 'info' : 'primary'} rounded-pill px-3 py-1 fw-bold`} style={p === 'p2' ? {color:'var(--bs-purple)', borderColor:'var(--bs-purple)'} : {}} onClick={() => addArrayItem('additionalIncome', { owner: p, name: 'Side Hustle', amount: 5000, freq: 'year', growth: 2.0, startMode: 'date', start: '2026-01', endMode: 'never', taxable: true })}>+ Stream</button>
+                      <button type="button" className={`btn btn-sm btn-outline-${p === 'p1' ? 'info' : 'primary'} rounded-pill px-3 py-1 fw-bold`} style={p === 'p2' ? {color:'var(--bs-purple)', borderColor:'var(--bs-purple)'} : {}} onClick={() => addArrayItem('additionalIncome', { owner: p, name: 'Side Hustle', amount: 5000, freq: 'year', growth: 2.0, startMode: 'date', start: '2026-01', endMode: 'never', taxable: true })}>{t('taxCard.addStream', '+ Stream')}</button>
                     </div>
                   </div>
 
                   <div className="border border-secondary rounded-4 mb-3 shadow-sm">
                       <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                           <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-cash-stack"></i></div>
-                          <span className="fw-bold text-main small text-uppercase ls-1">Base Salary</span>
+                          <span className="fw-bold text-main small text-uppercase ls-1">{t('taxCard.baseSalary', 'Base Salary')}</span>
                       </div>
                       <div className="p-3 bg-input rounded-bottom-4">
                           <div className="row g-3">
                               <div className="col-12 col-md-7">
-                                  <label className="form-label small text-muted mb-1">Gross Annual Income</label>
+                                  <label className="form-label small text-muted mb-1">{t('taxCard.grossAnnualIncome', 'Gross Annual Income')}</label>
                                   <CurrencyInput className="form-control" value={data.inputs[`${p}_income`] ?? ''} onChange={(val: any) => updateInput(`${p}_income`, val)} />
                               </div>
                               <div className="col-12 col-md-5">
-                                  <label className="form-label small text-muted mb-1">Yearly Growth (%)</label>
+                                  <label className="form-label small text-muted mb-1">{t('taxCard.yearlyGrowth', 'Yearly Growth (%)')}</label>
                                   <PercentInput className="form-control" value={data.inputs[`${p}_income_growth`]} onChange={(val: any) => updateInput(`${p}_income_growth`, val)} />
                               </div>
                           </div>
@@ -1072,7 +1072,7 @@ export default function IncomeTaxCard() {
                                   <div className="d-flex align-items-center justify-content-between pt-2.5 mt-3 border-top border-secondary border-opacity-25 flex-wrap gap-1">
                                       <span className="small text-muted d-flex align-items-center gap-1.5" style={{ fontSize: '0.75rem' }}>
                                           <i className="bi bi-wallet2 text-success"></i>
-                                          <span>Estimated Net Pay</span>
+                                          <span>{t('taxCard.estimatedNetPay', 'Estimated Net Pay')}</span>
                                       </span>
                                       <div className="d-flex align-items-center gap-2">
                                           <span className="small text-main fw-bold" style={{ fontSize: '0.78rem' }}>
@@ -1091,8 +1091,8 @@ export default function IncomeTaxCard() {
 
                   {/* PAYCHEQUE DEDUCTIONS SECTION */}
                   <div className="d-flex justify-content-between align-items-center mb-2 mt-4">
-                      <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0">Paycheque Deductions</h6>
-                      <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 fw-bold" style={{fontSize: '0.75rem'}} onClick={() => addArrayItem('deductions', { owner: p, name: 'LTD / Health', amount: 50, freq: 'bi-weekly' })}>+ Add</button>
+                      <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0">{t('taxCard.paychequeDeductions', 'Paycheque Deductions')}</h6>
+                      <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 fw-bold" style={{fontSize: '0.75rem'}} onClick={() => addArrayItem('deductions', { owner: p, name: 'LTD / Health', amount: 50, freq: 'bi-weekly' })}>{t('taxCard.add', '+ Add')}</button>
                   </div>
                   
                   {(data.deductions || []).filter((d: any) => d.owner === p).map((ded: any) => {
@@ -1103,21 +1103,21 @@ export default function IncomeTaxCard() {
                               <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                   <div className="d-flex align-items-center gap-3 w-100">
                                       <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-dash-circle"></i></div>
-                                      <input type="text" maxLength={50} className="form-control bg-transparent border-0 text-main fw-bold p-0 shadow-none" value={ded.name || ''} onChange={(e) => updateDed('name', e.target.value)} placeholder="Deduction Name" />
+                                      <input type="text" maxLength={50} className="form-control bg-transparent border-0 text-main fw-bold p-0 shadow-none" value={ded.name || ''} onChange={(e) => updateDed('name', e.target.value)} placeholder={t('taxCard.deductionName', 'Deduction Name')} />
                                   </div>
                                   <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('deductions', realIdx)}><i className="bi bi-x-lg fs-5"></i></button>
                               </div>
                               <div className="p-3 bg-input rounded-bottom-4">
                                   <div className="row g-3">
                                       <div className="col-12 col-md-6">
-                                          <label className="small text-muted mb-1 fw-medium">Amount ($)</label>
+                                          <label className="small text-muted mb-1 fw-medium">{t('taxCard.amount', 'Amount ($)')}</label>
                                           <CurrencyInput className="form-control form-control-sm" value={ded.amount} onChange={(val: any) => updateDed('amount', val)} />
                                       </div>
                                       <div className="col-12 col-md-6">
-                                          <label className="small text-muted mb-1 fw-medium">Frequency</label>
+                                          <label className="small text-muted mb-1 fw-medium">{t('taxCard.frequency', 'Frequency')}</label>
                                           <select className="form-select form-select-sm bg-input border-secondary text-main" value={ded.freq || 'bi-weekly'} onChange={(e) => updateDed('freq', e.target.value)}>
-                                              <option value="bi-weekly">Bi-Weekly</option>
-                                              <option value="monthly">Monthly</option>
+                                              <option value="bi-weekly">{t('taxCard.biWeekly', 'Bi-Weekly')}</option>
+                                              <option value="monthly">{t('taxCard.monthly', 'Monthly')}</option>
                                           </select>
                                       </div>
                                   </div>
@@ -1129,16 +1129,16 @@ export default function IncomeTaxCard() {
                   <div className="border border-secondary rounded-4 mb-3 shadow-sm mt-3">
                       <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex align-items-center gap-3 rounded-top-4">
                           <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}><i className="bi bi-building"></i></div>
-                          <span className="fw-bold text-main small text-uppercase ls-1">Employer RRSP Match</span>
+                          <span className="fw-bold text-main small text-uppercase ls-1">{t('taxCard.employerRrspMatch', 'Employer RRSP Match')}</span>
                       </div>
                       <div className="p-3 bg-input rounded-bottom-4">
                           <div className="row g-3">
                               <div className="col-12 col-md-6 d-flex flex-column">
-                                  <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1" style={{ minHeight: '24px' }}>Max Match (%)</label>
+                                  <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1" style={{ minHeight: '24px' }}>{t('taxCard.maxMatch', 'Max Match (%)')}</label>
                                   <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match`]} onChange={(val: any) => updateInput(`${p}_rrsp_match`, val)} />
                               </div>
                               <div className="col-12 col-md-6 d-flex flex-column">
-                                  <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1" style={{ minHeight: '24px' }}>Match Rate (%) <InfoBtn title="Match Rate" text="If they match 50 cents on the dollar, enter 50."/></label>
+                                  <label className="form-label small text-muted mb-1 d-flex align-items-center gap-1" style={{ minHeight: '24px' }}>{t('taxCard.matchRate', 'Match Rate (%)')} <InfoBtn title="Match Rate" text="If they match 50 cents on the dollar, enter 50."/></label>
                                   <PercentInput className="form-control" value={data.inputs[`${p}_rrsp_match_tier`]} onChange={(val: any) => updateInput(`${p}_rrsp_match_tier`, val)} />
                               </div>
                           </div>
@@ -1155,7 +1155,7 @@ export default function IncomeTaxCard() {
                               <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '32px', height: '32px'}}>
                                   <i className="bi bi-shield-check"></i>
                               </div>
-                              <span className="fw-bold text-main small text-uppercase ls-1">Tax Credits & Deductions</span>
+                              <span className="fw-bold text-main small text-uppercase ls-1">{t('taxCard.taxCreditsDeductions', 'Tax Credits & Deductions')}</span>
                           </div>
                           <i className={`bi bi-chevron-${showCredits[p] ? 'up' : 'down'} text-muted`}></i>
                       </div>
@@ -1171,7 +1171,7 @@ export default function IncomeTaxCard() {
                                       <div id={`${p}_disability_container`} className="bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2 transition-all">
                                           <div className="d-flex align-items-center justify-content-between px-1">
                                               <span className="small fw-medium text-main d-flex align-items-center gap-1">
-                                                  Disability Tax Credit
+                                                  {t('taxCard.disabilityTaxCredit', 'Disability Tax Credit')}
                                                   <InfoBtn 
                                                       title="Disability Tax Credit (Line 31600 / 58440)" 
                                                       text="A non-refundable tax credit (Federal Line 31600 & Provincial Line 58440) that reduces income tax for individuals with a severe and prolonged physical or mental impairment.<br/><br/>You can designate this credit to start at a specific age (especially useful for planning for older years or long-term care) or start immediately.<br/><br/><a href='https://www.taxtips.ca/nrcredits/tax-credits-2025-base.htm' target='_blank'>TaxTips.ca Base Tax Credits</a><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html' target='_blank'>CRA Disability Tax Credit</a>" 
@@ -1196,7 +1196,7 @@ export default function IncomeTaxCard() {
                                           
                                           {data.inputs[`${p}_disability`] && (
                                               <div className="d-flex align-items-center justify-content-between bg-input rounded-pill px-3 py-1 mt-2 border border-secondary border-opacity-25 user-select-none">
-                                                  <span className="small fw-medium text-muted">Starts at Age</span>
+                                                  <span className="small fw-medium text-muted">{t('taxCard.startsAtAge', 'Starts at Age')}</span>
                                                   <div style={{ width: '110px' }}>
                                                       <StepperInput 
                                                           min={playerAge} 
@@ -1212,12 +1212,12 @@ export default function IncomeTaxCard() {
                                       {/* Caregiver Block */}
                                       <div className="bg-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-3 p-2">
                                           <div className="d-flex align-items-center px-1 mb-2">
-                                              <span className="small fw-medium text-main mb-0 me-1">Canada Caregiver Credit</span>
+                                              <span className="small fw-medium text-main mb-0 me-1">{t('taxCard.canadaCaregiverCredit', 'Canada Caregiver Credit')}</span>
                                               <InfoBtn title="Canada Caregiver Amount" text="This non-refundable tax credit helps caregivers with the expenses involved with taking care of their spouse or common-law partner or dependant who has an impairment in physical or mental functions.<br/><br/>Enter the number of eligible dependants you are claiming for this credit.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html' target='_blank'>Learn more on Canada.ca</a>" />
                                           </div>
                                           
                                           <div className="d-flex align-items-center justify-content-between bg-input rounded-pill px-3 py-1 mb-2 border border-secondary border-opacity-25 user-select-none">
-                                              <span className="small fw-medium text-muted">Under 18</span>
+                                              <span className="small fw-medium text-muted">{t('taxCard.under18', 'Under 18')}</span>
                                               <div className="d-flex align-items-center gap-3">
                                                   <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_under_18`, Math.max(0, (data.inputs[`${p}_caregiver_under_18`] || 0) - 1))}></i>
                                                   <span className="fw-bold text-main" style={{width: '12px', textAlign: 'center'}}>{data.inputs[`${p}_caregiver_under_18`] || 0}</span>
@@ -1226,7 +1226,7 @@ export default function IncomeTaxCard() {
                                           </div>
 
                                           <div className="d-flex align-items-center justify-content-between bg-input rounded-pill px-3 py-1 border border-secondary border-opacity-25 user-select-none">
-                                              <span className="small fw-medium text-muted">18 or Older</span>
+                                              <span className="small fw-medium text-muted">{t('taxCard.age18OrOlder', '18 or Older')}</span>
                                               <div className="d-flex align-items-center gap-3">
                                                   <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => updateInput(`${p}_caregiver_over_18`, Math.max(0, (data.inputs[`${p}_caregiver_over_18`] || 0) - 1))}></i>
                                                   <span className="fw-bold text-main" style={{width: '12px', textAlign: 'center'}}>{data.inputs[`${p}_caregiver_over_18`] || 0}</span>
@@ -1238,7 +1238,7 @@ export default function IncomeTaxCard() {
                                       {/* Home Buyer */}
                                       <div className="d-flex align-items-center justify-content-between bg-secondary bg-opacity-10 rounded-3 px-3 py-2 border border-secondary border-opacity-25 user-select-none mt-1">
                                           <span className="small fw-medium text-main d-flex align-items-center gap-1">
-                                              Home Buyer Yr <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html' target='_blank'>Learn more on Canada.ca</a>"/>
+                                              {t('taxCard.homeBuyerYr', 'Home Buyer Yr')} <InfoBtn title="First-Time Home Buyer" text="Select the year you plan to buy your first home to apply the $10,000 base credit for that specific year.<br/><br/><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-31270-home-buyers-amount.html' target='_blank'>Learn more on Canada.ca</a>"/>
                                           </span>
                                           <div className="d-flex align-items-center gap-2 bg-input rounded-pill px-2 py-1 border border-secondary border-opacity-25">
                                               <i className="bi bi-dash-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => {
@@ -1247,7 +1247,7 @@ export default function IncomeTaxCard() {
                                                   if (yr && Number(yr) > cy) updateInput(`${p}_first_time_home_buyer_year`, Number(yr) - 1);
                                                   else if (yr && Number(yr) <= cy) updateInput(`${p}_first_time_home_buyer_year`, '');
                                               }}></i>
-                                              <span className="fw-bold text-main" style={{width: '36px', textAlign: 'center', fontSize: '0.85rem'}}>{data.inputs[`${p}_first_time_home_buyer_year`] || 'None'}</span>
+                                              <span className="fw-bold text-main" style={{width: '36px', textAlign: 'center', fontSize: '0.85rem'}}>{data.inputs[`${p}_first_time_home_buyer_year`] || t('taxCard.none', 'None')}</span>
                                               <i className="bi bi-plus-circle cursor-pointer text-muted hover-text-main transition-all fs-6" onClick={() => {
                                                   const cy = new Date().getFullYear();
                                                   const yr = data.inputs[`${p}_first_time_home_buyer_year`];

@@ -150,7 +150,7 @@ export default function LivingExpensesCard() {
         <div className="form-check form-switch mb-0 d-flex align-items-center">
             <input className="form-check-input m-0 mt-1 cursor-pointer" type="checkbox" id="advancedModeToggle" checked={expenseAdvancedMode} onChange={(e) => setExpenseAdvancedMode(e.target.checked)} />
             <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-2 cursor-pointer d-flex align-items-center" htmlFor="advancedModeToggle">
-                Adv. Mode
+                {t('expensesCard.advMode', 'Adv. Mode')}
             </label>
         </div>
       </div>
@@ -160,16 +160,16 @@ export default function LivingExpensesCard() {
         <div className="card border-info border-opacity-50 surface-card shadow-sm rounded-4 mb-5">
             <div className="card-header bg-info bg-opacity-10 border-bottom border-info border-opacity-50 p-3 d-flex justify-content-between align-items-center">
                 <h6 className="mb-0 fw-bold text-info text-uppercase ls-1 d-flex align-items-center gap-2">
-                    <i className="bi bi-calendar-range"></i> Phased Expenses & Housing Transitions
+                    <i className="bi bi-calendar-range"></i> {t('expensesCard.phasedTitle', 'Phased Expenses & Housing Transitions')}
                 </h6>
                 <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('expensePhases', { name: 'Future Rent / LTC', amount: 4000, startAge: 80, endAge: 100, isPhased: true })}>
-                    <i className="bi bi-plus-lg me-1"></i> Add Phase
+                    <i className="bi bi-plus-lg me-1"></i> {t('expensesCard.addPhase', 'Add Phase')}
                 </button>
             </div>
             
             {(!data.expensePhases || data.expensePhases.length === 0) ? (
                 <div className="card-body p-4 text-center">
-                    <span className="text-muted small fst-italic">No phased expenses added.</span>
+                    <span className="text-muted small fst-italic">{t('expensesCard.noPhases', 'No phased expenses added.')}</span>
                 </div>
             ) : (
                 <div className="card-body p-3">
@@ -180,7 +180,7 @@ export default function LivingExpensesCard() {
                                     <button type="button" className="btn btn-sm btn-link text-danger position-absolute top-0 end-0 mt-2 me-2 p-0" onClick={() => removeArrayItem('expensePhases', idx)}>
                                         <i className="bi bi-x-lg fs-5"></i>
                                     </button>
-                                    <input type="text" className="form-control form-control-sm bg-transparent border-0 text-main fw-bold mb-2 shadow-none" value={phase.name || ''} onChange={(e) => updateArrayItem('expensePhases', idx, 'name', e.target.value)} placeholder="Phase Name" />
+                                    <input type="text" className="form-control form-control-sm bg-transparent border-0 text-main fw-bold mb-2 shadow-none" value={phase.name || ''} onChange={(e) => updateArrayItem('expensePhases', idx, 'name', e.target.value)} placeholder={t('expensesCard.phaseNamePlaceholder', 'Phase Name')} />
                                     <div className="row g-2">
                                         <div className="col-4"><CurrencyInput className="form-control form-control-sm" value={phase.amount} onChange={(val: any) => updateArrayItem('expensePhases', idx, 'amount', val)} /></div>
                                         <div className="col-4"><StepperInput min={18} max={120} value={phase.startAge || 60} onChange={(val: any) => updateArrayItem('expensePhases', idx, 'startAge', val)} /></div>
@@ -200,7 +200,7 @@ export default function LivingExpensesCard() {
                 <div className="card surface-card border-secondary shadow-sm rounded-4 overflow-hidden" key={cat}>
                     <div className="card-header bg-secondary bg-opacity-10 border-bottom border-secondary d-flex justify-content-between align-items-center p-3">
                         <h6 className="text-uppercase mb-0 fw-bold d-flex align-items-center gap-2">
-                            {getCategoryIcon(cat)} <span className="ls-1">{cat}</span>
+                            {getCategoryIcon(cat)} <span className="ls-1">{t(`expensesCard.categories.${cat}`, cat)}</span>
                         </h6>
                         <div className="d-flex align-items-center gap-2">
                             <button 
@@ -210,7 +210,7 @@ export default function LivingExpensesCard() {
                                 title="Copy all working expense numbers into retirement for this category" 
                                 onClick={() => copyWorkingToRetire(cat, 1.0)}
                             >
-                                <i className="bi bi-copy me-1"></i> Copy to Ret
+                                <i className="bi bi-copy me-1"></i> {t('expensesCard.copyToRet', 'Copy to Ret')}
                             </button>
                             <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => { 
                                 const newList = [...data.expensesByCategory[cat].items, { name: '', curr: 0, ret: 0, trans: 0, gogo: 0, slow: 0, nogo: 0, freq: 12, owner: 'joint' }]; 

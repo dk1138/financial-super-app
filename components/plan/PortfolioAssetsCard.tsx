@@ -113,7 +113,7 @@ export default function PortfolioAssetsCard() {
         </div>
         <div className="form-check form-switch mb-0">
           <input className="form-check-input mt-1 cursor-pointer" type="checkbox" checked={showAssetMixUI} onChange={(e) => updateInput('asset_mode_advanced', e.target.checked)} />
-          <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-1 cursor-pointer">Adv. Mode</label>
+          <label className="form-check-label small fw-bold text-uppercase ls-1 text-muted ms-1 cursor-pointer">{t('portfolioCard.advMode', 'Adv. Mode')}</label>
         </div>
       </div>
       <div className="card-body p-4">
@@ -124,8 +124,8 @@ export default function PortfolioAssetsCard() {
                     <i className="bi bi-pie-chart-fill fs-5"></i>
                 </div>
                 <div>
-                    <h6 className="fw-bold mb-1">Asset Allocation</h6>
-                    <span className="small text-muted">Preset or manual rates.</span>
+                    <h6 className="fw-bold mb-1">{t('portfolioCard.assetAllocation', 'Asset Allocation')}</h6>
+                    <span className="small text-muted">{t('portfolioCard.presetOrManual', 'Preset or manual rates.')}</span>
                 </div>
             </div>
             
@@ -134,16 +134,16 @@ export default function PortfolioAssetsCard() {
                     value={localAlloc} 
                     onChange={handleAllocationChangeWrapper} 
                     options={[
-                        { value: 'custom', label: 'Custom' },
-                        { value: 'aggressive', label: 'Aggressive' },
-                        { value: 'balanced', label: 'Balanced' },
-                        { value: 'conservative', label: 'Conservative' }
+                        { value: 'custom', label: t('portfolioCard.custom', 'Custom') },
+                        { value: 'aggressive', label: t('portfolioCard.aggressive', 'Aggressive') },
+                        { value: 'balanced', label: t('portfolioCard.balanced', 'Balanced') },
+                        { value: 'conservative', label: t('portfolioCard.conservative', 'Conservative') }
                     ]} 
                 />
                 
                 <div className="form-check form-switch mb-0 d-flex align-items-center px-0 justify-content-start flex-shrink-0 border-start border-secondary ps-lg-3 ms-lg-1 pt-2 pt-lg-0">
                     <label className="form-check-label small fw-bold text-primary cursor-pointer me-2 text-nowrap" htmlFor="use_glide_path">
-                        Glide Path <InfoBtn direction="up" title="Glide Path" text="Automatically reduces your equity exposure (risk) by 0.1% per year starting at Age 50 to protect your wealth heading into retirement." />
+                        {t('portfolioCard.glidePath', 'Glide Path')} <InfoBtn direction="up" title={t('portfolioCard.glidePath', 'Glide Path')} text="Automatically reduces your equity exposure (risk) by 0.1% per year starting at Age 50 to protect your wealth heading into retirement." />
                     </label>
                     <input className="form-check-input ms-0 mt-0 cursor-pointer fs-5" type="checkbox" id="use_glide_path" checked={localGlide} onChange={e => handleGlideChangeWrapper(e.target.checked)} />
                 </div>
@@ -164,7 +164,7 @@ export default function PortfolioAssetsCard() {
                 <div className="card-body p-3 p-md-4">
                   
                   <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary cursor-pointer user-select-none" onClick={() => setAssetsOpen(!assetsOpen)}>
-                      <h6 className={`fw-bold text-uppercase ls-1 mb-0 ${isP1 ? 'text-info' : ''}`} style={!isP1 ? {color: 'var(--bs-purple)'} : {}}>{currentName} Asset Mix</h6>
+                      <h6 className={`fw-bold text-uppercase ls-1 mb-0 ${isP1 ? 'text-info' : ''}`} style={!isP1 ? {color: 'var(--bs-purple)'} : {}}>{currentName} {t('portfolioCard.assetMixSuffix', 'Asset Mix')}</h6>
                       <button type="button" className="btn btn-sm btn-link text-muted p-0"><i className={`bi bi-chevron-${assetsOpen ? 'up' : 'down'} fs-5`}></i></button>
                   </div>
 
@@ -173,16 +173,17 @@ export default function PortfolioAssetsCard() {
                           
                           {/* Headers (Standard & Adv) */}
                           <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100" style={{fontSize: '0.65rem'}}>
-                              <div style={{flex: '0 0 135px'}} className="text-start">Account</div>
-                              <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
-                              <div style={{flex: '0 0 75px'}} className="text-start ps-1">{showAssetMixUI ? 'Pre-Ret %' : 'Return %'}</div>
-                              {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post-Ret %</div>}
+                              <div style={{flex: '0 0 135px'}} className="text-start">{t('portfolioCard.account', 'Account')}</div>
+                              <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">{t('portfolioCard.balance', 'Balance')}</div>
+                              <div style={{flex: '0 0 75px'}} className="text-start ps-1">{showAssetMixUI ? t('portfolioCard.preRetPct', 'Pre-Ret %') : t('portfolioCard.returnPct', 'Return %')}</div>
+                              {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">{t('portfolioCard.postRetPct', 'Post-Ret %')}</div>}
                           </div>
 
                           {/* --- COMPACT STANDARD ACCOUNTS --- */}
                           {ACCOUNT_TYPES.map(acct => {
                               const bal = Number(data.inputs[`${p}_${acct.id}`]) || 0;
                               const showFhsaWarning = acct.id === 'fhsa' && bal > 40000;
+                              const localizedAcctLabel = t(`accounts.${acct.id}`, acct.label);
 
                               // UNIFIED CARD FOR LIF (Matching Non-Reg / Crypto styling for both P1 and P2)
                               if (acct.id === 'lif') {
@@ -195,9 +196,9 @@ export default function PortfolioAssetsCard() {
                                               <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
                                                   <div className="d-flex align-items-center gap-1">
                                                       <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
-                                                      <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                                                      <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{localizedAcctLabel}</span>
                                                   </div>
-                                                  <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
+                                                  <InfoBtn direction="up" title={localizedAcctLabel} text={acct.tooltip} />
                                               </div>
                                               <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                                   <CurrencyInput 
@@ -230,7 +231,7 @@ export default function PortfolioAssetsCard() {
                                           {/* Sub-Row: Prior Year LIF Investment Return ($) - Full Width Input Matching Other Rows */}
                                           <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 w-100">
                                               <div className="d-flex justify-content-end align-items-center pe-1" style={{flex: '0 0 135px'}}>
-                                                  <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>Prior Yr Return ($)</span>
+                                                  <span className="small fw-bold text-muted text-uppercase ls-1 me-1" style={{fontSize: '0.65rem'}}>{t('portfolioCard.priorYrReturn', 'Prior Yr Return ($)')}</span>
                                                   <InfoBtn direction="up" title="Prior Year LIF Return ($)" text="Under Canadian pension regulations, the annual LIF maximum withdrawal limit is the <b>greater of</b> the statutory age-based factor and the actual investment return earned in the preceding calendar year.<br><br>Enter last year's actual LIF dollar investment gain ($) here. If left blank, Planfolio defaults to your projected return rate applied to your starting balance." />
                                               </div>
                                               <div style={{flex: '1 1 0%', minWidth: '80px'}}>
@@ -253,14 +254,14 @@ export default function PortfolioAssetsCard() {
                                       <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
                                           <div className="d-flex align-items-center gap-1">
                                               <i className={`bi ${acct.icon} fs-6 ${acct.color}`}></i>
-                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct.label}</span>
+                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{localizedAcctLabel}</span>
                                               {showFhsaWarning && (
                                                   <i className="bi bi-exclamation-triangle-fill text-warning ms-1" 
                                                      title="The lifetime contribution limit for an FHSA is $40,000. Ensure any amount above this represents investment growth, not over-contributions." 
                                                      style={{ cursor: 'help', fontSize: '0.85rem' }}></i>
                                               )}
                                           </div>
-                                          <InfoBtn direction="up" title={acct.label} text={acct.tooltip} />
+                                          <InfoBtn direction="up" title={localizedAcctLabel} text={acct.tooltip} />
                                       </div>
                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                           <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct.id}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct.id}`, val)} placeholder="$0" />
@@ -278,15 +279,17 @@ export default function PortfolioAssetsCard() {
                           })}
                           
                           {/* --- NON-REG & CRYPTO --- */}
-                          {['nonreg', 'crypto'].map(acct => (
+                          {['nonreg', 'crypto'].map(acct => {
+                              const acctTitle = acct === 'crypto' ? t('accounts.crypto', 'Crypto') : t('accounts.nonreg', 'Non-Reg');
+                              return (
                               <div className="d-flex flex-column p-2 bg-input border border-secondary rounded-3 shadow-sm mb-1 mt-2 w-100" key={`${p}_adv_${acct}`}>
                                   <div className="d-flex align-items-center gap-2 w-100">
                                       <div className="d-flex justify-content-between align-items-center pe-1" style={{flex: '0 0 135px'}}>
                                           <div className="d-flex align-items-center gap-1">
                                               <i className={`bi ${acct === 'crypto' ? 'bi-currency-bitcoin text-primary' : 'bi-graph-up-arrow text-secondary'} fs-6`}></i>
-                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acct === 'crypto' ? 'Crypto' : 'Non-Reg'}</span>
+                                              <span className="fw-bold text-main" style={{fontSize: '0.75rem'}}>{acctTitle}</span>
                                           </div>
-                                          <InfoBtn direction="up" title={acct === 'crypto' ? 'Crypto' : 'Non-Reg'} text={acct === 'nonreg' ? 'Taxable Account. Capital gains taxed at 50% inclusion.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12700-capital-gains.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/programs/about-canada-revenue-agency-cra/compliance/digital-currency/cryptocurrency-guide.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>'} />
+                                          <InfoBtn direction="up" title={acctTitle} text={acct === 'nonreg' ? 'Taxable Account. Capital gains taxed at 50% inclusion.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12700-capital-gains.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>' : 'Capital Asset. Gains subject to Capital Gains Tax when sold.<br><br><a href=\'https://www.canada.ca/en/revenue-agency/programs/about-canada-revenue-agency-cra/compliance/digital-currency/cryptocurrency-guide.html\' target=\'_blank\' class=\'text-primary\'>Learn more at Canada.ca</a>'} />
                                       </div>
                                       <div style={{flex: '1 1 0%', minWidth: '80px'}}>
                                           <CurrencyInput className="form-control form-control-sm" value={data.inputs[`${p}_${acct}`] ?? ''} onChange={(val: any) => updateInput(`${p}_${acct}`, val)} placeholder="$0" />
@@ -334,30 +337,31 @@ export default function PortfolioAssetsCard() {
                                       </div>
                                   )}
                               </div>
-                          ))}
+                              );
+                          })}
 
                           {/* --- CUSTOM ACCOUNTS --- */}
                           <div className="mt-3 pt-3 border-top border-secondary">
                               <div className="d-flex justify-content-between align-items-center mb-2">
-                                  <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0">Additional Accounts</h6>
+                                  <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-0">{t('portfolioCard.additionalAccounts', 'Additional Accounts')}</h6>
                                   <button type="button" className={`btn btn-sm rounded-pill px-3 py-1 fw-bold btn-outline-${isP1 ? 'info' : 'primary'}`} style={!isP1 ? {color:'var(--bs-purple)', borderColor:'var(--bs-purple)'} : {}} onClick={() => addArrayItem('customAssets', { owner: p, name: '', type: 'tfsa', balance: 0, rate: 6.0, retireRate: 6.0, acb: 0 })}>
-                                      <i className="bi bi-plus-lg me-1"></i> Add Account
+                                      <i className="bi bi-plus-lg me-1"></i> {t('portfolioCard.addAccount', 'Add Account')}
                                   </button>
                               </div>
                               
                               {playerCustomAssets.length === 0 && (
-                                  <div className="text-center small text-muted fst-italic py-2">No additional accounts added.</div>
+                                  <div className="text-center small text-muted fst-italic py-2">{t('portfolioCard.noAdditional', 'No additional accounts added.')}</div>
                               )}
                               
                               {playerCustomAssets.length > 0 && (
                                   <>
                                       <div className="d-flex align-items-end gap-2 px-2 mb-1 text-muted fw-bold text-uppercase ls-1 w-100 mt-2" style={{fontSize: '0.65rem'}}>
                                           <div style={{flex: '0 0 24px'}}></div>
-                                          <div style={{flex: '0 0 130px'}} className="text-start">Type</div>
-                                          <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1">Name</div>
-                                          <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">Balance</div>
-                                          <div style={{flex: '0 0 75px'}} className="text-start ps-1">{showAssetMixUI ? 'Pre-Ret %' : 'Return %'}</div>
-                                          {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">Post-Ret %</div>}
+                                          <div style={{flex: '0 0 130px'}} className="text-start">{t('portfolioCard.type', 'Type')}</div>
+                                          <div style={{flex: '1 1 0%', minWidth: '60px'}} className="text-start ps-1">{t('portfolioCard.name', 'Name')}</div>
+                                          <div style={{flex: '1 1 0%', minWidth: '80px'}} className="text-start ps-1">{t('portfolioCard.balance', 'Balance')}</div>
+                                          <div style={{flex: '0 0 75px'}} className="text-start ps-1">{showAssetMixUI ? t('portfolioCard.preRetPct', 'Pre-Ret %') : t('portfolioCard.returnPct', 'Return %')}</div>
+                                          {showAssetMixUI && <div style={{flex: '0 0 75px'}} className="text-start ps-1 text-primary">{t('portfolioCard.postRetPct', 'Post-Ret %')}</div>}
                                       </div>
 
                                       {playerCustomAssets.map((ca: any) => {
@@ -378,7 +382,7 @@ export default function PortfolioAssetsCard() {
                                                           <ModernDropdown value={ca.type || 'tfsa'} onChange={val => updateCa('type', val)} options={EXTENDED_ACCOUNT_TYPES} />
                                                       </div>
                                                       <div style={{flex: '1 1 0%', minWidth: '60px'}}>
-                                                          <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-input text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder="Name" />
+                                                          <input type="text" maxLength={20} className="w-100 form-control form-control-sm px-2 text-start shadow-sm border border-secondary bg-input text-main" style={{fontWeight: '600', height: '31px'}} value={ca.name || ''} onChange={(e) => updateCa('name', e.target.value)} placeholder={t('portfolioCard.name', 'Name')} />
                                                       </div>
                                                       <div style={{flex: '1 1 0%', minWidth: '80px'}} className="d-flex align-items-center gap-1 position-relative">
                                                           <CurrencyInput className={`form-control form-control-sm ${showCaWarning ? 'border-warning' : ''}`} value={ca.balance ?? ''} onChange={(val: any) => updateCa('balance', val)} placeholder="$0" />
@@ -447,7 +451,7 @@ export default function PortfolioAssetsCard() {
                           </div>
                       </div>
                   )}
-                  {!assetsOpen && <div className="text-center text-muted small fst-italic py-2" onClick={() => setAssetsOpen(!assetsOpen)} style={{cursor: 'pointer'}}>Click to expand account details</div>}
+                  {!assetsOpen && <div className="text-center text-muted small fst-italic py-2" onClick={() => setAssetsOpen(!assetsOpen)} style={{cursor: 'pointer'}}>{t('portfolioCard.clickToExpand', 'Click to expand account details')}</div>}
                 </div>
               </div>
             </div>
@@ -458,17 +462,17 @@ export default function PortfolioAssetsCard() {
           <div className="card-body p-3">
               <div className="row text-center align-items-center">
                   <div className={isCouple ? "col-4 border-end border-success border-opacity-25" : "col-6 border-end border-success border-opacity-25"}>
-                      <div className="small fw-bold text-success text-uppercase ls-1 mb-1">{p1Name} Portfolio</div>
+                      <div className="small fw-bold text-success text-uppercase ls-1 mb-1">{p1Name} {t('portfolioCard.portfolioSuffix', 'Portfolio')}</div>
                       <div className="fs-5 fw-bold text-success">{formatCurrency(p1Total)}</div>
                   </div>
                   {isCouple && (
                     <div className="col-4 border-end border-success border-opacity-25">
-                        <div className="small fw-bold text-uppercase ls-1 mb-1" style={{ color: 'var(--bs-purple)' }}>{p2Name} Portfolio</div>
+                        <div className="small fw-bold text-uppercase ls-1 mb-1" style={{ color: 'var(--bs-purple)' }}>{p2Name} {t('portfolioCard.portfolioSuffix', 'Portfolio')}</div>
                         <div className="fs-5 fw-bold" style={{ color: 'var(--bs-purple)' }}>{formatCurrency(p2Total)}</div>
                     </div>
                   )}
                   <div className={isCouple ? "col-4" : "col-6"}>
-                      <div className="small fw-bold text-main text-uppercase ls-1 mb-1">Household Total</div>
+                      <div className="small fw-bold text-main text-uppercase ls-1 mb-1">{t('portfolioCard.householdTotal', 'Household Total')}</div>
                       <div className="fs-5 fw-bold text-main">{formatCurrency(hhTotal)}</div>
                   </div>
               </div>

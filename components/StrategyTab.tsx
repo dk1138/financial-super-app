@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../lib/FinanceContext';
+import { useTranslation } from '../lib/LanguageContext';
 import { InfoBtn, CurrencyInput, SegmentedControl } from './SharedUI';
 import StrategyMatrixCard from './StrategyMatrixCard';
 
@@ -31,6 +32,7 @@ const ACCOUNT_MAP: Record<string, { label: string, icon: string, color: string, 
 
 export default function StrategyTab() {
   const { data, updateInput, updateStrategy, results } = useFinance();
+  const { t } = useTranslation();
   
   const isCouple = data.mode === 'Couple';
   const isOptimized = data.inputs.fully_optimize_tax ?? false;
@@ -260,7 +262,7 @@ export default function StrategyTab() {
         <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
           <div className="d-flex align-items-center">
             <i className="bi bi-arrow-down-up text-primary fs-4 me-3"></i>
-            <h5 className="mb-0 fw-bold text-uppercase ls-1">1. Financial Optimization & Flow Priority Queues</h5>
+            <h5 className="mb-0 fw-bold text-uppercase ls-1">{t('strategyTab.flowPriorityQueues', '1. Financial Optimization & Flow Priority Queues')}</h5>
             <InfoBtn align="left" title="Flow Hierarchies" text="The execution stack segregates optimization pipelines completely across three lifecycle environments. Re-order each stack independently." />
           </div>
         </div>
@@ -271,7 +273,7 @@ export default function StrategyTab() {
                 <i className="bi bi-shield-check-fill fs-5"></i>
               </div>
               <div>
-                <h6 className="fw-bold mb-1 text-info text-uppercase ls-1" style={{ fontSize: '0.8rem' }}>Guaranteed Alpha Return Safeguard Enabled</h6>
+                <h6 className="fw-bold mb-1 text-info text-uppercase ls-1" style={{ fontSize: '0.8rem' }}>{t('strategyTab.safeguardTitle', 'Guaranteed Alpha Return Safeguard Enabled')}</h6>
                 <p className="small text-muted mb-0 lh-sm" style={{ fontSize: '0.75rem' }}>
                   The engine dynamically isolates your <strong>RRSP Employer Match</strong> as an untouchable baseline priority. If income drops during a high-expense working year, matching payroll allocations are fulfilled as a mandatory constraint. The resulting mid-career expense shortfall is cleared according to your specific <strong>Working-Year Shortfall Hierarchy</strong> stack, protecting matched returns before liquidation occurs.
                 </p>
@@ -289,8 +291,8 @@ export default function StrategyTab() {
                                 <i className="bi bi-piggy-bank-fill fs-5"></i>
                             </div>
                             <div>
-                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-success" style={{ fontSize: '0.85rem' }}>Surplus Savings</h6>
-                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>Order of filling spaces when surplus cash exists</span>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-success" style={{ fontSize: '0.85rem' }}>{t('strategyTab.surplusSavings', 'Surplus Savings')}</h6>
+                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>{t('strategyTab.surplusSavingsDesc', 'Order of filling spaces when surplus cash exists')}</span>
                             </div>
                         </div>
                         <div className="p-3 bg-transparent h-100">
@@ -307,8 +309,8 @@ export default function StrategyTab() {
                                 <i className="bi bi-exclamation-triangle-fill fs-5"></i>
                             </div>
                             <div>
-                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-warning" style={{ fontSize: '0.85rem' }}>Working-Year Shortfalls</h6>
-                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>Order of drawing buffers if cash dips mid-career</span>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-warning" style={{ fontSize: '0.85rem' }}>{t('strategyTab.workingYearShortfalls', 'Working-Year Shortfalls')}</h6>
+                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>{t('strategyTab.workingYearShortfallsDesc', 'Order of drawing buffers if cash dips mid-career')}</span>
                             </div>
                         </div>
                         <div className="p-3 bg-transparent h-100">
@@ -325,8 +327,8 @@ export default function StrategyTab() {
                                 <i className="bi bi-wallet2 fs-5"></i>
                             </div>
                             <div>
-                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary" style={{ fontSize: '0.85rem' }}>Retirement Decumulation</h6>
-                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>Drawdown sequence across terminal years</span>
+                                <h6 className="fw-bold mb-0 text-uppercase ls-1 text-primary" style={{ fontSize: '0.85rem' }}>{t('strategyTab.retirementDecumulation', 'Retirement Decumulation')}</h6>
+                                <span className="small text-muted" style={{fontSize: '0.65rem'}}>{t('strategyTab.retirementDecumulationDesc', 'Drawdown sequence across terminal years')}</span>
                             </div>
                         </div>
                         
@@ -347,7 +349,7 @@ export default function StrategyTab() {
                                     <div className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-2 shadow-sm" style={{width: '36px', height: '36px'}}>
                                         <i className="bi bi-lock-fill fs-5"></i>
                                     </div>
-                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>Optimized & Locked</span>
+                                    <span className="text-uppercase fw-bold text-success ls-1 mb-1" style={{ fontSize: '0.85rem' }}>{t('strategyTab.optimizedLocked', 'Optimized & Locked')}</span>
                                     <span className="small text-muted fw-medium lh-sm mb-2" style={{fontSize: '0.72rem'}}>
                                         Engine's tax optimizer handles this stack.
                                     </span>
@@ -357,7 +359,7 @@ export default function StrategyTab() {
                                         style={{ fontSize: '0.72rem' }}
                                         onClick={() => updateInput('fully_optimize_tax', false)}
                                     >
-                                        <i className="bi bi-unlock-fill me-1"></i> Unlock for Manual Order
+                                        <i className="bi bi-unlock-fill me-1"></i> {t('strategyTab.unlockManual', 'Unlock for Manual Order')}
                                     </button>
                                 </div>
                             </div>
@@ -373,24 +375,24 @@ export default function StrategyTab() {
         <div className="card-header d-flex align-items-center justify-content-between border-bottom border-secondary p-3 surface-card">
           <div className="d-flex align-items-center">
             <i className="bi bi-sliders text-warning fs-4 me-3"></i>
-            <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">2. Max Annual Limits</h5>
+            <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">{t('strategyTab.maxAnnualLimits', '2. Max Annual Limits')}</h5>
             <InfoBtn align="left" title="Custom Limits" text="Set a manual upper boundary in flat dollars. Excess cash flows down to the next priority container." />
           </div>
           {isCouple && (
             <div className="form-check form-switch mb-0 d-flex align-items-center gap-2 bg-input border border-secondary py-1 px-3 rounded-pill shadow-sm">
-              <label className="form-check-label small fw-bold text-muted cursor-pointer mb-0 text-uppercase ls-1" htmlFor="toggleSplitLimits" style={{ fontSize: '0.65rem' }}>Split {p1Name} / {p2Name}</label>
+              <label className="form-check-label small fw-bold text-muted cursor-pointer mb-0 text-uppercase ls-1" htmlFor="toggleSplitLimits" style={{ fontSize: '0.65rem' }}>{t('strategyTab.split', 'Split')} {p1Name} / {p2Name}</label>
               <input className="form-check-input cursor-pointer shadow-none m-0 border-secondary" type="checkbox" id="toggleSplitLimits" checked={data.inputs.split_annual_limits ?? false} onChange={(e) => updateInput('split_annual_limits', e.target.checked)} />
             </div>
           )}
         </div>
         <div className="card-body p-4 bg-secondary bg-opacity-10">
           <div className="row g-3">
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('TFSA', 'text-info', 'max_annual_tfsa', 'max_annual_tfsa_p1', 'max_annual_tfsa_p2')}</div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('RRSP', 'text-danger', 'max_annual_rrsp', 'max_annual_rrsp_p1', 'max_annual_rrsp_p2')}</div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('FHSA', 'text-primary', 'max_annual_fhsa', 'max_annual_fhsa_p1', 'max_annual_fhsa_p2')}</div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('Non-Reg', 'text-success', 'max_annual_nonreg', 'max_annual_nonreg_p1', 'max_annual_nonreg_p2')}</div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('Cash', 'text-secondary', 'max_annual_cash', 'max_annual_cash_p1', 'max_annual_cash_p2')}</div>
-            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField('Crypto', 'text-warning', 'max_annual_crypto', 'max_annual_crypto_p1', 'max_annual_crypto_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField(t('accounts.tfsa', 'TFSA'), 'text-info', 'max_annual_tfsa', 'max_annual_tfsa_p1', 'max_annual_tfsa_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField(t('accounts.rrsp', 'RRSP'), 'text-danger', 'max_annual_rrsp', 'max_annual_rrsp_p1', 'max_annual_rrsp_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField(t('accounts.fhsa', 'FHSA'), 'text-primary', 'max_annual_fhsa', 'max_annual_fhsa_p1', 'max_annual_fhsa_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField(t('accounts.nonreg', 'Non-Reg'), 'text-success', 'max_annual_nonreg', 'max_annual_nonreg_p1', 'max_annual_nonreg_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField(t('accounts.cash', 'Cash'), 'text-secondary', 'max_annual_cash', 'max_annual_cash_p1', 'max_annual_cash_p2')}</div>
+            <div className="col-12 col-sm-6 col-md-4 col-xl-2">{renderLimitField(t('accounts.crypto', 'Crypto'), 'text-warning', 'max_annual_crypto', 'max_annual_crypto_p1', 'max_annual_crypto_p2')}</div>
           </div>
         </div>
       </div>
@@ -401,14 +403,14 @@ export default function StrategyTab() {
             <div className="rp-card border border-secondary rounded-4 shadow-sm flex-grow-1">
                 <div className="card-header d-flex align-items-center border-bottom border-secondary p-3 surface-card">
                     <i className="bi bi-speedometer2 text-info fs-4 me-3"></i>
-                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">3. Account Guidelines</h5>
+                    <h5 className="mb-0 fw-bold text-uppercase ls-1 d-flex align-items-center">{t('strategyTab.accountGuidelines', '3. Account Guidelines')}</h5>
                 </div>
                 <div className="card-body p-4 bg-secondary bg-opacity-10">
                     <div className="row g-3">
                         <div className="col-6">
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <span className="small fw-bold text-info text-uppercase ls-1">TFSA</span>
+                                    <span className="small fw-bold text-info text-uppercase ls-1">{t('accounts.tfsa', 'TFSA')}</span>
                                     <InfoBtn align="right" title="TFSA Limit" text="The annual contribution room granted by the CRA for a Tax-Free Savings Account." />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_tfsa_limit} onChange={(val: any) => updateInput('cfg_tfsa_limit', val)} />
@@ -417,7 +419,7 @@ export default function StrategyTab() {
                         <div className="col-6">
                             <div className="p-3 bg-input border border-secondary rounded-4 shadow-sm d-flex flex-column justify-content-between h-100 gap-2">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                    <span className="small fw-bold text-danger text-uppercase ls-1">RRSP Max</span>
+                                    <span className="small fw-bold text-danger text-uppercase ls-1">{t('accounts.rrsp', 'RRSP')} Max</span>
                                     <InfoBtn align="right" title="RRSP Limit" text="The absolute maximum RRSP contribution cap set by the CRA for the year." />
                                 </div>
                                 <CurrencyInput className="form-control form-control-sm border-secondary shadow-none" value={data.inputs.cfg_rrsp_limit} onChange={(val: any) => updateInput('cfg_rrsp_limit', val)} />

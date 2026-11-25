@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFinance, migrateLegacyData, emptyData } from '../lib/FinanceContext';
+import { useTranslation } from '../lib/LanguageContext';
 import { FINANCIAL_CONSTANTS } from '../lib/config';
 import { InfoBtn, SegmentedControl, ConfirmModal } from './SharedUI';
 import CanadianPeerBenchmarks from './compare/CanadianPeerBenchmarks';
@@ -20,6 +21,7 @@ const formatInputKey = (key: string) => {
 
 export default function CompareTab() {
     const { data, results, loadData } = useFinance();
+    const { t } = useTranslation();
     const [compareMode, setCompareMode] = useState<'benchmarks' | 'scenarios'>('benchmarks');
     const [savedPlans, setSavedPlans] = useState<string[]>([]);
     const [comparePlanName, setComparePlanName] = useState<string>('');
@@ -310,10 +312,10 @@ export default function CompareTab() {
                 <div>
                     <h4 className="fw-bolder mb-1 text-main d-flex align-items-center gap-2">
                         <i className="bi bi-intersect text-primary"></i>
-                        <span>Comparison & Benchmark Engine</span>
+                        <span>{t('compareTab.engineTitle', 'Comparison & Benchmark Engine')}</span>
                     </h4>
                     <p className="text-muted small mb-0">
-                        Benchmark your plan against official Canadian demographic statistics or contrast alternative scenario milestones side-by-side.
+                        {t('compareTab.engineDesc', 'Benchmark your plan against official Canadian demographic statistics or contrast alternative scenario milestones side-by-side.')}
                     </p>
                 </div>
 
@@ -325,7 +327,7 @@ export default function CompareTab() {
                         onClick={() => setCompareMode('benchmarks')}
                         style={{ fontSize: '0.8rem' }}
                     >
-                        Canadian Peer Benchmarks
+                        {t('compareTab.canadianPeerBenchmarks', 'Canadian Peer Benchmarks')}
                     </button>
                     <button 
                         type="button"
@@ -333,7 +335,7 @@ export default function CompareTab() {
                         onClick={() => setCompareMode('scenarios')}
                         style={{ fontSize: '0.8rem' }}
                     >
-                        Scenario vs. Scenario
+                        {t('compareTab.scenarioVsScenario', 'Scenario vs. Scenario')}
                     </button>
                 </div>
             </div>
@@ -348,9 +350,9 @@ export default function CompareTab() {
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2">
                         <div>
                             <h5 className="fw-bold text-uppercase ls-1 text-primary mb-1 d-flex align-items-center">
-                                <i className="bi bi-bezier2 me-2"></i> Scenario Comparison
+                                <i className="bi bi-bezier2 me-2"></i> {t('compareTab.scenarioComparison', 'Scenario Comparison')}
                             </h5>
-                            <span className="text-muted small">Compare your current live plan against saved milestone scenarios side-by-side.</span>
+                            <span className="text-muted small">{t('compareTab.scenarioComparisonDesc', 'Compare your current live plan against saved milestone scenarios side-by-side.')}</span>
                         </div>
 
                         <div className="d-flex align-items-center gap-2">
@@ -361,7 +363,7 @@ export default function CompareTab() {
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 >
                                     <i className="bi bi-folder2-open text-warning"></i>
-                                    <span>{comparePlanName || "-- Select Plan to Compare --"}</span>
+                                    <span>{comparePlanName || t('compareTab.selectPlanPrompt', '-- Select Plan to Compare --')}</span>
                                     {isCalculating && <span className="spinner-border spinner-border-sm text-warning ms-1"></span>}
                                 </button>
                                 {isDropdownOpen && (

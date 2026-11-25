@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useFinance } from '../lib/FinanceContext';
+import { useTranslation } from '../lib/LanguageContext';
 import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { InfoBtn } from './SharedUI';
@@ -40,6 +41,7 @@ function ScoreCard({ title, score, max, tooltip, align = 'left' }: { title: stri
 
 export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, toolId?: string) => void } = {}) {
   const { data, results, planScore } = useFinance();
+  const { t } = useTranslation();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isUploadingImgur, setIsUploadingImgur] = useState(false);
@@ -647,7 +649,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
               <div className="row g-3 pt-4 mt-1 border-top border-secondary border-opacity-50">
                   <div className="col-6 col-md-3">
                       <ScoreCard 
-                          title="Retirement Funding" 
+                          title={t('dashboardTab.retirementFunding', 'Retirement Funding')} 
                           score={planScore.retirementReadiness} 
                           max={50} 
                           tooltip="<p class='mb-2'>Measures your projected ability to sustain your lifestyle through your target life expectancy without running out of liquid capital.</p><b class='text-main d-block mb-1'>Scoring Factors:</b><ul class='ps-3 mb-2' style='line-height:1.5;'><li><b>Plan Solvency (30 pts base):</b> If your liquid portfolio ever drops to $0 during retirement, this score immediately becomes <b>0 / 50</b>. If liquid funds never deplete through your target life expectancy, you earn 30 baseline points.</li><li><b>FI Trajectory (Up to 20 pts):</b> Measures your current progress toward your retirement Financial Independence (FI) target (25&times; your first year of inflation-adjusted retirement spending, based on the 4% rule).</li></ul><b class='text-main d-block mb-1'>Key Inputs:</b><span class='text-muted'>Retirement age, annual living expenses, debt payments, liquid assets (TFSA, RRSP, Non-Reg, Cash), and inflation rate.</span>" 
@@ -655,7 +657,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   </div>
                   <div className="col-6 col-md-3">
                       <ScoreCard 
-                          title="Debt Health" 
+                          title={t('dashboardTab.debtHealth', 'Debt Health')} 
                           score={planScore.debtHealth} 
                           max={20} 
                           tooltip="<p class='mb-2'>Evaluates your monthly debt service burden against gross income using standard Canadian lending thresholds.</p><b class='text-main d-block mb-1'>Scoring Thresholds (DTI Ratio):</b><ul class='ps-3 mb-2' style='line-height:1.5;'><li><b>DTI &le; 20% (20 / 20 pts):</b> Optimal. Low debt overhead leaves maximum cash flow for investing and lifestyle.</li><li><b>DTI 20% to 36% (10–20 pts):</b> Healthy range matching standard Canadian GDS/TDS lender guidelines.</li><li><b>DTI 36% to 50% (1–10 pts):</b> Stretched. High debt payments limit new savings capacity.</li><li><b>DTI &gt; 50% (0 pts):</b> Critical debt strain.</li></ul><b class='text-main d-block mb-1'>Key Inputs:</b><span class='text-muted'>Annual mortgage payments, non-mortgage debt repayments, and gross household cash inflows.</span>" 
@@ -663,7 +665,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   </div>
                   <div className="col-6 col-md-3">
                       <ScoreCard 
-                          title="Savings Rate" 
+                          title={t('dashboardTab.savingsRate', 'Savings Rate')} 
                           score={planScore.savingsRate} 
                           max={20} 
                           tooltip="<p class='mb-2'>Measures what percentage of your gross household income is being automatically saved and invested toward long-term wealth.</p><b class='text-main d-block mb-1'>Scoring Target:</b><ul class='ps-3 mb-2' style='line-height:1.5;'><li><b>20%+ Savings Rate (20 / 20 pts):</b> Full marks for saving 20% or more of gross cash inflow.</li><li><b>Under 20%:</b> Prorated proportionally (e.g., a 10% savings rate scores 10 / 20 pts).</li><li><b>Retiree Protection:</b> If you are already at or past your retirement age in Year 1, you automatically receive full <b>20 / 20 pts</b>, recognizing that asset drawdown is expected.</li></ul><b class='text-main d-block mb-1'>Key Inputs:</b><span class='text-muted'>TFSA, RRSP, FHSA, and non-registered contributions, employer matching, and total gross household income.</span>" 
@@ -671,7 +673,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   </div>
                   <div className="col-6 col-md-3">
                       <ScoreCard 
-                          title="Emergency Fund" 
+                          title={t('dashboardTab.emergencyFund', 'Emergency Fund')} 
                           score={planScore.emergencyFund} 
                           max={10} 
                           align="right"
@@ -688,7 +690,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-cash-stack text-success me-2"></i>
-                          <span className="me-1">Total Gross Inflow</span>
+                          <span className="me-1">{t('dashboardTab.totalGrossInflow', 'Total Gross Inflow')}</span>
                           <InfoBtn align="center" title="Gross Inflow" text="All cash sourced over your lifetime, including salaries, pensions, benefits, and portfolio withdrawals." />
                       </div>
                       <div className="fs-3 fw-bold text-main" title={formatExact(totalGrossInflow)}>{formatCurrency(totalGrossInflow)}</div>
@@ -699,7 +701,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-graph-up-arrow text-primary me-2"></i>
-                          <span className="me-1">Investment Growth</span>
+                          <span className="me-1">{t('dashboardTab.investmentGrowth', 'Investment Growth')}</span>
                           <InfoBtn align="center" title="Investment Growth" text="Total compound interest and market growth generated by your portfolio over the entire simulation." />
                       </div>
                       <div className="fs-3 fw-bold text-primary" title={formatExact(totalInvestmentGrowth)}>{formatCurrency(totalInvestmentGrowth)}</div>
@@ -710,7 +712,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-bank text-purple me-2" style={{color:'var(--bs-purple)'}}></i>
-                          <span className="me-1" style={{color:'var(--bs-purple)'}}>Govt Benefits Collected</span>
+                          <span className="me-1" style={{color:'var(--bs-purple)'}}>{t('dashboardTab.govtBenefitsCollected', 'Govt Benefits Collected')}</span>
                           <InfoBtn align="center" title="Govt Benefits" text="Total CPP and OAS collected over your lifetime." />
                       </div>
                       <div className="fs-3 fw-bold" style={{color:'var(--bs-purple)'}} title={formatExact(totalBenefits)}>{formatCurrency(totalBenefits)}</div>
@@ -721,7 +723,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-receipt text-danger me-2"></i>
-                          <span className="me-1">Lifetime Tax Paid</span>
+                          <span className="me-1">{t('dashboardTab.lifetimeTaxPaid', 'Lifetime Tax Paid')}</span>
                           <InfoBtn align="center" title="Lifetime Tax" text="Total federal and provincial tax paid, including capital gains taxes and OAS clawbacks." />
                       </div>
                       <div className="fs-3 fw-bold text-danger" title={formatExact(totalTaxPaid)}>
@@ -735,7 +737,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-cart-dash text-warning me-2"></i>
-                          <span className="me-1">Total Living Expenses</span>
+                          <span className="me-1">{t('dashboardTab.totalLivingExpenses', 'Total Living Expenses')}</span>
                           <InfoBtn align="center" title="Living Expenses" text="Total amount spent on lifestyle, debt, and baseline expenses over the simulation." />
                       </div>
                       <div className="fs-3 fw-bold text-warning" title={formatExact(totalExpenses)}>{formatCurrency(totalExpenses)}</div>
@@ -746,7 +748,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
                   <div className="rp-card border-secondary rounded-4 p-4 h-100 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                       <div className="text-muted fw-bold text-uppercase ls-1 small mb-2 d-flex align-items-center justify-content-center w-100">
                           <i className="bi bi-calendar-heart text-info me-2"></i>
-                          <span className="me-1">Avg Retirement Spend</span>
+                          <span className="me-1">{t('dashboardTab.avgRetirementSpend', 'Avg Retirement Spend')}</span>
                           <InfoBtn align="center" title="Retirement Spend" text="Average annual spending during your retirement years, adjusted for today's dollars if toggled." />
                       </div>
                       <div className="fs-3 fw-bold text-info" title={formatExact(avgRetSpending)}>{formatCurrency(avgRetSpending)} <span className="fs-6 text-muted fw-normal">/yr</span></div>

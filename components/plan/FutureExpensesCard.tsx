@@ -23,11 +23,11 @@ export default function FutureExpensesCard() {
             </h5>
         </div>
         <button type="button" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold" onClick={() => addArrayItem('debt', { name: 'New Expense', amount: 20000, start: '2026-01', type: 'one', duration: 1, rate: 0, owner: 'joint' })}>
-            <i className="bi bi-plus-lg me-1"></i> Add Expense
+            <i className="bi bi-plus-lg me-1"></i> {t('futureCard.addExpense', 'Add Expense')}
         </button>
       </div>
       <div className="card-body p-4">
-        {data.debt.length === 0 && <div className="text-center text-muted small fst-italic">No future expenses added.</div>}
+        {data.debt.length === 0 && <div className="text-center text-muted small fst-italic">{t('futureCard.empty', 'No future expenses added.')}</div>}
         <div className="row g-3">
             {data.debt.map((d: any, idx: number) => {
                 const isRecurring = d.type === 'monthly' || d.type === 'yearly';
@@ -39,7 +39,7 @@ export default function FutureExpensesCard() {
                                     <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{width: '36px', height: '36px'}}>
                                         <i className="bi bi-cart-x-fill fs-5"></i>
                                     </div>
-                                    <input type="text" maxLength={50} className="form-control bg-transparent border-0 fw-bold fs-6 p-0 shadow-none text-main" placeholder="Expense Name" value={d.name || ''} onChange={(e) => updateArrayItem('debt', idx, 'name', e.target.value)} />
+                                    <input type="text" maxLength={50} className="form-control bg-transparent border-0 fw-bold fs-6 p-0 shadow-none text-main" placeholder={t('futureCard.expenseNamePlaceholder', 'Expense Name')} value={d.name || ''} onChange={(e) => updateArrayItem('debt', idx, 'name', e.target.value)} />
                                 </div>
                                 <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2 opacity-75 hover-opacity-100 flex-shrink-0" onClick={() => removeArrayItem('debt', idx)}><i className="bi bi-x-lg fs-5"></i></button>
                             </div>
@@ -47,50 +47,50 @@ export default function FutureExpensesCard() {
                             {/* Dynamic Owner Selection for Couple Mode */}
                             {isCouple && (
                                 <div className="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-25 pb-2 mb-1">
-                                    <span className="small text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>Liability Owner</span>
+                                    <span className="small text-muted fw-bold text-uppercase ls-1" style={{ fontSize: '0.65rem' }}>{t('futureCard.liabilityOwner', 'Liability Owner')}</span>
                                     <SegmentedControl 
                                         value={d.owner || 'joint'} 
                                         onChange={(val: string) => updateArrayItem('debt', idx, 'owner', val)} 
                                         options={[
                                             { value: 'p1', label: p1Name },
                                             { value: 'p2', label: p2Name },
-                                            { value: 'joint', label: 'Joint' }
+                                            { value: 'joint', label: t('futureCard.joint', 'Joint') }
                                         ]} 
                                     />
                                 </div>
                             )}
 
                             <div className="d-flex bg-input border border-secondary rounded-pill p-1 gap-1 shadow-sm w-100">
-                                <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'one')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${(!d.type || d.type === 'one') ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>One-Time</button>
-                                <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'monthly')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${d.type === 'monthly' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Monthly</button>
-                                <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'yearly')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${d.type === 'yearly' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>Yearly</button>
+                                <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'one')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${(!d.type || d.type === 'one') ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>{t('futureCard.oneTime', 'One-Time')}</button>
+                                <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'monthly')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${d.type === 'monthly' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>{t('futureCard.monthly', 'Monthly')}</button>
+                                <button type="button" onClick={() => updateArrayItem('debt', idx, 'type', 'yearly')} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-2 py-1 flex-grow-1 ${d.type === 'yearly' ? 'bg-secondary text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`} style={{ fontSize: '0.7rem' }}>{t('futureCard.yearly', 'Yearly')}</button>
                             </div>
 
                             <div className="d-flex flex-wrap align-items-sm-end gap-3 bg-input p-2 rounded-3">
                                 <div className="flex-grow-1" style={{ minWidth: '140px' }}>
-                                    <label className="small text-muted mb-1 fw-bold">{isRecurring && d.rate > 0 ? 'Principal Amount ($)' : 'Amount ($)'}</label>
-                                    <CurrencyInput className="form-control form-control-sm border-secondary" value={data.debt[idx].amount ?? ''} onChange={(val: any) => updateArrayItem('debt', idx, 'amount', val)} placeholder="Amount ($)" />
+                                    <label className="small text-muted mb-1 fw-bold">{isRecurring && d.rate > 0 ? t('futureCard.principalAmount', 'Principal Amount ($)') : t('futureCard.amount', 'Amount ($)')}</label>
+                                    <CurrencyInput className="form-control form-control-sm border-secondary" value={data.debt[idx].amount ?? ''} onChange={(val: any) => updateArrayItem('debt', idx, 'amount', val)} placeholder={t('futureCard.amount', 'Amount ($)')} />
                                 </div>
                                 
                                 {isRecurring && (
                                     <div style={{width: '90px'}}>
-                                        <label className="small text-muted mb-1 fw-bold">Rate (%)</label>
+                                        <label className="small text-muted mb-1 fw-bold">{t('futureCard.rate', 'Rate (%)')}</label>
                                         <PercentInput className="form-control form-control-sm border-secondary" value={d.rate ?? ''} onChange={(val: any) => updateArrayItem('debt', idx, 'rate', val)} />
                                     </div>
                                 )}
 
                                 {isRecurring && (
                                     <div style={{width: '110px'}}>
-                                        <label className="small text-muted mb-1 fw-bold">Term (Yrs)</label>
+                                        <label className="small text-muted mb-1 fw-bold">{t('futureCard.termYrs', 'Term (Yrs)')}</label>
                                         <div className="input-group input-group-sm border border-secondary rounded-pill overflow-hidden shadow-sm">
                                             <input type="number" className="form-control border-0 fw-bold bg-input text-main text-end px-2 shadow-none" value={d.duration ?? 1} onChange={e => updateArrayItem('debt', idx, 'duration', e.target.value)} />
-                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">yrs</span>
+                                            <span className="input-group-text bg-input border-0 text-muted fw-bold">{t('futureCard.yrs', 'yrs')}</span>
                                         </div>
                                     </div>
                                 )}
                                 
                                 <div style={{minWidth: '220px'}} className="flex-grow-1">
-                                    <label className="small text-muted mb-1 fw-bold">Start Date</label>
+                                    <label className="small text-muted mb-1 fw-bold">{t('futureCard.startDate', 'Start Date')}</label>
                                     <MonthYearStepper value={d.start || ''} onChange={(e: any) => updateArrayItem('debt', idx, 'start', e)} />
                                 </div>
                             </div>

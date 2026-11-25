@@ -57,7 +57,7 @@ export default function LivingCostCard() {
       <div className="card-body p-3 p-md-4">
         
         {/* --- SECTION 1: CURRENT SITUATION --- */}
-        <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-3"><i className="bi bi-geo-alt-fill text-primary me-2"></i>Current Primary Residence</h6>
+        <h6 className="fw-bold text-muted small text-uppercase ls-1 mb-3"><i className="bi bi-geo-alt-fill text-primary me-2"></i>{t('housingCard.currentPrimary', 'Current Primary Residence')}</h6>
         <div className="p-0 border border-secondary rounded-4 mb-5 shadow-sm overflow-hidden">
             
             <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-3 d-flex flex-wrap align-items-center gap-3">
@@ -66,19 +66,19 @@ export default function LivingCostCard() {
                         value={currentMode} 
                         onChange={(val: any) => updateInput('housing_mode', val)} 
                         options={[
-                            { value: 'own', label: 'Own Home' },
-                            { value: 'rent', label: 'Renting' },
-                            { value: 'free', label: 'No Cost' }
+                            { value: 'own', label: t('housingCard.ownHome', 'Own Home') },
+                            { value: 'rent', label: t('housingCard.renting', 'Renting') },
+                            { value: 'free', label: t('housingCard.noCost', 'No Cost') }
                         ]} 
                     />
                 </div>
                 {/* DYNAMIC KEEP/SELL PILL FOR CURRENT RESIDENCE */}
                 {currentMode === 'own' && transitions.length > 0 && (
                     <div className="d-flex align-items-center gap-2 border-start-md border-secondary ps-md-3">
-                        <span className="fw-bold text-muted small me-1">End of Current Phase</span>
+                        <span className="fw-bold text-muted small me-1">{t('housingCard.endOfCurrentPhase', 'End of Current Phase')}</span>
                         <div className="d-flex bg-secondary bg-opacity-10 border border-secondary rounded-pill p-1 gap-1 shadow-sm">
-                            <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!transitions[0].keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Sell</button>
-                            <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${transitions[0].keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>Keep</button>
+                            <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', false)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${!transitions[0].keepPrevious ? 'bg-danger text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>{t('housingCard.sell', 'Sell')}</button>
+                            <button type="button" onClick={() => updateArrayItem('housingTransitions', 0, 'keepPrevious', true)} className={`btn btn-sm rounded-pill fw-bold border-0 transition-all text-nowrap px-3 py-1 ${transitions[0].keepPrevious ? 'bg-success text-white shadow' : 'text-muted bg-transparent hover-opacity-100'}`}>{t('housingCard.keep', 'Keep')}</button>
                         </div>
                     </div>
                 )}
@@ -89,20 +89,20 @@ export default function LivingCostCard() {
                     <div className="row g-4">
                         <div className="col-12 col-xl-5 border-end-xl border-secondary pe-xl-4 d-flex flex-column">
                             <div className="d-flex justify-content-between align-items-center mb-3">
-                                <h6 className="fw-bold text-success small text-uppercase ls-1 mb-0">Property Value</h6>
+                                <h6 className="fw-bold text-success small text-uppercase ls-1 mb-0">{t('housingCard.propertyValue', 'Property Value')}</h6>
                                 <div className="form-check form-switch mb-0 d-flex align-items-center" title="Include primary residence equity in total Net Worth">
                                     <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs.include_primary_in_nw ?? true} onChange={(e) => updateInput('include_primary_in_nw', e.target.checked)} />
-                                    <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer">Include in NW</label>
+                                    <label className="form-check-label small fw-bold text-muted ms-2 cursor-pointer">{t('housingCard.includeInNW', 'Include in NW')}</label>
                                 </div>
                             </div>
                             <div className="mt-auto">
                                 <div className="row g-3 align-items-end">
                                     <div className="col-sm-7">
-                                        <label className="form-label small text-muted mb-1">Current Value ($)</label>
+                                        <label className="form-label small text-muted mb-1">{t('housingCard.currentValue', 'Current Value ($)')}</label>
                                         <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_value ?? 800000} onChange={(val: any) => updateInput('primary_value', val)} />
                                     </div>
                                     <div className="col-sm-5">
-                                        <label className="form-label small text-muted mb-1">Growth (%)</label>
+                                        <label className="form-label small text-muted mb-1">{t('housingCard.growthPct', 'Growth (%)')}</label>
                                         <PercentInput className="form-control border-secondary" value={data.inputs.primary_growth ?? 3.0} onChange={(val: any) => updateInput('primary_growth', val)} />
                                     </div>
                                 </div>
@@ -113,7 +113,7 @@ export default function LivingCostCard() {
 
                         <div className="col-12 col-xl-7 ps-xl-4 d-flex flex-column">
                             <div className="d-flex justify-content-between align-items-center mb-3">
-                                <h6 className="fw-bold text-danger small text-uppercase ls-1 mb-0">Mortgage Details</h6>
+                                <h6 className="fw-bold text-danger small text-uppercase ls-1 mb-0">{t('housingCard.mortgageDetails', 'Mortgage Details')}</h6>
                                 {(data.inputs.primary_mortgage > 0) && (data.inputs.primary_rate > 0) && (
                                     <button type="button" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 fw-bold" style={{fontSize: '0.7rem'}} onClick={() => updateInput('primary_payment', Math.round(calc25YearPayment(data.inputs.primary_mortgage, data.inputs.primary_rate)))}>
                                         <i className="bi bi-magic me-1 text-primary"></i> Auto 25-Yr
@@ -123,15 +123,15 @@ export default function LivingCostCard() {
                             <div className="mt-auto">
                                 <div className="row g-3 align-items-end">
                                     <div className="col-sm-4">
-                                        <label className="form-label small text-muted mb-1">Balance ($)</label>
+                                        <label className="form-label small text-muted mb-1">{t('housingCard.balance', 'Balance ($)')}</label>
                                         <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_mortgage ?? 400000} onChange={(val: any) => updateInput('primary_mortgage', val)} />
                                     </div>
                                     <div className="col-sm-4">
-                                        <label className="form-label small text-muted mb-1">Int. Rate (%)</label>
+                                        <label className="form-label small text-muted mb-1">{t('housingCard.intRate', 'Int. Rate (%)')}</label>
                                         <PercentInput className="form-control border-secondary" value={data.inputs.primary_rate ?? 4.0} onChange={(val: any) => updateInput('primary_rate', val)} />
                                     </div>
                                     <div className="col-sm-4">
-                                        <label className="form-label small text-muted mb-1">Payment /mo ($)</label>
+                                        <label className="form-label small text-muted mb-1">{t('housingCard.paymentMo', 'Payment /mo ($)')}</label>
                                         <CurrencyInput className="form-control border-secondary" value={data.inputs.primary_payment ?? 2000} onChange={(val: any) => updateInput('primary_payment', val)} />
                                     </div>
                                 </div>
@@ -146,9 +146,9 @@ export default function LivingCostCard() {
                 {currentMode === 'rent' && (
                     <div className="row justify-content-center">
                         <div className="col-12 col-md-6 col-lg-4 text-center py-3">
-                            <label className="form-label small text-muted fw-bold mb-2">Current Monthly Rent ($)</label>
+                            <label className="form-label small text-muted fw-bold mb-2">{t('housingCard.currentMonthlyRent', 'Current Monthly Rent ($)')}</label>
                             <CurrencyInput className="form-control form-control-lg text-center border-primary border-opacity-50 text-main fw-bold shadow-sm" value={data.inputs.primary_rent ?? 2500} onChange={(val: any) => updateInput('primary_rent', val)} />
-                            <div className="small text-muted mt-2 fst-italic">This amount will be inflated automatically over time.</div>
+                            <div className="small text-muted mt-2 fst-italic">{t('housingCard.rentInflatedNote', 'This amount will be inflated automatically over time.')}</div>
                         </div>
                     </div>
                 )}
@@ -156,8 +156,8 @@ export default function LivingCostCard() {
                 {currentMode === 'free' && (
                     <div className="text-center py-4">
                         <i className="bi bi-emoji-sunglasses text-success fs-1 mb-2 d-block opacity-75"></i>
-                        <h6 className="fw-bold text-main">Living Rent-Free!</h6>
-                        <span className="text-muted small">You currently have no primary housing expenses dragging down your cash flow.</span>
+                        <h6 className="fw-bold text-main">{t('housingCard.livingRentFree', 'Living Rent-Free!')}</h6>
+                        <span className="text-muted small">{t('housingCard.livingRentFreeDesc', 'You currently have no primary housing expenses dragging down your cash flow.')}</span>
                     </div>
                 )}
             </div>

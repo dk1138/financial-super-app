@@ -69,7 +69,7 @@ export default function GovtBenefitsCard() {
                     />
                 </div>
               {isCouple && (
-                  <div className="form-check form-switch m-0 d-flex align-items-center bg-black bg-opacity-25 px-3 py-2 rounded-pill border border-secondary shadow-inner">
+                  <div className="form-check form-switch m-0 d-flex align-items-center bg-secondary bg-opacity-10 px-3 py-2 rounded-pill border border-secondary shadow-inner">
                       <input 
                           className="form-check-input cursor-pointer m-0 me-2 fs-5" 
                           type="checkbox" 
@@ -77,8 +77,8 @@ export default function GovtBenefitsCard() {
                           onChange={(e) => updateInput('pension_split_enabled', e.target.checked)} 
                       />
                       <label className="form-check-label fw-bold text-muted small mt-1 d-flex align-items-center">
-                          Pension Income Splitting
-                          <InfoBtn align="right" title="Pension Income Splitting" text="Allows you to allocate up to 50% of eligible pension income to your spouse for tax purposes. <br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/pension-income-splitting.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
+                          {t('govtCard.pensionSplitting', 'Pension Income Splitting')}
+                          <InfoBtn align="right" title={t('govtCard.pensionSplitting', 'Pension Income Splitting')} text="Allows you to allocate up to 50% of eligible pension income to your spouse for tax purposes. <br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/pension-income-splitting.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
                       </label>
                   </div>
               )}
@@ -119,25 +119,25 @@ export default function GovtBenefitsCard() {
             <div className="col-12 col-xl-6" key={p}>
                 <div className="card h-100 border-secondary surface-card shadow-none">
                     <div className="card-body p-4">
-                        <h6 className={`fw-bold text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{playerName} Benefits</h6>
+                        <h6 className={`fw-bold text-uppercase ls-1 mb-4 pb-2 border-bottom border-secondary ${p === 'p1' ? 'text-info' : ''}`} style={p === 'p2' ? {color:'var(--bs-purple)'} : {}}>{playerName} {t('govtCard.benefitsSuffix', 'Benefits')}</h6>
                         
                         {/* CPP Box */}
                         <div className="border border-secondary rounded-4 mb-3 shadow-sm">
                             <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                 <div className="d-flex align-items-center gap-3">
                                     <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-map-fill"></i></div>
-                                    <span className="fw-bold text-main small text-uppercase ls-1">CPP</span>
+                                    <span className="fw-bold text-main small text-uppercase ls-1">{t('govtCard.cpp', 'CPP')}</span>
                                 </div>
                                 <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_cpp_enabled`] ?? true} onChange={(e) => updateInput(`${p}_cpp_enabled`, e.target.checked)} /></div>
                             </div>
                             {(data.inputs[`${p}_cpp_enabled`] ?? true) && (
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <label className="form-label small text-muted mb-0">Est. Base Payout (Age 65)</label>
+                                        <label className="form-label small text-muted mb-0">{t('govtCard.estBasePayout', 'Est. Base Payout (Age 65)')}</label>
                                         <div style={{width: '215px'}}><CurrencyInput suffix="/yr" className="form-control form-control-sm" value={data.inputs[`${p}_cpp_est_base`]} onChange={(val: any) => updateInput(`${p}_cpp_est_base`, val)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                        <span className="small text-muted fw-bold">{t('govtCard.startsAgeMo', 'Starts (Age & Mo):')}</span>
                                         <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                             <div className="flex-grow-1">
                                                 <StepperInput min={60} max={70} value={data.inputs[`${p}_cpp_start`]} onChange={(val: any) => updateInput(`${p}_cpp_start`, val)} />
@@ -153,7 +153,7 @@ export default function GovtBenefitsCard() {
                                         </div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
-                                        <span className="small text-muted">Adjusted Payout:</span>
+                                        <span className="small text-muted">{t('govtCard.adjustedPayout', 'Adjusted Payout:')}</span>
                                         <div className="text-end">
                                             <span className={`small fw-bold ${cppColor}`}>{formatCurrency(cppAdjMo)} <span className="text-muted fw-normal" style={{fontSize:'0.7rem'}}>/mo</span></span>
                                             <div className="text-muted fw-normal" style={{fontSize: '0.65rem'}}>{formatCurrency(cppAdjYr)} /yr</div>
@@ -168,18 +168,18 @@ export default function GovtBenefitsCard() {
                             <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                 <div className="d-flex align-items-center gap-3">
                                     <div className="bg-success bg-opacity-25 text-success rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-shield-fill-check"></i></div>
-                                    <span className="fw-bold text-main small text-uppercase ls-1">OAS</span>
+                                    <span className="fw-bold text-main small text-uppercase ls-1">{t('govtCard.oas', 'OAS')}</span>
                                 </div>
                                 <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_oas_enabled`] ?? true} onChange={(e) => updateInput(`${p}_oas_enabled`, e.target.checked)} /></div>
                             </div>
                             {(data.inputs[`${p}_oas_enabled`] ?? true) && (
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <label className="form-label small text-muted mb-0">Years in Canada <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65.<br><br><a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/eligibility.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>"/></label>
+                                        <label className="form-label small text-muted mb-0">{t('govtCard.yearsInCanada', 'Years in Canada')} <InfoBtn title="OAS Proration" text="Max OAS requires 40 years of residency in Canada between ages 18 and 65.<br><br><a href='https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/eligibility.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>"/></label>
                                         <div style={{width: '215px'}}><StepperInput min={0} max={40} value={oasYears} onChange={(val: any) => updateInput(`${p}_oas_years`, val)} /></div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                        <span className="small text-muted fw-bold">{t('govtCard.startsAgeMo', 'Starts (Age & Mo):')}</span>
                                         <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                             <div className="flex-grow-1">
                                                 <StepperInput min={65} max={70} value={oasStart} onChange={(val: any) => updateInput(`${p}_oas_start`, val)} />
@@ -195,7 +195,7 @@ export default function GovtBenefitsCard() {
                                         </div>
                                     </div>
                                     <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-50">
-                                        <span className="small text-muted">Adjusted Payout:</span>
+                                        <span className="small text-muted">{t('govtCard.adjustedPayout', 'Adjusted Payout:')}</span>
                                         <div className="text-end">
                                             <span className={`small fw-bold ${oasColor}`}>{formatCurrency(oasAdjMo)} <span className="text-muted fw-normal" style={{fontSize:'0.7rem'}}>/mo</span></span>
                                             <div className="text-muted fw-normal" style={{fontSize: '0.65rem'}}>{formatCurrency(oasAdjYr)} /yr</div>
@@ -210,7 +210,7 @@ export default function GovtBenefitsCard() {
                             <div className="bg-secondary bg-opacity-10 border-bottom border-secondary p-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                 <div className="d-flex align-items-center gap-3">
                                     <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px'}}><i className="bi bi-briefcase-fill"></i></div>
-                                    <span className="fw-bold text-main small text-uppercase ls-1">DB Pension</span>
+                                    <span className="fw-bold text-main small text-uppercase ls-1">{t('govtCard.dbPension', 'DB Pension')}</span>
                                 </div>
                                 <div className="form-check form-switch mb-0">
                                     <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={p === 'p1' ? p1DbEnabled : p2DbEnabled} onChange={(e) => {
@@ -224,20 +224,20 @@ export default function GovtBenefitsCard() {
                                 <div className="p-3 bg-input d-flex flex-column gap-3 rounded-bottom-4">
                                     <div className="d-flex justify-content-between align-items-center">
                                         <div className="d-flex align-items-center">
-                                            <label className="form-label small fw-bold text-muted mb-0">Index to Inflation</label>
-                                            <InfoBtn title="Index to Inflation" text="If checked, the pension amount will grow with inflation. If unchecked, the payout remains flat for life.<br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/pension-adjustment.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
+                                            <label className="form-label small fw-bold text-muted mb-0">{t('govtCard.indexToInflation', 'Index to Inflation')}</label>
+                                            <InfoBtn title={t('govtCard.indexToInflation', 'Index to Inflation')} text="If checked, the pension amount will grow with inflation. If unchecked, the payout remains flat for life.<br><br><a href='https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/pension-adjustment.html' target='_blank' class='text-primary'>Learn more at Canada.ca</a>" />
                                         </div>
                                         <div className="form-check form-switch mb-0"><input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={data.inputs[`${p}_db_indexed`] ?? true} onChange={(e) => updateInput(`${p}_db_indexed`, e.target.checked)} /></div>
                                     </div>
                                     
                                     <div className="border-top border-secondary pt-3 mt-1">
-                                        <h6 className="small fw-bold mb-3" style={p === 'p2' ? {color: 'var(--bs-purple)'} : {color: 'var(--bs-info)'}}>Lifetime Pension</h6>
+                                        <h6 className="small fw-bold mb-3" style={p === 'p2' ? {color: 'var(--bs-purple)'} : {color: 'var(--bs-info)'}}>{t('govtCard.lifetimePension', 'Lifetime Pension')}</h6>
                                         <div className="d-flex justify-content-between align-items-center mb-2">
-                                            <label className="small text-muted mb-0">Amount</label>
+                                            <label className="small text-muted mb-0">{t('govtCard.amount', 'Amount')}</label>
                                             <div style={{width: '215px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_lifetime`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_lifetime`, val)} /></div>
                                         </div>
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                            <span className="small text-muted fw-bold">{t('govtCard.startsAgeMo', 'Starts (Age & Mo):')}</span>
                                             <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={75} value={data.inputs[`${p}_db_lifetime_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_lifetime_start`, val)} />
@@ -255,13 +255,13 @@ export default function GovtBenefitsCard() {
                                     </div>
 
                                     <div className="border-top border-secondary pt-3 mt-1">
-                                        <h6 className="small fw-bold text-muted mb-3">Bridge Benefit <span className="text-muted fw-normal">(Ends at 65)</span></h6>
+                                        <h6 className="small fw-bold text-muted mb-3">{t('govtCard.bridgeBenefit', 'Bridge Benefit')} <span className="text-muted fw-normal">{t('govtCard.endsAt65', '(Ends at 65)')}</span></h6>
                                         <div className="d-flex justify-content-between align-items-center mb-2">
-                                            <label className="small text-muted mb-0">Amount</label>
+                                            <label className="small text-muted mb-0">{t('govtCard.amount', 'Amount')}</label>
                                             <div style={{width: '215px'}}><CurrencyInput suffix="/mo" className="form-control form-control-sm" value={data.inputs[`${p}_db_bridge`] ?? ''} onChange={(val: any) => updateInput(`${p}_db_bridge`, val)} /></div>
                                         </div>
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span className="small text-muted fw-bold">Starts (Age &amp; Mo):</span>
+                                            <span className="small text-muted fw-bold">{t('govtCard.startsAgeMo', 'Starts (Age & Mo):')}</span>
                                             <div className="d-flex align-items-center gap-2" style={{width: '215px'}}>
                                                 <div className="flex-grow-1">
                                                     <StepperInput min={50} max={65} value={data.inputs[`${p}_db_bridge_start`] ?? 60} onChange={(val: any) => updateInput(`${p}_db_bridge_start`, val)} />

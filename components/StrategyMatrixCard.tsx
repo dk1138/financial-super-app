@@ -136,8 +136,8 @@ export default function StrategyMatrixCard() {
                 value={sortBy}
                 onChange={setSortBy}
                 options={[
-                  { value: 'estate', label: 'Max Estate' },
-                  { value: 'tax', label: 'Lowest Tax' },
+                  { value: 'estate', label: t('strategyMatrix.maxEstate', 'Max Estate') },
+                  { value: 'tax', label: t('strategyMatrix.lowestTax', 'Lowest Tax') },
                 ]}
               />
             </div>
@@ -248,13 +248,13 @@ export default function StrategyMatrixCard() {
               <table className="table table-hover align-middle mb-0 small">
                 <thead className="surface-card border-bottom border-secondary">
                   <tr className="text-muted text-uppercase" style={{ fontSize: '0.7rem' }}>
-                    <th className="ps-3 py-2.5">Rank</th>
-                    <th className="py-2.5">Strategy</th>
-                    <th className="py-2.5 text-end">After-Tax Estate</th>
-                    <th className="py-2.5 text-end">Lifetime Tax</th>
-                    <th className="py-2.5 text-end">vs. Current</th>
-                    <th className="py-2.5 text-center">Status</th>
-                    <th className="pe-3 py-2.5 text-end">Action</th>
+                    <th className="ps-3 py-2.5">{t('strategyMatrix.rank', 'Rank')}</th>
+                    <th className="py-2.5">{t('strategyMatrix.strategy', 'Strategy')}</th>
+                    <th className="py-2.5 text-end">{t('strategyMatrix.afterTaxEstate', 'After-Tax Estate')}</th>
+                    <th className="py-2.5 text-end">{t('strategyMatrix.lifetimeTax', 'Lifetime Tax')}</th>
+                    <th className="py-2.5 text-end">{t('strategyMatrix.vsCurrent', 'vs. Current')}</th>
+                    <th className="py-2.5 text-center">{t('strategyMatrix.status', 'Status')}</th>
+                    <th className="pe-3 py-2.5 text-end">{t('strategyMatrix.action', 'Action')}</th>
                   </tr>
                 </thead>
                 <tbody>
