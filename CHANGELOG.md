@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-11-25
+
+### Changed
+- **Version Bump (`lib/financeEngine.ts`)**: Updated `ENGINE_VERSION` from `1.2.2` to `1.2.3`.
+
 ## [2026-11-24]
 
 ### Added
