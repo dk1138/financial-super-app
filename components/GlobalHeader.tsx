@@ -11,6 +11,7 @@ import { ENGINE_VERSION } from '../lib/financeEngine';
 import SharePlanModal from './SharePlanModal';
 import CommandPaletteModal from './CommandPaletteModal';
 import PlanNotesModal from './PlanNotesModal';
+import WhatsNewModal from './WhatsNewModal';
 
 function fingerprintPlan(planData: any): string {
     if (!planData) return '';
@@ -65,11 +66,30 @@ export default function GlobalHeader() {
     const [showShareModal, setShowShareModal] = useState(false);
     const [showNotesModal, setShowNotesModal] = useState(false);
     const [showCommandPalette, setShowCommandPalette] = useState(false);
+    const [showWhatsNew, setShowWhatsNew] = useState(false);
+    const [hasUnreadChangelog, setHasUnreadChangelog] = useState(false);
     const [planToLoad, setPlanToLoad] = useState<string | null>(null);
     const [planToDelete, setPlanToDelete] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    useEffect(() => {
+        try {
+            const seen = localStorage.getItem('rp_last_seen_version');
+            if (seen !== ENGINE_VERSION) {
+                setHasUnreadChangelog(true);
+            }
+        } catch {}
+    }, []);
+
+    const openWhatsNew = useCallback(() => {
+        setShowWhatsNew(true);
+        setHasUnreadChangelog(false);
+        try {
+            localStorage.setItem('rp_last_seen_version', ENGINE_VERSION);
+        } catch {}
+    }, []);
 
     // Sync saved fingerprint whenever active plan name changes;
     // for unsaved/untitled plans, baseline against the initial loaded snapshot so edits trigger the amber Save pill.
@@ -548,7 +568,14 @@ export default function GlobalHeader() {
                                         <li>
                                             <h6 className="dropdown-header text-muted text-uppercase ls-1 d-flex justify-content-between align-items-center" style={{ fontSize: '0.7rem' }}>
                                                 <span>File Options</span>
-                                                <span className="badge bg-secondary bg-opacity-25 text-secondary">v{ENGINE_VERSION}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setFileMenuOpen(false); openWhatsNew(); }}
+                                                    className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill cursor-pointer"
+                                                    title={lang === 'fr' ? 'Voir les nouveautés' : "View What's New"}
+                                                >
+                                                    v{ENGINE_VERSION}
+                                                </button>
                                             </h6>
                                         </li>
                                         <li>
@@ -607,14 +634,32 @@ export default function GlobalHeader() {
                                 </button>
                             )}
 
-                            {/* VERSION BADGE */}
-                            <span 
-                                className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold shadow-sm" 
-                                style={{ fontSize: '0.75rem', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}
-                                title={`Planfolio Version ${ENGINE_VERSION}`}
+                            {/* VERSION / WHAT'S NEW BADGE */}
+                            <button
+                                type="button"
+                                onClick={openWhatsNew}
+                                className={`badge rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-1.5 cursor-pointer transition-all ${
+                                    hasUnreadChangelog
+                                        ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-50 px-2.5 py-1.5'
+                                        : 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5'
+                                }`}
+                                style={{ fontSize: '0.74rem', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}
+                                title={
+                                    hasUnreadChangelog
+                                        ? (lang === 'fr' ? `Nouvelle version v${ENGINE_VERSION} — Cliquez pour voir les nouveautés` : `Updated to v${ENGINE_VERSION} — Click to see What's New`)
+                                        : (lang === 'fr' ? `Planfolio v${ENGINE_VERSION} — Voir le journal des changements` : `Planfolio v${ENGINE_VERSION} — View changelog`)
+                                }
                             >
-                                v{ENGINE_VERSION}
-                            </span>
+                                {hasUnreadChangelog && (
+                                    <span className="rounded-circle bg-success d-inline-block" style={{ width: '7px', height: '7px' }}></span>
+                                )}
+                                <span>v{ENGINE_VERSION}</span>
+                                {hasUnreadChangelog && (
+                                    <span className="border-start border-success border-opacity-25 ps-1.5">
+                                        {lang === 'fr' ? 'Nouveautés' : "What's New"}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                     )}
 
@@ -912,6 +957,11 @@ export default function GlobalHeader() {
                 onToggleTheme={toggleTheme}
                 onQuickSave={handleQuickSave}
                 onOpenShare={() => setShowShareModal(true)}
+            />
+            <WhatsNewModal
+                isOpen={showWhatsNew}
+                onClose={() => setShowWhatsNew(false)}
+                lang={lang === 'fr' ? 'fr' : 'en'}
             />
         </>
     );
