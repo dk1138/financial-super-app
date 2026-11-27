@@ -3,6 +3,8 @@ import { useFinanceData, useFinanceResults } from '../lib/FinanceContext';
 import { InfoBtn } from './SharedUI';
 import html2canvas from 'html2canvas';
 import { ENGINE_VERSION } from '../lib/financeEngine';
+import { generateDetailedProjectionCSV, SpreadsheetBuildOptions } from '../lib/projectionSpreadsheet';
+import ProjectionSpreadsheetView from './ProjectionSpreadsheetView';
 
 const getRrifFactor = (age: number) => {
     if (age < 71) return 1 / (90 - age);
@@ -20,6 +22,14 @@ export default function ProjectionTab() {
   const data = useFinanceData();
   const results = useFinanceResults();
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
+  const [viewMode, setViewModeState] = useState<'summary' | 'spreadsheet'>(() => {
+    if (typeof window === 'undefined') return 'summary';
+    return localStorage.getItem('rp_proj_view_mode') === 'spreadsheet' ? 'spreadsheet' : 'summary';
+  });
+  const setViewMode = (next: 'summary' | 'spreadsheet') => {
+    setViewModeState(next);
+    try { localStorage.setItem('rp_proj_view_mode', next); } catch {}
+  };
   const [phaseFilter, setPhaseFilterState] = useState<'all' | 'pre' | 'ret' | 'milestones'>(() => {
     if (typeof window === 'undefined') return 'all';
     const saved = localStorage.getItem('rp_proj_phase_filter');
@@ -189,6 +199,33 @@ export default function ProjectionTab() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+  };
+
+  const p1ShortLabel = data.inputs.p1_name && data.inputs.p1_name !== 'Player 1' ? data.inputs.p1_name.split(' ')[0] : 'P1';
+  const p2ShortLabel = data.inputs.p2_name && data.inputs.p2_name !== 'Player 2' ? data.inputs.p2_name.split(' ')[0] : 'P2';
+
+  const spreadsheetOptions: SpreadsheetBuildOptions = {
+      isCouple,
+      p1Label: p1ShortLabel,
+      p2Label: p2ShortLabel,
+      p1RetireAge: Number(data.inputs.p1_retireAge) || 65,
+      p2RetireAge: isCouple ? (Number(data.inputs.p2_retireAge) || 65) : (Number(data.inputs.p1_retireAge) || 65),
+      gogoAge: Number(data.inputs.exp_gogo_age) || 75,
+      slowAge: Number(data.inputs.exp_slow_age) || 85,
+      getRealValue,
+  };
+
+  const exportDetailedCSV = () => {
+      if (!results || !results.timeline) return;
+      const csvContent = generateDetailedProjectionCSV(results.timeline, spreadsheetOptions);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Planfolio_Full_Spreadsheet_v${ENGINE_VERSION}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Downloaded full yearly spreadsheet CSV (P1 & P2)!');
   };
 
   const exportToPNG = async () => {
@@ -1366,31 +1403,55 @@ export default function ProjectionTab() {
           </div>
       </div>
 
-      {/* DEDICATED TOOLBAR: PHASE FILTERS (LEFT) & ACTIONS (RIGHT) */}
+      {/* DEDICATED TOOLBAR: PHASE FILTERS & VIEW MODE (LEFT) & ACTIONS (RIGHT) */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          {/* Phase Filter Segmented Pills (KUMO) */}
-          <div className="segmented-kumo">
-              {[
-                { id: 'all', label: `All Years (${results.timeline.length})`, icon: 'bi-grid-fill' },
-                { id: 'pre', label: 'Pre-Ret', icon: 'bi-briefcase-fill' },
-                { id: 'ret', label: 'Retirement', icon: 'bi-cup-hot-fill' },
-                { id: 'milestones', label: 'Milestones', icon: 'bi-flag-fill' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setPhaseFilter(tab.id as any)}
-                  className={`seg-btn ${phaseFilter === tab.id ? 'active' : ''}`}
-                >
-                  <i className={`bi ${tab.icon}`}></i>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            {/* View Mode Toggle: Summary vs Full Spreadsheet */}
+            <div className="segmented-kumo">
+              <button
+                type="button"
+                onClick={() => setViewMode('summary')}
+                className={`seg-btn ${viewMode === 'summary' ? 'active' : ''}`}
+                title="Expandable yearly summary with audit drawers"
+              >
+                <i className="bi bi-list-ul"></i>
+                <span>Summary</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('spreadsheet')}
+                className={`seg-btn ${viewMode === 'spreadsheet' ? 'active' : ''}`}
+                title="Full yearly spreadsheet with P1 & P2 Income, CPP, OAS, DB, Contributions, Withdrawals, Spending, Taxes & Balances"
+              >
+                <i className="bi bi-table"></i>
+                <span>Spreadsheet</span>
+              </button>
+            </div>
+
+            {/* Phase Filter Segmented Pills (KUMO) */}
+            <div className="segmented-kumo">
+                {[
+                  { id: 'all', label: `All Years (${results.timeline.length})`, icon: 'bi-grid-fill' },
+                  { id: 'pre', label: 'Pre-Ret', icon: 'bi-briefcase-fill' },
+                  { id: 'ret', label: 'Retirement', icon: 'bi-cup-hot-fill' },
+                  { id: 'milestones', label: 'Milestones', icon: 'bi-flag-fill' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setPhaseFilter(tab.id as any)}
+                    className={`seg-btn ${phaseFilter === tab.id ? 'active' : ''}`}
+                  >
+                    <i className={`bi ${tab.icon}`}></i>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+            </div>
           </div>
 
-          {/* Action Buttons: Jump To, Expand/Collapse, Export */}
+          {/* Action Buttons: Jump To, Expand/Collapse, Columns, Export */}
           <div className="d-flex align-items-center gap-2 flex-nowrap">
-              {(() => {
+              {viewMode === 'summary' && (() => {
                 const p1Ret = Number(data.inputs.p1_retireAge) || 65;
                 const retYr = results.timeline.find((y: any) => y.p1Age === p1Ret)?.year;
                 const p2Ret = isCouple ? (Number(data.inputs.p2_retireAge) || 65) : null;
@@ -1530,58 +1591,62 @@ export default function ProjectionTab() {
                 );
               })()}
 
-              <button 
-                type="button" 
-                onClick={toggleAllRows} 
-                className="btn btn-sm btn-outline-info bg-info bg-opacity-10 border border-info px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 text-nowrap"
-                style={{ height: '36px' }}
-                title="Expand or collapse all yearly audit drawers"
-              >
-                <span className="small fw-bold text-uppercase ls-1 text-info d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
-                  <i className={`bi bi-arrows-${expandedYears.size === filteredTimeline.length ? 'collapse' : 'expand'} me-1.5`}></i>
-                  {expandedYears.size === filteredTimeline.length ? 'Collapse All' : 'Expand All'}
-                </span>
-              </button>
-
-              {/* COLUMN PICKER DROPDOWN */}
-              <div className="position-relative">
-                  <div
-                      className="bg-input border border-secondary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer text-nowrap"
-                      style={{ height: '36px' }}
-                      onClick={() => { setColMenuOpen(!colMenuOpen); setExportMenuOpen(false); setJumpMenuOpen(false); }}
-                      title="Show or hide table columns"
+              {viewMode === 'summary' && (
+                <>
+                  <button 
+                    type="button" 
+                    onClick={toggleAllRows} 
+                    className="btn btn-sm btn-outline-info bg-info bg-opacity-10 border border-info px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 text-nowrap"
+                    style={{ height: '36px' }}
+                    title="Expand or collapse all yearly audit drawers"
                   >
-                      <span className="small fw-bold text-uppercase ls-1 text-muted d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
-                          <i className="bi bi-layout-three-columns me-1.5 text-info"></i>
-                          Columns
-                          <i className={`bi bi-chevron-${colMenuOpen ? 'up' : 'down'} ms-1.5 opacity-75`} style={{ fontSize: '0.65rem' }}></i>
-                      </span>
+                    <span className="small fw-bold text-uppercase ls-1 text-info d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
+                      <i className={`bi bi-arrows-${expandedYears.size === filteredTimeline.length ? 'collapse' : 'expand'} me-1.5`}></i>
+                      {expandedYears.size === filteredTimeline.length ? 'Collapse All' : 'Expand All'}
+                    </span>
+                  </button>
+
+                  {/* COLUMN PICKER DROPDOWN */}
+                  <div className="position-relative">
+                      <div
+                          className="bg-input border border-secondary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer text-nowrap"
+                          style={{ height: '36px' }}
+                          onClick={() => { setColMenuOpen(!colMenuOpen); setExportMenuOpen(false); setJumpMenuOpen(false); }}
+                          title="Show or hide table columns"
+                      >
+                          <span className="small fw-bold text-uppercase ls-1 text-muted d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
+                              <i className="bi bi-layout-three-columns me-1.5 text-info"></i>
+                              Columns
+                              <i className={`bi bi-chevron-${colMenuOpen ? 'up' : 'down'} ms-1.5 opacity-75`} style={{ fontSize: '0.65rem' }}></i>
+                          </span>
+                      </div>
+                      {colMenuOpen && (
+                          <>
+                              <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setColMenuOpen(false)}></div>
+                              <div className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-2" style={{ zIndex: 1060, top: '100%', right: 0, minWidth: '185px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
+                                  {[
+                                      { key: 'phase', label: 'Phase' },
+                                      { key: 'ages', label: 'Ages' },
+                                      { key: 'income', label: 'Net Income' },
+                                      { key: 'taxes', label: 'Taxes' },
+                                      { key: 'expenses', label: 'Expenses' },
+                                  ].map((col) => (
+                                      <label key={col.key} className="dropdown-item py-1.5 px-2 rounded-2 d-flex align-items-center gap-2 cursor-pointer small fw-bold text-main">
+                                          <input
+                                              type="checkbox"
+                                              className="form-check-input m-0 cursor-pointer"
+                                              checked={!hiddenCols[col.key]}
+                                              onChange={() => toggleCol(col.key)}
+                                          />
+                                          <span>{col.label}</span>
+                                      </label>
+                                  ))}
+                              </div>
+                          </>
+                      )}
                   </div>
-                  {colMenuOpen && (
-                      <>
-                          <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setColMenuOpen(false)}></div>
-                          <div className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-2" style={{ zIndex: 1060, top: '100%', right: 0, minWidth: '185px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
-                              {[
-                                  { key: 'phase', label: 'Phase' },
-                                  { key: 'ages', label: 'Ages' },
-                                  { key: 'income', label: 'Net Income' },
-                                  { key: 'taxes', label: 'Taxes' },
-                                  { key: 'expenses', label: 'Expenses' },
-                              ].map((col) => (
-                                  <label key={col.key} className="dropdown-item py-1.5 px-2 rounded-2 d-flex align-items-center gap-2 cursor-pointer small fw-bold text-main">
-                                      <input
-                                          type="checkbox"
-                                          className="form-check-input m-0 cursor-pointer"
-                                          checked={!hiddenCols[col.key]}
-                                          onChange={() => toggleCol(col.key)}
-                                      />
-                                      <span>{col.label}</span>
-                                  </label>
-                              ))}
-                          </div>
-                      </>
-                  )}
-              </div>
+                </>
+              )}
 
               <div className="position-relative">
                   <div 
@@ -1599,17 +1664,28 @@ export default function ProjectionTab() {
                   {exportMenuOpen && (
                       <>
                           <div className="position-fixed top-0 start-0 w-100 h-100" style={{zIndex: 1040}} onClick={() => setExportMenuOpen(false)}></div>
-                          <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-1" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '170px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)'}}>
+                          <ul className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-1" style={{zIndex: 1060, top: '100%', right: 0, minWidth: '240px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)'}}>
+                              <li>
+                                  <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-success d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportDetailedCSV(); }}>
+                                      <i className="bi bi-file-earmark-spreadsheet me-2 fs-6"></i>
+                                      <div className="text-start">
+                                          <div>Full Spreadsheet CSV</div>
+                                          <div className="text-muted fw-normal" style={{ fontSize: '0.68rem' }}>All P1 &amp; P2 accounts, benefits &amp; tax</div>
+                                      </div>
+                                  </button>
+                              </li>
                               <li>
                                   <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-primary d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToCSV(); }}>
-                                      <i className="bi bi-filetype-csv me-2 fs-6"></i> Export to CSV
+                                      <i className="bi bi-filetype-csv me-2 fs-6"></i> Summary CSV
                                   </button>
                               </li>
-                              <li>
-                                  <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-success d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
-                                      <i className="bi bi-image me-2 fs-6"></i> Export to PNG
-                                  </button>
-                              </li>
+                              {viewMode === 'summary' && (
+                                  <li>
+                                      <button className="dropdown-item py-2 px-3 rounded-2 fw-bold text-info d-flex align-items-center border-0 bg-transparent" onClick={() => { setExportMenuOpen(false); exportToPNG(); }}>
+                                          <i className="bi bi-image me-2 fs-6"></i> Export to PNG
+                                      </button>
+                                  </li>
+                              )}
                           </ul>
                       </>
                   )}
@@ -1617,6 +1693,14 @@ export default function ProjectionTab() {
           </div>
       </div>
 
+      {viewMode === 'spreadsheet' ? (
+        <ProjectionSpreadsheetView
+          timeline={filteredTimeline}
+          options={spreadsheetOptions}
+          onExportDetailedCSV={exportDetailedCSV}
+          useRealDollars={data.useRealDollars}
+        />
+      ) : (
       <div className="rp-card border border-secondary rounded-4 overflow-hidden shadow-sm position-relative">
         <div className="table-responsive hide-scrollbar" style={{ maxHeight: '75vh' }} ref={tableRef} onScroll={handleTableScroll}>
           
@@ -2291,6 +2375,7 @@ export default function ProjectionTab() {
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }
