@@ -134,17 +134,14 @@ export default function MacroShocksCard() {
 
     return (
         <>
-            <h5 className="text-muted small text-uppercase fw-bold ls-1 mb-4 pb-2 border-bottom border-secondary"><i className="bi bi-heart-pulse-fill me-2 text-danger"></i>Life & Macro Shocks</h5>
-            <div className="row g-4">
-                
                 {/* LTC SHOCK */}
-                <div className="col-12 col-lg-4">
+                <div className="col-12 col-xl-6">
                     <div className="rp-card border border-secondary rounded-4 p-4 shadow-sm h-100 d-flex flex-column">
                         <div className="d-flex align-items-center mb-3">
-                            <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                                <i className="bi bi-bandaid-fill fs-4"></i>
+                            <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '42px', height: '42px', flexShrink: 0}}>
+                                <i className="bi bi-bandaid-fill fs-5"></i>
                             </div>
-                            <h5 className="fw-bold text-danger mb-0 text-uppercase ls-1">Long-Term Care Shock</h5>
+                            <h5 className="fw-bold text-danger mb-0 text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>Long-Term Care Shock</h5>
                         </div>
                         <p className="text-muted small mb-4">Injects a massive healthcare expense into your retirement plan to see if your portfolio can survive a nursing home without bankrupting the surviving spouse.</p>
                         
@@ -163,7 +160,7 @@ export default function MacroShocksCard() {
                             </div>
                         </div>
 
-                        <button className="btn btn-outline-danger w-100 fw-bold py-2 rounded-pill mt-auto mb-4" onClick={runLtcShock}>Run LTC Stress Test</button>
+                        <button className="btn btn-outline-danger w-100 fw-bold py-2 rounded-pill mt-auto mb-3" onClick={runLtcShock}>Run LTC Stress Test</button>
 
                         {ltcResult && (
                             <div className={`p-3 rounded-4 border shadow-inner text-center ${ltcResult.survived ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'}`}>
@@ -180,13 +177,13 @@ export default function MacroShocksCard() {
                 </div>
 
                 {/* HIGH INFLATION DECADE */}
-                <div className="col-12 col-lg-4">
+                <div className="col-12 col-xl-6">
                     <div className="rp-card border border-secondary rounded-4 p-4 shadow-sm h-100 d-flex flex-column">
                         <div className="d-flex align-items-center mb-3">
-                            <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                                <i className="bi bi-graph-down-arrow fs-4"></i>
+                            <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '42px', height: '42px', flexShrink: 0}}>
+                                <i className="bi bi-graph-down-arrow fs-5"></i>
                             </div>
-                            <h5 className="fw-bold text-warning mb-0 text-uppercase ls-1">High Inflation Era</h5>
+                            <h5 className="fw-bold text-warning mb-0 text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>High Inflation Era</h5>
                         </div>
                         <p className="text-muted small mb-4">Overrides your baseline inflation assumption. Discover how badly a prolonged period of high inflation silently destroys your real purchasing power.</p>
                         
@@ -197,7 +194,7 @@ export default function MacroShocksCard() {
                             </div>
                         </div>
 
-                        <button className="btn btn-outline-warning w-100 fw-bold py-2 rounded-pill mt-auto mb-4" onClick={runInflationShock}>Run Inflation Stress Test</button>
+                        <button className="btn btn-outline-warning w-100 fw-bold py-2 rounded-pill mt-auto mb-3" onClick={runInflationShock}>Run Inflation Stress Test</button>
 
                         {infResult && (
                             <div className="p-3 rounded-4 border border-warning bg-warning bg-opacity-10 shadow-inner text-center">
@@ -214,13 +211,13 @@ export default function MacroShocksCard() {
                 </div>
 
                 {/* REAL ESTATE CRASH */}
-                <div className="col-12 col-lg-4">
+                <div className="col-12 col-xl-6">
                     <div className="rp-card border border-secondary rounded-4 p-4 shadow-sm h-100 d-flex flex-column">
                         <div className="d-flex align-items-center mb-3">
-                            <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
-                                <i className="bi bi-houses-fill fs-4"></i>
+                            <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '42px', height: '42px', flexShrink: 0}}>
+                                <i className="bi bi-houses-fill fs-5"></i>
                             </div>
-                            <h5 className="fw-bold text-info mb-0 text-uppercase ls-1">Real Estate Crash</h5>
+                            <h5 className="fw-bold text-info mb-0 text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>Real Estate Crash</h5>
                         </div>
                         <p className="text-muted small mb-4">Many Canadians rely on downsizing to fund their late-stage retirement. Test what happens if the housing market crashes exactly when you plan to sell.</p>
                         
@@ -231,7 +228,7 @@ export default function MacroShocksCard() {
                             </div>
                         </div>
 
-                        <button className="btn btn-outline-info w-100 fw-bold py-2 rounded-pill mt-auto mb-4" onClick={runReCrash}>Run Housing Stress Test</button>
+                        <button className="btn btn-outline-info w-100 fw-bold py-2 rounded-pill mt-auto mb-3" onClick={runReCrash}>Run Housing Stress Test</button>
 
                         {reResult && (
                             <div className="p-3 rounded-4 border border-info bg-info bg-opacity-10 shadow-inner text-center">
@@ -245,8 +242,6 @@ export default function MacroShocksCard() {
                         )}
                     </div>
                 </div>
-
-            </div>
         </>
     );
 }

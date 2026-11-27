@@ -229,10 +229,10 @@ export default function CPPImporter() {
             )}
 
             <div className="d-flex align-items-center mb-3">
-                <div className="bg-secondary bg-opacity-25 text-white rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
+                <div className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
                     <i className="bi bi-file-earmark-spreadsheet fs-4"></i>
                 </div>
-                <h5 className="fw-bold text-white mb-0 text-uppercase ls-1">CPP Smart Importer</h5>
+                <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">CPP Smart Importer</h5>
             </div>
             <p className="text-muted small mb-3">Import your Service Canada earnings to project your base benefit using the exact 17% drop-out rules and YMPE ratios.</p>
 

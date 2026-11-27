@@ -333,7 +333,7 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
 
       {/* --- CARDS GRID --- */}
       {visibleToolKeys.length > 0 ? (
-        <div className="row g-4 mb-5">
+        <div className="row g-4 mb-5 optimizers-grid">
           {visibleToolKeys.map((toolId, idx) => renderToolCard(toolId, idx))}
         </div>
       ) : (

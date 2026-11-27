@@ -100,11 +100,12 @@ export default function SurvivorStressCard() {
   };
 
   return (
-    <div className="rp-card border border-secondary rounded-4 shadow-sm mb-4">
-      <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom border-secondary p-3 surface-card">
+    <div className="col-12 col-xl-6">
+    <div className="rp-card border border-secondary rounded-4 shadow-sm h-100 d-flex flex-column overflow-hidden">
+      <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom border-secondary p-3 surface-card">
         <div className="d-flex align-items-center">
-          <i className="bi bi-heart-pulse-fill text-danger fs-4 me-3"></i>
-          <h5 className="mb-0 fw-bold text-uppercase ls-1">{t('survivorStress.title', "Survivor & Widow's Tax Trap Stress Test")}</h5>
+          <i className="bi bi-heart-pulse-fill text-danger fs-5 me-2"></i>
+          <h5 className="mb-0 fw-bold text-uppercase ls-1" style={{ fontSize: '0.95rem' }}>{t('survivorStress.title', "Survivor & Widow's Tax Trap Stress Test")}</h5>
           <InfoBtn
             align="left"
             title={t('survivorStress.title', "Survivor & Widow's Tax Trap Stress Test")}
@@ -264,6 +265,7 @@ export default function SurvivorStressCard() {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

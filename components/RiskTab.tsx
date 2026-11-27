@@ -17,8 +17,15 @@ export default function RiskTab() {
 
       <MonteCarloCard />
       <SorrCard />
-      <SurvivorStressCard />
-      <MacroShocksCard />
+
+      <h5 className="text-muted small text-uppercase fw-bold ls-1 mt-4 mb-3 pb-2 border-bottom border-secondary d-flex align-items-center">
+        <i className="bi bi-heart-pulse-fill me-2 text-danger"></i>
+        {t('riskTab.lifeMacroShocks', 'Life & Macro Shocks')}
+      </h5>
+      <div className="row g-4">
+        <SurvivorStressCard />
+        <MacroShocksCard />
+      </div>
       
     </div>
   );
