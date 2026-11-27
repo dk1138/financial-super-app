@@ -2,7 +2,6 @@ import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useFinanceData, useFinanceResults, useFinancePlanScore } from '../lib/FinanceContext';
 import { useTranslation } from '../lib/LanguageContext';
-import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { InfoBtn } from './SharedUI';
 import ExecutiveReportModal from './ExecutiveReportModal';
@@ -92,6 +91,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
     document.head.appendChild(styleEl);
 
     try {
+      const html2canvas = (await import('html2canvas')).default;
       const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
       return await html2canvas(dashboardRef.current!, {
         backgroundColor: isLight ? '#f8fafc' : '#16181d',
@@ -369,7 +369,7 @@ export default function DashboardTab({ onNavigate }: { onNavigate?: (tab: string
 
       const totalSourcedRaw = y.grossInflow || 0;
       const mandatoryBillsRaw = yrExpRaw + yrTaxRaw;
-      if (totalSourcedRaw < mandatoryBillsRaw - 1) {
+      if ((y.unfundedShortfall || 0) > 1 || totalSourcedRaw < mandatoryBillsRaw - 1) {
           hasShortfall = true;
           if (firstShortfallYear === null) {
               firstShortfallYear = y.year;

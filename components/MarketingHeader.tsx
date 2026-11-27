@@ -33,8 +33,8 @@ export default function MarketingHeader() {
             isRoute: true 
         },
         { href: '/#how-it-works', label: 'How It Works', isRoute: false },
-        { href: '/#privacy', label: 'Local-First Privacy', isRoute: false },
-        { href: '/#pricing', label: 'Pricing', isRoute: false },
+        { href: '/methodology', label: 'Methodology', isRoute: true },
+        { href: '/privacy', label: 'Privacy', isRoute: true },
     ];
 
     const isLinkActive = (item: typeof navLinks[0]) => {

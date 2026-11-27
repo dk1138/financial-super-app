@@ -557,6 +557,174 @@ export const TOOLS_DATA: ToolMeta[] = [
                 a: 'Eligible deductions include home office expenses (calculated on square footage percentage), cell phone and internet costs, advertising and software subscriptions, professional dues, and vehicle business mileage.'
             }
         ]
+    },
+    {
+        slug: 'oas-clawback-calculator',
+        title: '2026 OAS Clawback & Effective Marginal Tax Rate Calculator',
+        subtitle: 'Model the 15% Old Age Security recovery tax above $95,323, provincial surtaxes, GIS phase-outs, and true effective marginal tax rates across all 13 Canadian jurisdictions.',
+        category: 'Tax & Registered Accounts',
+        toolKey: 'tax-curve',
+        badge: '2026 CRA Clawback',
+        icon: 'bi-graph-up-arrow',
+        overview: 'Statutory tax brackets hide the real cost of earning an extra dollar in Canadian retirement. Once Line 23400 net world income—including the 38% gross-up on eligible Canadian dividends—exceeds the 2026 CRA threshold of $95,323, Service Canada claws back 15 cents of Old Age Security per dollar (deductible on Line 23500). Combined with Ontario’s stacked 20%/36% surtaxes or low-income GIS phase-outs, effective marginal rates can spike past 50%–70%.',
+        faqs: [
+            {
+                q: 'What is the OAS clawback threshold for the 2026 tax year?',
+                a: 'For the 2026 tax year, the Old Age Security (OAS) recovery tax begins when individual net world income (Line 23400) exceeds $95,323, clawing back 15% of every dollar above that threshold until OAS is fully repaid.'
+            },
+            {
+                q: 'Do Canadian dividends and TFSA withdrawals count toward OAS clawback?',
+                a: 'TFSA withdrawals are 100% tax-free and excluded from OAS clawback. Eligible Canadian dividends, however, are included at 138% of the cash dividend received (the grossed-up taxable amount), which can unexpectedly push retirees over the $95,323 threshold.'
+            },
+            {
+                q: 'Does the 15% OAS recovery tax reduce my taxable income?',
+                a: 'Yes. On your T1 return, the OAS social benefits repayment is deducted on Line 23500 when calculating Line 23600 Net Income and Line 26000 Taxable Income, meaning the net combined marginal tax impact is 15% × (1 − your marginal income tax rate).'
+            }
+        ]
+    },
+    {
+        slug: 'cpp-at-60-vs-65-vs-70',
+        title: 'CPP & OAS Timing Optimizer: Age 60 vs. 65 vs. 70 Calculator',
+        subtitle: 'Run a full lifecycle grid search across CPP (ages 60–70) and OAS (ages 65–70) start ages to find your exact break-even age and highest after-tax estate.',
+        category: 'Pensions & Retirement Income',
+        toolKey: 'cpp',
+        badge: 'CPP/OAS Grid Search',
+        icon: 'bi-calendar2-range-fill',
+        overview: 'Taking Canada Pension Plan (CPP) early at age 60 permanently reduces benefits by 0.6% per month (−36%), while deferring to age 70 permanently increases CPP by 0.7% per month (+42%) and OAS by 0.6% per month (+36%, plus the automatic 10% boost at age 75). This optimizer tests every start-age combination against your RRSP meltdown, provincial tax brackets, and longevity horizon.',
+        faqs: [
+            {
+                q: 'How much does deferring CPP from age 65 to 70 increase my pension?',
+                a: 'Service Canada increases your inflation-indexed CPP retirement pension by 0.7% for each month you delay past age 65, up to a permanent 42% enhancement at age 70—on top of CPI wage/inflation adjustments.'
+            },
+            {
+                q: 'Why can delaying CPP to age 70 reduce lifetime taxes?',
+                a: 'Deferring CPP and OAS creates a low-income window in your 60s to melt down RRSP/RRIF balances in the 14% lowest federal tax bracket, shrinking future mandatory RRIF minimums at age 72 and avoiding the 15% OAS clawback.'
+            },
+            {
+                q: 'What is the typical break-even age for taking CPP at 65 vs. 70?',
+                a: 'On a pre-tax cash-flow basis, deferring CPP from 65 to 70 typically breaks even around age 81–83, though portfolio opportunity cost and RRSP tax-bracket arbitrage can shift your household break-even earlier or later.'
+            }
+        ]
+    },
+    {
+        slug: 'rrsp-vs-tfsa',
+        title: 'RRSP vs. TFSA Calculator Canada (2026)',
+        subtitle: 'Compare after-tax retirement wealth between contributing to an RRSP (with tax-refund reinvestment) versus a TFSA under 2026 federal and provincial tax brackets.',
+        category: 'Tax & Registered Accounts',
+        toolKey: 'tfsavsrrsp',
+        badge: 'RRSP vs. TFSA',
+        icon: 'bi-intersect',
+        overview: 'When your contribution marginal tax rate equals your retirement withdrawal marginal tax rate—and you reinvest the RRSP tax refund—an RRSP and TFSA produce identical after-tax wealth. In practice, progressive 2026 brackets ($33,810 RRSP limit, $7,000 TFSA limit), CCB income testing, and retirement OAS/GIS clawbacks tilt the math decisively toward one account depending on your career vs. retirement income.',
+        faqs: [
+            {
+                q: 'When does an RRSP beat a TFSA in Canada?',
+                a: 'An RRSP outperforms a TFSA when your current marginal tax rate (including any CCB boost from lowering AFNI) is higher than your expected effective marginal tax rate in retirement—provided you invest the tax refund rather than spending it.'
+            },
+            {
+                q: 'When should Canadians prioritize a TFSA over an RRSP?',
+                a: 'Prioritize a TFSA if you are in the lowest 14% federal bracket ($58,523 or less in 2026), expect higher income later in your career, or anticipate receiving income-tested GIS or hitting the $95,323 OAS clawback zone in retirement.'
+            },
+            {
+                q: 'What are the 2026 RRSP and TFSA contribution limits?',
+                a: 'For 2026, the CRA TFSA annual limit is $7,000 (plus unused carry-forward room and prior-year withdrawals), and new RRSP deduction room is 18% of prior-year earned income up to a maximum of $33,810.'
+            }
+        ]
+    },
+    {
+        slug: 'gis-clawback-maximizer',
+        title: 'GIS Clawback Shield & Low-Income Retirement Optimizer',
+        subtitle: 'Protect Guaranteed Income Supplement (GIS) benefits from 50%–75% clawbacks by timing pre-65 RRSP meltdowns and TFSA-first retirement spending.',
+        category: 'Pensions & Retirement Income',
+        toolKey: 'gis-maximizer',
+        badge: 'GIS Shield',
+        icon: 'bi-shield-lock-fill',
+        overview: 'For modest-income Canadian retirees, the Guaranteed Income Supplement (GIS) claws back 50 cents (and up to 75 cents with provincial top-ups) for every $1 of taxable RRIF or CPP income above statutory exemptions. Depleting modest RRSPs before age 65 and sheltering capital inside a TFSA can preserve thousands of dollars in tax-free annual GIS benefits.',
+        faqs: [
+            {
+                q: 'Which retirement income sources trigger the 50% GIS clawback?',
+                a: 'CPP benefits, RRSP/RRIF withdrawals, DB pensions, non-registered interest, capital gains, and grossed-up Canadian dividends all reduce GIS, whereas OAS payments and TFSA withdrawals are exempt.'
+            },
+            {
+                q: 'Is employment income partially exempt from GIS clawback?',
+                a: 'Yes. Service Canada exempts the first $5,000 of annual employment or self-employment income, and applies a 50% exemption on the next $10,000 (between $5,000 and $15,000), encouraging part-time work after age 65.'
+            },
+            {
+                q: 'Why can holding a small RRSP past age 65 hurt low-income seniors?',
+                a: 'Mandatory RRIF withdrawals starting at age 72 face an effective marginal rate exceeding 50%–70% once GIS clawback is included—far higher than the ~20% tax refund received when contributing in a modest bracket.'
+            }
+        ]
+    },
+    {
+        slug: 'estate-terminal-tax',
+        title: 'Canadian Estate & Terminal RRSP/RRIF Tax Calculator',
+        subtitle: 'Estimate the CRA deemed-disposition tax bill on unspent RRSP/RRIF balances and unrealized non-registered capital gains on your final T1 return.',
+        category: 'Tax & Registered Accounts',
+        toolKey: 'estate-tax',
+        badge: 'Terminal Return',
+        icon: 'bi-file-earmark-Lock2',
+        overview: 'Canada has no formal inheritance tax, yet the CRA treats death of the surviving spouse as a full cash-out event (ITA s. 70(5) and s. 146(8.8)). One hundred percent of remaining RRSP/RRIF/LIF balances and 50% of unrealized non-registered capital gains are added to income in a single tax year—often pushing estates into 50%+ top provincial brackets.',
+        faqs: [
+            {
+                q: 'How are RRSPs and RRIFs taxed at death in Canada?',
+                a: 'When the first spouse dies, RRSPs and RRIFs can roll over tax-deferred to a surviving spouse. On the death of the surviving (or single) spouse, 100% of the fair market value is taxed as ordinary income on the terminal T1 return.'
+            },
+            {
+                q: 'What is the capital gains inclusion rate on deemed disposition at death in 2026?',
+                a: 'Under 2026 CRA rules (following the March 2025 cancellation of the proposed tiered hike), 50% of unrealized capital gains on non-registered investments and secondary properties are taxable on the final return, while the principal residence remains exempt.'
+            },
+            {
+                q: 'How does an RRSP meltdown reduce terminal estate taxes?',
+                a: 'Systematically drawing down RRSP/RRIF funds in lower 20%–30% tax brackets during your 60s and 70s—and shifting surplus cash into TFSAs—prevents a massive lump-sum balance from being taxed at ~53% at death.'
+            }
+        ]
+    },
+    {
+        slug: 'consumption-smoothing',
+        title: 'Consumption Smoothing & Die With Zero Calculator',
+        subtitle: 'Solve for your highest sustainable inflation-adjusted lifestyle spending from retirement through longevity, with an optional $0 Die With Zero or custom legacy target.',
+        category: 'Pensions & Retirement Income',
+        toolKey: 'smoother',
+        badge: 'Die With Zero',
+        icon: 'bi-sliders2',
+        overview: 'Many diligent Canadian savers underspend in their healthiest Go-Go retirement years and unintentionally leave seven-figure taxable estates. This solver iterates across your full tax-adjusted retirement timeline—factoring in CPP/OAS start ages, RRIF minimums, and provincial taxes—to find the smooth real spending ceiling that hits your exact legacy goal.',
+        faqs: [
+            {
+                q: 'What is consumption smoothing in retirement planning?',
+                a: 'Consumption smoothing aligns your real inflation-adjusted spending power across pre-retirement and retirement years so you avoid over-saving early at the expense of life experiences or running short late in life.'
+            },
+            {
+                q: 'How does the Die With Zero ($0 Legacy) preset work?',
+                a: 'Setting Target Legacy to $0 instructs the binary-search solver to find the maximum annual after-tax lifestyle budget that exhausts liquid portfolio assets right at your chosen planning horizon while keeping housing equity intact unless downsized.'
+            },
+            {
+                q: 'Does this solver account for taxes and OAS clawbacks on higher withdrawals?',
+                a: 'Yes. Every candidate spending level runs through the full 2026 CRA progressive tax, RRIF minimum, and OAS recovery tax engine rather than a simplified 4% rule.'
+            }
+        ]
+    },
+    {
+        slug: 'cpp-statement-calculator',
+        title: 'Service Canada CPP Statement & CPP2 Benefit Calculator',
+        subtitle: 'Import or enter your annual pensionable earnings history (1966–2026) to calculate exact base CPP, general drop-out years, and enhanced CPP2 retirement benefits.',
+        category: 'Pensions & Retirement Income',
+        toolKey: 'cppimport',
+        badge: 'CPP & CPP2 Math',
+        icon: 'bi-file-earmark-spreadsheet',
+        overview: 'Service Canada’s online CPP estimates assume you keep earning your historical average right until age 65—significantly overstating benefits for early retirees (FIRE). By applying historical YMPE/YAMPE ceilings (up to $74,600 YMPE and $85,000 YAMPE in 2026) and the 17% general drop-out provision, this calculator computes your true CPP entitlement even if you stop working at 45, 50, or 55.',
+        faqs: [
+            {
+                q: 'Why is My Service Canada Account’s CPP estimate wrong if I retire early?',
+                a: 'Service Canada projects future earnings forward to age 65 at your past average. Every zero-earning year between early retirement and age 65 beyond your 17% general drop-out allowance (~8 years) reduces your base CPP by roughly 2.5% per year.'
+            },
+            {
+                q: 'What are the 2026 YMPE and YAMPE limits for CPP and CPP2?',
+                a: 'For 2026, the Year’s Maximum Pensionable Earnings (YMPE) is $74,600 (5.95% employee CPP contribution above the $3,500 basic exemption), and the Year’s Additional Maximum Pensionable Earnings (YAMPE) for Tier-2 CPP2 is $85,000 (4.0% contribution between $74,600 and $85,000).'
+            },
+            {
+                q: 'How does the 17% CPP general drop-out provision work?',
+                a: 'Between age 18 and 65 (47 contributory years), Service Canada automatically drops your lowest 17% of earning months (up to 8 years / 96 months) before averaging your pensionable earnings.'
+            }
+        ]
     }
 ];
 
@@ -564,10 +732,18 @@ export function getToolBySlug(slug: string): ToolMeta | undefined {
     return TOOLS_BY_SLUG[slug] || TOOLS_DATA.find((t) => t.slug === slug);
 }
 
+const EXTRA_ALIASES: Record<string, string> = {
+    'oas-clawback-calculator-2026': 'oas-clawback-calculator',
+    'marginal-tax-rate-calculator': 'oas-clawback-calculator',
+    'rrsp-vs-tfsa-calculator-canada': 'rrsp-vs-tfsa',
+    'cpp-60-vs-65-vs-70': 'cpp-at-60-vs-65-vs-70',
+    'die-with-zero': 'consumption-smoothing',
+    'die-with-zero-calculator': 'consumption-smoothing',
+};
+
 // Map both original slugs and canonical aliases so URLs like /tools/pension-buyback and /tools/pension-buyback-calculator both resolve
 export const TOOLS_BY_SLUG: Record<string, ToolMeta> = TOOLS_DATA.reduce((acc, tool) => {
     acc[tool.slug] = tool;
-    // Cross-register with and without -calculator suffix
     if (tool.slug.endsWith('-calculator')) {
         acc[tool.slug.replace(/-calculator$/, '')] = tool;
     } else {
@@ -576,7 +752,14 @@ export const TOOLS_BY_SLUG: Record<string, ToolMeta> = TOOLS_DATA.reduce((acc, t
     return acc;
 }, {} as Record<string, ToolMeta>);
 
+for (const [alias, canonicalSlug] of Object.entries(EXTRA_ALIASES)) {
+    if (TOOLS_BY_SLUG[canonicalSlug]) {
+        TOOLS_BY_SLUG[alias] = TOOLS_BY_SLUG[canonicalSlug];
+    }
+}
+
 export const ALL_TOOL_SLUGS: string[] = Array.from(new Set([
     ...TOOLS_DATA.map((t) => t.slug),
-    ...TOOLS_DATA.map((t) => t.slug.endsWith('-calculator') ? t.slug.replace(/-calculator$/, '') : `${t.slug}-calculator`)
+    ...TOOLS_DATA.map((t) => t.slug.endsWith('-calculator') ? t.slug.replace(/-calculator$/, '') : `${t.slug}-calculator`),
+    ...Object.keys(EXTRA_ALIASES),
 ]));

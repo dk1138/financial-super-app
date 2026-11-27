@@ -59,7 +59,7 @@ const MarginalTaxCurve = dynamic(() => import('../optimizers/MarginalTaxCurve'),
 const SensitivityHeatmap = dynamic(() => import('../optimizers/SensitivityHeatmap'), { ssr: false, loading: () => <ToolSkeleton /> });
 const CoastFireCalculator = dynamic(() => import('../optimizers/CoastFireCalculator'), { ssr: false, loading: () => <ToolSkeleton /> });
 
-export default function ToolRenderer({ toolKey }: { toolKey: string }) {
+export default function ToolRenderer({ toolKey, defaultProvince }: { toolKey: string; defaultProvince?: string }) {
     switch (toolKey) {
         case 'sensitivity': return <SensitivityHeatmap isExpanded={true} />;
         case 'coast-fire': return <CoastFireCalculator />;
@@ -67,7 +67,7 @@ export default function ToolRenderer({ toolKey }: { toolKey: string }) {
         case 'lif-unlock': return <LIFtoRRIFOptimizer />;
         case 'tfsavsrrsp': return <TFSAvsRRSP />;
         case 'cpp': return <CPPGridSearch />;
-        case 'tax-curve': return <MarginalTaxCurve />;
+        case 'tax-curve': return <MarginalTaxCurve defaultProvince={defaultProvince} />;
         case 'sweetspot': return <RRSPSweetSpot />;
         case 'grossup': return <RRSPGrossUp />;
         case 'tfsa-room': return <TFSARoomCalculator />;

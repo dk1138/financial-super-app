@@ -155,7 +155,7 @@ export const defaultData: FinanceData = {
     p2_oas_enabled: true, p2_oas_years: 40, p2_oas_start: 65,
 
     inflation_rate: 2.1, tax_province: 'ON',
-    cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000, 
+    cfg_tfsa_limit: 7000, cfg_rrsp_limit: 33810, cfg_fhsa_limit: 8000, 
     cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
     
     portfolio_allocation: 'custom', use_glide_path: false,
@@ -223,7 +223,7 @@ export const emptyData: FinanceData = {
     p2_oas_enabled: true, p2_oas_years: 0, p2_oas_start: 65,
 
     inflation_rate: 2.1, tax_province: 'ON',
-    cfg_tfsa_limit: 7000, cfg_rrsp_limit: 32960, cfg_fhsa_limit: 8000, 
+    cfg_tfsa_limit: 7000, cfg_rrsp_limit: 33810, cfg_fhsa_limit: 8000, 
     cfg_resp_limit: 2500, cfg_crypto_limit: 5000,
     
     portfolio_allocation: 'custom', use_glide_path: false,

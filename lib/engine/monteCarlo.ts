@@ -141,7 +141,9 @@ export function runMonteCarloSimulation(
 ): MonteCarloResult {
     const { simCount, method, volatility } = options;
     const trajectories: number[][] = [];
-    const p1Age = data.inputs.p1_age || 38;
+    const p1Age = data.inputs?.p1_dob
+        ? (new Date().getFullYear() - new Date(data.inputs.p1_dob).getFullYear())
+        : (Number(data.inputs?.p1_age) || 38);
     const inflationRate = (data.inputs.inflation_rate || 2.1) / 100;
     let successCount = 0;
 
@@ -177,7 +179,8 @@ export function runMonteCarloSimulation(
         const liquidTrajectory = detailedResult.map((y: any) => y.liquidNW);
         trajectories.push(liquidTrajectory);
 
-        if (liquidTrajectory[liquidTrajectory.length - 1] > 0) {
+        const hadShortfall = detailedResult.some((y: any) => (y.unfundedShortfall || 0) > 1);
+        if (liquidTrajectory[liquidTrajectory.length - 1] > 0 && !hadShortfall) {
             successCount++;
         }
 

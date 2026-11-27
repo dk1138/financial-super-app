@@ -691,6 +691,7 @@ export default function CashFlowTab() {
               </div>
               <input 
                   type="range" 
+                  aria-label="Select projection year for cash flow diagram"
                   className="form-range w-100 cursor-pointer" 
                   min={startYear} 
                   max={endYear} 

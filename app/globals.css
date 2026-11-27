@@ -185,6 +185,13 @@ body {
 .text-info { color: var(--info) !important; }
 .text-success { color: var(--success) !important; }
 .text-danger { color: var(--danger) !important; }
+:root:not([data-bs-theme="light"]) .text-primary,
+[data-bs-theme="dark"] .text-primary {
+  color: #38bdf8 !important;
+}
+[data-bs-theme="light"] .text-primary {
+  color: #0284c7 !important;
+}
 
 /* Scrollbar Utility */
 .hide-scrollbar::-webkit-scrollbar { display: none; }

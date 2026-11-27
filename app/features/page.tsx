@@ -5,17 +5,15 @@
  * INSTRUCTION: Rename this file to 'page.tsx' and place it in 'app/features/'
  * =========================================================================
  */
-'use client';
 import MarketingHeader from '@/components/MarketingHeader';
-import React, { useState, useMemo } from 'react';
+import FeaturesDirectoryClient from '@/components/marketing/FeaturesDirectoryClient';
+import React from 'react';
 import Link from 'next/link';
 import { TOOLS_DATA } from '@/lib/toolsData';
 
 const TOOL_SLUG_BY_KEY: Record<string, string> = Object.fromEntries(TOOLS_DATA.map((t) => [t.toolKey, t.slug]));
 
 export default function FeaturesPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-
   // 1. THE 6 CORE PLANNING ENGINES
   const coreSuites = [
     {
@@ -45,7 +43,7 @@ export default function FeaturesPage() {
       description: "Modeled down to the dollar for all Canadian provinces and territories, incorporating 2026 indexed tax brackets, surtaxes, and benefit clawbacks.",
       features: [
         { name: "Federal & Provincial Brackets", desc: "Full statutory tax formulas including Ontario Health Premium, provincial surtaxes, and indexation." },
-        { name: "CPP & OAS Flexibility", desc: "Optimize claiming ages between 60 and 70 (+8.4%/yr deferral bonus on OAS, +7.2%/yr on CPP)." },
+        { name: "CPP & OAS Flexibility", desc: "Optimize claiming ages between 60 and 70 (+8.4%/yr deferral bonus on CPP, +7.2%/yr on OAS)." },
         { name: "OAS Clawback Recovery", desc: "Models automatic 15% recovery tax thresholds when net world income exceeds statutory limits." },
         { name: "Spousal Pension Splitting", desc: "Algorithmically allocates up to 50% of eligible pension income to equalize spousal tax brackets." }
       ]
@@ -355,27 +353,8 @@ export default function FeaturesPage() {
     }
   ];
 
-  // Flattened tools for search
+  // Flattened tools count
   const totalToolCount = optimizerGroups.reduce((acc, g) => acc + g.tools.length, 0);
-
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return null;
-    const q = searchQuery.toLowerCase().trim();
-    const results: Array<any> = [];
-    optimizerGroups.forEach(g => {
-      g.tools.forEach(t => {
-        if (
-          t.name.toLowerCase().includes(q) ||
-          t.desc.toLowerCase().includes(q) ||
-          t.badge.toLowerCase().includes(q) ||
-          g.groupTitle.toLowerCase().includes(q)
-        ) {
-          results.push({ ...t, groupTitle: g.groupTitle });
-        }
-      });
-    });
-    return results;
-  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-blue-500/30">
@@ -386,7 +365,14 @@ export default function FeaturesPage() {
       {/* --- HERO HEADER --- */}
       <header className="pt-40 pb-16 border-b border-slate-800/80 bg-gradient-to-b from-[#0b1220] to-[#0f172a] text-center">
         <div className="container mx-auto px-6 max-w-4xl">
-
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-300 mb-6">
+            <i className="bi bi-patch-check-fill text-emerald-400"></i>
+            <span>Verified 2026 CRA &amp; 13-Jurisdiction Tax Rules</span>
+            <span className="text-slate-500">·</span>
+            <Link href="/methodology" className="underline text-emerald-200 hover:text-white">
+              Methodology &amp; Citations
+            </Link>
+          </div>
           
           <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black text-white mb-6 tracking-tight leading-tight">
             6 Core Engines. <br/>
@@ -478,183 +464,11 @@ export default function FeaturesPage() {
       </section>
 
       {/* --- SECTION 2: SPECIALIZED SMART OPTIMIZERS (FULL DIRECTORY) --- */}
-      <section className="py-24 bg-[#0f172a]" id="all-calculators">
-        <div className="container mx-auto px-6 max-w-6xl">
-          
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
-            <div className="text-start">
-              <span className="text-blue-400 text-xs font-bold uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full">
-                Interactive Directory
-              </span>
-              <h2 className="text-3xl md:text-4xl font-black text-white mt-3 mb-2 tracking-tight">
-                All {totalToolCount} Smart Optimizers & Calculators
-              </h2>
-              <p className="text-slate-400 text-sm md:text-base max-w-xl mb-0">
-                Independent, precision tools designed to solve specific high-stakes questions in Canadian wealth.
-              </p>
-            </div>
-
-            {/* Search Input Bar with embedded magnifying glass icon */}
-            <div className="relative w-full sm:w-80 flex items-center">
-              <i className="bi bi-search absolute left-3.5 text-slate-400 pointer-events-none text-xs"></i>
-              <input 
-                type="text"
-                placeholder="Search tools (e.g. LIF, Smith, TFSA, CPP)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-full py-2.5 pl-9 pr-9 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
-              />
-              {searchQuery && (
-                <button 
-                  type="button" 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 text-slate-500 hover:text-white text-xs border-0 bg-transparent p-0"
-                >
-                  <i className="bi bi-x-circle-fill"></i>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* IF SEARCH IS ACTIVE, SHOW FLATTENED MATCHES */}
-          {searchResults ? (
-            <div>
-              <div className="d-flex justify-content-between align-items-center mb-6">
-                <span className="text-sm text-slate-400">
-                  Showing <b>{searchResults.length}</b> tools matching "<span className="text-blue-400">{searchQuery}</span>"
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-bold bg-transparent border-0 p-0"
-                >
-                  Clear Search
-                </button>
-              </div>
-
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 text-start">
-                {searchResults.map((opt) => (
-                  <div 
-                    key={opt.id}
-                    className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 p-6 rounded-2xl transition-all flex flex-col justify-between group hover:shadow-xl hover:shadow-black/30"
-                  >
-                    <div>
-                      
-
-                      <h4 className="text-base font-bold text-white mb-2 leading-snug group-hover:text-blue-300 transition-colors">
-                        {opt.name}
-                      </h4>
-                      
-                      <p className="text-slate-400 text-xs leading-relaxed mb-4">
-                        {opt.desc}
-                      </p>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center gap-2 text-[11px]">
-                      {TOOL_SLUG_BY_KEY[opt.id] ? (
-                        <Link
-                          href={`/tools/${TOOL_SLUG_BY_KEY[opt.id]}`}
-                          className="text-slate-400 hover:text-emerald-400 font-semibold flex items-center gap-1 text-decoration-none transition-colors"
-                        >
-                          <i className="bi bi-book text-[10px]"></i>
-                          <span>Standalone Guide</span>
-                        </Link>
-                      ) : <span />}
-                      <Link 
-                        href={`/planner?tab=optimizers&tool=${opt.id}`} 
-                        className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
-                      >
-                        <span>Open in Planner</span>
-                        <i className="bi bi-chevron-right text-[10px]"></i>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {searchResults.length === 0 && (
-                <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-2xl my-8">
-                  <i className="bi bi-search text-slate-500 text-3xl mb-3 d-block"></i>
-                  <h5 className="text-white font-bold mb-1">No Tools Found</h5>
-                  <p className="text-slate-400 text-xs mb-4">No tools matched "{searchQuery}". Try searching for "tax", "mortgage", "rrsp", "cpp", or "pension".</p>
-                  <button 
-                    type="button" 
-                    onClick={() => setSearchQuery('')}
-                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-full"
-                  >
-                    View All {totalToolCount} Tools
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* IF NO SEARCH, SHOW STRUCTURED CATEGORY SECTIONS */
-            <div className="space-y-16">
-              {optimizerGroups.map((group, gIdx) => (
-                <div key={gIdx} className="text-start border-t border-slate-800/80 pt-10">
-                  
-                  {/* Category Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <i className={`bi ${group.groupIcon} ${group.groupColor} text-lg`}></i>
-                        <h3 className="text-2xl font-bold text-white tracking-tight">{group.groupTitle}</h3>
-                        <span className="bg-slate-800 text-slate-400 text-xs px-2.5 py-0.5 rounded-full font-bold ml-2">
-                          {group.tools.length} Tools
-                        </span>
-                      </div>
-                      <p className="text-slate-400 text-xs leading-relaxed max-w-2xl mb-0">{group.groupDesc}</p>
-                    </div>
-                  </div>
-
-                  {/* Category Tools Grid */}
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {group.tools.map((opt) => (
-                      <div 
-                        key={opt.id}
-                        className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 p-6 rounded-2xl transition-all flex flex-col justify-between group hover:shadow-xl hover:shadow-black/30"
-                      >
-                        <div>
-                          
-
-                          <h4 className="text-base font-bold text-white mb-2 leading-snug group-hover:text-blue-300 transition-colors">
-                            {opt.name}
-                          </h4>
-                          
-                          <p className="text-slate-400 text-xs leading-relaxed mb-4">
-                            {opt.desc}
-                          </p>
-                        </div>
-
-                        <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center gap-2 text-[11px]">
-                          {TOOL_SLUG_BY_KEY[opt.id] ? (
-                            <Link
-                              href={`/tools/${TOOL_SLUG_BY_KEY[opt.id]}`}
-                              className="text-slate-400 hover:text-emerald-400 font-semibold flex items-center gap-1 text-decoration-none transition-colors"
-                            >
-                              <i className="bi bi-book text-[10px]"></i>
-                              <span>Standalone Guide</span>
-                            </Link>
-                          ) : <span />}
-                          <Link 
-                            href={`/planner?tab=optimizers&tool=${opt.id}`} 
-                            className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
-                          >
-                            <span>Open in Planner</span>
-                            <i className="bi bi-chevron-right text-[10px]"></i>
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                </div>
-              ))}
-            </div>
-          )}
-
-        </div>
-      </section>
+      <FeaturesDirectoryClient
+        optimizerGroups={optimizerGroups}
+        toolSlugByKey={TOOL_SLUG_BY_KEY}
+        totalToolCount={totalToolCount}
+      />
 
       {/* --- 1-CLICK CANADIAN PERSONAS --- */}
       <section className="py-16 border-t border-slate-800 bg-[#0d1526]">
@@ -737,10 +551,13 @@ export default function FeaturesPage() {
             <Link href="/planner" className="hover:text-white transition-colors text-decoration-none">Launch Planner</Link>
             <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">Standalone Calculators</Link>
             <Link href="/databank" className="hover:text-white transition-colors text-decoration-none">Annual Data Bank</Link>
-            <Link href="/tools/retirement-sensitivity-heatmap" className="hover:text-white transition-colors text-decoration-none">Retirement Heatmap</Link>
-            <Link href="/tools/coast-fire-calculator" className="hover:text-white transition-colors text-decoration-none">Coast FIRE</Link>
-            <Link href="/tools/rrsp-sweet-spot" className="hover:text-white transition-colors text-decoration-none">RRSP Sweet Spot</Link>
-            <Link href="/tools/buy-vs-rent" className="hover:text-white transition-colors text-decoration-none">Buy vs. Rent</Link>
+            <Link href="/methodology" className="hover:text-white transition-colors text-decoration-none">2026 Methodology</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors text-decoration-none">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors text-decoration-none">Terms &amp; Disclaimer</Link>
+            <Link href="/tools/oas-clawback-calculator" className="hover:text-white transition-colors text-decoration-none">OAS Clawback</Link>
+            <Link href="/tools/cpp-at-60-vs-65-vs-70" className="hover:text-white transition-colors text-decoration-none">CPP 60 vs 65 vs 70</Link>
+            <Link href="/tools/tax-calculator/ontario" className="hover:text-white transition-colors text-decoration-none">Ontario Tax</Link>
+            <Link href="/tools/tax-calculator/british-columbia" className="hover:text-white transition-colors text-decoration-none">BC Tax</Link>
           </div>
           <p className="mb-2">Planfolio provides simulation and educational modeling only and does not offer certified tax or legal counsel.</p>
           <p className="mb-0">© {new Date().getFullYear()} Planfolio. All data stored securely and privately on your device.</p>

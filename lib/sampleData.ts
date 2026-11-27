@@ -82,7 +82,7 @@ export const sampleProfile = {
     inflation_rate: 2.1,
     tax_province: "ON",
     cfg_tfsa_limit: 7000,
-    cfg_rrsp_limit: 32960,
+    cfg_rrsp_limit: 33810,
     cfg_fhsa_limit: 8000,
     cfg_resp_limit: 2500,
     cfg_crypto_limit: 5000,

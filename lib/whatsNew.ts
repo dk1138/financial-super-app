@@ -18,6 +18,42 @@ export interface ReleaseEntry {
 
 export const WHATS_NEW_RELEASES: ReleaseEntry[] = [
   {
+    version: '1.2.4',
+    date: 'Nov 2026',
+    headlineEn: '2026 CRA Tax & Benefit Verification, 13 Provincial Tax Calculators & Methodology Hub',
+    headlineFr: 'Vérification fiscale ARC 2026, 13 calculateurs provinciaux et méthodologie complète',
+    items: [
+      {
+        category: 'fixed',
+        titleEn: '2026 CRA & Revenu Québec Statutory Tax Precision',
+        titleFr: 'Précision fiscale statutaire ARC et Revenu Québec 2026',
+        descEn: 'Verified all 13 provincial/territorial 2026 schedules: BC 5.60% lowest bracket & 2027–2030 freeze, PEI 6th bracket (20% over $200k), Quebec QPP/QPIP/16.5% federal abatement, Manitoba & Yukon BPA clawbacks, flat 50% capital gains inclusion, Ontario Tax Reduction formula, and Line 23600 income-tested credits.',
+        descFr: 'Vérification des 13 grilles fiscales 2026 : taux de 5,60 % en C.-B., 6e palier de l’Î.-P.-É. (20 %), RRQ/RQAP et abattement de 16,5 % au Québec, récupération du MPB au Manitoba/Yukon, inclusion de 50 % des gains en capital et crédits selon la ligne 23600.',
+      },
+      {
+        category: 'improved',
+        titleEn: 'Smarter Registered Room Tracking, Spousal Equalization & Shortfall Alerts',
+        titleFr: 'Suivi des droits CELI/REER, égalisation entre conjoints et alertes de déficit',
+        descEn: 'Added multi-year cumulative TFSA (including Jan 1 withdrawal restoration) and RRSP room carry-forwards, optional younger-spouse RRIF minimum election, cross-age spousal bracket equalization during decumulation, and explicit unfunded shortfall tracking in Projection and Monte Carlo.',
+        descFr: 'Suivi cumulatif des droits CELI (avec rétablissement au 1er janv.) et REER, option d’âge du conjoint plus jeune pour le FERR, égalisation des paliers entre conjoints et alertes explicites de déficit.',
+      },
+      {
+        category: 'new',
+        titleEn: '13 Provincial 2026 Tax Calculators & All 29 Standalone Guides',
+        titleFr: '13 calculateurs d’impôt provinciaux 2026 et 29 guides autonomes',
+        descEn: 'Added dedicated 2026 tax & OAS clawback pages for every Canadian province and territory plus standalone routes for OAS Clawback, CPP 60 vs 65 vs 70, RRSP vs TFSA, GIS Maximizer, and Estate Terminal Tax — all powered by live 2026 brackets.',
+        descFr: 'Ajout de pages fiscales 2026 dédiées pour les 13 provinces et territoires ainsi que de calculateurs autonomes SV, RPC 60/65/70, REER vs CELI, SRG et impôt successoral.',
+      },
+      {
+        category: 'new',
+        titleEn: 'Public 2026 Methodology, Privacy & Terms Pages + Faster SSR',
+        titleFr: 'Pages Méthodologie 2026, Confidentialité et Conditions + SSR accéléré',
+        descEn: 'Published transparent CRA/Service Canada statutory citations at /methodology alongside PIPEDA local-first /privacy and /terms pages, converted marketing pages to Server Components, and upgraded mobile tooltip & keyboard accessibility.',
+        descFr: 'Publication des sources statutaires ARC/Service Canada sur /methodology, pages /privacy et /terms, rendu serveur accéléré et infobulles adaptées au mobile.',
+      },
+    ],
+  },
+  {
     version: '1.2.3',
     date: 'Nov 2026',
     headlineEn: 'Full Yearly Spreadsheet, Command Palette, Historical Crash Presets & Speed Upgrades',

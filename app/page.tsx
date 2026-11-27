@@ -5,31 +5,12 @@
  * INSTRUCTION: Rename this file to 'page.tsx' and place it in 'app/'
  * =========================================================================
  */
-'use client';
 import MarketingHeader from '@/components/MarketingHeader';
-import React, { useState, useEffect } from 'react';
+import LandingCarousel from '@/components/marketing/LandingCarousel';
+import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function LandingPage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  
-  const slides = [
-    { id: 1, name: "Plan Summary", icon: "bi-clipboard2-data", img: "/preview-summary.png", tag: "Overview", desc: "Executive KPI dashboard with wealth trajectory, funded ratio, and milestone tracker." },
-    { id: 2, name: "Strategy & Optimization", icon: "bi-sliders", img: "/preview-strategy.png", tag: "Decumulation", desc: "Custom accumulation, shortfall, and tax-smart decumulation drawdown sequences." },
-    { id: 3, name: "Timeline & Estate Projection", icon: "bi-table", img: "/preview-projection.png", tag: "Granular", desc: "Year-by-year cash flows, tax brackets, spousal survivorship, and after-tax estate." },
-    { id: 4, name: "Cash Flow & Spending", icon: "bi-diagram-3", img: "/preview-cashflow.png", tag: "Cash Flow", desc: "Interactive Sankey diagram visualizing income sources, deductions, and living expenses." },
-    { id: 5, name: "Risk Assessment & Stress Testing", icon: "bi-activity", img: "/preview-risk.png", tag: "Robustness", desc: "1,000+ run Monte Carlo simulations, Sequence of Returns Risk, and macro shocks." },
-    { id: 6, name: "Tools & Calculators", icon: "bi-magic", img: "/preview-tools.png", tag: "Calculators", desc: "Specialized optimizers for RRSP vs TFSA, Smith Maneuver, Marginal Tax Curve, and CCB." }
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-blue-500/30 font-sans">
       
@@ -43,7 +24,15 @@ export default function LandingPage() {
       {/* ========================================================= */}
       <header id="about" className="relative pt-44 pb-20 overflow-hidden scroll-mt-28">
         <div className="container mx-auto px-6 text-center relative z-10 max-w-6xl">
-          
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-300 mb-6">
+            <i className="bi bi-patch-check-fill text-emerald-400"></i>
+            <span>Updated for 2026 CRA &amp; Provincial Tax Rules</span>
+            <span className="text-slate-500">·</span>
+            <Link href="/methodology" className="underline text-emerald-200 hover:text-white">
+              Methodology &amp; Sources
+            </Link>
+          </div>
+
           <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black text-white mb-6 leading-[1.1] tracking-tight text-center w-full">
             <span className="block text-center w-full sm:whitespace-nowrap">The Financial Command Center</span>
             <span className="block text-center w-full text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400">
@@ -335,94 +324,7 @@ export default function LandingPage() {
       {/* ========================================================= */}
       {/* SYSTEM WALKTHROUGH & SLIDER CAROUSEL                      */}
       {/* ========================================================= */}
-      <section className="py-24 border-t border-slate-800 bg-[#0f172a]">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-12 gap-12 items-center max-w-6xl mx-auto">
-            
-            <div className="lg:col-span-5 text-start">
-
-              <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-4">
-                A Unified Dashboard for Every Life Milestone
-              </h2>
-              <p className="text-slate-400 text-base leading-relaxed mb-8">
-                Planfolio combines high-level KPI summaries with deep, cell-by-cell transparency. Click through the preview cards to tour the system modules.
-              </p>
-
-              <div className="space-y-2">
-                {slides.map((s, idx) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`w-full text-start p-3.5 rounded-2xl transition-all border flex items-center justify-between ${
-                      idx === currentSlide 
-                        ? 'bg-blue-600/10 border-blue-500/40 text-white shadow-sm' 
-                        : 'bg-slate-900/40 border-slate-800/80 text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <i className={`bi ${s.icon} ${idx === currentSlide ? 'text-blue-400' : 'text-slate-500'}`}></i>
-                      <span className="text-sm font-semibold">{s.name}</span>
-                    </div>
-                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                      {s.tag}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="lg:col-span-7">
-              <div className="bg-slate-800/40 border border-slate-700/80 p-3 rounded-[2.5rem] shadow-2xl">
-                <div className="bg-[#0b1220] rounded-[2rem] border border-slate-700/80 relative overflow-hidden aspect-[16/10] flex flex-col group">
-                  <div className="flex-1 w-full h-full relative bg-slate-950">
-                    {slides.map((slide, i) => (
-                      <div 
-                        key={slide.id} 
-                        className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
-                          i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                        }`}
-                      >
-                        <Image 
-                          src={slide.img} 
-                          alt={slide.name}
-                          fill
-                          sizes="(max-width: 1024px) 100vw, 60vw"
-                          priority={i === 0}
-                          className="object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity"
-                        />
-                        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0b1220] via-[#0b1220]/90 to-transparent pt-16 pb-6 px-8 text-start">
-                          <span className="text-[11px] font-bold text-blue-400 uppercase tracking-widest">{slide.tag} Module</span>
-                          <h3 className="text-xl font-bold text-white tracking-wide mt-1 flex items-center gap-2.5">
-                            <i className={`bi ${slide.icon} text-blue-400`}></i> {slide.name}
-                          </h3>
-                          <p className="text-slate-300 text-xs mt-1 max-w-lg mb-0">{slide.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Dot indicators */}
-                  <div className="absolute top-4 right-6 flex gap-1.5 z-20">
-                    {slides.map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setCurrentSlide(i)}
-                        className={`h-1.5 rounded-full transition-all duration-300 border-0 p-0 ${
-                          i === currentSlide ? 'w-6 bg-blue-500' : 'w-2 bg-slate-600/60 hover:bg-slate-400'
-                        }`}
-                        aria-label={`Slide ${i + 1}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
+      <LandingCarousel />
 
       {/* ========================================================= */}
       {/* HOW IT WORKS (THE 3-STEP LIFECYCLE)                       */}
@@ -987,15 +889,20 @@ export default function LandingPage() {
               <Link href="/features" className="hover:text-white transition-colors text-decoration-none">Feature Directory</Link>
               <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">All 29 Tools</Link>
               <Link href="/databank" className="hover:text-white transition-colors text-decoration-none">Data Bank</Link>
+              <Link href="/methodology" className="hover:text-white transition-colors text-decoration-none">2026 Methodology</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors text-decoration-none">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors text-decoration-none">Terms &amp; Disclaimer</Link>
               <a href="#compare" className="hover:text-white transition-colors text-decoration-none">Compare</a>
               <a href="#faq" className="hover:text-white transition-colors text-decoration-none">FAQ</a>
-              <a href="#about" className="hover:text-white transition-colors text-decoration-none">Back to Top</a>
             </div>
           </div>
 
           <div className="border-t border-slate-800/80 pt-8 pb-8">
-            <h4 className="text-slate-400 font-bold mb-3 uppercase tracking-widest text-[11px]">Popular Free Canadian Calculators</h4>
+            <h4 className="text-slate-400 font-bold mb-3 uppercase tracking-widest text-[11px]">Popular Free Canadian Calculators &amp; 2026 Provincial Tax Guides</h4>
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
+              <Link href="/tools/oas-clawback-calculator" className="hover:text-white transition-colors text-decoration-none">2026 OAS Clawback Calculator</Link>
+              <Link href="/tools/cpp-at-60-vs-65-vs-70" className="hover:text-white transition-colors text-decoration-none">CPP at 60 vs. 65 vs. 70</Link>
+              <Link href="/tools/rrsp-vs-tfsa" className="hover:text-white transition-colors text-decoration-none">RRSP vs. TFSA Calculator</Link>
               <Link href="/tools/retirement-sensitivity-heatmap" className="hover:text-white transition-colors text-decoration-none">Retirement Age vs. Spend Heatmap</Link>
               <Link href="/tools/coast-fire-calculator" className="hover:text-white transition-colors text-decoration-none">Coast FIRE &amp; Barista FIRE</Link>
               <Link href="/tools/rrsp-sweet-spot" className="hover:text-white transition-colors text-decoration-none">RRSP Deduction Sweet Spot</Link>
@@ -1006,6 +913,12 @@ export default function LandingPage() {
               <Link href="/tools/smith-maneuver" className="hover:text-white transition-colors text-decoration-none">Smith Maneuver Calculator</Link>
               <Link href="/tools/pension-buyback" className="hover:text-white transition-colors text-decoration-none">DB Pension Buyback</Link>
               <Link href="/tools/ccb-maximizer" className="hover:text-white transition-colors text-decoration-none">Canada Child Benefit (CCB)</Link>
+              <Link href="/tools/gis-clawback-maximizer" className="hover:text-white transition-colors text-decoration-none">GIS Clawback Maximizer</Link>
+              <Link href="/tools/estate-terminal-tax" className="hover:text-white transition-colors text-decoration-none">Estate &amp; Terminal Tax</Link>
+              <Link href="/tools/tax-calculator/ontario" className="hover:text-white transition-colors text-decoration-none">Ontario 2026 Tax Calculator</Link>
+              <Link href="/tools/tax-calculator/british-columbia" className="hover:text-white transition-colors text-decoration-none">BC 2026 Tax Calculator</Link>
+              <Link href="/tools/tax-calculator/alberta" className="hover:text-white transition-colors text-decoration-none">Alberta 2026 Tax Calculator</Link>
+              <Link href="/tools/tax-calculator/quebec" className="hover:text-white transition-colors text-decoration-none">Quebec 2026 Tax Calculator</Link>
             </div>
           </div>
           
@@ -1069,7 +982,8 @@ export default function LandingPage() {
                 "url": "https://www.planfolio.ca",
                 "applicationCategory": "FinanceApplication",
                 "operatingSystem": "All",
-                "softwareVersion": "1.2.3",
+                "softwareVersion": "1.2.4",
+                "dateModified": "2026-11-26",
                 "inLanguage": ["en-CA", "fr-CA"],
                 "isAccessibleForFree": true,
                 "publisher": { "@id": "https://www.planfolio.ca/#organization" },

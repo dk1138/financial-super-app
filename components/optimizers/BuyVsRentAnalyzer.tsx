@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useDeferredValue } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { InfoBtn, CurrencyInput, PercentInput } from '../SharedUI';
 
@@ -25,6 +25,9 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
   const [monthlyRent, setMonthlyRent] = useState(3500);
   const [marketReturn, setMarketReturn] = useState(6.0);
 
+  const deferredHomePrice = useDeferredValue(homePrice);
+  const deferredMonthlyRent = useDeferredValue(monthlyRent);
+
   // --- TIER 2 ADVANCED ASSUMPTIONS ---
   const [closingCostsPct, setClosingCostsPct] = useState(2.0);
   const [realtorCommPct, setRealtorCommPct] = useState(5.0);
@@ -43,20 +46,20 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
   const { data, winner, difference, finalBuyer, finalRenter } = useMemo(() => {
     let timeline = [];
     
-    const downPayment = homePrice * (downPaymentPct / 100);
-    const closingCosts = homePrice * (closingCostsPct / 100);
-    let mortgageBal = homePrice - downPayment;
-    let currentHomeValue = homePrice;
+    const downPayment = deferredHomePrice * (downPaymentPct / 100);
+    const closingCosts = deferredHomePrice * (closingCostsPct / 100);
+    let mortgageBal = deferredHomePrice - downPayment;
+    let currentHomeValue = deferredHomePrice;
     
     let renterPortfolio = downPayment + closingCosts;
-    let currentRent = monthlyRent;
+    let currentRent = deferredMonthlyRent;
 
     const r = (mortgageRate / 100) / 12;
     const n = timeHorizon * 12;
     const monthlyMortgage = r === 0 ? mortgageBal / n : mortgageBal * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 
-    let currentPropertyTax = homePrice * (propertyTaxRate / 100);
-    let currentMaintenance = homePrice * (maintenanceRate / 100);
+    let currentPropertyTax = deferredHomePrice * (propertyTaxRate / 100);
+    let currentMaintenance = deferredHomePrice * (maintenanceRate / 100);
     let currentCondoFees = condoFees * 12;
     let currentHomeIns = homeInsurance * 12;
     let currentRentIns = renterInsurance * 12;
@@ -103,7 +106,7 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
       finalBuyer: endBuyer,
       finalRenter: endRenter
     };
-  }, [homePrice, downPaymentPct, mortgageRate, monthlyRent, marketReturn, closingCostsPct, realtorCommPct, propertyTaxRate, maintenanceRate, condoFees, homeInsurance, rentInflation, propertyAppreciation, renterInsurance]);
+  }, [deferredHomePrice, downPaymentPct, mortgageRate, deferredMonthlyRent, marketReturn, closingCostsPct, realtorCommPct, propertyTaxRate, maintenanceRate, condoFees, homeInsurance, rentInflation, propertyAppreciation, renterInsurance]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val || 0);
 
@@ -258,14 +261,16 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                   {activeTab === 'core' && (
                     <div className="anim-fade-in d-flex flex-column h-100">
                         <div className="mb-3">
-                            <div className="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
+                            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
                                 <div className="d-flex align-items-center gap-2">
                                     <label className="small fw-bold text-main mb-0">Home Price</label>
                                     <InfoBtn align="left" title="Home Price" text="The total estimated purchase price of the property." />
                                 </div>
-                                <span className="small text-primary fw-bold fs-6">{formatCurrency(homePrice)}</span>
+                                <div style={{ width: '140px' }}>
+                                    <CurrencyInput className="form-control form-control-sm text-primary" value={homePrice} onChange={(v: any) => setHomePrice(Math.max(100000, Number(v) || 0))} />
+                                </div>
                             </div>
-                            <input type="range" className="form-range" min="300000" max="3000000" step="25000" value={homePrice} onChange={(e) => setHomePrice(Number(e.target.value))} style={{ background: "transparent", border: "none", boxShadow: "none" }} />
+                            <input type="range" aria-label="Home purchase price" className="form-range" min="300000" max="3000000" step="25000" value={homePrice} onChange={(e) => setHomePrice(Number(e.target.value))} style={{ background: "transparent", border: "none", boxShadow: "none" }} />
                         </div>
 
                         <div className="row g-3 mb-3">
@@ -286,14 +291,16 @@ export default function BuyVsRentAnalyzer({ isExpanded: externalIsExpanded, onTo
                         </div>
 
                         <div className="pt-3 pb-3 border-top border-secondary border-opacity-50">
-                            <div className="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
+                            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
                                 <div className="d-flex align-items-center gap-2">
                                     <label className="small fw-bold text-main mb-0">Alt. Monthly Rent</label>
                                     <InfoBtn align="left" title="Alternative Rent" text="How much you would expect to pay to rent an equivalent home in the same area." />
                                 </div>
-                                <span className="small text-success fw-bold fs-6">{formatCurrency(monthlyRent)}/mo</span>
+                                <div style={{ width: '140px' }}>
+                                    <CurrencyInput className="form-control form-control-sm text-success" suffix="/mo" value={monthlyRent} onChange={(v: any) => setMonthlyRent(Math.max(500, Number(v) || 0))} />
+                                </div>
                             </div>
-                            <input type="range" className="form-range" min="1000" max="8000" step="100" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} style={{ background: "transparent", border: "none", boxShadow: "none" }} />
+                            <input type="range" aria-label="Alternative monthly rent" className="form-range" min="1000" max="8000" step="100" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} style={{ background: "transparent", border: "none", boxShadow: "none" }} />
                         </div>
 
                         <div className="mt-auto pt-3 border-top border-secondary border-opacity-50">

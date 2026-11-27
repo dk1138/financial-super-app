@@ -49,6 +49,7 @@ const featuresJsonLd = {
       description:
         'Complete directory of Planfolio Canadian retirement planning capabilities, 13-province CRA tax rules, stress tests, and 29 specialized financial calculators.',
       inLanguage: ['en-CA', 'fr-CA'],
+      dateModified: '2026-11-26',
       isPartOf: { '@id': 'https://www.planfolio.ca/#website' },
     },
     {

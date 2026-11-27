@@ -11,17 +11,18 @@ import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TOOLS_DATA } from '@/lib/toolsData';
+import { PROVINCIAL_TAX_PAGES } from '@/lib/provincialSeoData';
 
 export const metadata: Metadata = {
-    title: 'Free Canadian Financial Tools & Calculators | Planfolio',
+    title: '29 Free Canadian Financial Calculators & 2026 Provincial Tax Tools',
     description:
-        'Explore free, standalone Canadian personal finance, tax, mortgage, and pension calculators. Built specifically for CRA statutory rules and local-first privacy.',
+        'Explore 29 free standalone Canadian retirement, CRA 2026 tax, CPP/OAS clawback, RRSP vs. TFSA, mortgage, and pension calculators across all 13 provinces and territories.',
     alternates: {
         canonical: 'https://www.planfolio.ca/tools',
     },
     openGraph: {
-        title: 'Free Canadian Financial Tools & Calculators | Planfolio',
-        description: 'Free collection of standalone Canadian financial calculators. No sign-up, 100% privacy-first.',
+        title: '29 Free Canadian Financial Calculators & 2026 Tax Tools | Planfolio',
+        description: 'Free collection of 29 standalone Canadian financial calculators and 13 provincial 2026 tax guides. No sign-up, 100% privacy-first.',
         url: 'https://www.planfolio.ca/tools',
         type: 'website',
     },
@@ -30,6 +31,29 @@ export const metadata: Metadata = {
 export default function ToolsDirectoryPage() {
     // Dynamically derive categories from TOOLS_DATA so cards always render regardless of data revision
     const categories = Array.from(new Set((TOOLS_DATA || []).map((t) => t.category).filter(Boolean)));
+
+    const toolsJsonLd = {
+        '@context': 'https://schema.org',
+        '@graph': [
+            {
+                '@type': 'CollectionPage',
+                '@id': 'https://www.planfolio.ca/tools#webpage',
+                url: 'https://www.planfolio.ca/tools',
+                name: '29 Free Canadian Financial Calculators & 2026 Tax Tools',
+                description: 'Directory of 29 standalone Canadian financial calculators and 13 provincial/territorial 2026 CRA tax & OAS clawback calculators.',
+                inLanguage: 'en-CA',
+                dateModified: '2026-11-26',
+                isPartOf: { '@id': 'https://www.planfolio.ca/#website' },
+            },
+            {
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.planfolio.ca' },
+                    { '@type': 'ListItem', position: 2, name: 'Tools & Calculators', item: 'https://www.planfolio.ca/tools' },
+                ],
+            },
+        ],
+    };
 
     return (
         <div data-bs-theme="dark" className="min-h-screen bg-[#0b0f17] text-slate-100 selection:bg-blue-500/30 font-sans">
@@ -46,6 +70,11 @@ export default function ToolsDirectoryPage() {
                 .text-main { color: #f8fafc !important; }
             `}} />
 
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(toolsJsonLd) }}
+            />
+
             {/* NAVIGATION BAR - Identical to Main Page */}
             <MarketingHeader />
 
@@ -53,12 +82,19 @@ export default function ToolsDirectoryPage() {
             <main className="container mx-auto px-6 pt-44 pb-20 max-w-6xl text-start">
                 {/* DIRECTORY HERO HEADER */}
                 <div className="text-center mb-16">
-
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-300 mb-5">
+                        <i className="bi bi-patch-check-fill text-emerald-400"></i>
+                        <span>Verified 2026 CRA &amp; Service Canada Formulas</span>
+                        <span className="text-slate-500">·</span>
+                        <Link href="/methodology" className="underline text-emerald-200 hover:text-white">
+                            Methodology
+                        </Link>
+                    </div>
                     <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
-                        Canadian Financial Tools
+                        29 Canadian Financial Calculators
                     </h1>
                     <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-                        Every tool runs completely standalone in your browser with zero data entry or account setup required. Modeled specifically for CRA formulas, provincial tax brackets, and local-first privacy.
+                        Every tool runs completely standalone in your browser with zero data entry or account setup required. Modeled specifically for 2026 CRA formulas, provincial tax brackets, and local-first privacy.
                     </p>
                 </div>
 
@@ -131,6 +167,48 @@ export default function ToolsDirectoryPage() {
                             ))}
                         </div>
                     )}
+
+                    {/* 13 PROVINCIAL & TERRITORIAL 2026 TAX CALCULATORS */}
+                    <section id="provincial-tax-calculators">
+                        <div className="flex items-center justify-between gap-2 mb-6 pb-2 border-b border-slate-800">
+                            <div>
+                                <h2 className="text-2xl font-bold text-white tracking-tight mb-1">
+                                    2026 Provincial &amp; Territorial Tax &amp; OAS Clawback Calculators
+                                </h2>
+                                <p className="text-slate-400 text-xs mb-0">
+                                    Interactive marginal tax curves, surtax cliffs, Basic Personal Amounts, and OAS recovery thresholds for all 13 Canadian jurisdictions.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {PROVINCIAL_TAX_PAGES.map((prov) => (
+                                <Link
+                                    key={prov.slug}
+                                    href={`/tools/tax-calculator/${prov.slug}`}
+                                    className="bg-slate-900/70 border border-slate-800 hover:border-blue-500/40 p-5 rounded-2xl transition-all flex flex-col justify-between group text-decoration-none"
+                                >
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-sm font-bold text-white mb-0 group-hover:text-blue-300 transition-colors">
+                                                {prov.name} 2026 Tax Calculator
+                                            </h3>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/20">
+                                                {prov.code}
+                                            </span>
+                                        </div>
+                                        <p className="text-slate-400 text-xs leading-relaxed mb-3 line-clamp-2">
+                                            {prov.highlight2026}
+                                        </p>
+                                    </div>
+                                    <div className="text-[11px] font-bold text-blue-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                                        <span>View {prov.code} Brackets &amp; Curve</span>
+                                        <i className="bi bi-chevron-right text-[10px]"></i>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
                 </div>
 
                 {/* BOTTOM CTA BANNER */}
@@ -156,9 +234,13 @@ export default function ToolsDirectoryPage() {
                 <div className="container mx-auto px-6 max-w-6xl">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                         <span className="font-bold text-slate-400 text-sm">Planfolio Canada</span>
-                        <div className="flex gap-4">
+                        <div className="flex flex-wrap justify-center gap-4">
                             <Link href="/" className="text-slate-400 hover:text-white text-decoration-none">Home</Link>
                             <Link href="/features" className="text-slate-400 hover:text-white text-decoration-none">Features</Link>
+                            <Link href="/databank" className="text-slate-400 hover:text-white text-decoration-none">Data Bank</Link>
+                            <Link href="/methodology" className="text-slate-400 hover:text-white text-decoration-none">2026 Methodology</Link>
+                            <Link href="/privacy" className="text-slate-400 hover:text-white text-decoration-none">Privacy</Link>
+                            <Link href="/terms" className="text-slate-400 hover:text-white text-decoration-none">Terms &amp; Disclaimer</Link>
                             <Link href="/planner" className="text-slate-400 hover:text-white transition-colors text-decoration-none">Planner</Link>
                         </div>
                     </div>

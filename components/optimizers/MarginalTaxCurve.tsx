@@ -5,9 +5,12 @@ import { useFinance } from '../../lib/FinanceContext';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts';
 import { CurrencyInput, InfoBtn, SegmentedControl } from '../SharedUI';
 
+import { FINANCIAL_CONSTANTS } from '../../lib/config';
+import { calculateProgressiveTax } from '../../lib/engine/tax';
+
 // 2026 CRA & Provincial Tax Constants
-const OAS_THRESHOLD_2026 = 95323;
-const OAS_MAX_RECOVERY_2026 = 154708;
+const OAS_THRESHOLD_2026 = FINANCIAL_CONSTANTS.OAS_CLAWBACK_THRESHOLD || 95323;
+const OAS_MAX_RECOVERY_2026 = Math.round(OAS_THRESHOLD_2026 + (FINANCIAL_CONSTANTS.MAX_OAS || 8908) / 0.15);
 
 const PROVINCES = [
     { id: 'ON', label: 'Ontario (ON)' },
@@ -18,8 +21,11 @@ const PROVINCES = [
     { id: 'SK', label: 'Saskatchewan (SK)' },
     { id: 'NS', label: 'Nova Scotia (NS)' },
     { id: 'NB', label: 'New Brunswick (NB)' },
-    { id: 'NL', label: 'Newfoundland (NL)' },
-    { id: 'PE', label: 'PEI (PE)' }
+    { id: 'NL', label: 'Newfoundland & Labrador (NL)' },
+    { id: 'PE', label: 'Prince Edward Island (PE)' },
+    { id: 'YT', label: 'Yukon (YT)' },
+    { id: 'NT', label: 'Northwest Territories (NT)' },
+    { id: 'NU', label: 'Nunavut (NU)' }
 ];
 
 interface TaxBreakdown {
@@ -34,7 +40,7 @@ interface TaxBreakdown {
 }
 
 /**
- * Computes statutory & effective marginal tax rate at a specific income point.
+ * Computes 2026 statutory & effective marginal tax rate across all 13 jurisdictions.
  */
 function getMarginalBreakdown(income: number, province: string, isSenior: boolean, hasOas: boolean, hasGis: boolean): TaxBreakdown {
     if (income <= 0) {
@@ -50,68 +56,46 @@ function getMarginalBreakdown(income: number, province: string, isSenior: boolea
         };
     }
 
-    // --- 1. FEDERAL MARGINAL RATE ---
-    let baseFedRate = 0.15;
-    if (income > 253414) baseFedRate = 0.33;
-    else if (income > 177882) baseFedRate = 0.29;
-    else if (income > 114750) baseFedRate = 0.26;
-    else if (income > 57375) baseFedRate = 0.205;
-    else baseFedRate = 0.15;
+    const taxData: any = FINANCIAL_CONSTANTS.TAX_DATA;
+    const fedData = taxData.FED;
+    const provData = taxData[province] || taxData.ON;
 
-    // --- 2. PROVINCIAL MARGINAL RATE ---
-    let baseProvRate = 0.0505;
+    // 1. Federal marginal rate (0 below BPA, abated by 16.5% in Quebec)
+    const fedBpa = FINANCIAL_CONSTANTS.BPA_MAX_FED || 16452;
+    let baseFedRate = income <= fedBpa ? 0 : calculateProgressiveTax(income, fedData.brackets, fedData.rates).marginalRate;
+    if (province === 'QC' && provData.abatement) {
+        baseFedRate *= (1 - provData.abatement);
+    }
+
+    // 2. Provincial marginal rate & Ontario surtax
+    const provBpa = (FINANCIAL_CONSTANTS.PROV_BPA as any)?.[province] || 13000;
+    const provCalc = calculateProgressiveTax(income, provData.brackets, provData.rates);
+    let baseProvRate = income <= provBpa ? 0 : provCalc.marginalRate;
     let surtaxMultiplier = 0;
 
-    if (province === 'ON') {
-        if (income > 220000) baseProvRate = 0.1316;
-        else if (income > 150000) baseProvRate = 0.1216;
-        else if (income > 106717) baseProvRate = 0.1116;
-        else if (income > 53359) baseProvRate = 0.0915;
-        else baseProvRate = 0.0505;
-
-        // Ontario Surtax effect on marginal rate
-        // Tier 1 (> \$5,554 basic prov tax): +20% surtax on provincial tax
-        // Tier 2 (> \$7,108 basic prov tax): additional +36% surtax (total 56% surtax)
-        if (income > 96000) {
-            surtaxMultiplier = 0.56;
-        } else if (income > 82000) {
-            surtaxMultiplier = 0.20;
+    if (province === 'ON' && baseProvRate > 0) {
+        const basicOnTax = Math.max(0, provCalc.tax - provBpa * provData.rates[0]);
+        for (const tier of (provData.surtaxes || [])) {
+            if (basicOnTax > tier.threshold) surtaxMultiplier += tier.rate;
         }
-    } else if (province === 'BC') {
-        if (income > 252752) baseProvRate = 0.205;
-        else if (income > 181232) baseProvRate = 0.168;
-        else if (income > 141444) baseProvRate = 0.147;
-        else if (income > 110076) baseProvRate = 0.1229;
-        else if (income > 93380) baseProvRate = 0.105;
-        else if (income > 47937) baseProvRate = 0.077;
-        else baseProvRate = 0.0506;
-    } else if (province === 'AB') {
-        if (income > 355845) baseProvRate = 0.15;
-        else if (income > 241854) baseProvRate = 0.14;
-        else if (income > 181471) baseProvRate = 0.13;
-        else if (income > 151226) baseProvRate = 0.12;
-        else baseProvRate = 0.10;
-    } else {
-        baseProvRate = income > 120000 ? 0.13 : (income > 60000 ? 0.09 : 0.05);
     }
 
     const surtaxRate = baseProvRate * surtaxMultiplier;
-    const statutoryRate = baseFedRate + baseProvRate;
+    const statutoryRate = baseFedRate + baseProvRate + surtaxRate;
 
-    // --- 3. OAS RECOVERY TAX (CLAWBACK) ---
-    // 15% clawback on income exceeding \$95,323 until OAS is fully eliminated (~\$154,708)
+    // 3. OAS Recovery Tax (Clawback): 15% on Line 23400, deductible on Line 23500 -> net marginal impact = 15% * (1 - statutoryRate)
     let oasClawbackRate = 0;
-    if (isSenior && hasOas && income >= OAS_THRESHOLD_2026 && income <= OAS_MAX_RECOVERY_2026) {
-        oasClawbackRate = 0.15;
+    if (isSenior && hasOas && income > OAS_THRESHOLD_2026 && income <= OAS_MAX_RECOVERY_2026) {
+        oasClawbackRate = 0.15 * (1 - statutoryRate);
     }
 
-    // --- 4. GIS CLAWBACK (FOR LOW-INCOME SENIORS) ---
+    // 4. GIS Clawback (50% phase-out on non-OAS income for low-income seniors)
     let gisClawbackRate = 0;
-    if (isSenior && hasGis && income < 22000) {
+    if (isSenior && hasGis && income < 22488) {
         gisClawbackRate = 0.50;
     }
 
-    const totalMarginalRate = baseFedRate + baseProvRate + surtaxRate + oasClawbackRate + gisClawbackRate;
+    const totalMarginalRate = statutoryRate + oasClawbackRate + gisClawbackRate;
 
     return {
         income,
@@ -125,10 +109,10 @@ function getMarginalBreakdown(income: number, province: string, isSenior: boolea
     };
 }
 
-export default function MarginalTaxCurve() {
+export default function MarginalTaxCurve({ defaultProvince }: { defaultProvince?: string } = {}) {
     const { data } = useFinance();
     const isCouple = data.mode === 'Couple';
-    const initialProvince = data.inputs.tax_province || data.inputs.province || 'ON';
+    const initialProvince = defaultProvince || data.inputs.tax_province || data.inputs.province || 'ON';
 
     const p1Name = data.inputs.p1_name || 'Player 1';
     const p2Name = data.inputs.p2_name || 'Player 2';

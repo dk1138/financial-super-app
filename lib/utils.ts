@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-
 /**
  * Safely parses any input into a valid number.
  * Completely prevents NaN, Infinity, or string-math crashes in the engine.
@@ -25,30 +23,6 @@ export const parseFormattedNumber = (value: any): number => {
     
     return 0;
 };
-
-/**
- * Client-Side Rate Limiter (Debounce Hook)
- * Prevents the app from running complex state calculations on every single keystroke.
- * * @param value The value to track (e.g., text input)
- * @param delay The time to wait in milliseconds (e.g., 300ms)
- */
-export function useDebounce<T>(value: T, delay: number): T {
-    const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-    useEffect(() => {
-        // Set a timer to update the value only after the delay has passed
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-
-        // Clear the timer if the value changes again BEFORE the delay passes
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-
-    return debouncedValue;
-}
 
 // lib/utils.ts or financeEngine.ts
 

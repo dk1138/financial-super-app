@@ -1,18 +1,8 @@
-export function calcTaxableCapitalGain(gain: number, priorGainInYear: number = 0): number {
+export function calcTaxableCapitalGain(gain: number, _priorGainInYear: number = 0): number {
     if (gain <= 0) return 0;
-    const threshold = 250000;
-    const start = priorGainInYear;
-    const end = priorGainInYear + gain;
-
-    if (end <= threshold) {
-        return gain * 0.50;
-    } else if (start >= threshold) {
-        return gain * (2 / 3);
-    } else {
-        const tier1Gain = threshold - start;
-        const tier2Gain = end - threshold;
-        return (tier1Gain * 0.50) + (tier2Gain * (2 / 3));
-    }
+    // CRA 2026 statutory individual capital gains inclusion rate is flat 50%
+    // (Budget 2024 two-thirds tier was cancelled March 21, 2025).
+    return gain * 0.50;
 }
 
 export function applyPensionSplitting(
@@ -22,13 +12,13 @@ export function applyPensionSplitting(
     taxEvaluator?: (t1: number, t2: number, p1Elig: number, p2Elig: number) => number
 ) {
     // Eligible pension income under CRA rules (ITA s. 60.03):
-    // 1. Lifetime DB company pensions (any age / 55+)
-    // 2. RRIF & LIF withdrawals (strictly age 65 or older)
+    // 1. Lifetime DB company pensions (any age)
+    // 2. RRIF & LIF withdrawals (strictly age 65 or older; wdBreakdown already includes regMins when detailed=true)
     const p1RrifLif = age1 >= 65 
-        ? ((regMins?.p1 || 0) + (regMins?.lifTaken1 || 0) + (wdBreakdown?.p1?.RRIF || 0) + (wdBreakdown?.p1?.LIF || 0)) 
+        ? (Math.max(regMins?.p1 || 0, wdBreakdown?.p1?.RRIF || 0) + Math.max(regMins?.lifTaken1 || 0, wdBreakdown?.p1?.LIF || 0)) 
         : 0;
     const p2RrifLif = age2 >= 65 
-        ? ((regMins?.p2 || 0) + (regMins?.lifTaken2 || 0) + (wdBreakdown?.p2?.RRIF || 0) + (wdBreakdown?.p2?.LIF || 0)) 
+        ? (Math.max(regMins?.p2 || 0, wdBreakdown?.p2?.RRIF || 0) + Math.max(regMins?.lifTaken2 || 0, wdBreakdown?.p2?.LIF || 0)) 
         : 0;
 
     let p1Eligible = (inflows?.p1?.pension || 0) + p1RrifLif;
@@ -153,16 +143,29 @@ export function handleSurplus(
         p2Tier?: number;
         inflowsReference?: any;
         matchTracking?: any;
+        cumTfsaRoom?: { p1: number; p2: number };
+        cumRrspRoom?: { p1: number; p2: number };
     }
 ): number {
     let remaining = netSurplus;
     const accumOrder = strategies?.accum || ['tfsa', 'rrsp', 'fhsa', 'spending_cash', 'resp', 'nonreg', 'cash', 'crypto'];
     const baseInflation = Math.pow(1 + (inputs.inflation_rate || 2.1) / 100, yearIndex);
 
-    let tfsaRoom1 = alive1 ? tfsaLim + (yearIndex === 0 ? (inputs.p1_tfsa_room || 0) : 0) : 0;
-    let tfsaRoom2 = alive2 ? tfsaLim + (yearIndex === 0 ? (inputs.p2_tfsa_room || 0) : 0) : 0;
+    let tfsaRoom1 = alive1 && age1 >= 18
+        ? (options?.cumTfsaRoom ? options.cumTfsaRoom.p1 : (tfsaLim + (yearIndex === 0 ? (inputs.p1_tfsa_room || 0) : 0)))
+        : 0;
+    let tfsaRoom2 = alive2 && age2 >= 18
+        ? (options?.cumTfsaRoom ? options.cumTfsaRoom.p2 : (tfsaLim + (yearIndex === 0 ? (inputs.p2_tfsa_room || 0) : 0)))
+        : 0;
     if (inputs.skip_first_tfsa_p1 && yearIndex === 0) tfsaRoom1 = 0;
     if (inputs.skip_first_tfsa_p2 && yearIndex === 0) tfsaRoom2 = 0;
+
+    // Statutory CRA age ceiling: individual RRSP contributions end Dec 31 of the year turning 71
+    if (age1 > 71) rrspRoom1 = 0;
+    if (age2 > 71) rrspRoom2 = 0;
+    // Statutory CRA FHSA eligibility: ages 18 to 71 inclusive
+    if (age1 < 18 || age1 > 71) fhsaLim1 = 0;
+    if (age2 < 18 || age2 > 71) fhsaLim2 = 0;
 
     let annualContributed = {
         p1: { tfsa: 0, rrsp: 0, fhsa: 0, nonreg: 0, cash: 0, crypto: 0 },
@@ -192,7 +195,7 @@ export function handleSurplus(
     };
 
     // --- PRIORITY GUARD LAYER: EXECUTE TRUE EMPLOYER MATCHING ---
-    if (alive1 && rrspRoom1 > 0 && options?.p1MatchRate && options.p1MatchRate > 0 && options?.p1Tier && options.p1Tier > 0) {
+    if (alive1 && age1 <= 71 && rrspRoom1 > 0 && options?.p1MatchRate && options.p1MatchRate > 0 && options?.p1Tier && options.p1Tier > 0) {
         let maxEmployerCap1 = person1.inc * options.p1MatchRate;
         let requiredEmployeeDeposit1 = maxEmployerCap1 / options.p1Tier;
         let actEmployeePortionP1 = Math.min(Math.max(0, remaining), requiredEmployeeDeposit1, rrspRoom1);
@@ -213,7 +216,7 @@ export function handleSurplus(
         }
     }
 
-    if (alive2 && rrspRoom2 > 0 && options?.p2MatchRate && options.p2MatchRate > 0 && options?.p2Tier && options.p2Tier > 0 && remaining > 0) {
+    if (alive2 && age2 <= 71 && rrspRoom2 > 0 && options?.p2MatchRate && options.p2MatchRate > 0 && options?.p2Tier && options.p2Tier > 0 && remaining > 0) {
         let maxEmployerCap2 = person2.inc * options.p2MatchRate;
         let requiredEmployeeDeposit2 = maxEmployerCap2 / options.p2Tier;
         let actEmployeePortionP2 = Math.min(remaining, requiredEmployeeDeposit2, rrspRoom2);
@@ -275,7 +278,7 @@ export function handleSurplus(
         }
 
         if (acct === 'rrsp') {
-            if (alive1 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) {
+            if (alive1 && age1 <= 71 && rrspRoom1 > 0 && !options?.blockRRSPContributionsP1) {
                 let allowed = isSplit ? (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.p1.rrsp)) : (maxLimits.p1.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p1.rrsp - annualContributed.shared.rrsp));
                 if (allowed > 0) {
                     let take = Math.min(remaining, rrspRoom1, allowed);
@@ -283,7 +286,7 @@ export function handleSurplus(
                     if (flowLog) flowLog.contributions.p1.rrsp = (flowLog.contributions.p1.rrsp || 0) + take;
                 }
             }
-            if (alive2 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) {
+            if (alive2 && age2 <= 71 && rrspRoom2 > 0 && remaining > 0 && !options?.blockRRSPContributionsP2) {
                 let allowed = isSplit ? (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.p2.rrsp)) : (maxLimits.p2.rrsp === 0 ? Infinity : Math.max(0, maxLimits.p2.rrsp - annualContributed.shared.rrsp));
                 if (allowed > 0) {
                     let take = Math.min(remaining, rrspRoom2, allowed);
@@ -295,7 +298,7 @@ export function handleSurplus(
         }
 
         if (acct === 'fhsa') {
-            if (alive1 && fhsaLim1 > 0 && fhsaRooms.p1 > 0) { 
+            if (alive1 && age1 >= 18 && age1 <= 71 && fhsaLim1 > 0 && fhsaRooms.p1 > 0) { 
                 let allowed = isSplit ? (maxLimits.p1.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p1.fhsa - annualContributed.p1.fhsa)) : (maxLimits.p1.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p1.fhsa - annualContributed.shared.fhsa));
                 if (allowed > 0) {
                     let take = Math.min(remaining, fhsaLim1, fhsaRooms.p1, allowed); 
@@ -303,7 +306,7 @@ export function handleSurplus(
                     if (flowLog) flowLog.contributions.p1.fhsa = (flowLog.contributions.p1.fhsa || 0) + take;
                 }
             }
-            if (alive2 && fhsaLim2 > 0 && fhsaRooms.p2 > 0 && remaining > 0) { 
+            if (alive2 && age2 >= 18 && age2 <= 71 && fhsaLim2 > 0 && fhsaRooms.p2 > 0 && remaining > 0) { 
                 let allowed = isSplit ? (maxLimits.p2.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p2.fhsa - annualContributed.p2.fhsa)) : (maxLimits.p2.fhsa === 0 ? Infinity : Math.max(0, maxLimits.p2.fhsa - annualContributed.shared.fhsa));
                 if (allowed > 0) {
                     let take = Math.min(remaining, fhsaLim2, fhsaRooms.p2, allowed); 
@@ -382,6 +385,16 @@ export function handleSurplus(
         }
     }
 
+    // Persist remaining unused TFSA & RRSP room for carry-forward into subsequent years
+    if (options?.cumTfsaRoom) {
+        if (!(inputs.skip_first_tfsa_p1 && yearIndex === 0)) options.cumTfsaRoom.p1 = Math.max(0, tfsaRoom1);
+        if (!(inputs.skip_first_tfsa_p2 && yearIndex === 0)) options.cumTfsaRoom.p2 = Math.max(0, tfsaRoom2);
+    }
+    if (options?.cumRrspRoom) {
+        options.cumRrspRoom.p1 = age1 <= 71 ? Math.max(0, rrspRoom1) : 0;
+        options.cumRrspRoom.p2 = age2 <= 71 ? Math.max(0, rrspRoom2) : 0;
+    }
+
     return remaining;
 }
 
@@ -400,9 +413,12 @@ export function handleDeficit(
         isRet1?: boolean; 
         isRet2?: boolean;
         annualRealizedGains?: Record<string, number>;
+        tfsaWithdrawn?: { p1: number; p2: number };
     }
-) {
+): number {
     let remainingDeficit = deficit;
+    let curTi1 = ti1;
+    let curTi2 = ti2;
     const isBothRetired = (options?.isRet1 ?? false) && (options?.isRet2 ?? false);
     const targetShortfallOrder = inputs.strategies?.shortfall || ['cash', 'tfsa', 'nonreg', 'crypto', 'rrsp'];
     
@@ -426,8 +442,6 @@ export function handleDeficit(
     let householdCash = (alive1 ? person1.cash : 0) + (alive2 ? person2.cash : 0);
     let availableHouseholdCash = Math.max(0, householdCash - protectedCash);
 
-    // Track annual cumulative capital gains per person for the $250k Budget 2024 inclusion threshold
-    // Persists across multi-pass iterations within the tax year when provided via options
     let annualRealizedGains: Record<string, number> = options?.annualRealizedGains || { p1: 0, p2: 0 };
 
     const executePull = (p: any, prefix: string, acct: string, maxSlice?: number): number => {
@@ -466,6 +480,10 @@ export function handleDeficit(
 
         p[acct] -= pullAmount;
         if (acct === 'cash') availableHouseholdCash -= pullAmount;
+        if (acct === 'tfsa' && options?.tfsaWithdrawn) {
+            if (prefix === 'p1') options.tfsaWithdrawn.p1 += pullAmount;
+            if (prefix === 'p2') options.tfsaWithdrawn.p2 += pullAmount;
+        }
 
         let logKey = acct;
         if (acct === 'nonreg') logKey = 'Non-Reg';
@@ -475,49 +493,68 @@ export function handleDeficit(
         else logKey = acct.toUpperCase();
 
         if (flowLog) flowLog.withdrawals[`${prefix.toUpperCase()} ${logKey}`] = (flowLog.withdrawals[`${prefix.toUpperCase()} ${logKey}`] || 0) + pullAmount;
-        
+
         if (wdBreakdown) {
             if (!wdBreakdown[prefix]) wdBreakdown[prefix] = {};
             if (!wdBreakdown[prefix][logKey + '_math']) wdBreakdown[prefix][logKey + '_math'] = { wd: 0, tax: 0, acb: 0, gain: 0 };
             wdBreakdown[prefix][logKey + '_math'].wd += pullAmount;
-
-            if (isCapitalGain) {
-                let acbKey = acct === 'crypto' ? 'crypto_acb' : 'acb';
-                let currentAcb = p[acbKey] || 0;
-                let balBeforePull = accountBalance; 
-                let gainRatio = balBeforePull > 0 ? Math.max(0, balBeforePull - currentAcb) / balBeforePull : 0;
-                let acbDisposed = pullAmount * (1 - gainRatio);
-                let gain = pullAmount * gainRatio;
-
-                p[acbKey] = Math.max(0, currentAcb - acbDisposed);
-                wdBreakdown[prefix][logKey + '_math'].acb += acbDisposed;
-                wdBreakdown[prefix][logKey + '_math'].gain += gain;
-                
-                // CRA Budget 2024 Rule: 50% inclusion on first $250k; 66.67% (2/3) on gains above $250k
-                let taxableGain = calcTaxableCapitalGain(gain, annualRealizedGains[prefix] || 0);
-                annualRealizedGains[prefix] = (annualRealizedGains[prefix] || 0) + gain;
-                
-                wdBreakdown[prefix][logKey + '_math'].tax += taxableGain;
-                addTaxFn(prefix, taxableGain, pullAmount); 
-            } else if (isTaxable) {
-                wdBreakdown[prefix][logKey + '_math'].tax += pullAmount;
-                addTaxFn(prefix, pullAmount, pullAmount); 
-            } else {
-                addTaxFn(prefix, 0, pullAmount); 
+            if (['RRIF', 'LIF', 'RRSP', 'LIRF', 'TFSA', 'FHSA', 'Cash', 'Non-Reg', 'Crypto'].includes(logKey)) {
+                wdBreakdown[prefix][logKey] = (wdBreakdown[prefix][logKey] || 0) + pullAmount;
             }
         }
+
+        if (isCapitalGain) {
+            let acbKey = acct === 'crypto' ? 'crypto_acb' : 'acb';
+            let currentAcb = p[acbKey] || 0;
+            let balBeforePull = accountBalance; 
+            let gainRatio = balBeforePull > 0 ? Math.max(0, balBeforePull - currentAcb) / balBeforePull : 0;
+            let acbDisposed = pullAmount * (1 - gainRatio);
+            let gain = pullAmount * gainRatio;
+
+            p[acbKey] = Math.max(0, currentAcb - acbDisposed);
+            let taxableGain = calcTaxableCapitalGain(gain, annualRealizedGains[prefix] || 0);
+            annualRealizedGains[prefix] = (annualRealizedGains[prefix] || 0) + gain;
+
+            if (wdBreakdown) {
+                wdBreakdown[prefix][logKey + '_math'].acb += acbDisposed;
+                wdBreakdown[prefix][logKey + '_math'].gain += gain;
+                wdBreakdown[prefix][logKey + '_math'].tax += taxableGain;
+            }
+            if (prefix === 'p1') curTi1 += taxableGain; else curTi2 += taxableGain;
+            addTaxFn(prefix, taxableGain, pullAmount); 
+        } else if (isTaxable) {
+            if (wdBreakdown) {
+                wdBreakdown[prefix][logKey + '_math'].tax += pullAmount;
+            }
+            if (prefix === 'p1') curTi1 += pullAmount; else curTi2 += pullAmount;
+            addTaxFn(prefix, pullAmount, pullAmount); 
+        } else {
+            addTaxFn(prefix, 0, pullAmount); 
+        }
+
         return netCashCleared;
     };
 
     for (const acct of decumOrder) {
         if (remainingDeficit <= 0) break;
 
-        if (['rrsp', 'rrif_acct', 'lif', 'lirf'].includes(acct) && isBothRetired && age1 < 65 && age2 < 65 && alive1 && alive2) {
+        // Equalize spousal marginal tax brackets across all ages by pulling tranches from the lower-income spouse first
+        if (['rrsp', 'rrif_acct', 'lif', 'lirf', 'nonreg', 'crypto'].includes(acct) && alive1 && alive2) {
             const trancheSliceLimit = 2500 * inflation; 
             while (remainingDeficit > 0 && ((person1[acct] || 0) > 0 || (person2[acct] || 0) > 0)) {
-                let p1Pulled = executePull(person1, 'p1', acct, trancheSliceLimit);
-                let p2Pulled = executePull(person2, 'p2', acct, trancheSliceLimit);
-                if (p1Pulled === 0 && p2Pulled === 0) break; 
+                let pulled = 0;
+                if ((person1[acct] || 0) > 0 && ((person2[acct] || 0) <= 0 || curTi1 <= curTi2)) {
+                    pulled = executePull(person1, 'p1', acct, trancheSliceLimit);
+                    if (pulled === 0 && (person2[acct] || 0) > 0) {
+                        pulled = executePull(person2, 'p2', acct, trancheSliceLimit);
+                    }
+                } else if ((person2[acct] || 0) > 0) {
+                    pulled = executePull(person2, 'p2', acct, trancheSliceLimit);
+                    if (pulled === 0 && (person1[acct] || 0) > 0) {
+                        pulled = executePull(person1, 'p1', acct, trancheSliceLimit);
+                    }
+                }
+                if (pulled === 0) break; 
             }
         } else {
             if (alive1) executePull(person1, 'p1', acct);
@@ -529,4 +566,6 @@ export function handleDeficit(
         if (alive1 && person1.cash > 0) { availableHouseholdCash = Infinity; executePull(person1, 'p1', 'cash'); }
         if (alive2 && person2.cash > 0 && remainingDeficit > 0) { availableHouseholdCash = Infinity; executePull(person2, 'p2', 'cash'); }
     }
+
+    return Math.max(0, remainingDeficit);
 }

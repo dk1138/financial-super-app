@@ -49,7 +49,16 @@ export default function DataBankPage() {
                 '@type': 'WebPage',
                 name: 'Data Bank & Annual Roll-Forward Calibration',
                 url: 'https://www.planfolio.ca/databank',
+                dateModified: '2026-11-26',
+                inLanguage: 'en-CA',
                 description: 'Real-world actuals tracking and assumption calibration for Canadian retirement planning.',
+            },
+            {
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.planfolio.ca' },
+                    { '@type': 'ListItem', position: 2, name: 'Data Bank', item: 'https://www.planfolio.ca/databank' },
+                ],
             },
             {
                 '@type': 'FAQPage',
@@ -442,10 +451,13 @@ export default function DataBankPage() {
                 <div className="container mx-auto px-6 max-w-6xl">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                         <span className="font-bold text-slate-400 text-sm">Planfolio Canada</span>
-                        <div className="flex gap-4">
+                        <div className="flex flex-wrap justify-center gap-4">
                             <Link href="/" className="text-slate-400 hover:text-white text-decoration-none">Home</Link>
                             <Link href="/features" className="text-slate-400 hover:text-white text-decoration-none">Features</Link>
                             <Link href="/tools" className="text-slate-400 hover:text-white text-decoration-none">Tools</Link>
+                            <Link href="/methodology" className="text-slate-400 hover:text-white text-decoration-none">2026 Methodology</Link>
+                            <Link href="/privacy" className="text-slate-400 hover:text-white text-decoration-none">Privacy</Link>
+                            <Link href="/terms" className="text-slate-400 hover:text-white text-decoration-none">Terms &amp; Disclaimer</Link>
                             <Link href="/planner" className="text-slate-400 hover:text-white text-decoration-none">Planner</Link>
                         </div>
                     </div>

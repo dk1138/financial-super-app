@@ -128,28 +128,31 @@ export function calculateCCBForYear(currentYear: number, dependents: any[], fami
     return Math.max(0, maxBenefit - reduction);
 }
 
-export function calcRegMinimums(person1: any, person2: any, age1: number, age2: number, alive1: boolean, alive2: boolean, preRrsp1: number, preRrif1: number, preRrsp2: number, preRrif2: number, preLirf1: number, preLif1: number, preLirf2: number, preLif2: number, rrifStartAge: number) {
+export function calcRegMinimums(person1: any, person2: any, age1: number, age2: number, alive1: boolean, alive2: boolean, preRrsp1: number, preRrif1: number, preRrsp2: number, preRrif2: number, preLirf1: number, preLif1: number, preLirf2: number, preLif2: number, rrifStartAge: number, useYoungerSpouseAge: boolean = false) {
     let result = { p1: 0, p2: 0, lifTaken1: 0, lifTaken2: 0, details: { p1: null as any, p2: null as any } };
     const formatter = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 });
+    const electedAge = (useYoungerSpouseAge && alive1 && alive2) ? Math.min(age1, age2) : null;
     
     const calculateMinimumForPerson = (person: any, age: number, preRrsp: number, preRrif: number, preLirf: number, preLif: number) => {
-        let factor = getRrifFactor(age - 1);
+        const factorAge = electedAge !== null ? Math.min(age, electedAge) : age;
+        let rrifFactor = getRrifFactor(factorAge - 1);
+        let lifFactor = getRrifFactor(age - 1); // LIF statutory minimum always uses annuitant's own age
         let baseRrifBalance = age >= rrifStartAge ? (preRrsp + preRrif) : preRrif;
         let baseLifBalance = age >= rrifStartAge ? (preLirf + preLif) : preLif;
         
-        let requiredRrifMin = baseRrifBalance * factor;
-        let requiredLifMin = age >= 55 ? (baseLifBalance * factor) : 0;
+        let requiredRrifMin = baseRrifBalance * rrifFactor;
+        let requiredLifMin = age >= 55 ? (baseLifBalance * lifFactor) : 0;
         
         let actualRrifTaken = 0, actualLifTaken = 0;
 
         let rrifArith = '';
         if (baseRrifBalance > 0) {
-            rrifArith = `<div class="d-flex justify-content-between text-muted mb-1"><span>Prior Year Balance:</span> <span>${formatter.format(baseRrifBalance)}</span></div><div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Min Factor:</span> <span>${(factor * 100).toFixed(2)}%</span></div><div class="d-flex justify-content-between fw-bold text-main"><span>Required Min:</span> <span>${formatter.format(requiredRrifMin)}</span></div>`;
+            rrifArith = `<div class="d-flex justify-content-between text-muted mb-1"><span>Prior Year Balance:</span> <span>${formatter.format(baseRrifBalance)}</span></div><div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Min Factor:</span> <span>${(rrifFactor * 100).toFixed(2)}%</span></div><div class="d-flex justify-content-between fw-bold text-main"><span>Required Min:</span> <span>${formatter.format(requiredRrifMin)}</span></div>`;
         }
 
         let lifArith = '';
         if (baseLifBalance > 0 && age >= 55) {
-            lifArith = `<div class="d-flex justify-content-between text-muted mb-1"><span>Prior Year Balance:</span> <span>${formatter.format(baseLifBalance)}</span></div><div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Min Factor:</span> <span>${(factor * 100).toFixed(2)}%</span></div><div class="d-flex justify-content-between fw-bold text-main"><span>Required Min:</span> <span>${formatter.format(requiredLifMin)}</span></div>`;
+            lifArith = `<div class="d-flex justify-content-between text-muted mb-1"><span>Prior Year Balance:</span> <span>${formatter.format(baseLifBalance)}</span></div><div class="d-flex justify-content-between text-muted border-bottom border-secondary pb-1 mb-1"><span>Min Factor:</span> <span>${(lifFactor * 100).toFixed(2)}%</span></div><div class="d-flex justify-content-between fw-bold text-main"><span>Required Min:</span> <span>${formatter.format(requiredLifMin)}</span></div>`;
         }
         
         if (baseRrifBalance > 0) {
@@ -182,7 +185,7 @@ export function calcRegMinimums(person1: any, person2: any, age1: number, age2: 
         
         return { 
             rrifTaken: actualRrifTaken, lifTaken: actualLifTaken, 
-            details: { factor, bal: baseRrifBalance, min: requiredRrifMin, lifBal: baseLifBalance, lifMin: requiredLifMin, rrifArith, lifArith } 
+            details: { factor: rrifFactor, bal: baseRrifBalance, min: requiredRrifMin, lifBal: baseLifBalance, lifMin: requiredLifMin, rrifArith, lifArith } 
         };
     };
     

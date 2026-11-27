@@ -60,6 +60,7 @@ export default function ReverseMortgage() {
           </label>
           <input 
             type="range" 
+            aria-label="Projection timeline in years"
             className="form-range" 
             min="1" 
             max="30" 

@@ -288,7 +288,7 @@ export default function ProjectionTab() {
       const totalSourced = y.grossInflow || 0;
       const mandatoryBills = (y.expenses || 0) + (y.mortgagePay || 0) + (y.debtRepayment || 0) + respWd + (y.taxP1 || 0) + (y.taxP2 || 0);
       
-      if (totalSourced < mandatoryBills - 1) {
+      if ((y.unfundedShortfall || 0) > 1 || totalSourced < mandatoryBills - 1) {
           hasShortfall = true;
       }
 
@@ -1721,7 +1721,8 @@ export default function ProjectionTab() {
                 const p2BeforeSplit = y.taxIncP2 + (y.pensionSplit?.p2ToP1 || 0) - (y.pensionSplit?.p1ToP2 || 0);
 
                 const isRetAge = y.p1Age >= (Number(data.inputs.p1_retireAge) || 65);
-                const isLiquidDepleted = isRetAge && (y.liquidNW || 0) <= 1;
+                const rowUnfunded = Math.max(shortfall, y.unfundedShortfall || 0);
+                const isLiquidDepleted = (isRetAge && (y.liquidNW || 0) <= 1) || rowUnfunded > 1;
 
                 return (
                   <React.Fragment key={y.year}>
@@ -1729,7 +1730,11 @@ export default function ProjectionTab() {
                       <tr key={`depleted-milestone-${y.year}`} className="bg-danger bg-opacity-25 border-top border-bottom border-danger">
                         <td colSpan={8} className="py-2 px-3 text-center text-danger fw-bold small">
                           <i className="bi bi-exclamation-triangle-fill text-warning me-2 fs-6"></i>
-                          <span>PORTFOLIO DEPLETED AT AGE {y.p1Age} ({y.year}) — From this point forward, remaining Net Worth is 100% Real Estate Equity.</span>
+                          <span>
+                            PORTFOLIO DEPLETED AT AGE {y.p1Age} ({y.year}) — {(y.reIncludedEq || 0) > 0
+                              ? 'From this point forward, remaining Net Worth is 100% Real Estate Equity.'
+                              : 'All liquid accounts are exhausted and annual expenses exceed income.'}
+                          </span>
                         </td>
                       </tr>
                     )}
@@ -1742,7 +1747,7 @@ export default function ProjectionTab() {
                             <span className="fs-6 me-1">{y.year}</span>
                             {isLiquidDepleted && (
                                 <span className="badge px-1.5 py-0.5 rounded-pill" style={{ fontSize: '0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
-                                    Depleted
+                                    {rowUnfunded > 1 ? 'Shortfall' : 'Depleted'}
                                 </span>
                             )}
                             {getEventIcons(y.events, y)}
@@ -1761,7 +1766,13 @@ export default function ProjectionTab() {
                         {isLiquidDepleted ? (
                             <div className="d-flex flex-column align-items-center lh-sm">
                                 <span className="text-info fw-bold">{formatCurrency(totalNW, y.year)}</span>
-                                <span className="text-danger fw-bold" style={{ fontSize: '0.65rem' }}>Liquid $0 (House Only)</span>
+                                <span className="text-danger fw-bold" style={{ fontSize: '0.65rem' }}>
+                                  {rowUnfunded > 1
+                                    ? `Deficit: −${formatCurrency(rowUnfunded, y.year)}`
+                                    : (y.reIncludedEq || 0) > 0
+                                    ? 'Liquid $0 (House Only)'
+                                    : 'Liquid $0'}
+                                </span>
                             </div>
                         ) : (
                             <span className="text-success fw-bold fs-6">{formatCurrency(totalNW, y.year)}</span>

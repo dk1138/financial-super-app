@@ -2,28 +2,95 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { sanitizeTooltipHtml } from '../lib/sanitizeHtml';
 
-// --- FLUID TOOLTIP ---
+// --- FLUID TOOLTIP (VIEWPORT-CLAMPED PORTAL) ---
 export const InfoBtn = ({ title, text, align = 'center', direction = 'down' }: { title: string, text: string, align?: 'center'|'right'|'left', direction?: 'up'|'down' }) => {
     const [open, setOpen] = useState(false);
-    let posStyles: React.CSSProperties = { backgroundColor: 'var(--bg-card)', minWidth: '290px', maxWidth: '340px', maxHeight: '420px', overflowY: 'auto', zIndex: 1060 };
-    
-    if (direction === 'up') { posStyles.bottom = '140%'; } 
-    else { posStyles.top = '140%'; }
+    const [coords, setCoords] = useState<{ top: number, left: number, width: number }>({ top: 0, left: 0, width: 320 });
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const popRef = useRef<HTMLDivElement>(null);
 
-    if (align === 'right') { posStyles.right = '0'; }
-    else if (align === 'left') { posStyles.left = '0'; }
-    else { posStyles.left = '50%'; posStyles.transform = 'translateX(-50%)'; }
+    const toggleOpen = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!open && btnRef.current && typeof window !== 'undefined') {
+            const rect = btnRef.current.getBoundingClientRect();
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const width = Math.min(340, Math.max(240, vw - 24));
+
+            let left = rect.left + rect.width / 2 - width / 2;
+            if (align === 'right') left = rect.right - width;
+            else if (align === 'left') left = rect.left;
+            left = Math.max(12, Math.min(left, vw - width - 12));
+
+            const preferUp = direction === 'up' || (vh - rect.bottom < 220 && rect.top > 240);
+            const top = preferUp ? Math.max(12, rect.top - 12) : Math.min(vh - 80, rect.bottom + 8);
+            setCoords({ top, left, width });
+        }
+        setOpen((prev) => !prev);
+    };
+
+    useEffect(() => {
+        if (!open) return;
+        const onDocClick = (ev: MouseEvent) => {
+            if (
+                btnRef.current && !btnRef.current.contains(ev.target as Node) &&
+                popRef.current && !popRef.current.contains(ev.target as Node)
+            ) {
+                setOpen(false);
+            }
+        };
+        const onKey = (ev: KeyboardEvent) => {
+            if (ev.key === 'Escape') setOpen(false);
+        };
+        const onScrollOrResize = () => setOpen(false);
+        document.addEventListener('mousedown', onDocClick);
+        window.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', onScrollOrResize, true);
+        window.addEventListener('resize', onScrollOrResize);
+        return () => {
+            document.removeEventListener('mousedown', onDocClick);
+            window.removeEventListener('keydown', onKey);
+            window.removeEventListener('scroll', onScrollOrResize, true);
+            window.removeEventListener('resize', onScrollOrResize);
+        };
+    }, [open]);
+
+    const openUpward = open && btnRef.current && coords.top <= btnRef.current.getBoundingClientRect().top;
 
     return (
-        <div className="position-relative d-inline-flex align-items-center ms-1" style={{zIndex: open ? 1050 : 1}} data-html2canvas-ignore="true">
-            <button type="button" className="btn btn-link p-0 text-muted info-btn text-decoration-none" onClick={(e) => { e.preventDefault(); setOpen(!open); }} onBlur={() => setTimeout(() => setOpen(false), 200)}>
+        <div className="position-relative d-inline-flex align-items-center ms-1" data-html2canvas-ignore="true">
+            <button
+                ref={btnRef}
+                type="button"
+                aria-label={`More information: ${title}`}
+                aria-expanded={open}
+                className="btn btn-link p-0 text-muted info-btn text-decoration-none"
+                onClick={toggleOpen}
+            >
                 <i className="bi bi-info-circle" style={{fontSize: '0.85rem'}}></i>
             </button>
-            {open && (
-                <div className="position-absolute border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start" style={posStyles}>
+            {open && typeof document !== 'undefined' && createPortal(
+                <div
+                    ref={popRef}
+                    role="tooltip"
+                    className="position-fixed border border-secondary rounded-3 shadow-lg p-3 text-none-uppercase text-start"
+                    style={{
+                        top: coords.top,
+                        left: coords.left,
+                        width: coords.width,
+                        maxWidth: 'calc(100vw - 24px)',
+                        maxHeight: 'min(420px, calc(100vh - 32px))',
+                        transform: openUpward ? 'translateY(-100%)' : undefined,
+                        backgroundColor: 'var(--bg-card)',
+                        overflowY: 'auto',
+                        zIndex: 99999,
+                    }}
+                >
                     <h6 className="fw-bold mb-2 text-main border-bottom border-secondary pb-1 text-capitalize" style={{fontSize: '0.85rem'}}>{title}</h6>
                     <div className="small text-muted fw-normal text-none-uppercase" style={{fontSize: '0.75rem', lineHeight: '1.5', whiteSpace: 'normal', textTransform: 'none'}} dangerouslySetInnerHTML={{__html: sanitizeTooltipHtml(text)}}></div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -183,10 +250,11 @@ export const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) =>
     
     return (
         <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm w-100 justify-content-between" style={{ height: "38px", minWidth: "95px" }}>
-            <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1.5 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
+            <button type="button" aria-label="Decrease value" className="btn btn-sm btn-link text-muted p-0 px-1.5 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
             <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minWidth: "32px" }}>
                 <input 
                     type="text" 
+                    aria-label="Numeric value"
                     maxLength={4} 
                     className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0 w-100" 
                     style={{ outline: 'none', boxShadow: 'none', fontSize: '0.95rem' }} 
@@ -201,7 +269,7 @@ export const StepperInput = ({ value, onChange, min, max, suffix = "" }: any) =>
                 />
                 {suffix && <span className="text-muted fw-bold pe-1" style={{fontSize: '0.95rem'}}>{suffix}</span>}
             </div>
-            <button type="button" className="btn btn-sm btn-link text-primary p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
+            <button type="button" aria-label="Increase value" className="btn btn-sm btn-link text-primary p-0 px-2 d-flex align-items-center text-decoration-none hover-opacity-100" onClick={handleInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
         </div>
     );
 };
@@ -245,15 +313,15 @@ export const MonthYearStepper = ({ value, onChange, minYear = 1900, maxYear = 21
     return (
         <div className="d-inline-flex align-items-center bg-input border border-secondary rounded-pill p-1 shadow-sm gap-1 w-100 justify-content-between" style={{ minWidth: '170px' }}>
             <div className="d-flex align-items-center flex-grow-1 justify-content-center">
-                <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
-                <input type="text" maxLength={3} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" style={{ width: '40px', outline: 'none', fontSize: '0.95rem' }} value={localM} onChange={e => setLocalM(e.target.value)} onBlur={commitM} onFocus={e => (e.target as HTMLInputElement).select()} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
-                <button type="button" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
+                <button type="button" aria-label="Previous month" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
+                <input type="text" aria-label="Birth month" maxLength={3} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" style={{ width: '40px', outline: 'none', fontSize: '0.95rem' }} value={localM} onChange={e => setLocalM(e.target.value)} onBlur={commitM} onFocus={e => (e.target as HTMLInputElement).select()} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+                <button type="button" aria-label="Next month" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleMInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
             </div>
             <div className="border-start border-secondary opacity-50 flex-shrink-0" style={{height: '20px'}}></div>
             <div className="d-flex align-items-center flex-grow-1 justify-content-center">
-                <button type="button" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
-                <input type="text" maxLength={4} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" style={{ width: '46px', outline: 'none', fontSize: '0.95rem' }} value={localY} onChange={e => setLocalY(e.target.value)} onBlur={commitY} onFocus={e => (e.target as HTMLInputElement).select()} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
-                <button type="button" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
+                <button type="button" aria-label="Previous year" className="btn btn-sm btn-link text-muted p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYDec}><i className="bi bi-dash-circle-fill fs-5"></i></button>
+                <input type="text" aria-label="Birth year" maxLength={4} className="bg-transparent border-0 text-center fw-bold text-main p-0 m-0" style={{ width: '46px', outline: 'none', fontSize: '0.95rem' }} value={localY} onChange={e => setLocalY(e.target.value)} onBlur={commitY} onFocus={e => (e.target as HTMLInputElement).select()} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+                <button type="button" aria-label="Next year" className="btn btn-sm btn-link text-primary p-0 px-1 hover-opacity-100 text-decoration-none" onClick={handleYInc}><i className="bi bi-plus-circle-fill fs-5"></i></button>
             </div>
         </div>
     );

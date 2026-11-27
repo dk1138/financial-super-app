@@ -100,8 +100,16 @@ export default async function ToolPage({ params }: PageProps) {
                 url: `https://www.planfolio.ca/tools/${tool.slug}`,
                 applicationCategory: 'FinanceApplication',
                 operatingSystem: 'All',
+                softwareVersion: '1.2.4',
+                dateModified: '2026-11-26',
+                isAccessibleForFree: true,
                 inLanguage: 'en-CA',
                 description: tool.subtitle,
+                publisher: {
+                    '@type': 'Organization',
+                    name: 'Planfolio Canada',
+                    url: 'https://www.planfolio.ca',
+                },
                 offers: {
                     '@type': 'Offer',
                     price: '0',
@@ -213,20 +221,6 @@ export default async function ToolPage({ params }: PageProps) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        '@context': 'https://schema.org',
-                        '@type': 'BreadcrumbList',
-                        itemListElement: [
-                            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.planfolio.ca' },
-                            { '@type': 'ListItem', position: 2, name: 'Tools & Calculators', item: 'https://www.planfolio.ca/tools' },
-                            { '@type': 'ListItem', position: 3, name: tool.title, item: `https://www.planfolio.ca/tools/${tool.slug}` },
-                        ],
-                    }),
-                }}
-            />
 
             {/* UNIVERSAL NAVIGATION HEADER */}
             <MarketingHeader />
@@ -235,6 +229,14 @@ export default async function ToolPage({ params }: PageProps) {
             <main className="container mx-auto px-6 pt-44 pb-20 max-w-4xl">
                 {/* TOOL HERO HEADER - Clean Centered Layout (No Orphan Words on 2nd Line) */}
                 <div className="text-center max-w-5xl mx-auto mb-12">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-300 mb-4">
+                        <i className="bi bi-patch-check-fill text-emerald-400"></i>
+                        <span>2026 CRA Rules</span>
+                        <span className="text-slate-500">·</span>
+                        <Link href="/methodology" className="underline text-emerald-200 hover:text-white">
+                            Methodology &amp; Citations
+                        </Link>
+                    </div>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-3 text-balance max-w-4xl mx-auto">
                         {tool.title}
                     </h1>
@@ -351,15 +353,17 @@ export default async function ToolPage({ params }: PageProps) {
                         © {new Date().getFullYear()} Planfolio Canada. 100% Client-Side Local Privacy.
                     </p>
                     {/* SEO Quick-Link Anchor Text Hub */}
-                    <div className="mt-6 pt-6 border-t border-slate-800/60 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[11px] text-slate-500">
-                        <Link href="/tools/pension-buyback" className="hover:text-slate-300 transition-colors text-decoration-none">Pension Buyback</Link>
-                        <Link href="/tools/pension-commuted-value-vs-annuity" className="hover:text-slate-300 transition-colors text-decoration-none">Commuted Value vs Annuity</Link>
+                    <div className="mt-6 pt-6 border-t border-slate-800/60 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[11px] text-slate-500">
+                        <Link href="/methodology" className="hover:text-slate-300 transition-colors text-decoration-none">2026 Methodology</Link>
+                        <Link href="/privacy" className="hover:text-slate-300 transition-colors text-decoration-none">Privacy Policy</Link>
+                        <Link href="/terms" className="hover:text-slate-300 transition-colors text-decoration-none">Terms &amp; Disclaimer</Link>
+                        <Link href="/tools/oas-clawback-calculator" className="hover:text-slate-300 transition-colors text-decoration-none">2026 OAS Clawback</Link>
+                        <Link href="/tools/cpp-at-60-vs-65-vs-70" className="hover:text-slate-300 transition-colors text-decoration-none">CPP 60 vs 65 vs 70</Link>
+                        <Link href="/tools/rrsp-vs-tfsa" className="hover:text-slate-300 transition-colors text-decoration-none">RRSP vs TFSA</Link>
                         <Link href="/tools/lif-to-rrif-unlocking" className="hover:text-slate-300 transition-colors text-decoration-none">50% LIF Unlocking</Link>
                         <Link href="/tools/smith-maneuver" className="hover:text-slate-300 transition-colors text-decoration-none">Smith Maneuver</Link>
-                        <Link href="/tools/tfsa-contribution-room" className="hover:text-slate-300 transition-colors text-decoration-none">TFSA Contribution Room</Link>
-                        <Link href="/tools/fhsa-vs-rrsp" className="hover:text-slate-300 transition-colors text-decoration-none">FHSA vs RRSP</Link>
-                        <Link href="/tools/ccb-maximizer" className="hover:text-slate-300 transition-colors text-decoration-none">CCB Maximizer</Link>
-                        <Link href="/tools/buy-vs-rent" className="hover:text-slate-300 transition-colors text-decoration-none">Buy vs Rent</Link>
+                        <Link href="/tools/tax-calculator/ontario" className="hover:text-slate-300 transition-colors text-decoration-none">Ontario Tax</Link>
+                        <Link href="/tools/tax-calculator/british-columbia" className="hover:text-slate-300 transition-colors text-decoration-none">BC Tax</Link>
                     </div>
                 </div>
             </footer>
