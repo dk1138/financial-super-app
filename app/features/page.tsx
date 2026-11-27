@@ -9,6 +9,9 @@
 import MarketingHeader from '@/components/MarketingHeader';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { TOOLS_DATA } from '@/lib/toolsData';
+
+const TOOL_SLUG_BY_KEY: Record<string, string> = Object.fromEntries(TOOLS_DATA.map((t) => [t.toolKey, t.slug]));
 
 export default function FeaturesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,18 +139,11 @@ export default function FeaturesPage() {
           desc: "Finds the exact portfolio size today where you can stop saving and let compounding carry you to FI—with optional Canadian CPP & OAS pension offsets."
         },
         {
-          id: "dwz",
-          name: "Die With Zero Optimizer",
-          badge: "Spending Model",
-          icon: "bi-bullseye",
-          desc: "Calculates your maximum safe annual discretionary spending curve to optimize life experiences without leaving unintended excess capital."
-        },
-        {
           id: "smoother",
-          name: "Consumption Smoothing",
-          badge: "Lifestyle",
+          name: "Consumption Smoothing & Die With Zero",
+          badge: "Spending Model",
           icon: "bi-water",
-          desc: "Smooths your lifetime living standard across pre-retirement, active go-go years, and slow-down phases to eliminate lifestyle whiplash."
+          desc: "Solves your maximum sustainable retirement living standard (including pure Die With Zero at $0 target legacy) and tests how retirement age and CPP timing shift your monthly spending power."
         },
         {
           id: "cpp",
@@ -554,7 +550,16 @@ export default function FeaturesPage() {
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-800/80 flex justify-end items-center text-[11px]">
+                    <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center gap-2 text-[11px]">
+                      {TOOL_SLUG_BY_KEY[opt.id] ? (
+                        <Link
+                          href={`/tools/${TOOL_SLUG_BY_KEY[opt.id]}`}
+                          className="text-slate-400 hover:text-emerald-400 font-semibold flex items-center gap-1 text-decoration-none transition-colors"
+                        >
+                          <i className="bi bi-book text-[10px]"></i>
+                          <span>Standalone Guide</span>
+                        </Link>
+                      ) : <span />}
                       <Link 
                         href={`/planner?tab=optimizers&tool=${opt.id}`} 
                         className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
@@ -621,15 +626,24 @@ export default function FeaturesPage() {
                           </p>
                         </div>
 
-                        <div className="pt-3 border-t border-slate-800/80 flex justify-end items-center text-[11px]">
-                      <Link 
+                        <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center gap-2 text-[11px]">
+                          {TOOL_SLUG_BY_KEY[opt.id] ? (
+                            <Link
+                              href={`/tools/${TOOL_SLUG_BY_KEY[opt.id]}`}
+                              className="text-slate-400 hover:text-emerald-400 font-semibold flex items-center gap-1 text-decoration-none transition-colors"
+                            >
+                              <i className="bi bi-book text-[10px]"></i>
+                              <span>Standalone Guide</span>
+                            </Link>
+                          ) : <span />}
+                          <Link 
                             href={`/planner?tab=optimizers&tool=${opt.id}`} 
                             className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 text-decoration-none group-hover:translate-x-0.5 transition-transform"
                           >
                             <span>Open in Planner</span>
                             <i className="bi bi-chevron-right text-[10px]"></i>
                           </Link>
-                    </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -717,7 +731,17 @@ export default function FeaturesPage() {
 
       {/* --- FOOTER --- */}
       <footer className="py-12 border-t border-slate-800 bg-[#080d19] text-xs text-slate-500 text-center">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-6 max-w-5xl">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6 text-slate-400 font-semibold">
+            <Link href="/" className="hover:text-white transition-colors text-decoration-none">Home</Link>
+            <Link href="/planner" className="hover:text-white transition-colors text-decoration-none">Launch Planner</Link>
+            <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">Standalone Calculators</Link>
+            <Link href="/databank" className="hover:text-white transition-colors text-decoration-none">Annual Data Bank</Link>
+            <Link href="/tools/retirement-sensitivity-heatmap" className="hover:text-white transition-colors text-decoration-none">Retirement Heatmap</Link>
+            <Link href="/tools/coast-fire-calculator" className="hover:text-white transition-colors text-decoration-none">Coast FIRE</Link>
+            <Link href="/tools/rrsp-sweet-spot" className="hover:text-white transition-colors text-decoration-none">RRSP Sweet Spot</Link>
+            <Link href="/tools/buy-vs-rent" className="hover:text-white transition-colors text-decoration-none">Buy vs. Rent</Link>
+          </div>
           <p className="mb-2">Planfolio provides simulation and educational modeling only and does not offer certified tax or legal counsel.</p>
           <p className="mb-0">© {new Date().getFullYear()} Planfolio. All data stored securely and privately on your device.</p>
         </div>

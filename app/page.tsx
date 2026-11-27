@@ -985,10 +985,27 @@ export default function LandingPage() {
             <div className="flex flex-wrap gap-6 text-xs text-slate-400 font-semibold">
               <Link href="/planner" className="hover:text-white transition-colors text-decoration-none">Launch Planner</Link>
               <Link href="/features" className="hover:text-white transition-colors text-decoration-none">Feature Directory</Link>
-              <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">Tools</Link>
+              <Link href="/tools" className="hover:text-white transition-colors text-decoration-none">All 29 Tools</Link>
+              <Link href="/databank" className="hover:text-white transition-colors text-decoration-none">Data Bank</Link>
               <a href="#compare" className="hover:text-white transition-colors text-decoration-none">Compare</a>
               <a href="#faq" className="hover:text-white transition-colors text-decoration-none">FAQ</a>
               <a href="#about" className="hover:text-white transition-colors text-decoration-none">Back to Top</a>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-800/80 pt-8 pb-8">
+            <h4 className="text-slate-400 font-bold mb-3 uppercase tracking-widest text-[11px]">Popular Free Canadian Calculators</h4>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
+              <Link href="/tools/retirement-sensitivity-heatmap" className="hover:text-white transition-colors text-decoration-none">Retirement Age vs. Spend Heatmap</Link>
+              <Link href="/tools/coast-fire-calculator" className="hover:text-white transition-colors text-decoration-none">Coast FIRE &amp; Barista FIRE</Link>
+              <Link href="/tools/rrsp-sweet-spot" className="hover:text-white transition-colors text-decoration-none">RRSP Deduction Sweet Spot</Link>
+              <Link href="/tools/tfsa-contribution-room" className="hover:text-white transition-colors text-decoration-none">TFSA Contribution Room</Link>
+              <Link href="/tools/lif-to-rrif-unlocking" className="hover:text-white transition-colors text-decoration-none">LIF to RRIF 50% Unlocking</Link>
+              <Link href="/tools/fhsa-vs-rrsp" className="hover:text-white transition-colors text-decoration-none">FHSA vs. RRSP HBP</Link>
+              <Link href="/tools/buy-vs-rent" className="hover:text-white transition-colors text-decoration-none">Buy vs. Rent Canada</Link>
+              <Link href="/tools/smith-maneuver" className="hover:text-white transition-colors text-decoration-none">Smith Maneuver Calculator</Link>
+              <Link href="/tools/pension-buyback" className="hover:text-white transition-colors text-decoration-none">DB Pension Buyback</Link>
+              <Link href="/tools/ccb-maximizer" className="hover:text-white transition-colors text-decoration-none">Canada Child Benefit (CCB)</Link>
             </div>
           </div>
           
@@ -1025,26 +1042,59 @@ export default function LandingPage() {
             "@context": "https://schema.org",
             "@graph": [
               {
+                "@type": "Organization",
+                "@id": "https://www.planfolio.ca/#organization",
+                "name": "Planfolio",
+                "url": "https://www.planfolio.ca",
+                "logo": {
+                  "@type": "ImageObject",
+                  "url": "https://www.planfolio.ca/icon-512.png",
+                  "width": 512,
+                  "height": 512
+                }
+              },
+              {
+                "@type": "WebSite",
+                "@id": "https://www.planfolio.ca/#website",
+                "url": "https://www.planfolio.ca",
+                "name": "Planfolio Canada",
+                "description": "Free, local-first Canadian retirement, tax, and cash flow planner.",
+                "inLanguage": ["en-CA", "fr-CA"],
+                "publisher": { "@id": "https://www.planfolio.ca/#organization" }
+              },
+              {
                 "@type": "WebApplication",
                 "@id": "https://www.planfolio.ca/#webapp",
                 "name": "Planfolio",
                 "url": "https://www.planfolio.ca",
                 "applicationCategory": "FinanceApplication",
                 "operatingSystem": "All",
-                "description": "Free, local-first Canadian retirement and cash flow planner. Model CPP, OAS, all 13 provincial tax brackets, TFSA vs RRSP, LIF unlocking, and financial tools & calculators.",
+                "softwareVersion": "1.2.3",
+                "inLanguage": ["en-CA", "fr-CA"],
+                "isAccessibleForFree": true,
+                "publisher": { "@id": "https://www.planfolio.ca/#organization" },
+                "screenshot": [
+                  "https://www.planfolio.ca/preview-summary.png",
+                  "https://www.planfolio.ca/preview-projection.png",
+                  "https://www.planfolio.ca/preview-risk.png",
+                  "https://www.planfolio.ca/preview-strategy.png"
+                ],
+                "description": "Free, local-first Canadian retirement and cash flow planner. Model 2026 CRA taxes across all 13 provinces, CPP/OAS clawback, RRSP meltdown, yearly P1 & P2 spreadsheets, Monte Carlo & historical crash stress tests, and 29 Canadian financial calculators.",
                 "offers": {
                   "@type": "Offer",
                   "price": "0",
                   "priceCurrency": "CAD"
                 },
                 "featureList": [
-                  "13 Canadian Provincial and Territorial Tax Schedules",
-                  "CPP & OAS Actuarial Early/Late Multipliers and OAS Recovery Tax",
-                  "LIF to RRIF 50% Unlocking and Maximum Ceilings",
-                  "TFSA, RRSP, FHSA, RESP, and Non-Reg ACB Tracking",
-                  "Canadian Financial & Debt Tools",
-                  "Monte Carlo and Sequence of Returns Risk Simulation",
-                  "Local-First Zero Sign-Up Architecture"
+                  "13 Canadian Provincial and Territorial 2026 CRA Tax Schedules",
+                  "Full Yearly Spreadsheet View & Excel CSV Export (Person 1 & Person 2)",
+                  "CPP & OAS Actuarial Early/Late Multipliers and OAS Recovery Tax Clawback",
+                  "RRSP Meltdown, Spousal Pension Splitting & LIF to RRIF 50% Unlocking",
+                  "TFSA, RRSP, FHSA, RESP, and Non-Reg ACB Capital Gains Tracking",
+                  "Monte Carlo LHS/QHS & Historical Crash Stress Tests (2008 GFC, 2000 Dot-Com, 1966 Stagflation)",
+                  "Survivor & Widow's Tax Trap Stress Test",
+                  "29 Built-In Canadian Financial Calculators & Optimizers",
+                  "Bilingual English & Canadian French (fr-CA) Local-First Zero Sign-Up Architecture"
                 ]
               },
               {
@@ -1056,7 +1106,7 @@ export default function LandingPage() {
                     "name": "How does Planfolio compare to Adviice, MayRetire, Gilded, Snap Projections, and ProjectionLab?",
                     "acceptedAnswer": {
                       "@type": "Answer",
-                      "text": "Planfolio is 100% free with zero sign-up required and operates on a strict local-first privacy model where zero bytes of your financial data are stored on remote cloud servers. Unlike Adviice ($99–$150+/year), Gilded ($247/year for full multi-scenario and custom age modeling), or Snap Projections ($1,200+/year advisor software), Planfolio provides institutional-grade 2026 CRA tax modeling across all 13 provinces, 20+ standalone financial calculators, and full decumulation planning without subscriptions or account lock-in. Unlike MayRetire, Planfolio includes 20+ free standalone calculators, multi-scenario comparisons, and the signature Annual Data Bank calibration engine. Unlike US-centric tools like ProjectionLab, Planfolio is engineered specifically for Canadian statutory rules, including 50% LIF unlocking, OAS clawback recovery tax, and spousal pension splitting."
+                      "text": "Planfolio is 100% free with zero sign-up required and operates on a strict local-first privacy model where zero bytes of your financial data are stored on remote cloud servers. Unlike Adviice ($99–$150+/year), Gilded ($247/year for full multi-scenario and custom age modeling), or Snap Projections ($1,200+/year advisor software), Planfolio provides institutional-grade 2026 CRA tax modeling across all 13 provinces, 29 Canadian financial calculators, full yearly P1 & P2 spreadsheet export, and complete decumulation planning without subscriptions or account lock-in. Unlike MayRetire, Planfolio includes 29 free calculators, multi-scenario comparisons, historical crash stress testing, and the Annual Data Bank calibration engine. Unlike US-centric tools like ProjectionLab, Planfolio is engineered specifically for Canadian statutory rules, including 50% LIF unlocking, OAS clawback recovery tax, and spousal pension splitting."
                     }
                   },
                   {

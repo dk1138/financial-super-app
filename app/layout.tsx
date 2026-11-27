@@ -15,29 +15,34 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.planfolio.ca"),
   title: {
-    default: "Planfolio | Canadian Retirement & Cash Flow Planner",
+    default: "Planfolio | Free Canadian Retirement, Tax & Cash Flow Planner (2026)",
     template: "%s | Planfolio",
   },
   description:
-    "Free, local-first Canadian retirement and cash flow planner. Model CPP, OAS clawback, all 13 provincial tax brackets, TFSA vs RRSP, LIF unlocking, and 30 specialized financial optimizers with zero sign-up.",
+    "Free, local-first Canadian retirement & cash flow planner (EN/FR). Model 2026 CRA taxes across all 13 provinces, CPP/OAS clawback, RRSP meltdown, yearly P1 & P2 spreadsheets, Monte Carlo & historical crash stress tests, and 29 financial calculators with zero sign-up.",
   keywords: [
     "Canadian retirement calculator",
-    "retirement planner Canada",
-    "CPP calculator",
+    "free retirement planner Canada",
+    "Canadian retirement spreadsheet",
+    "CPP calculator Canada",
     "OAS clawback calculator",
+    "RRSP meltdown calculator",
     "TFSA vs RRSP Canada",
     "LIF to RRIF unlocking",
+    "Monte Carlo retirement Canada",
     "financial independence Canada",
     "FIRE planner Canada",
     "defined benefit pension buyback calculator",
     "Smith Maneuver calculator",
     "Canada Child Benefit calculator",
-    "retirement cash flow model",
+    "retirement cash flow model Canada",
+    "planificateur de retraite Canada",
   ],
   authors: [{ name: "Planfolio" }],
   creator: "Planfolio",
   publisher: "Planfolio",
   applicationName: "Planfolio",
+  category: "finance",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -58,11 +63,12 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_CA",
+    alternateLocale: ["fr_CA"],
     url: "https://www.planfolio.ca",
     siteName: "Planfolio Canada",
-    title: "Planfolio | Canadian Retirement & Cash Flow Planner",
+    title: "Planfolio | Free Canadian Retirement, Tax & Cash Flow Planner (2026)",
     description:
-      "Free, local-first Canadian retirement and cash flow planning. Model your real estate, CPP/OAS pensions, CRA tax brackets, and 30 financial optimizers with zero sign-up.",
+      "Free, local-first Canadian retirement planner (EN/FR). Model 2026 CRA taxes across all 13 provinces, CPP/OAS clawback, RRSP meltdown, yearly P1 & P2 spreadsheets, and 29 financial calculators with zero sign-up.",
     images: [
       {
         url: "/preview-summary.png",
@@ -74,9 +80,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Planfolio | Canadian Retirement & Cash Flow Planner",
+    title: "Planfolio | Free Canadian Retirement & Cash Flow Planner (2026)",
     description:
-      "Free, local-first Canadian retirement and cash flow planning. Model CPP/OAS, CRA taxes, and 30 financial optimizers.",
+      "Free, local-first Canadian retirement planner. Model 13-province CRA taxes, CPP/OAS clawback, yearly P1 & P2 spreadsheets, Monte Carlo, and 29 financial calculators.",
     images: ["/preview-summary.png"],
   },
   robots: {
