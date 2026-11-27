@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- **Full Yearly Spreadsheet View & Detailed P1/P2 CSV Export (`lib/projectionSpreadsheet.ts`, `lib/projectionSpreadsheet.test.mjs`, `components/ProjectionSpreadsheetView.tsx`, `components/ProjectionTab.tsx`)**: Added a `Summary | Spreadsheet` view toggle in the Projection tab showing a single-sheet yearly ledger for both Person 1 and Person 2 (Income, CPP, OAS, DB Pension, Gov Benefits, Contributions by account, Withdrawals by account including RRSP/RRIF/LIF/TFSA/Non-Reg, Spending, Taxes, OAS Clawback, Pension Split, and Ending Balances) with section filter pills and a 1-click **Full Spreadsheet CSV (Excel)** download.
+- **Full Yearly Spreadsheet View & Detailed P1/P2 CSV Export (`lib/projectionSpreadsheet.ts`, `lib/projectionSpreadsheet.test.mjs`, `components/ProjectionSpreadsheetView.tsx`, `components/ProjectionTab.tsx`)**: Added a `Summary | Spreadsheet` view toggle in the Projection tab showing a single-sheet yearly ledger for both Person 1 and Person 2 (Income, CPP, OAS, DB Pension, Gov Benefits, Contributions by account, Withdrawals by account including RRSP/RRIF/LIF/TFSA/Non-Reg, Spending, Taxes, OAS Clawback, Pension Split, and Ending Balances) with section filter pills, a **Freeze Timeline** column-pinning toggle, and a 1-click **Full Spreadsheet CSV (Excel)** download.
 
 ### Removed
 - **Projection Summary Table Columns Picker (`components/ProjectionTab.tsx`)**: Removed the `Columns` hide/show dropdown pill from the Projection tab toolbar so all summary columns always remain visible.

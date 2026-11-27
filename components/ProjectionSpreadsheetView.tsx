@@ -27,6 +27,17 @@ export default function ProjectionSpreadsheetView({
   const [activeGroups, setActiveGroups] = useState<Set<SpreadsheetGroupId>>(
     () => new Set(ALL_GROUP_IDS)
   );
+  const [freezeTimeline, setFreezeTimelineState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('rp_proj_freeze_timeline') === 'true';
+  });
+  const toggleFreezeTimeline = () => {
+    setFreezeTimelineState((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('rp_proj_freeze_timeline', String(next)); } catch {}
+      return next;
+    });
+  };
 
   const toggleGroup = (id: SpreadsheetGroupId) => {
     setActiveGroups((prev) => {
@@ -51,6 +62,24 @@ export default function ProjectionSpreadsheetView({
     () => allColumns.filter((c) => c.group === 'core' || activeGroups.has(c.group)),
     [allColumns, activeGroups]
   );
+
+  const coreColOffsets = useMemo(() => {
+    const coreCols = visibleColumns.filter((c) => c.group === 'core');
+    const widths: Record<string, number> = {
+      year: 68,
+      p1Age: 64,
+      p2Age: 64,
+      phase: 86,
+    };
+    let acc = 0;
+    const map: Record<string, { left: number; width: number; isLastCore: boolean }> = {};
+    coreCols.forEach((col, i) => {
+      const w = widths[col.key] || 72;
+      map[col.key] = { left: acc, width: w, isLastCore: i === coreCols.length - 1 };
+      acc += w;
+    });
+    return map;
+  }, [visibleColumns]);
 
   const groupSpans = useMemo(() => {
     const spans: Array<{
@@ -151,7 +180,21 @@ export default function ProjectionSpreadsheetView({
           })}
         </div>
 
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={toggleFreezeTimeline}
+            className={`btn btn-sm rounded-pill px-2.5 py-1 fw-bold d-flex align-items-center gap-1 transition-all ${
+              freezeTimeline
+                ? 'btn-primary shadow-sm'
+                : 'btn-outline-secondary'
+            }`}
+            style={{ fontSize: '0.72rem' }}
+            title="Freeze Year, Age, and Phase columns while scrolling horizontally"
+          >
+            <i className={`bi ${freezeTimeline ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`}></i>
+            Freeze Timeline
+          </button>
           <span className="badge bg-secondary bg-opacity-25 text-muted fw-bold" style={{ fontSize: '0.68rem' }}>
             {useRealDollars ? "Today's $" : 'Nominal $'} · {rows.length} yrs
           </span>
@@ -182,25 +225,38 @@ export default function ProjectionSpreadsheetView({
           <thead style={{ position: 'sticky', top: 0, zIndex: 12, backgroundColor: 'var(--bg-card)' }}>
             {/* Row 1: Section Group Headers */}
             <tr>
-              {groupSpans.map((span) => (
-                <th
-                  key={span.id}
-                  colSpan={span.colSpan}
-                  className={`py-2 px-2 text-uppercase fw-bolder ls-1 text-center border-bottom border-end border-secondary border-opacity-50 ${span.accentClass}`}
-                  style={{
-                    fontSize: '0.68rem',
-                    backgroundColor: span.headerBg === 'transparent' ? 'var(--bg-card)' : span.headerBg,
-                  }}
-                >
-                  {span.label}
-                </th>
-              ))}
+              {groupSpans.map((span) => {
+                const isFrozenCore = freezeTimeline && span.id === 'core';
+                return (
+                  <th
+                    key={span.id}
+                    colSpan={span.colSpan}
+                    className={`py-2 px-2 text-uppercase fw-bolder ls-1 text-center border-bottom border-end border-secondary border-opacity-50 ${span.accentClass}`}
+                    style={{
+                      fontSize: '0.68rem',
+                      backgroundColor: span.headerBg === 'transparent' ? 'var(--bg-card)' : span.headerBg,
+                      ...(isFrozenCore
+                        ? {
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 16,
+                            boxShadow: '2px 0 6px -2px rgba(0, 0, 0, 0.25)',
+                          }
+                        : {}),
+                    }}
+                  >
+                    {span.label}
+                  </th>
+                );
+              })}
             </tr>
             {/* Row 2: Individual Column Headers */}
             <tr>
               {visibleColumns.map((col, idx) => {
                 const isGroupBoundary =
                   idx < visibleColumns.length - 1 && visibleColumns[idx + 1].group !== col.group;
+                const coreMeta = col.group === 'core' ? coreColOffsets[col.key] : undefined;
+                const isFrozen = freezeTimeline && !!coreMeta;
                 return (
                   <th
                     key={col.key}
@@ -214,7 +270,23 @@ export default function ProjectionSpreadsheetView({
                     style={{
                       fontSize: '0.68rem',
                       backgroundColor: 'var(--bg-card)',
-                      minWidth: col.key === 'year' ? '64px' : col.key === 'phase' ? '82px' : '86px',
+                      ...(coreMeta
+                        ? {
+                            width: `${coreMeta.width}px`,
+                            minWidth: `${coreMeta.width}px`,
+                            maxWidth: `${coreMeta.width}px`,
+                          }
+                        : { minWidth: '86px' }),
+                      ...(isFrozen && coreMeta
+                        ? {
+                            position: 'sticky',
+                            left: `${coreMeta.left}px`,
+                            zIndex: 15,
+                            ...(coreMeta.isLastCore
+                              ? { boxShadow: '2px 0 6px -2px rgba(0, 0, 0, 0.25)' }
+                              : {}),
+                          }
+                        : {}),
                     }}
                   >
                     {col.label}
@@ -244,6 +316,8 @@ export default function ProjectionSpreadsheetView({
                       const isZeroCurrency = col.isCurrency && (Number(val) || 0) === 0;
                       const isGroupBoundary =
                         idx < visibleColumns.length - 1 && visibleColumns[idx + 1].group !== col.group;
+                      const coreMeta = col.group === 'core' ? coreColOffsets[col.key] : undefined;
+                      const isFrozen = freezeTimeline && !!coreMeta;
 
                       return (
                         <td
@@ -257,6 +331,28 @@ export default function ProjectionSpreadsheetView({
                           } ${isZeroCurrency ? 'text-muted opacity-25' : col.colorClass || 'text-main'} ${
                             isGroupBoundary ? 'border-end border-secondary border-opacity-50' : ''
                           }`}
+                          style={
+                            isFrozen && coreMeta
+                              ? {
+                                  position: 'sticky',
+                                  left: `${coreMeta.left}px`,
+                                  zIndex: 5,
+                                  width: `${coreMeta.width}px`,
+                                  minWidth: `${coreMeta.width}px`,
+                                  maxWidth: `${coreMeta.width}px`,
+                                  backgroundColor: 'var(--bg-card)',
+                                  ...(coreMeta.isLastCore
+                                    ? { boxShadow: '2px 0 6px -2px rgba(0, 0, 0, 0.25)' }
+                                    : {}),
+                                }
+                              : coreMeta
+                              ? {
+                                  width: `${coreMeta.width}px`,
+                                  minWidth: `${coreMeta.width}px`,
+                                  maxWidth: `${coreMeta.width}px`,
+                                }
+                              : undefined
+                          }
                         >
                           {col.key === 'phase' ? (
                             <span
