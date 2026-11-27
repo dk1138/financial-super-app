@@ -7,7 +7,6 @@ import { useTranslation } from '../lib/LanguageContext';
 // --- DYNAMIC IMPORTS (LAZY LOADING) ---
 const MedicalExpenseOptimizer = dynamic(() => import('./optimizers/MedicalExpenseOptimizer'), { ssr: false });
 const SideHustleROI = dynamic(() => import('./optimizers/SideHustleROI'), { ssr: false });
-const DieWithZero = dynamic(() => import('./optimizers/DieWithZero'), { ssr: false });
 const ConsumptionSmoother = dynamic(() => import('./optimizers/ConsumptionSmoother'), { ssr: false });
 const CPPGridSearch = dynamic(() => import('./optimizers/CPPGridSearch'), { ssr: false });
 const PensionBuyback = dynamic(() => import('./optimizers/PensionBuyback'), { ssr: false });
@@ -40,8 +39,7 @@ const CoastFireCalculator = dynamic(() => import('./optimizers/CoastFireCalculat
 const TOOL_METADATA: Record<string, { title: string; category: string; keywords: string[] }> = {
   'sensitivity': { title: 'Retirement Age vs. Spend Heatmap & Max Safe Spend Solver', category: 'Master Simulations', keywords: ['heatmap', 'sensitivity', 'matrix', 'max spend', 'safe spend', 'retirement age', 'spending', 'tradeoff', 'grid'] },
   'coast-fire': { title: 'Coast FIRE & Barista FIRE Calculator', category: 'Master Simulations', keywords: ['coast fire', 'barista fire', 'fire', 'early retirement', 'semi retirement', 'financial independence', 'swr', '4% rule'] },
-  'dwz': { title: 'Die With Zero', category: 'Master Simulations', keywords: ['die with zero', 'maximum spend', 'lifestyle', 'budget', 'spending'] },
-  'smoother': { title: 'Consumption Smoothing', category: 'Master Simulations', keywords: ['consumption smoothing', 'maxifi', 'living standard', 'discretionary spending', 'lifestyle'] },
+  'smoother': { title: 'Consumption Smoothing & Die With Zero', category: 'Master Simulations', keywords: ['consumption smoothing', 'die with zero', 'maxifi', 'maximum spend', 'living standard', 'discretionary spending', 'lifestyle', 'budget'] },
   'cpp': { title: 'CPP Grid Search', category: 'Master Simulations', keywords: ['cpp', 'oas', 'pension', 'grid search', 'retirement age', 'start age', 'government benefits'] },
   'pensioncv': { title: 'Pension Commuted Value', category: 'Master Simulations', keywords: ['pension', 'commuted value', 'db pension', 'lump sum', 'defined benefit', 'cv'] },
   'pensionbb': { title: 'Pension Buyback', category: 'Master Simulations', keywords: ['pension buyback', 'service buyback', 'past service', 'omers', 'hoopp', 'otpp'] },
@@ -125,36 +123,37 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string>('All Tools');
   const [expandedTool, setExpandedTool] = useState<string | null>(null);
-  const [highlightedTool, setHighlightedTool] = useState<string | null>(initialToolId || null);
+  const resolvedInitialId = initialToolId === 'dwz' ? 'smoother' : initialToolId;
+  const [highlightedTool, setHighlightedTool] = useState<string | null>(resolvedInitialId || null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Automatically scroll to and border-highlight requested tool without breaking the 3-column grid
   useEffect(() => {
-    if (initialToolId) {
-      setHighlightedTool(initialToolId);
-      const meta = TOOL_METADATA[initialToolId];
+    if (resolvedInitialId) {
+      setHighlightedTool(resolvedInitialId);
+      const meta = TOOL_METADATA[resolvedInitialId];
       if (meta && meta.category) {
         setActiveCategory('All Tools');
       }
       const scrollTimer = setTimeout(() => {
-        const el = document.getElementById(`tool-card-${initialToolId}`);
+        const el = document.getElementById(`tool-card-${resolvedInitialId}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 200);
       const clearTimer = setTimeout(() => {
-        setHighlightedTool((prev) => (prev === initialToolId ? null : prev));
+        setHighlightedTool((prev) => (prev === resolvedInitialId ? null : prev));
       }, 6500);
       return () => {
         clearTimeout(scrollTimer);
         clearTimeout(clearTimer);
       };
     }
-  }, [initialToolId]);
+  }, [resolvedInitialId]);
 
   const toolCategories = [
     { title: "All Tools", keys: ALL_TOOL_KEYS },
-    { title: "Master Simulations", keys: ['sensitivity', 'coast-fire', 'dwz', 'smoother', 'cpp', 'pensioncv', 'pensionbb'] },
+    { title: "Master Simulations", keys: ['sensitivity', 'coast-fire', 'smoother', 'cpp', 'pensioncv', 'pensionbb'] },
     { title: "Tax & Registered", keys: ['tax-curve', 'sweetspot', 'grossup', 'tfsavsrrsp', 'tfsa-room', 'lif-unlock', 'gis-maximizer', 'estate-tax', 'ccb', 'fhsa', 'resp', 'medical'] },
     { title: "Business & Income", keys: ['sidehustle'] },
     { title: "Debt, Real Estate & Cash", keys: ['buyvsrent', 'mvi', 'smith', 'emerg', 'car', 'afford', 'moveup', 'renewal', 'reversemortgage'] },
@@ -192,7 +191,6 @@ export default function OptimizersTab({ initialToolId }: { initialToolId?: strin
       case 'buyvsrent': ContentComponent = <BuyVsRentAnalyzer isExpanded={isExpanded} onToggle={() => setExpandedTool(isExpanded ? null : id)} />; break;
       case 'medical': ContentComponent = <MedicalExpenseOptimizer />; break;
       case 'sidehustle': ContentComponent = <SideHustleROI />; break;
-      case 'dwz': ContentComponent = <DieWithZero />; break;
       case 'smoother': ContentComponent = <ConsumptionSmoother />; break;
       case 'cpp': ContentComponent = <CPPGridSearch />; break;
       case 'pensionbb': ContentComponent = <PensionBuyback />; break;

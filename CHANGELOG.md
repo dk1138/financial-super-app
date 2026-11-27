@@ -10,8 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **In-App "What's New" Header Badge & Changelog Modal (`lib/whatsNew.ts`, `components/WhatsNewModal.tsx`, `components/GlobalHeader.tsx`)**: Upgraded the top header `v{ENGINE_VERSION}` pill into a clickable **What's New** badge (`● v1.2.3 | What's New` whenever a new version is unseen in `localStorage`, settling back to clickable `v1.2.3` once viewed) that opens a bilingual EN/FR release notes modal showcasing the `v1.2.3` highlights.
 - **Full Yearly Spreadsheet View & Detailed P1/P2 CSV Export (`lib/projectionSpreadsheet.ts`, `lib/projectionSpreadsheet.test.mjs`, `components/ProjectionSpreadsheetView.tsx`, `components/ProjectionTab.tsx`)**: Added a `Summary | Spreadsheet` view toggle in the Projection tab showing a single-sheet yearly ledger for both Person 1 and Person 2 (Income, CPP, OAS, DB Pension, Gov Benefits, Contributions by account, Withdrawals by account including RRSP/RRIF/LIF/TFSA/Non-Reg, Spending, Taxes, OAS Clawback, Pension Split, and Ending Balances) with section filter pills, a **Freeze Timeline** column-pinning toggle, and a 1-click **Full Spreadsheet CSV (Excel)** download.
 
+### Changed
+- **Consolidated Overlapping Features (`components/risk/MacroShocksCard.tsx`, `components/optimizers/ConsumptionSmoother.tsx`, `components/OptimizersTab.tsx`, `components/CommandPaletteModal.tsx`, `components/tools/ToolRenderer.tsx`, `components/plan/LivingExpensesCard.tsx`, `components/plan/FutureExpensesCard.tsx`)**:
+  - Removed the simplified duplicate *The Widow's Penalty* tile from `MacroShocksCard` (now handled thoroughly by `SurvivorStressCard` directly above it on the Risk tab) and balanced the remaining 3 macro shocks into a 3-column grid.
+  - Merged *Die With Zero* into *Consumption Smoothing & Die With Zero* (`ConsumptionSmoother.tsx`) with a 1-click **Die With Zero ($0)** preset while keeping `/tools/die-with-zero` routed seamlessly via `ToolRenderer`.
+  - Added 1-line clarifying helper hints to *Phased Expenses* (`LivingExpensesCard`) and *Future Expenses & Debts* (`FutureExpensesCard`).
+
 ### Removed
 - **Projection Summary Table Columns Picker (`components/ProjectionTab.tsx`)**: Removed the `Columns` hide/show dropdown pill from the Projection tab toolbar so all summary columns always remain visible.
+- **Orphaned & Consolidated Legacy Components (`components/FloatingFeedback.tsx`, `components/plan/RealEstateCard.tsx`, `components/history/DataBankModal.tsx`, `components/optimizers/DieWithZero.tsx`)**: Deleted 3 unreferenced legacy duplicate components and the consolidated standalone `DieWithZero.tsx` card.
 
 ## [1.2.3] - 2026-11-25
 

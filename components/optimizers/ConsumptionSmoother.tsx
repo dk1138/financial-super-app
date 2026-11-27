@@ -88,10 +88,10 @@ export default function ConsumptionSmoother() {
                 </div>
                 <div className="flex-grow-1">
                     <div className="d-flex align-items-center justify-content-between">
-                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Consumption Smoothing (Living Standard Maximizer)</h5>
+                        <h5 className="fw-bold text-primary mb-0 text-uppercase ls-1">Consumption Smoothing &amp; Die With Zero</h5>
                         <InfoBtn 
-                            title="MaxiFi-Style Consumption Smoothing" 
-                            text="Based on economic consumption smoothing principles. Instead of forcing you to guess a retirement budget, this solver works backward from your net worth, CPP, OAS, pensions, and Canadian tax brackets to find the <b>exact flat discretionary living standard</b> (in today's purchasing power) you can spend every year from retirement to age 95 without ever running out of money."
+                            title="Consumption Smoothing & Die With Zero" 
+                            text="Works backward from your net worth, CPP, OAS, pensions, and Canadian tax brackets to find the <b>exact maximum flat discretionary living standard</b> (in today's purchasing power) you can spend every year to life expectancy without running out of money. Set Target Estate Legacy to <b>$0</b> for a pure <b>Die With Zero</b> strategy."
                             align="right"
                         />
                     </div>
@@ -99,17 +99,30 @@ export default function ConsumptionSmoother() {
             </div>
 
             <p className="text-muted small mb-3">
-                Calculate your sustainable lifetime discretionary spending ceiling (in today's dollars) and test how lifestyle levers like retirement age and CPP timing adjust your monthly spending power.
+                Calculate your maximum sustainable retirement spending ceiling (including pure <strong>Die With Zero</strong> at $0 legacy) and test how retirement age and CPP timing adjust your monthly spending power.
             </p>
 
             {/* Inputs Grid */}
             <div className="row g-2 mb-3">
                 <div className="col-12 col-md-6">
-                    <label className="form-label small text-muted fw-bold mb-1">Target Estate Legacy Floor (\$)</label>
+                    <div className="d-flex align-items-center justify-content-between mb-1">
+                        <label className="form-label small text-muted fw-bold mb-0">Target Estate Legacy Floor ($)</label>
+                        {targetLegacy !== 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setTargetLegacy(0)}
+                                className="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none"
+                                style={{ fontSize: '0.7rem' }}
+                                title="Set target estate floor to $0 for pure Die With Zero spending"
+                            >
+                                Die With Zero ($0)
+                            </button>
+                        )}
+                    </div>
                     <CurrencyInput 
                         value={targetLegacy} 
                         onChange={(v: any) => setTargetLegacy(v || 0)} 
-                        placeholder="0 (Pure Consumption)" 
+                        placeholder="0 (Die With Zero)" 
                     />
                 </div>
                 <div className="col-12 col-md-6">

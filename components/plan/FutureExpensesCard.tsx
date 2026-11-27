@@ -28,6 +28,9 @@ export default function FutureExpensesCard() {
         </button>
       </div>
       <div className="card-body p-4">
+        <p className="text-muted small mb-3" style={{ fontSize: "0.78rem" }}>
+            {t('futureCard.hint', 'Use this section for one-time large purchases (car, renovation, wedding) or multi-year debt payoffs — use Living Expenses above for recurring lifestyle costs.')}
+        </p>
         {data.debt.length === 0 && <div className="text-center text-muted small fst-italic">{t('futureCard.empty', 'No future expenses added.')}</div>}
         <div className="row g-3">
             {data.debt.map((d: any, idx: number) => {

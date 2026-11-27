@@ -189,10 +189,15 @@ export default function LivingExpensesCard() {
       <div className="card-body p-3 p-md-4">
         {/* --- PHASED EXPENSES SECTION --- */}
         <div className="card border-info border-opacity-50 surface-card shadow-sm rounded-4 mb-5">
-            <div className="card-header bg-info bg-opacity-10 border-bottom border-info border-opacity-50 p-3 d-flex justify-content-between align-items-center">
-                <h6 className="mb-0 fw-bold text-info text-uppercase ls-1 d-flex align-items-center gap-2">
-                    <i className="bi bi-calendar-range"></i> {t('expensesCard.phasedTitle', 'Phased Expenses & Housing Transitions')}
-                </h6>
+            <div className="card-header bg-info bg-opacity-10 border-bottom border-info border-opacity-50 p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h6 className="mb-0 fw-bold text-info text-uppercase ls-1 d-flex align-items-center gap-2">
+                        <i className="bi bi-calendar-range"></i> {t('expensesCard.phasedTitle', 'Phased Expenses & Housing Transitions')}
+                    </h6>
+                    <div className="text-muted mt-1" style={{ fontSize: "0.73rem" }}>
+                        {t('expensesCard.phasedHint', 'For temporary age-bounded monthly shifts (e.g. future rent, LTC, or travel years). Use Adv. Mode above to scale core categories across Go-Go / Slow-Go / No-Go.')}
+                    </div>
+                </div>
                 <button type="button" className="btn btn-sm btn-info fw-bold rounded-pill px-3 py-1 text-dark" onClick={() => addArrayItem('expensePhases', { name: 'Future Rent / LTC', amount: 4000, startAge: 80, endAge: 100, isPhased: true })}>
                     <i className="bi bi-plus-lg me-1"></i> {t('expensesCard.addPhase', 'Add Phase')}
                 </button>

@@ -31,7 +31,6 @@ const ToolSkeleton = () => (
 
 const MedicalExpenseOptimizer = dynamic(() => import('../optimizers/MedicalExpenseOptimizer'), { ssr: false, loading: () => <ToolSkeleton /> });
 const SideHustleROI = dynamic(() => import('../optimizers/SideHustleROI'), { ssr: false, loading: () => <ToolSkeleton /> });
-const DieWithZero = dynamic(() => import('../optimizers/DieWithZero'), { ssr: false, loading: () => <ToolSkeleton /> });
 const ConsumptionSmoother = dynamic(() => import('../optimizers/ConsumptionSmoother'), { ssr: false, loading: () => <ToolSkeleton /> });
 const CPPGridSearch = dynamic(() => import('../optimizers/CPPGridSearch'), { ssr: false, loading: () => <ToolSkeleton /> });
 const PensionBuyback = dynamic(() => import('../optimizers/PensionBuyback'), { ssr: false, loading: () => <ToolSkeleton /> });
@@ -89,7 +88,7 @@ export default function ToolRenderer({ toolKey }: { toolKey: string }) {
         case 'car': return <CarLease />;
         case 'medical': return <MedicalExpenseOptimizer />;
         case 'sidehustle': return <SideHustleROI />;
-        case 'dwz': return <DieWithZero />;
+        case 'dwz':
         case 'smoother': return <ConsumptionSmoother />;
         case 'cppimport': return <CPPImporter />;
         default: return <div className="p-4 text-muted">Tool coming soon.</div>;

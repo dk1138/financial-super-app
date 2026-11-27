@@ -4,7 +4,6 @@ import { InfoBtn, CurrencyInput, PercentInput } from '../SharedUI';
 
 export default function MacroShocksCard() {
     const { data, results } = useFinance();
-    const isCouple = data.mode === 'Couple';
 
     const [ltcAge, setLtcAge] = useState(82);
     const [ltcCost, setLtcCost] = useState(80000);
@@ -13,9 +12,6 @@ export default function MacroShocksCard() {
 
     const [infRate, setInfRate] = useState(6.0);
     const [infResult, setInfResult] = useState<any>(null);
-
-    const [widowAge, setWidowAge] = useState(75);
-    const [widowResult, setWidowResult] = useState<any>(null);
 
     const [reCrashPct, setReCrashPct] = useState(30);
     const [reResult, setReResult] = useState<any>(null);
@@ -60,29 +56,6 @@ export default function MacroShocksCard() {
             console.error('MacroShocksCard worker error:', err);
         }
     };
-
-    // Calculate Widow's Penalty on load if Couple
-    useEffect(() => {
-        if (!results || !results.timeline || !isCouple) return;
-        const widowYr = results.timeline.find((y: any) => y.p1Age === widowAge);
-        if (widowYr) {
-            const jointGovt = (widowYr.cppP1||0) + (widowYr.cppP2||0) + (widowYr.oasP1||0) + (widowYr.oasP2||0);
-            const jointPen = (widowYr.dbP1||0) + (widowYr.dbP2||0);
-            const jointInc = jointGovt + jointPen;
-            
-            const survivorCpp = Math.min(16000, (widowYr.cppP1||0) + (widowYr.cppP2||0));
-            const survivorOas = widowYr.oasP1||0;
-            const survivorPen = (widowYr.dbP1||0) + ((widowYr.dbP2||0) * 0.6); 
-            const survivorInc = survivorCpp + survivorOas + survivorPen;
-
-            setWidowResult({
-                jointIncome: jointInc,
-                survivorIncome: survivorInc,
-                drop: jointInc - survivorInc,
-                dropPct: jointInc > 0 ? ((jointInc - survivorInc) / jointInc) * 100 : 0
-            });
-        }
-    }, [results, widowAge, isCouple]);
 
     const runLtcShock = () => {
         const p1Age = Number(data.inputs.p1_age) || 35;
@@ -165,7 +138,7 @@ export default function MacroShocksCard() {
             <div className="row g-4">
                 
                 {/* LTC SHOCK */}
-                <div className="col-12 col-xl-6">
+                <div className="col-12 col-lg-4">
                     <div className="rp-card border border-secondary rounded-4 p-4 shadow-sm h-100 d-flex flex-column">
                         <div className="d-flex align-items-center mb-3">
                             <div className="bg-danger bg-opacity-25 text-danger rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
@@ -207,7 +180,7 @@ export default function MacroShocksCard() {
                 </div>
 
                 {/* HIGH INFLATION DECADE */}
-                <div className="col-12 col-xl-6">
+                <div className="col-12 col-lg-4">
                     <div className="rp-card border border-secondary rounded-4 p-4 shadow-sm h-100 d-flex flex-column">
                         <div className="d-flex align-items-center mb-3">
                             <div className="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>
@@ -240,50 +213,8 @@ export default function MacroShocksCard() {
                     </div>
                 </div>
 
-                {/* WIDOW'S PENALTY */}
-                {isCouple && (
-                    <div className="col-12 col-xl-6">
-                        <div className="rp-card border border-secondary rounded-4 p-4 shadow-sm h-100 d-flex flex-column">
-                            <div className="d-flex align-items-center mb-3">
-                                <div className="bg-purple bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0, color: 'var(--bs-purple)'}}>
-                                    <i className="bi bi-person-dash-fill fs-4"></i>
-                                </div>
-                                <h5 className="fw-bold mb-0 text-uppercase ls-1" style={{color: 'var(--bs-purple)'}}>The Widow's Penalty</h5>
-                            </div>
-                            <p className="text-muted small mb-4">Calculates the immediate loss of household income (lost OAS, CPP max caps, reduced pensions) if one spouse passes away early.</p>
-                            
-                            <div className="row g-3 mb-4">
-                                <div className="col-12">
-                                    <label className="form-label small fw-bold text-muted mb-1">Simulated Age of Death (P2)</label>
-                                    <input type="number" className="form-control form-control-sm bg-input text-main border-secondary shadow-sm fw-bold text-center" value={widowAge} onChange={e => setWidowAge(parseInt(e.target.value)||0)} />
-                                </div>
-                            </div>
-
-                            {widowResult ? (
-                                <div className="p-3 rounded-4 border border-secondary bg-black bg-opacity-25 shadow-inner mt-auto">
-                                    <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-50">
-                                        <span className="text-muted fw-bold small">Joint Gov/Pension Income</span>
-                                        <span className="fw-bold text-main">{formatCurrency(widowResult.jointIncome)} <span className="small text-muted fw-normal">/yr</span></span>
-                                    </div>
-                                    <div className="d-flex justify-content-between align-items-center mb-3">
-                                        <span className="text-muted fw-bold small">Survivor Income <InfoBtn title="Survivor Income" text="Survivor retains 1 OAS, max 1 standard CPP limit, and 60% of spouse's DB pension." /></span>
-                                        <span className="fw-bold text-danger">{formatCurrency(widowResult.survivorIncome)} <span className="small text-muted fw-normal">/yr</span></span>
-                                    </div>
-                                    <div className="text-center">
-                                        <span className="badge px-3 py-2" style={{backgroundColor: 'var(--bs-purple)'}}>Income Drops by {formatCurrency(widowResult.drop)} ({widowResult.dropPct.toFixed(1)}%)</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="mt-auto text-center text-muted small fst-italic py-4 border border-secondary border-opacity-25 rounded-4">
-                                    Data available once retirement plan is calculated.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
                 {/* REAL ESTATE CRASH */}
-                <div className="col-12 col-xl-6">
+                <div className="col-12 col-lg-4">
                     <div className="rp-card border border-secondary rounded-4 p-4 shadow-sm h-100 d-flex flex-column">
                         <div className="d-flex align-items-center mb-3">
                             <div className="bg-info bg-opacity-25 text-info rounded-circle d-flex align-items-center justify-content-center shadow-inner me-3" style={{width: '45px', height: '45px', flexShrink: 0}}>

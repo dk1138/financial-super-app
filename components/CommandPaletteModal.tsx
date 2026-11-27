@@ -33,8 +33,7 @@ interface CommandPaletteModalProps {
 const QUICK_TOOLS: Array<{ id: string; title: string; frTitle: string; category: string; keywords: string }> = [
   { id: 'sensitivity', title: 'Retirement Age vs. Spend Heatmap & Max Safe Spend Solver', frTitle: 'Carte de sensibilité et dépenses max.', category: 'Master Simulations', keywords: 'heatmap sensitivity max spend safe spend retirement age' },
   { id: 'coast-fire', title: 'Coast FIRE & Barista FIRE Calculator', frTitle: 'Calculateur Coast FIRE et Barista FIRE', category: 'Master Simulations', keywords: 'coast fire barista fire early retirement' },
-  { id: 'dwz', title: 'Die With Zero', frTitle: 'Mourir avec zéro', category: 'Master Simulations', keywords: 'die with zero maximum spend' },
-  { id: 'smoother', title: 'Consumption Smoothing', frTitle: 'Lissage de la consommation', category: 'Master Simulations', keywords: 'consumption smoothing lifestyle' },
+  { id: 'smoother', title: 'Consumption Smoothing & Die With Zero', frTitle: 'Lissage de la consommation et Mourir avec zéro', category: 'Master Simulations', keywords: 'consumption smoothing die with zero maximum spend lifestyle' },
   { id: 'cpp', title: 'CPP Grid Search', frTitle: 'Optimiseur RPC/RRQ et SV', category: 'Master Simulations', keywords: 'cpp oas rpc rrq sv pension start age' },
   { id: 'pensioncv', title: 'Pension Commuted Value', frTitle: 'Valeur de rachat de pension', category: 'Master Simulations', keywords: 'commuted value db pension lump sum' },
   { id: 'pensionbb', title: 'Pension Buyback', frTitle: 'Rachat de service de pension', category: 'Master Simulations', keywords: 'pension buyback past service' },
