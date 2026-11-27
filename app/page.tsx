@@ -42,10 +42,10 @@ export default function LandingPage() {
       {/* HERO SECTION                                              */}
       {/* ========================================================= */}
       <header id="about" className="relative pt-44 pb-20 overflow-hidden scroll-mt-28">
-        <div className="container mx-auto px-6 text-center relative z-10 max-w-5xl">
+        <div className="container mx-auto px-6 text-center relative z-10 max-w-6xl">
           
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-[1.08] tracking-tight text-center w-full">
-            <span className="block text-center w-full">The Financial Command Center</span>
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black text-white mb-6 leading-[1.1] tracking-tight text-center w-full">
+            <span className="block text-center w-full sm:whitespace-nowrap">The Financial Command Center</span>
             <span className="block text-center w-full text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400">
               Built for Modern Canadians.
             </span>
