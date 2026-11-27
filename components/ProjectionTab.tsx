@@ -39,28 +39,6 @@ export default function ProjectionTab() {
     setPhaseFilterState(next);
     try { localStorage.setItem('rp_proj_phase_filter', next); } catch {}
   };
-  const [hiddenCols, setHiddenCols] = useState<Record<string, boolean>>(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem('rp_proj_hidden_cols') || '{}') || {};
-    } catch {
-      return {};
-    }
-  });
-  const toggleCol = (key: string) => {
-    setHiddenCols((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      try { localStorage.setItem('rp_proj_hidden_cols', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
-  const visibleColCount =
-    3 +
-    (hiddenCols.phase ? 0 : 1) +
-    (hiddenCols.ages ? 0 : 1) +
-    (hiddenCols.income ? 0 : 1) +
-    (hiddenCols.taxes ? 0 : 1) +
-    (hiddenCols.expenses ? 0 : 1);
 
   const [showBackToTop, setShowBackToTop] = useState(false);
 
@@ -75,7 +53,6 @@ export default function ProjectionTab() {
 
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [jumpMenuOpen, setJumpMenuOpen] = useState(false);
-  const [colMenuOpen, setColMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
@@ -1592,67 +1569,25 @@ export default function ProjectionTab() {
               })()}
 
               {viewMode === 'summary' && (
-                <>
-                  <button 
-                    type="button" 
-                    onClick={toggleAllRows} 
-                    className="btn btn-sm btn-outline-info bg-info bg-opacity-10 border border-info px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 text-nowrap"
-                    style={{ height: '36px' }}
-                    title="Expand or collapse all yearly audit drawers"
-                  >
-                    <span className="small fw-bold text-uppercase ls-1 text-info d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
-                      <i className={`bi bi-arrows-${expandedYears.size === filteredTimeline.length ? 'collapse' : 'expand'} me-1.5`}></i>
-                      {expandedYears.size === filteredTimeline.length ? 'Collapse All' : 'Expand All'}
-                    </span>
-                  </button>
-
-                  {/* COLUMN PICKER DROPDOWN */}
-                  <div className="position-relative">
-                      <div
-                          className="bg-input border border-secondary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer text-nowrap"
-                          style={{ height: '36px' }}
-                          onClick={() => { setColMenuOpen(!colMenuOpen); setExportMenuOpen(false); setJumpMenuOpen(false); }}
-                          title="Show or hide table columns"
-                      >
-                          <span className="small fw-bold text-uppercase ls-1 text-muted d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
-                              <i className="bi bi-layout-three-columns me-1.5 text-info"></i>
-                              Columns
-                              <i className={`bi bi-chevron-${colMenuOpen ? 'up' : 'down'} ms-1.5 opacity-75`} style={{ fontSize: '0.65rem' }}></i>
-                          </span>
-                      </div>
-                      {colMenuOpen && (
-                          <>
-                              <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1040 }} onClick={() => setColMenuOpen(false)}></div>
-                              <div className="dropdown-menu shadow-lg border-secondary rounded-3 show position-absolute mt-2 p-2" style={{ zIndex: 1060, top: '100%', right: 0, minWidth: '185px', backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
-                                  {[
-                                      { key: 'phase', label: 'Phase' },
-                                      { key: 'ages', label: 'Ages' },
-                                      { key: 'income', label: 'Net Income' },
-                                      { key: 'taxes', label: 'Taxes' },
-                                      { key: 'expenses', label: 'Expenses' },
-                                  ].map((col) => (
-                                      <label key={col.key} className="dropdown-item py-1.5 px-2 rounded-2 d-flex align-items-center gap-2 cursor-pointer small fw-bold text-main">
-                                          <input
-                                              type="checkbox"
-                                              className="form-check-input m-0 cursor-pointer"
-                                              checked={!hiddenCols[col.key]}
-                                              onChange={() => toggleCol(col.key)}
-                                          />
-                                          <span>{col.label}</span>
-                                      </label>
-                                  ))}
-                              </div>
-                          </>
-                      )}
-                  </div>
-                </>
+                <button 
+                  type="button" 
+                  onClick={toggleAllRows} 
+                  className="btn btn-sm btn-outline-info bg-info bg-opacity-10 border border-info px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 text-nowrap"
+                  style={{ height: '36px' }}
+                  title="Expand or collapse all yearly audit drawers"
+                >
+                  <span className="small fw-bold text-uppercase ls-1 text-info d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
+                    <i className={`bi bi-arrows-${expandedYears.size === filteredTimeline.length ? 'collapse' : 'expand'} me-1.5`}></i>
+                    {expandedYears.size === filteredTimeline.length ? 'Collapse All' : 'Expand All'}
+                  </span>
+                </button>
               )}
 
               <div className="position-relative">
                   <div 
                       className="bg-primary bg-opacity-10 border border-primary px-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center transition-all hover-opacity-75 cursor-pointer text-nowrap"
                       style={{ height: '36px' }}
-                      onClick={() => { setExportMenuOpen(!exportMenuOpen); setJumpMenuOpen(false); setColMenuOpen(false); }}
+                      onClick={() => { setExportMenuOpen(!exportMenuOpen); setJumpMenuOpen(false); }}
                       title="Export projection data"
                   >
                       <span className="small fw-bold text-uppercase ls-1 text-primary d-flex align-items-center text-nowrap" style={{ fontSize: '0.75rem' }}>
@@ -1710,11 +1645,11 @@ export default function ProjectionTab() {
               <tr style={{ fontSize: '0.75rem', letterSpacing: '0.05em' }}>
                 <th className="py-3 ps-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '44px' }}></th>
                 <th className="py-3 text-muted text-uppercase text-start ps-2 border-bottom border-secondary" style={{ width: '18%' }}>Year & Events</th>
-                {!hiddenCols.phase && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>}
-                {!hiddenCols.ages && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>}
-                {!hiddenCols.income && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>}
-                {!hiddenCols.taxes && <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>}
-                {!hiddenCols.expenses && <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>}
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Phase</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '12%' }}>Ages</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary" style={{ width: '14%' }}>Net Income</th>
+                <th className="py-3 text-muted text-uppercase text-center border-bottom border-secondary text-danger" style={{ width: '14%' }}>Taxes</th>
+                <th className="py-3 text-uppercase text-center border-bottom border-secondary" style={{ color: '#d97706', width: '14%' }}>Expenses</th>
                 <th className="py-3 pe-4 text-muted text-uppercase text-center border-bottom border-secondary text-success" style={{ width: '16%' }}>Net Worth</th>
               </tr>
             </thead>
@@ -1728,7 +1663,7 @@ export default function ProjectionTab() {
                 if (filteredTimeline.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={visibleColCount} className="py-5 text-center text-muted">
+                      <td colSpan={8} className="py-5 text-center text-muted">
                         <i className="bi bi-funnel fs-2 mb-2 d-block opacity-50"></i>
                         <span className="fw-medium">No timeline years match the selected filter.</span>
                       </td>
@@ -1792,7 +1727,7 @@ export default function ProjectionTab() {
                   <React.Fragment key={y.year}>
                     {y.year === firstDepYear && (
                       <tr key={`depleted-milestone-${y.year}`} className="bg-danger bg-opacity-25 border-top border-bottom border-danger">
-                        <td colSpan={visibleColCount} className="py-2 px-3 text-center text-danger fw-bold small">
+                        <td colSpan={8} className="py-2 px-3 text-center text-danger fw-bold small">
                           <i className="bi bi-exclamation-triangle-fill text-warning me-2 fs-6"></i>
                           <span>PORTFOLIO DEPLETED AT AGE {y.p1Age} ({y.year}) — From this point forward, remaining Net Worth is 100% Real Estate Equity.</span>
                         </td>
@@ -1813,25 +1748,15 @@ export default function ProjectionTab() {
                             {getEventIcons(y.events, y)}
                         </div>
                       </td>
-                      {!hiddenCols.phase && (
-                        <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
-                          {getPhaseBadge(y)}
-                        </td>
-                      )}
-                      {!hiddenCols.ages && (
-                        <td className="py-3 text-center border-bottom border-secondary border-opacity-25">
-                          {renderAges(y)}
-                        </td>
-                      )}
-                      {!hiddenCols.income && (
-                        <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
-                      )}
-                      {!hiddenCols.taxes && (
-                        <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
-                      )}
-                      {!hiddenCols.expenses && (
-                        <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
-                      )}
+                      <td className="py-3 text-center border-bottom border-secondary border-opacity-25 px-2">
+                        {getPhaseBadge(y)}
+                      </td>
+                      <td className="py-3 text-center border-bottom border-secondary border-opacity-25">
+                        {renderAges(y)}
+                      </td>
+                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalIncome, y.year)}</td>
+                      <td className="py-3 text-center text-danger fw-medium border-bottom border-secondary border-opacity-25">{formatCurrency(totalTaxes, y.year)}</td>
+                      <td className="py-3 text-center fw-medium border-bottom border-secondary border-opacity-25" style={{ color: '#d97706' }}>{formatCurrency(totalExpenses, y.year)}</td>
                       <td className="py-3 pe-4 text-center border-bottom border-secondary border-opacity-25">
                         {isLiquidDepleted ? (
                             <div className="d-flex flex-column align-items-center lh-sm">
@@ -1846,7 +1771,7 @@ export default function ProjectionTab() {
 
                     {isExpanded && (
                       <tr style={{ position: 'relative', zIndex: 999 }}>
-                        <td colSpan={visibleColCount} className="p-0 border-bottom border-secondary border-opacity-50 position-relative" style={{ zIndex: 999 }}>
+                        <td colSpan={8} className="p-0 border-bottom border-secondary border-opacity-50 position-relative" style={{ zIndex: 999 }}>
                           <div className="m-0 m-md-2 rounded-4 surface-card border border-primary border-opacity-25 shadow-inner slide-down position-relative" style={{ zIndex: 999 }}>
                             
                             <div className="row g-0 align-items-stretch">
